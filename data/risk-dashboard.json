@@ -1,0 +1,322 @@
+{
+  "metadata": {
+    "title": "통합 리스크 모니터링 대시보드",
+    "subtitle": "시장 조기경보 · 신용리스크 확장 준비 · 유동성리스크 확장 준비",
+    "asOf": "2026-06-10",
+    "generatedAt": "2026-06-10 15:23 KST",
+    "source": "Yahoo Finance and Naver Finance chart endpoints via scripts/update_market_risk.py"
+  },
+  "tabs": [
+    {
+      "id": "summary",
+      "label": "통합 Summary",
+      "enabled": true
+    },
+    {
+      "id": "market",
+      "label": "시장리스크",
+      "enabled": true
+    },
+    {
+      "id": "credit",
+      "label": "신용리스크",
+      "enabled": false
+    },
+    {
+      "id": "liquidity",
+      "label": "유동성리스크",
+      "enabled": false
+    }
+  ],
+  "sections": [
+    {
+      "id": "market",
+      "label": "시장리스크",
+      "status": "active",
+      "owner": "Risk Monitoring",
+      "description": "KOSPI/KOSDAQ, 원달러 환율, 글로벌 변동성·금리·크레딧, 외국인 보유비중, 거래량, 레버리지 ETF, AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다.",
+      "model": {
+        "aggregation": "weightedAverage",
+        "thresholds": [
+          {
+            "label": "정상",
+            "min": 0,
+            "max": 35,
+            "tone": "good"
+          },
+          {
+            "label": "관심",
+            "min": 35,
+            "max": 55,
+            "tone": "watch"
+          },
+          {
+            "label": "주의",
+            "min": 55,
+            "max": 75,
+            "tone": "caution"
+          },
+          {
+            "label": "경고",
+            "min": 75,
+            "max": 101,
+            "tone": "danger"
+          }
+        ],
+        "version": "market-risk-v2-yahoo-percentile-zscore",
+        "methodology": "각 시계열의 2년 히스토리에서 레벨, 20일 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 분위수 점수와 z-score 정규분포 변환 점수로 각각 0~100 표준화하고, 두 점수의 평균을 지표별 가중평균으로 합성합니다.",
+        "dataSources": [
+          "Yahoo Finance chart endpoint",
+          "Naver Finance chart endpoint",
+          "KOSPI/KOSDAQ price series",
+          "USD/KRW, VIX, US 10Y proxy",
+          "SOX, NVIDIA, TSMC ADR, Broadcom, AMD, Micron, ASML",
+          "Samsung Electronics, SK hynix, Hanmi Semiconductor, DB HiTek, Leeno Industrial",
+          "Naver foreign ownership ratio and trading volume",
+          "HYG/LQD credit proxy, EEM emerging market proxy"
+        ],
+        "references": [
+          {
+            "label": "Bank of Korea FSI/FVI composite index approach",
+            "url": "https://www.bok.or.kr/portal/bbs/B0000347/view.do?menuNo=201106&nttId=10077975&pageIndex=1"
+          },
+          {
+            "label": "Yahoo Finance chart endpoint",
+            "url": "https://query1.finance.yahoo.com/v8/finance/chart/%5EKS11?range=2y&interval=1d"
+          },
+          {
+            "label": "Naver Finance chart endpoint",
+            "url": "https://api.finance.naver.com/siseJson.naver?symbol=005930&requestType=1&timeframe=day"
+          }
+        ],
+        "normalization": {
+          "percentileWeight": 0.5,
+          "zScoreWeight": 0.5,
+          "zScoreMapping": "normalCDF",
+          "scoreRange": "0-100"
+        }
+      },
+      "indicators": [
+        {
+          "id": "kospi_price_stress",
+          "name": "KOSPI 가격 스트레스",
+          "category": "한국주식",
+          "value": 87.3,
+          "unit": "score",
+          "weight": 0.11,
+          "trend": "up",
+          "detail": "KOSPI 7,628.81, 20일 수익률 +1.74%, 20일 변동성 +61.25%, 고점대비 -13.32%",
+          "source": "Yahoo Finance chart: ^KS11"
+        },
+        {
+          "id": "kosdaq_growth_stress",
+          "name": "KOSDAQ 성장주 스트레스",
+          "category": "한국주식",
+          "value": 96.7,
+          "unit": "score",
+          "weight": 0.07,
+          "trend": "up",
+          "detail": "KOSDAQ 941.33, 20일 수익률 -22.06%, 20일 변동성 +53.04%",
+          "source": "Yahoo Finance chart: ^KQ11"
+        },
+        {
+          "id": "usdkrw_fx_pressure",
+          "name": "원/달러 환율 압력",
+          "category": "외환",
+          "value": 88.8,
+          "unit": "score",
+          "weight": 0.1,
+          "trend": "up",
+          "detail": "USD/KRW 1,523.98, 20일 변화율 +2.08%, 2년 분위 98.7",
+          "source": "Yahoo Finance chart: KRW=X"
+        },
+        {
+          "id": "global_volatility_pressure",
+          "name": "글로벌 변동성 압력",
+          "category": "변동성",
+          "value": 54.5,
+          "unit": "score",
+          "weight": 0.08,
+          "trend": "up",
+          "detail": "VIX 18.92, 20일 변화율 +2.94%, 2년 분위 60.4",
+          "source": "Yahoo Finance chart: ^VIX"
+        },
+        {
+          "id": "rates_pressure",
+          "name": "글로벌 금리 압력",
+          "category": "금리",
+          "value": 92.1,
+          "unit": "score",
+          "weight": 0.07,
+          "trend": "up",
+          "detail": "미 10년 금리 proxy 4.55, 20일 변화율 +4.31%, 2년 분위 93.2",
+          "source": "Yahoo Finance chart: ^TNX"
+        },
+        {
+          "id": "global_ai_semiconductor_stress",
+          "name": "글로벌 AI 반도체 스트레스",
+          "category": "AI 반도체",
+          "value": 74.1,
+          "unit": "score",
+          "weight": 0.12,
+          "trend": "down",
+          "detail": "7개 글로벌 AI 반도체 basket, SOX 12,906.69, SOX 20일 수익률 +9.61%, NVDA 점수 86.0, TSM 점수 69.1",
+          "source": "Yahoo Finance chart: ^SOX, NVDA, TSM, AVGO, AMD, MU, ASML"
+        },
+        {
+          "id": "korea_ai_semiconductor_concentration",
+          "name": "한국 AI 반도체 쏠림/스트레스",
+          "category": "AI 반도체",
+          "value": 70.3,
+          "unit": "score",
+          "weight": 0.12,
+          "trend": "flat",
+          "detail": "5개 한국 반도체 basket, 삼성전자 300,500.00, SK하이닉스 2,027,000.00, 반도체 60일 상대성과 +7.40%, 쏠림점수 24.7",
+          "source": "Yahoo Finance chart: 005930.KS, 000660.KS, 042700.KS, 000990.KS, 058470.KQ, ^KS11"
+        },
+        {
+          "id": "foreign_ownership_pressure",
+          "name": "외국인 보유비중 이탈 압력",
+          "category": "수급",
+          "value": 95.0,
+          "unit": "score",
+          "weight": 0.1,
+          "trend": "down",
+          "detail": "삼성전자·SK하이닉스·한미반도체 외국인소진율 20일 변화 기준, 최대 이탈폭 1.69%p",
+          "source": "Naver Finance chart: 005930, 000660, 042700"
+        },
+        {
+          "id": "trading_activity_heat",
+          "name": "거래량 과열/위축 압력",
+          "category": "유동성",
+          "value": 27.9,
+          "unit": "score",
+          "weight": 0.07,
+          "trend": "flat",
+          "detail": "주요 반도체·KODEX ETF 거래량의 60일 평균 대비 평균 괴리 -13.30%, 최대 괴리 -8.49%",
+          "source": "Naver Finance chart: 005930, 000660, 042700, 069500, 122630"
+        },
+        {
+          "id": "leveraged_etf_stress",
+          "name": "KOSPI 레버리지 ETF 스트레스",
+          "category": "파생/레버리지",
+          "value": 93.8,
+          "unit": "score",
+          "weight": 0.06,
+          "trend": "up",
+          "detail": "KODEX 레버리지 161,570.00, 20일 수익률 -5.37%, 20일 변동성 +147.76%",
+          "source": "Yahoo Finance chart: 122630.KS"
+        },
+        {
+          "id": "global_credit_proxy_stress",
+          "name": "글로벌 신용스프레드 proxy",
+          "category": "신용/크레딧",
+          "value": 13.8,
+          "unit": "score",
+          "weight": 0.05,
+          "trend": "down",
+          "detail": "HYG/LQD 상대가격 기준, 20일 수익률 +0.30%, 고점대비 -0.86%",
+          "source": "Yahoo Finance chart: HYG, LQD"
+        },
+        {
+          "id": "emerging_market_stress",
+          "name": "신흥국 위험선호 스트레스",
+          "category": "글로벌",
+          "value": 94.7,
+          "unit": "score",
+          "weight": 0.05,
+          "trend": "up",
+          "detail": "EEM 65.75, 20일 수익률 -3.22%, 고점대비 -7.13%",
+          "source": "Yahoo Finance chart: EEM"
+        }
+      ],
+      "actions": [
+        "scripts/update_market_risk.py를 일 단위로 실행해 data/risk-dashboard.json과 market-risk-snapshot.json을 갱신합니다.",
+        "점수 75 이상 또는 핵심 지표 2개 이상 경고 시 투자위원회 보고 대상을 자동 지정합니다.",
+        "운영 배포에서는 Yahoo/Naver proxy를 KRX, 한국은행 ECOS, 금융투자협회, 내부 포지션/외국인 수급 데이터로 교체할 수 있습니다."
+      ]
+    },
+    {
+      "id": "credit",
+      "label": "신용리스크",
+      "status": "planned",
+      "owner": "Credit Risk",
+      "description": "기업별 재무비율, 신용스프레드, 뉴스 이벤트를 연결할 예정입니다.",
+      "model": {
+        "aggregation": "weightedAverage",
+        "thresholds": [
+          {
+            "label": "정상",
+            "min": 0,
+            "max": 35,
+            "tone": "good"
+          },
+          {
+            "label": "관심",
+            "min": 35,
+            "max": 55,
+            "tone": "watch"
+          },
+          {
+            "label": "주의",
+            "min": 55,
+            "max": 75,
+            "tone": "caution"
+          },
+          {
+            "label": "경고",
+            "min": 75,
+            "max": 101,
+            "tone": "danger"
+          }
+        ]
+      },
+      "indicators": [],
+      "actions": [
+        "issuer_id, sector, leverage, interest_coverage, spread_change 필드를 우선 연결합니다.",
+        "기업별 이벤트 테이블은 별도 data/credit-events.json으로 분리할 수 있습니다."
+      ]
+    },
+    {
+      "id": "liquidity",
+      "label": "유동성리스크",
+      "status": "planned",
+      "owner": "Liquidity Risk",
+      "description": "펀딩 스프레드, 거래대금, 환매/담보 여력, 단기자금시장 지표를 추가할 예정입니다.",
+      "model": {
+        "aggregation": "weightedAverage",
+        "thresholds": [
+          {
+            "label": "정상",
+            "min": 0,
+            "max": 35,
+            "tone": "good"
+          },
+          {
+            "label": "관심",
+            "min": 35,
+            "max": 55,
+            "tone": "watch"
+          },
+          {
+            "label": "주의",
+            "min": 55,
+            "max": 75,
+            "tone": "caution"
+          },
+          {
+            "label": "경고",
+            "min": 75,
+            "max": 101,
+            "tone": "danger"
+          }
+        ]
+      },
+      "indicators": [],
+      "actions": [
+        "market_depth, bid_ask_spread, funding_gap, redemption_pressure 지표를 같은 구조로 추가합니다.",
+        "시장리스크와 별도 점수로 유지하되 Summary에서는 통합 최고 위험등급을 노출합니다."
+      ]
+    }
+  ]
+}
