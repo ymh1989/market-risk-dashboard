@@ -108,6 +108,69 @@ function createMetricCard({ label, value, meta, tone = "neutral" }) {
   `;
 }
 
+function renderBacktestPanel(backtest) {
+  if (!backtest?.byBucket) return "";
+
+  const bucketOrder = ["정상", "관심", "주의", "경고"];
+  const buckets = bucketOrder
+    .filter((bucket) => backtest.byBucket[bucket])
+    .map((bucket) => ({ name: bucket, ...backtest.byBucket[bucket] }));
+  const samples = backtest.recentSamples ?? [];
+
+  return `
+    <section class="backtest-panel">
+      <div class="backtest-panel__header">
+        <div>
+          <span class="eyebrow">Backtest</span>
+          <h2>향후 20거래일 KOSPI 최대낙폭 진단</h2>
+        </div>
+        <div class="backtest-panel__meta">
+          <strong>${backtest.sampleCount}</strong>
+          <span>samples</span>
+        </div>
+      </div>
+
+      <div class="backtest-grid">
+        ${buckets
+          .map(
+            (bucket) => `
+              <article class="backtest-card backtest-card--${bucket.name}">
+                <div>
+                  <span class="eyebrow">${bucket.count} samples</span>
+                  <h3>${bucket.name}</h3>
+                </div>
+                <strong>${Number(bucket.hitRateDrawdownOver5Pct).toFixed(1)}%</strong>
+                <div class="mini-bar" aria-hidden="true">
+                  <span style="width:${clampScore(bucket.hitRateDrawdownOver5Pct)}%"></span>
+                </div>
+                <footer>
+                  <span>평균 ${Number(bucket.avgForwardMaxDrawdownPct).toFixed(2)}%</span>
+                  <span>최악 ${Number(bucket.worstForwardMaxDrawdownPct).toFixed(2)}%</span>
+                </footer>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+
+      <div class="backtest-strip" aria-label="최근 백테스트 샘플">
+        ${samples
+          .map((sample) => {
+            const drawdown = Math.abs(Math.min(0, Number(sample.forwardMaxDrawdownPct)));
+            return `
+              <span
+                class="backtest-dot backtest-dot--${sample.bucket}"
+                style="height:${Math.max(8, Math.min(52, drawdown * 3.2))}px"
+                title="${sample.date} · ${sample.bucket} · ${Number(sample.forwardMaxDrawdownPct).toFixed(2)}%"
+              ></span>
+            `;
+          })
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderGauge(score, level, thresholds) {
   const safeScore = clampScore(score);
   return `
@@ -159,7 +222,7 @@ function renderIndicator(indicator, thresholds, timeseries) {
   `;
 }
 
-function renderSummary(data) {
+function renderSummary(data, backtest) {
   const market = data.sections.find((section) => section.id === "market");
   const plannedLabels = data.sections
     .filter((section) => section.status !== "active")
@@ -205,6 +268,8 @@ function renderSummary(data) {
         ${market.topIndicators.map((indicator) => indicator.name).join(", ")}입니다.
       </p>
     </section>
+
+    ${renderBacktestPanel(backtest)}
   `;
 }
 
@@ -265,7 +330,7 @@ function renderGroupScores(section) {
   `;
 }
 
-function renderSection(section, timeseries) {
+function renderSection(section, timeseries, backtest) {
   const isPlanned = section.status !== "active";
   const sortedIndicators = [...(section.indicators ?? [])].sort((a, b) => clampScore(b.value) - clampScore(a.value));
 
@@ -292,6 +357,7 @@ function renderSection(section, timeseries) {
           : `
             ${renderModelPanel(section)}
             ${renderGroupScores(section)}
+            ${renderBacktestPanel(section.id === "market" ? backtest : null)}
             ${renderGauge(section.score, section.level, section.model.thresholds)}
             <div class="indicator-grid">
               ${sortedIndicators
@@ -311,7 +377,7 @@ function renderSection(section, timeseries) {
   `;
 }
 
-function renderDashboard(rawData, timeseries) {
+function renderDashboard(rawData, timeseries, backtest) {
   const data = evaluateDashboard(rawData);
   const enabledTabs = data.tabs.filter((tab) => tab.enabled);
 
@@ -350,9 +416,9 @@ function renderDashboard(rawData, timeseries) {
 
     <div class="panel-stack">
       <section class="tab-panel is-active" data-panel="summary">
-        ${renderSummary(data)}
+        ${renderSummary(data, backtest)}
       </section>
-      ${data.sections.map((section) => renderSection(section, timeseries)).join("")}
+      ${data.sections.map((section) => renderSection(section, timeseries, backtest)).join("")}
     </div>
   `;
 
@@ -380,9 +446,12 @@ Promise.all([
   }),
   fetch("./data/market-risk-timeseries.json")
     .then((response) => (response.ok ? response.json() : null))
+    .catch(() => null),
+  fetch("./data/market-risk-backtest.json")
+    .then((response) => (response.ok ? response.json() : null))
     .catch(() => null)
 ])
-  .then(([dashboard, timeseries]) => renderDashboard(dashboard, timeseries))
+  .then(([dashboard, timeseries, backtest]) => renderDashboard(dashboard, timeseries, backtest))
   .catch((error) => {
     app.innerHTML = `
       <div class="loading-panel loading-panel--error">

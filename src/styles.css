@@ -224,6 +224,7 @@ select {
 .metric-card,
 .indicator-card,
 .narrative-band,
+.backtest-panel,
 .risk-section,
 .action-panel,
 .empty-state {
@@ -274,6 +275,123 @@ select {
   margin-top: 16px;
   padding: 28px;
   background: var(--surface-raised);
+}
+
+.backtest-panel {
+  display: grid;
+  gap: 18px;
+  margin-top: 16px;
+  padding: 24px;
+  background: var(--surface);
+}
+
+.backtest-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.backtest-panel__header h2 {
+  margin: 6px 0 0;
+  font-size: 1.35rem;
+}
+
+.backtest-panel__meta {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.backtest-panel__meta strong {
+  color: var(--ink);
+  font-size: 1.7rem;
+}
+
+.backtest-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.backtest-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 16px;
+}
+
+.backtest-card h3 {
+  margin: 5px 0 0;
+}
+
+.backtest-card > strong {
+  font-size: 1.7rem;
+}
+
+.backtest-card footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.backtest-card--경고 {
+  border-top: 4px solid var(--red);
+}
+
+.backtest-card--주의 {
+  border-top: 4px solid var(--amber);
+}
+
+.backtest-card--관심 {
+  border-top: 4px solid var(--blue);
+}
+
+.backtest-card--정상 {
+  border-top: 4px solid var(--green);
+}
+
+.backtest-strip {
+  display: flex;
+  align-items: end;
+  gap: 7px;
+  min-height: 66px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 12px;
+}
+
+.backtest-dot {
+  flex: 1 1 0;
+  min-width: 7px;
+  border-radius: 999px 999px 3px 3px;
+  background: var(--blue);
+}
+
+.backtest-dot--경고 {
+  background: var(--red);
+}
+
+.backtest-dot--주의 {
+  background: var(--amber);
+}
+
+.backtest-dot--관심 {
+  background: var(--blue);
+}
+
+.backtest-dot--정상 {
+  background: var(--green);
 }
 
 .narrative-band h2,
@@ -645,6 +763,7 @@ select {
   }
 
   .summary-grid,
+  .backtest-grid,
   .group-panel,
   .indicator-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -686,6 +805,7 @@ select {
   }
 
   .summary-grid,
+  .backtest-grid,
   .group-panel,
   .indicator-grid {
     grid-template-columns: 1fr;
@@ -697,5 +817,14 @@ select {
 
   .indicator-card footer {
     display: grid;
+  }
+
+  .backtest-panel__header,
+  .backtest-card footer {
+    display: grid;
+  }
+
+  .backtest-panel__meta {
+    justify-items: start;
   }
 }
