@@ -3,7 +3,7 @@
     "title": "통합 리스크 모니터링 대시보드",
     "subtitle": "시장 조기경보 · 신용리스크 확장 준비 · 유동성리스크 확장 준비",
     "asOf": "2026-06-11",
-    "generatedAt": "2026-06-11 09:36 KST",
+    "generatedAt": "2026-06-11 10:07 KST",
     "source": "Yahoo Finance and Naver Finance chart endpoints via scripts/update_market_risk.py"
   },
   "tabs": [
@@ -63,8 +63,8 @@
             "tone": "danger"
           }
         ],
-        "version": "market-risk-v2-yahoo-percentile-zscore",
-        "methodology": "각 시계열의 2년 히스토리에서 레벨, 20일 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 분위수 점수와 z-score 정규분포 변환 점수로 각각 0~100 표준화하고, 두 점수의 평균을 지표별 가중평균으로 합성합니다.",
+        "version": "market-risk-v3-grouped-robust-zscore",
+        "methodology": "각 시계열의 2년 히스토리에서 레벨, 20일 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 분위수 점수, z-score 정규분포 변환 점수, median/MAD 기반 robust z-score 변환 점수로 각각 0~100 표준화하고, 하위 리스크 그룹별 기여도를 함께 산출합니다.",
         "dataSources": [
           "Yahoo Finance chart endpoint",
           "Naver Finance chart endpoint",
@@ -90,10 +90,38 @@
           }
         ],
         "normalization": {
-          "percentileWeight": 0.5,
-          "zScoreWeight": 0.5,
+          "percentileWeight": 0.4,
+          "zScoreWeight": 0.3,
+          "robustZScoreWeight": 0.3,
           "zScoreMapping": "normalCDF",
+          "robustZScore": "median/MAD",
           "scoreRange": "0-100"
+        },
+        "riskGroups": {
+          "crash": {
+            "label": "Crash Stress",
+            "weight": 0.18
+          },
+          "overheating": {
+            "label": "Overheating",
+            "weight": 0.11
+          },
+          "liquidity": {
+            "label": "Liquidity",
+            "weight": 0.07
+          },
+          "flow": {
+            "label": "Flow",
+            "weight": 0.1
+          },
+          "macro": {
+            "label": "Macro",
+            "weight": 0.3
+          },
+          "ai_semi": {
+            "label": "AI Semi",
+            "weight": 0.24
+          }
         }
       },
       "indicators": [
@@ -101,139 +129,225 @@
           "id": "kospi_price_stress",
           "name": "KOSPI 가격 스트레스",
           "category": "한국주식",
-          "value": 97.0,
+          "group": "crash",
+          "value": 93.8,
           "unit": "score",
           "weight": 0.11,
           "trend": "up",
-          "detail": "KOSPI 7,493.55, 20일 수익률 -4.20%, 20일 변동성 +70.82%, 고점대비 -14.86%",
-          "source": "Yahoo Finance chart: ^KS11"
+          "detail": "KOSPI 7,505.06, 20일 수익률 -4.05%, 20일 변동성 +70.64%, 고점대비 -14.73%",
+          "source": "Yahoo Finance chart: ^KS11",
+          "contribution": 10.32,
+          "contributionPct": 11.0
         },
         {
           "id": "kosdaq_growth_stress",
           "name": "KOSDAQ 성장주 스트레스",
           "category": "한국주식",
-          "value": 97.3,
+          "group": "crash",
+          "value": 94.2,
           "unit": "score",
           "weight": 0.07,
           "trend": "up",
-          "detail": "KOSDAQ 928.19, 20일 수익률 -23.12%, 20일 변동성 +57.76%",
-          "source": "Yahoo Finance chart: ^KQ11"
+          "detail": "KOSDAQ 950.62, 20일 수익률 -21.26%, 20일 변동성 +56.87%",
+          "source": "Yahoo Finance chart: ^KQ11",
+          "contribution": 6.59,
+          "contributionPct": 7.0
         },
         {
           "id": "usdkrw_fx_pressure",
           "name": "원/달러 환율 압력",
           "category": "외환",
-          "value": 90.9,
+          "group": "macro",
+          "value": 92.3,
           "unit": "score",
           "weight": 0.1,
           "trend": "up",
-          "detail": "USD/KRW 1,524.48, 20일 변화율 +2.33%, 2년 분위 98.6",
-          "source": "Yahoo Finance chart: KRW=X"
+          "detail": "USD/KRW 1,525.68, 20일 변화율 +2.41%, 2년 분위 97.5",
+          "source": "Yahoo Finance chart: KRW=X",
+          "contribution": 9.23,
+          "contributionPct": 10.0
         },
         {
           "id": "global_volatility_pressure",
           "name": "글로벌 변동성 압력",
           "category": "변동성",
-          "value": 84.3,
+          "group": "macro",
+          "value": 81.7,
           "unit": "score",
           "weight": 0.08,
           "trend": "up",
-          "detail": "VIX 22.22, 20일 변화율 +24.34%, 2년 분위 81.7",
-          "source": "Yahoo Finance chart: ^VIX"
+          "detail": "VIX 22.22, 20일 변화율 +24.34%, 2년 분위 86.3",
+          "source": "Yahoo Finance chart: ^VIX",
+          "contribution": 6.54,
+          "contributionPct": 8.0
         },
         {
           "id": "rates_pressure",
           "name": "글로벌 금리 압력",
           "category": "금리",
-          "value": 78.6,
+          "group": "macro",
+          "value": 84.1,
           "unit": "score",
           "weight": 0.07,
           "trend": "down",
-          "detail": "미 10년 금리 proxy 4.54, 20일 변화율 +1.77%, 2년 분위 92.3",
-          "source": "Yahoo Finance chart: ^TNX"
+          "detail": "미 10년 금리 proxy 4.54, 20일 변화율 +1.77%, 2년 분위 92.4",
+          "source": "Yahoo Finance chart: ^TNX",
+          "contribution": 5.89,
+          "contributionPct": 7.0
         },
         {
           "id": "global_ai_semiconductor_stress",
           "name": "글로벌 AI 반도체 스트레스",
           "category": "AI 반도체",
-          "value": 81.9,
+          "group": "ai_semi",
+          "value": 81.3,
           "unit": "score",
           "weight": 0.12,
           "trend": "down",
-          "detail": "7개 글로벌 AI 반도체 basket, SOX 12,206.46, SOX 20일 수익률 +4.18%, NVDA 점수 96.8, TSM 점수 81.6",
-          "source": "Yahoo Finance chart: ^SOX, NVDA, TSM, AVGO, AMD, MU, ASML"
+          "detail": "7개 글로벌 AI 반도체 basket, SOX 12,206.46, SOX 20일 수익률 +4.18%, NVDA 점수 92.6, TSM 점수 82.6",
+          "source": "Yahoo Finance chart: ^SOX, NVDA, TSM, AVGO, AMD, MU, ASML",
+          "contribution": 9.76,
+          "contributionPct": 12.0
         },
         {
           "id": "korea_ai_semiconductor_concentration",
           "name": "한국 AI 반도체 쏠림/스트레스",
           "category": "AI 반도체",
-          "value": 74.0,
+          "group": "ai_semi",
+          "value": 73.2,
           "unit": "score",
           "weight": 0.12,
           "trend": "flat",
-          "detail": "5개 한국 반도체 basket, 삼성전자 293,500.00, SK하이닉스 2,018,000.00, 반도체 60일 상대성과 +11.20%, 쏠림점수 37.3",
-          "source": "Yahoo Finance chart: 005930.KS, 000660.KS, 042700.KS, 000990.KS, 058470.KQ, ^KS11"
+          "detail": "5개 한국 반도체 basket, 삼성전자 292,250.00, SK하이닉스 2,027,000.00, 반도체 60일 상대성과 +11.96%, 쏠림점수 39.9",
+          "source": "Yahoo Finance chart: 005930.KS, 000660.KS, 042700.KS, 000990.KS, 058470.KQ, ^KS11",
+          "contribution": 8.78,
+          "contributionPct": 12.0
         },
         {
           "id": "foreign_ownership_pressure",
           "name": "외국인 보유비중 이탈 압력",
           "category": "수급",
-          "value": 94.4,
+          "group": "flow",
+          "value": 95.8,
           "unit": "score",
           "weight": 0.1,
           "trend": "down",
           "detail": "삼성전자·SK하이닉스·한미반도체 외국인소진율 20일 변화 기준, 최대 이탈폭 1.46%p",
-          "source": "Naver Finance chart: 005930, 000660, 042700"
+          "source": "Naver Finance chart: 005930, 000660, 042700",
+          "contribution": 9.58,
+          "contributionPct": 10.0
         },
         {
           "id": "trading_activity_heat",
           "name": "거래량 과열/위축 압력",
           "category": "유동성",
-          "value": 92.3,
+          "group": "liquidity",
+          "value": 91.0,
           "unit": "score",
           "weight": 0.07,
-          "trend": "down",
-          "detail": "주요 반도체·KODEX ETF 거래량의 60일 평균 대비 평균 괴리 -82.79%, 최대 괴리 -75.64%",
-          "source": "Naver Finance chart: 005930, 000660, 042700, 069500, 122630"
+          "trend": "flat",
+          "detail": "주요 반도체·KODEX ETF 거래량의 60일 평균 대비 평균 괴리 -72.37%, 최대 괴리 -61.23%",
+          "source": "Naver Finance chart: 005930, 000660, 042700, 069500, 122630",
+          "contribution": 6.37,
+          "contributionPct": 7.0
         },
         {
           "id": "leveraged_etf_stress",
           "name": "KOSPI 레버리지 ETF 스트레스",
           "category": "파생/레버리지",
-          "value": 92.6,
+          "group": "overheating",
+          "value": 91.0,
           "unit": "score",
           "weight": 0.06,
           "trend": "up",
-          "detail": "KODEX 레버리지 155,625.00, 20일 수익률 -3.73%, 20일 변동성 +145.58%",
-          "source": "Yahoo Finance chart: 122630.KS"
+          "detail": "KODEX 레버리지 155,950.00, 20일 수익률 -3.53%, 20일 변동성 +145.47%",
+          "source": "Yahoo Finance chart: 122630.KS",
+          "contribution": 5.46,
+          "contributionPct": 6.0
         },
         {
           "id": "global_credit_proxy_stress",
           "name": "글로벌 신용스프레드 proxy",
           "category": "신용/크레딧",
-          "value": 17.2,
+          "group": "macro",
+          "value": 18.6,
           "unit": "score",
           "weight": 0.05,
           "trend": "down",
           "detail": "HYG/LQD 상대가격 기준, 20일 수익률 -0.13%, 고점대비 -1.04%",
-          "source": "Yahoo Finance chart: HYG, LQD"
+          "source": "Yahoo Finance chart: HYG, LQD",
+          "contribution": 0.93,
+          "contributionPct": 5.0
         },
         {
           "id": "emerging_market_stress",
           "name": "신흥국 위험선호 스트레스",
           "category": "글로벌",
-          "value": 91.8,
+          "group": "overheating",
+          "value": 90.6,
           "unit": "score",
           "weight": 0.05,
           "trend": "up",
           "detail": "EEM 64.66, 20일 수익률 -1.76%, 고점대비 -8.67%",
-          "source": "Yahoo Finance chart: EEM"
+          "source": "Yahoo Finance chart: EEM",
+          "contribution": 4.53,
+          "contributionPct": 5.0
         }
       ],
       "actions": [
         "scripts/update_market_risk.py를 일 단위로 실행해 data/risk-dashboard.json과 market-risk-snapshot.json을 갱신합니다.",
         "점수 75 이상 또는 핵심 지표 2개 이상 경고 시 투자위원회 보고 대상을 자동 지정합니다.",
         "운영 배포에서는 Yahoo/Naver proxy를 KRX, 한국은행 ECOS, 금융투자협회, 내부 포지션/외국인 수급 데이터로 교체할 수 있습니다."
+      ],
+      "groupScores": [
+        {
+          "id": "macro",
+          "label": "Macro",
+          "score": 75.3,
+          "weight": 0.3,
+          "contribution": 22.59,
+          "indicatorCount": 4
+        },
+        {
+          "id": "ai_semi",
+          "label": "AI Semi",
+          "score": 77.2,
+          "weight": 0.24,
+          "contribution": 18.54,
+          "indicatorCount": 2
+        },
+        {
+          "id": "crash",
+          "label": "Crash Stress",
+          "score": 94.0,
+          "weight": 0.18,
+          "contribution": 16.91,
+          "indicatorCount": 2
+        },
+        {
+          "id": "overheating",
+          "label": "Overheating",
+          "score": 90.8,
+          "weight": 0.11,
+          "contribution": 9.99,
+          "indicatorCount": 2
+        },
+        {
+          "id": "flow",
+          "label": "Flow",
+          "score": 95.8,
+          "weight": 0.1,
+          "contribution": 9.58,
+          "indicatorCount": 1
+        },
+        {
+          "id": "liquidity",
+          "label": "Liquidity",
+          "score": 91.0,
+          "weight": 0.07,
+          "contribution": 6.37,
+          "indicatorCount": 1
+        }
       ]
     },
     {

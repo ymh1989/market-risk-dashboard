@@ -142,6 +142,10 @@ function renderIndicator(indicator, thresholds, timeseries) {
         <strong>${formatScore(indicator.value)}</strong>
         <span class="status-pill status-pill--${tone}">${level?.label ?? "N/A"}</span>
       </div>
+      <div class="contribution-line">
+        <span>${indicator.group ?? "risk"}</span>
+        <strong>기여도 +${Number(indicator.contribution ?? 0).toFixed(2)}점</strong>
+      </div>
       <div class="mini-bar" aria-hidden="true">
         <span style="width:${clampScore(indicator.value)}%"></span>
       </div>
@@ -218,8 +222,8 @@ function renderModelPanel(section) {
       </article>
       <article>
         <span class="eyebrow">Normalization</span>
-        <h3>${normalization ? `${normalization.percentileWeight * 100}% 분위수 · ${normalization.zScoreWeight * 100}% z-score` : "Weighted score"}</h3>
-        <p>${normalization ? `z-score는 ${normalization.zScoreMapping} 방식으로 ${normalization.scoreRange} 점수에 매핑합니다.` : "섹션 모델 설정을 사용합니다."}</p>
+        <h3>${normalization ? `${normalization.percentileWeight * 100}% 분위수 · ${normalization.zScoreWeight * 100}% z · ${normalization.robustZScoreWeight * 100}% robust z` : "Weighted score"}</h3>
+        <p>${normalization ? `z-score는 ${normalization.zScoreMapping}, robust z-score는 ${normalization.robustZScore} 방식으로 ${normalization.scoreRange} 점수에 매핑합니다.` : "섹션 모델 설정을 사용합니다."}</p>
       </article>
       <article>
         <span class="eyebrow">Data</span>
@@ -227,6 +231,36 @@ function renderModelPanel(section) {
           ${sources.slice(0, 6).map((source) => `<span>${source}</span>`).join("")}
         </div>
       </article>
+    </section>
+  `;
+}
+
+function renderGroupScores(section) {
+  const groups = section.groupScores ?? [];
+  if (!groups.length) return "";
+
+  return `
+    <section class="group-panel">
+      ${groups
+        .map(
+          (group) => `
+            <article class="group-card">
+              <div>
+                <span class="eyebrow">${group.indicatorCount} indicators</span>
+                <h3>${group.label}</h3>
+              </div>
+              <strong>${formatScore(group.score)}</strong>
+              <div class="mini-bar" aria-hidden="true">
+                <span style="width:${clampScore(group.score)}%"></span>
+              </div>
+              <footer>
+                <span>비중 ${(group.weight * 100).toFixed(1)}%</span>
+                <span>기여도 +${Number(group.contribution).toFixed(2)}점</span>
+              </footer>
+            </article>
+          `
+        )
+        .join("")}
     </section>
   `;
 }
@@ -257,6 +291,7 @@ function renderSection(section, timeseries) {
             </div>`
           : `
             ${renderModelPanel(section)}
+            ${renderGroupScores(section)}
             ${renderGauge(section.score, section.level, section.model.thresholds)}
             <div class="indicator-grid">
               ${sortedIndicators

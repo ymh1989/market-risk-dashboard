@@ -51,6 +51,15 @@ NAVER_SYMBOLS = {
     "kodex_leverage": {"symbol": "122630", "label": "KODEX Leverage"},
 }
 
+RISK_GROUPS = {
+    "crash": {"label": "Crash Stress", "weight": 0.18},
+    "overheating": {"label": "Overheating", "weight": 0.11},
+    "liquidity": {"label": "Liquidity", "weight": 0.07},
+    "flow": {"label": "Flow", "weight": 0.1},
+    "macro": {"label": "Macro", "weight": 0.3},
+    "ai_semi": {"label": "AI Semi", "weight": 0.24},
+}
+
 
 def clamp(value, low=0.0, high=100.0):
     return max(low, min(high, value))
@@ -174,6 +183,19 @@ def z_score(sample, value):
     return (value - mean) / stdev
 
 
+def robust_z_score(sample, value):
+    clean = sorted(item for item in sample if item is not None and math.isfinite(item))
+    if len(clean) < 3:
+        return 0.0
+
+    median = statistics.median(clean)
+    absolute_deviations = [abs(item - median) for item in clean]
+    mad = statistics.median(absolute_deviations)
+    if mad == 0:
+        return 0.0
+    return 0.6745 * (value - median) / mad
+
+
 def z_score_to_percentile(z_value):
     return clamp(50 * (1 + math.erf(z_value / math.sqrt(2))))
 
@@ -181,7 +203,8 @@ def z_score_to_percentile(z_value):
 def hybrid_standard_score(sample, value):
     percentile_score = percentile_rank(sample, value)
     z_percentile_score = z_score_to_percentile(z_score(sample, value))
-    return round_score((percentile_score + z_percentile_score) / 2)
+    robust_z_percentile_score = z_score_to_percentile(robust_z_score(sample, value))
+    return round_score(percentile_score * 0.4 + z_percentile_score * 0.3 + robust_z_percentile_score * 0.3)
 
 
 def rolling_drawdowns(values, window=252):
@@ -676,6 +699,44 @@ def fmt_pct(value):
     return f"{sign}{value:.2f}%"
 
 
+def enrich_indicators(indicators):
+    total_weight = sum(indicator["weight"] for indicator in indicators)
+    if total_weight <= 0:
+        return indicators, []
+
+    enriched = []
+    for indicator in indicators:
+        contribution = indicator["value"] * indicator["weight"] / total_weight
+        enriched.append(
+            {
+                **indicator,
+                "contribution": round(contribution, 2),
+                "contributionPct": round(indicator["weight"] / total_weight * 100, 1),
+            }
+        )
+
+    group_scores = []
+    for group_id, config in RISK_GROUPS.items():
+        members = [indicator for indicator in enriched if indicator["group"] == group_id]
+        if not members:
+            continue
+        group_weight = sum(indicator["weight"] for indicator in members)
+        group_score = sum(indicator["value"] * indicator["weight"] for indicator in members) / group_weight
+        group_contribution = sum(indicator["contribution"] for indicator in members)
+        group_scores.append(
+            {
+                "id": group_id,
+                "label": config["label"],
+                "score": round_score(group_score),
+                "weight": round(group_weight / total_weight, 3),
+                "contribution": round(group_contribution, 2),
+                "indicatorCount": len(members),
+            }
+        )
+
+    return enriched, sorted(group_scores, key=lambda group: group["contribution"], reverse=True)
+
+
 def build_indicators(series_map, naver_map):
     kospi = equity_stress_score(series_map["kospi"])
     kosdaq = equity_stress_score(series_map["kosdaq"])
@@ -698,6 +759,7 @@ def build_indicators(series_map, naver_map):
             "id": "kospi_price_stress",
             "name": "KOSPI 가격 스트레스",
             "category": "한국주식",
+            "group": "crash",
             "value": kospi["score"],
             "unit": "score",
             "weight": 0.11,
@@ -712,6 +774,7 @@ def build_indicators(series_map, naver_map):
             "id": "kosdaq_growth_stress",
             "name": "KOSDAQ 성장주 스트레스",
             "category": "한국주식",
+            "group": "crash",
             "value": kosdaq["score"],
             "unit": "score",
             "weight": 0.07,
@@ -726,6 +789,7 @@ def build_indicators(series_map, naver_map):
             "id": "usdkrw_fx_pressure",
             "name": "원/달러 환율 압력",
             "category": "외환",
+            "group": "macro",
             "value": usdkrw["score"],
             "unit": "score",
             "weight": 0.1,
@@ -740,6 +804,7 @@ def build_indicators(series_map, naver_map):
             "id": "global_volatility_pressure",
             "name": "글로벌 변동성 압력",
             "category": "변동성",
+            "group": "macro",
             "value": vix["score"],
             "unit": "score",
             "weight": 0.08,
@@ -754,6 +819,7 @@ def build_indicators(series_map, naver_map):
             "id": "rates_pressure",
             "name": "글로벌 금리 압력",
             "category": "금리",
+            "group": "macro",
             "value": us10y["score"],
             "unit": "score",
             "weight": 0.07,
@@ -768,6 +834,7 @@ def build_indicators(series_map, naver_map):
             "id": "global_ai_semiconductor_stress",
             "name": "글로벌 AI 반도체 스트레스",
             "category": "AI 반도체",
+            "group": "ai_semi",
             "value": global_ai["score"],
             "unit": "score",
             "weight": 0.12,
@@ -783,6 +850,7 @@ def build_indicators(series_map, naver_map):
             "id": "korea_ai_semiconductor_concentration",
             "name": "한국 AI 반도체 쏠림/스트레스",
             "category": "AI 반도체",
+            "group": "ai_semi",
             "value": korea_ai["score"],
             "unit": "score",
             "weight": 0.12,
@@ -799,6 +867,7 @@ def build_indicators(series_map, naver_map):
             "id": "foreign_ownership_pressure",
             "name": "외국인 보유비중 이탈 압력",
             "category": "수급",
+            "group": "flow",
             "value": foreign_ownership["score"],
             "unit": "score",
             "weight": 0.1,
@@ -813,6 +882,7 @@ def build_indicators(series_map, naver_map):
             "id": "trading_activity_heat",
             "name": "거래량 과열/위축 압력",
             "category": "유동성",
+            "group": "liquidity",
             "value": trading_activity["score"],
             "unit": "score",
             "weight": 0.07,
@@ -828,6 +898,7 @@ def build_indicators(series_map, naver_map):
             "id": "leveraged_etf_stress",
             "name": "KOSPI 레버리지 ETF 스트레스",
             "category": "파생/레버리지",
+            "group": "overheating",
             "value": leveraged_etf["score"],
             "unit": "score",
             "weight": 0.06,
@@ -843,6 +914,7 @@ def build_indicators(series_map, naver_map):
             "id": "global_credit_proxy_stress",
             "name": "글로벌 신용스프레드 proxy",
             "category": "신용/크레딧",
+            "group": "macro",
             "value": global_credit["score"],
             "unit": "score",
             "weight": 0.05,
@@ -857,6 +929,7 @@ def build_indicators(series_map, naver_map):
             "id": "emerging_market_stress",
             "name": "신흥국 위험선호 스트레스",
             "category": "글로벌",
+            "group": "overheating",
             "value": emerging_market["score"],
             "unit": "score",
             "weight": 0.05,
@@ -875,6 +948,7 @@ def update_dashboard(series_map, indicators):
     dashboard = json.loads(DASHBOARD_FILE.read_text(encoding="utf-8"))
     generated_at = datetime.now(KST).strftime("%Y-%m-%d %H:%M KST")
     as_of = max(point["date"] for series in series_map.values() for point in series[-1:])
+    enriched_indicators, group_scores = enrich_indicators(indicators)
 
     dashboard["metadata"]["asOf"] = as_of
     dashboard["metadata"]["generatedAt"] = generated_at
@@ -885,18 +959,21 @@ def update_dashboard(series_map, indicators):
         "KOSPI/KOSDAQ, 원달러 환율, 글로벌 변동성·금리·크레딧, 외국인 보유비중, 거래량, "
         "레버리지 ETF, AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다."
     )
-    market["model"]["version"] = "market-risk-v2-yahoo-percentile-zscore"
+    market["model"]["version"] = "market-risk-v3-grouped-robust-zscore"
     market["model"]["methodology"] = (
         "각 시계열의 2년 히스토리에서 레벨, 20일 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 "
-        "분위수 점수와 z-score 정규분포 변환 점수로 각각 0~100 표준화하고, 두 점수의 평균을 "
-        "지표별 가중평균으로 합성합니다."
+        "분위수 점수, z-score 정규분포 변환 점수, median/MAD 기반 robust z-score 변환 점수로 "
+        "각각 0~100 표준화하고, 하위 리스크 그룹별 기여도를 함께 산출합니다."
     )
     market["model"]["normalization"] = {
-        "percentileWeight": 0.5,
-        "zScoreWeight": 0.5,
+        "percentileWeight": 0.4,
+        "zScoreWeight": 0.3,
+        "robustZScoreWeight": 0.3,
         "zScoreMapping": "normalCDF",
+        "robustZScore": "median/MAD",
         "scoreRange": "0-100",
     }
+    market["model"]["riskGroups"] = RISK_GROUPS
     market["model"]["dataSources"] = [
         "Yahoo Finance chart endpoint",
         "Naver Finance chart endpoint",
@@ -921,7 +998,8 @@ def update_dashboard(series_map, indicators):
             "url": "https://api.finance.naver.com/siseJson.naver?symbol=005930&requestType=1&timeframe=day",
         },
     ]
-    market["indicators"] = indicators
+    market["groupScores"] = group_scores
+    market["indicators"] = enriched_indicators
     market["actions"] = [
         "scripts/update_market_risk.py를 일 단위로 실행해 data/risk-dashboard.json과 market-risk-snapshot.json을 갱신합니다.",
         "점수 75 이상 또는 핵심 지표 2개 이상 경고 시 투자위원회 보고 대상을 자동 지정합니다.",
@@ -932,6 +1010,7 @@ def update_dashboard(series_map, indicators):
 
 
 def write_snapshot(series_map, naver_map, indicators):
+    enriched_indicators, group_scores = enrich_indicators(indicators)
     snapshot = {
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
         "source": "Yahoo Finance and Naver Finance chart endpoints",
@@ -957,7 +1036,8 @@ def write_snapshot(series_map, naver_map, indicators):
             }
             for key, config in NAVER_SYMBOLS.items()
         },
-        "indicators": indicators,
+        "groupScores": group_scores,
+        "indicators": enriched_indicators,
     }
     SNAPSHOT_FILE.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 

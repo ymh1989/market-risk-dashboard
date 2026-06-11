@@ -28,6 +28,7 @@ make test
 
 ```bash
 make update-market-risk
+make backtest-market-risk
 ```
 
 이 명령은 Yahoo Finance와 Naver Finance chart 엔드포인트에서 2년 일별 데이터를 받아와 `data/risk-dashboard.json`의 시장리스크 지표와 `data/market-risk-snapshot.json` 감사용 스냅샷을 갱신합니다. 현재 모델은 한국 시장지표, 수급/거래량, 글로벌 크레딧/위험선호, AI 반도체 모니터링 지표를 함께 사용합니다.
@@ -38,7 +39,9 @@ make update-market-risk
 - AI 반도체: SOX, NVIDIA, TSMC ADR, Broadcom, AMD, Micron, ASML, 삼성전자, SK하이닉스, 한미반도체, DB하이텍, 리노공업
 - 글로벌 proxy: HYG/LQD 신용스프레드 proxy, EEM 신흥국 위험선호 proxy
 
-점수는 2년 히스토리 기준의 레벨, 20일 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 두 방식으로 표준화한 뒤 가중평균합니다. 첫째는 과거 분포 내 분위수 순위이고, 둘째는 `z = (현재값 - 평균) / 표준편차`를 정규분포 CDF로 0~100 변환한 값입니다. 현재 모델은 두 표준화 점수를 50:50으로 섞습니다. 운영 환경에서는 동일한 스크립트 구조에서 Yahoo/Naver provider를 KRX, 한국은행 ECOS, 금융투자협회, 내부 외국인 수급/포지션 데이터 provider로 교체하면 됩니다.
+점수는 2년 히스토리 기준의 레벨, 20일 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 세 방식으로 표준화한 뒤 가중평균합니다. 첫째는 과거 분포 내 분위수 순위, 둘째는 `z = (현재값 - 평균) / 표준편차`를 정규분포 CDF로 0~100 변환한 값, 셋째는 median/MAD 기반 robust z-score 변환값입니다. 현재 모델은 분위수 40%, z-score 30%, robust z-score 30%로 섞습니다. 운영 환경에서는 동일한 스크립트 구조에서 Yahoo/Naver provider를 KRX, 한국은행 ECOS, 금융투자협회, 내부 외국인 수급/포지션 데이터 provider로 교체하면 됩니다.
+
+지표는 Crash Stress, Overheating, Liquidity, Flow, Macro, AI Semi 하위 리스크 그룹으로 나뉘며, 각 지표와 그룹의 최종 점수 기여도를 함께 저장합니다. `make backtest-market-risk`는 최근 점수 시계열을 KOSPI 향후 20거래일 최대낙폭과 비교해 간단한 진단 결과를 `data/market-risk-backtest.json`에 저장합니다.
 
 갱신 시 `data/market-risk-timeseries.json`도 함께 생성됩니다. 이 파일은 각 시장리스크 지표의 최근 120개 관측치 기준 0~100 점수 흐름을 담고, 홈페이지의 지표 카드 안에서 작은 시계열 차트로 표시됩니다.
 
@@ -85,6 +88,7 @@ make install-news-digest
 - `data/risk-dashboard.json`: 기준일, 탭, 리스크 섹션, 지표, 운영 기준을 관리합니다.
 - `data/market-risk-snapshot.json`: 외부 데이터 갱신 시점의 원천 티커와 산출 지표 스냅샷입니다.
 - `data/market-risk-timeseries.json`: 지표별 최근 점수 시계열입니다.
+- `data/market-risk-backtest.json`: 최근 점수 구간별 KOSPI 향후 최대낙폭 진단 결과입니다.
 - `src/risk-model.js`: 점수 계산과 등급 판정 로직입니다.
 - `src/app.js`: JSON 데이터를 읽어 화면을 렌더링합니다.
 - `src/styles.css`: 대시보드 레이아웃과 시각 스타일입니다.
