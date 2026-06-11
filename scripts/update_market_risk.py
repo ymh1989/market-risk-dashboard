@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DASHBOARD_FILE = ROOT / "data" / "risk-dashboard.json"
 SNAPSHOT_FILE = ROOT / "data" / "market-risk-snapshot.json"
 TIMESERIES_FILE = ROOT / "data" / "market-risk-timeseries.json"
-YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=2y&interval=1d"
+YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d"
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-risk-dashboard/0.1)"
 KST = timezone(timedelta(hours=9))
 
@@ -69,10 +69,10 @@ def round_score(value):
     return round(clamp(value), 1)
 
 
-def fetch_yahoo_chart(symbol):
+def fetch_yahoo_chart(symbol, range_value="2y"):
     encoded_symbol = urllib.parse.quote(symbol, safe="")
     request = urllib.request.Request(
-        YAHOO_CHART_URL.format(symbol=encoded_symbol),
+        YAHOO_CHART_URL.format(symbol=encoded_symbol, range_value=range_value),
         headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
     )
     with urllib.request.urlopen(request, timeout=20) as response:
@@ -107,9 +107,9 @@ def fetch_yahoo_chart(symbol):
     return series
 
 
-def fetch_naver_chart(symbol):
-    end_date = datetime.now(KST).strftime("%Y%m%d")
-    start_date = (datetime.now(KST) - timedelta(days=760)).strftime("%Y%m%d")
+def fetch_naver_chart(symbol, lookback_days=760, start_date=None, end_date=None):
+    end_date = end_date or datetime.now(KST).strftime("%Y%m%d")
+    start_date = start_date or (datetime.now(KST) - timedelta(days=lookback_days)).strftime("%Y%m%d")
     params = urllib.parse.urlencode(
         {
             "symbol": symbol,
@@ -465,10 +465,10 @@ def basket_volume_pressure_score(naver_map, keys):
     }
 
 
-def basket_volume_timeseries(naver_map, keys, limit=120):
+def basket_volume_timeseries(naver_map, keys, limit=120, step=1):
     indexes = {key: index_by_date(naver_map[key]) for key in keys}
     points = []
-    for date in common_dates(naver_map, keys)[-limit:]:
+    for date in sampled_recent(common_dates(naver_map, keys), limit, step):
         scores = [volume_pressure_score_at(naver_map[key], indexes[key][date]) for key in keys]
         if any(score is None for score in scores):
             continue
@@ -529,9 +529,9 @@ def foreign_ownership_pressure_score_at(naver_map, keys, date):
     return round_score(sum(scores) / len(scores))
 
 
-def foreign_ownership_timeseries(naver_map, keys, limit=120):
+def foreign_ownership_timeseries(naver_map, keys, limit=120, step=1):
     points = []
-    for date in common_dates(naver_map, keys)[-limit:]:
+    for date in sampled_recent(common_dates(naver_map, keys), limit, step):
         score = foreign_ownership_pressure_score_at(naver_map, keys, date)
         if score is None:
             continue
@@ -571,10 +571,41 @@ def common_dates(series_map, keys):
     return sorted(set.intersection(*date_sets))
 
 
-def single_indicator_timeseries(series, score_fn, limit=120):
+def sampled_recent(values, limit, step=1):
+    recent = values[-limit:]
+    if step <= 1 or len(recent) <= 1:
+        return recent
+    sampled = []
+    for value in recent:
+        try:
+            ordinal = datetime.strptime(value, "%Y-%m-%d").date().toordinal()
+        except (TypeError, ValueError):
+            ordinal = len(sampled)
+        if ordinal % step == 0:
+            sampled.append(value)
+    if not sampled:
+        sampled = [recent[-1]]
+    elif sampled[-1] != recent[-1]:
+        sampled.append(recent[-1])
+    return sampled
+
+
+def single_indicator_timeseries(series, score_fn, limit=120, step=1):
     points = []
     start_index = max(0, len(series) - limit)
+    indexes = []
     for index in range(start_index, len(series)):
+        if step <= 1:
+            indexes.append(index)
+            continue
+        ordinal = datetime.strptime(series[index]["date"], "%Y-%m-%d").date().toordinal()
+        if ordinal % step == 0:
+            indexes.append(index)
+    if indexes and indexes[-1] != len(series) - 1:
+        indexes.append(len(series) - 1)
+    if not indexes and series:
+        indexes.append(len(series) - 1)
+    for index in indexes:
         point = series[index]
         score = score_fn(series, index)
         if score is None:
@@ -583,11 +614,11 @@ def single_indicator_timeseries(series, score_fn, limit=120):
     return points
 
 
-def global_ai_timeseries(series_map, limit=120):
+def global_ai_timeseries(series_map, limit=120, step=1):
     keys = ("sox", "nvda", "tsm", "avgo", "amd", "mu", "asml")
     indexes = {key: index_by_date(series_map[key]) for key in keys}
     points = []
-    for date in common_dates(series_map, keys)[-limit:]:
+    for date in sampled_recent(common_dates(series_map, keys), limit, step):
         scores = [equity_stress_score_at(series_map[key], indexes[key][date]) for key in keys]
         if any(score is None for score in scores):
             continue
@@ -595,12 +626,12 @@ def global_ai_timeseries(series_map, limit=120):
     return points
 
 
-def korea_ai_timeseries(series_map, limit=120):
+def korea_ai_timeseries(series_map, limit=120, step=1):
     keys = ("kospi", "samsung", "hynix", "hanmi", "dbhitek", "leeno")
     indexes = {key: index_by_date(series_map[key]) for key in keys}
     points = []
 
-    for date in common_dates(series_map, keys)[-limit:]:
+    for date in sampled_recent(common_dates(series_map, keys), limit, step):
         kospi_index = indexes["kospi"][date]
         asset_indexes = [indexes[key][date] for key in keys if key != "kospi"]
         if min([kospi_index, *asset_indexes]) < 60:
@@ -628,26 +659,46 @@ def korea_ai_timeseries(series_map, limit=120):
     return points
 
 
-def build_timeseries(series_map, naver_map):
+def build_timeseries(series_map, naver_map, limit=120, step=1):
     return {
-        "kospi_price_stress": single_indicator_timeseries(series_map["kospi"], equity_stress_score_at),
-        "kosdaq_growth_stress": single_indicator_timeseries(series_map["kosdaq"], equity_stress_score_at),
-        "usdkrw_fx_pressure": single_indicator_timeseries(series_map["usdkrw"], level_and_change_score_at),
-        "global_volatility_pressure": single_indicator_timeseries(series_map["vix"], level_and_change_score_at),
-        "rates_pressure": single_indicator_timeseries(series_map["us10y"], level_and_change_score_at),
-        "global_ai_semiconductor_stress": global_ai_timeseries(series_map),
-        "korea_ai_semiconductor_concentration": korea_ai_timeseries(series_map),
-        "foreign_ownership_pressure": foreign_ownership_timeseries(naver_map, ("samsung", "hynix", "hanmi")),
+        "kospi_price_stress": single_indicator_timeseries(
+            series_map["kospi"], equity_stress_score_at, limit=limit, step=step
+        ),
+        "kosdaq_growth_stress": single_indicator_timeseries(
+            series_map["kosdaq"], equity_stress_score_at, limit=limit, step=step
+        ),
+        "usdkrw_fx_pressure": single_indicator_timeseries(
+            series_map["usdkrw"], level_and_change_score_at, limit=limit, step=step
+        ),
+        "global_volatility_pressure": single_indicator_timeseries(
+            series_map["vix"], level_and_change_score_at, limit=limit, step=step
+        ),
+        "rates_pressure": single_indicator_timeseries(
+            series_map["us10y"], level_and_change_score_at, limit=limit, step=step
+        ),
+        "global_ai_semiconductor_stress": global_ai_timeseries(series_map, limit=limit, step=step),
+        "korea_ai_semiconductor_concentration": korea_ai_timeseries(series_map, limit=limit, step=step),
+        "foreign_ownership_pressure": foreign_ownership_timeseries(
+            naver_map, ("samsung", "hynix", "hanmi"), limit=limit, step=step
+        ),
         "trading_activity_heat": basket_volume_timeseries(
             naver_map,
             ("samsung", "hynix", "hanmi", "kodex200", "kodex_leverage"),
+            limit=limit,
+            step=step,
         ),
-        "leveraged_etf_stress": single_indicator_timeseries(series_map["kodex_leverage"], equity_stress_score_at),
+        "leveraged_etf_stress": single_indicator_timeseries(
+            series_map["kodex_leverage"], equity_stress_score_at, limit=limit, step=step
+        ),
         "global_credit_proxy_stress": single_indicator_timeseries(
             make_ratio_series(series_map["hyg"], series_map["lqd"]),
             equity_stress_score_at,
+            limit=limit,
+            step=step,
         ),
-        "emerging_market_stress": single_indicator_timeseries(series_map["eem"], equity_stress_score_at),
+        "emerging_market_stress": single_indicator_timeseries(
+            series_map["eem"], equity_stress_score_at, limit=limit, step=step
+        ),
     }
 
 

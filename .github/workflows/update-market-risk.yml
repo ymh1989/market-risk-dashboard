@@ -25,6 +25,7 @@ jobs:
         run: |
           make update-market-risk
           make backtest-market-risk
+          REFRESH_STRESS_CACHE=1 make analyze-stress-episodes
 
       - name: Validate dashboard data
         run: make test
@@ -33,7 +34,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/risk-dashboard.json data/market-risk-snapshot.json data/market-risk-timeseries.json data/market-risk-backtest.json
+          git add data/risk-dashboard.json data/market-risk-snapshot.json data/market-risk-timeseries.json data/market-risk-backtest.json data/market-stress-episodes.json data/market-history-cache.json
           if git diff --cached --quiet; then
             echo "No data changes to commit."
           else

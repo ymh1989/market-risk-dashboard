@@ -1,0 +1,214 @@
+{
+  "generatedAt": "2026-06-11 11:08:11 KST",
+  "source": "Yahoo Finance and Naver Finance chart endpoints",
+  "historyCache": "data/market-history-cache.json",
+  "methodology": "2020년 이후 동일 시장리스크 모델 점수와 KOSPI 252일 고점대비 낙폭을 함께 평가해 모델 점수 75 이상 또는 KOSPI 낙폭 10% 이상인 거래일을 주요 스트레스 후보로 묶습니다.",
+  "sampleStart": "2020-01-06",
+  "sampleEnd": "2026-05-14",
+  "sampleCount": 149,
+  "thresholds": {
+    "modelScore": 75,
+    "kospiDrawdownFromHighPct": 10,
+    "minTradingDays": 2,
+    "sampleStepTradingDays": 10
+  },
+  "episodeCount": 4,
+  "episodes": [
+    {
+      "id": "2026-03-05_2026-03-25",
+      "label": "최근 AI 쏠림·금리/환율 스트레스",
+      "startDate": "2026-03-05",
+      "endDate": "2026-03-25",
+      "tradingDays": 2,
+      "peakDate": "2026-03-25",
+      "peakScore": 77.7,
+      "averageScore": 74.2,
+      "kospiStart": 5583.9,
+      "kospiEnd": 5642.21,
+      "kospiLow": 5583.9,
+      "kospiEpisodeReturnPct": 1.04,
+      "kospiMaxDrawdownFromHighPct": 11.47,
+      "kospiLowFromStartPct": 0.0,
+      "forward20dMaxDrawdownFromPeakPct": -10.45,
+      "trigger": "modelScore",
+      "topContributors": [
+        {
+          "id": "kospi_price_stress",
+          "name": "KOSPI 가격 스트레스",
+          "group": "crash",
+          "score": 91.7,
+          "contribution": 10.09
+        },
+        {
+          "id": "usdkrw_fx_pressure",
+          "name": "원/달러 환율 압력",
+          "group": "macro",
+          "score": 99.0,
+          "contribution": 9.9
+        },
+        {
+          "id": "korea_ai_semiconductor_concentration",
+          "name": "한국 AI 반도체 쏠림/스트레스",
+          "group": "ai_semi",
+          "score": 81.4,
+          "contribution": 9.77
+        },
+        {
+          "id": "foreign_ownership_pressure",
+          "name": "외국인 보유비중 이탈 압력",
+          "group": "flow",
+          "score": 80.6,
+          "contribution": 8.06
+        }
+      ]
+    },
+    {
+      "id": "2024-08-02_2025-05-09",
+      "label": "AI 반도체 변동성",
+      "startDate": "2024-08-02",
+      "endDate": "2025-05-09",
+      "tradingDays": 14,
+      "peakDate": "2025-04-09",
+      "peakScore": 79.4,
+      "averageScore": 68.6,
+      "kospiStart": 2676.19,
+      "kospiEnd": 2577.27,
+      "kospiLow": 2293.7,
+      "kospiEpisodeReturnPct": -3.7,
+      "kospiMaxDrawdownFromHighPct": 20.67,
+      "kospiLowFromStartPct": -14.29,
+      "forward20dMaxDrawdownFromPeakPct": 0.0,
+      "trigger": "modelScore",
+      "topContributors": [
+        {
+          "id": "kospi_price_stress",
+          "name": "KOSPI 가격 스트레스",
+          "group": "crash",
+          "score": 96.7,
+          "contribution": 10.64
+        },
+        {
+          "id": "global_ai_semiconductor_stress",
+          "name": "글로벌 AI 반도체 스트레스",
+          "group": "ai_semi",
+          "score": 88.2,
+          "contribution": 10.58
+        },
+        {
+          "id": "global_volatility_pressure",
+          "name": "글로벌 변동성 압력",
+          "group": "macro",
+          "score": 95.7,
+          "contribution": 7.66
+        },
+        {
+          "id": "foreign_ownership_pressure",
+          "name": "외국인 보유비중 이탈 압력",
+          "group": "flow",
+          "score": 70.2,
+          "contribution": 7.02
+        }
+      ]
+    },
+    {
+      "id": "2021-10-07_2023-03-31",
+      "label": "인플레이션·긴축·강달러",
+      "startDate": "2021-10-07",
+      "endDate": "2023-03-31",
+      "tradingDays": 31,
+      "peakDate": "2022-06-14",
+      "peakScore": 80.1,
+      "averageScore": 59.9,
+      "kospiStart": 2959.46,
+      "kospiEnd": 2476.86,
+      "kospiLow": 2202.47,
+      "kospiEpisodeReturnPct": -16.31,
+      "kospiMaxDrawdownFromHighPct": 29.74,
+      "kospiLowFromStartPct": -25.58,
+      "forward20dMaxDrawdownFromPeakPct": -8.06,
+      "trigger": "modelScore",
+      "topContributors": [
+        {
+          "id": "global_ai_semiconductor_stress",
+          "name": "글로벌 AI 반도체 스트레스",
+          "group": "ai_semi",
+          "score": 87.2,
+          "contribution": 10.46
+        },
+        {
+          "id": "kospi_price_stress",
+          "name": "KOSPI 가격 스트레스",
+          "group": "crash",
+          "score": 90.8,
+          "contribution": 9.99
+        },
+        {
+          "id": "usdkrw_fx_pressure",
+          "name": "원/달러 환율 압력",
+          "group": "macro",
+          "score": 87.8,
+          "contribution": 8.78
+        },
+        {
+          "id": "korea_ai_semiconductor_concentration",
+          "name": "한국 AI 반도체 쏠림/스트레스",
+          "group": "ai_semi",
+          "score": 62.7,
+          "contribution": 7.52
+        }
+      ]
+    },
+    {
+      "id": "2020-02-25_2020-05-15",
+      "label": "코로나19 급락",
+      "startDate": "2020-02-25",
+      "endDate": "2020-05-15",
+      "tradingDays": 5,
+      "peakDate": "2020-03-16",
+      "peakScore": 88.1,
+      "averageScore": 78.3,
+      "kospiStart": 2103.61,
+      "kospiEnd": 1927.28,
+      "kospiLow": 1686.24,
+      "kospiEpisodeReturnPct": -8.38,
+      "kospiMaxDrawdownFromHighPct": 25.63,
+      "kospiLowFromStartPct": -19.84,
+      "forward20dMaxDrawdownFromPeakPct": -15.0,
+      "trigger": "modelScore",
+      "topContributors": [
+        {
+          "id": "global_ai_semiconductor_stress",
+          "name": "글로벌 AI 반도체 스트레스",
+          "group": "ai_semi",
+          "score": 96.2,
+          "contribution": 13.91
+        },
+        {
+          "id": "kospi_price_stress",
+          "name": "KOSPI 가격 스트레스",
+          "group": "crash",
+          "score": 96.2,
+          "contribution": 12.75
+        },
+        {
+          "id": "korea_ai_semiconductor_concentration",
+          "name": "한국 AI 반도체 쏠림/스트레스",
+          "group": "ai_semi",
+          "score": 82.6,
+          "contribution": 11.94
+        },
+        {
+          "id": "usdkrw_fx_pressure",
+          "name": "원/달러 환율 압력",
+          "group": "macro",
+          "score": 92.7,
+          "contribution": 11.17
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "에피소드 명칭은 날짜가 겹치는 대표 시장 이벤트를 붙인 보조 라벨입니다.",
+    "모든 수치는 공개 chart endpoint 기반 proxy이며 내부 포지션/유동성 데이터는 포함하지 않습니다."
+  ]
+}

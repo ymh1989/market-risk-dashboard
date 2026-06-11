@@ -10,6 +10,7 @@ const trendLabel = {
 };
 
 const formatScore = (value) => `${clampScore(value).toFixed(1)} / 100`;
+const formatPct = (value) => `${Number(value).toFixed(2)}%`;
 const categoryCountText = (indicators) => {
   const counts = indicators.reduce((acc, indicator) => {
     acc[indicator.category] = (acc[indicator.category] ?? 0) + 1;
@@ -167,6 +168,84 @@ function renderBacktestPanel(backtest) {
           })
           .join("")}
       </div>
+
+      <div class="backtest-help">
+        <strong>이렇게 읽으면 됩니다</strong>
+        <p>
+          최근 ${backtest.sampleCount}개 샘플은 각 거래일의 모델 점수를 정상·관심·주의·경고로 나눈 뒤,
+          그 날 이후 20거래일 안에 KOSPI가 얼마나 크게 밀렸는지 되돌아본 조건부 진단입니다.
+          hit-rate는 해당 구간에서 향후 20거래일 최대낙폭이 -5% 이하였던 비율이고,
+          평균·최악 낙폭은 실제로 뒤따른 하락 강도를 보여줍니다.
+        </p>
+        <p>
+          따라서 이 값은 “앞으로 반드시 하락한다”는 예측 확률이 아니라, 현재 점수 구간이 과거에는
+          어느 정도의 후행 스트레스와 함께 나타났는지 보는 참고 지표입니다. 샘플 수가 적은 구간은
+          방향성 위주로 보고, 2020년 이후 스트레스 구간 테스트와 함께 해석하는 편이 좋습니다.
+        </p>
+      </div>
+    </section>
+  `;
+}
+
+function renderStressEpisodesPanel(stressEpisodes) {
+  const episodes = stressEpisodes?.episodes ?? [];
+  if (!episodes.length) return "";
+
+  return `
+    <section class="stress-panel">
+      <div class="backtest-panel__header">
+        <div>
+          <span class="eyebrow">Historical Stress</span>
+          <h2>2020년 이후 주요 스트레스 구간</h2>
+        </div>
+        <div class="backtest-panel__meta">
+          <strong>${stressEpisodes.episodeCount}</strong>
+          <span>episodes</span>
+        </div>
+      </div>
+
+      <div class="stress-grid">
+        ${episodes
+          .map(
+            (episode) => `
+              <article class="stress-card">
+                <header>
+                  <div>
+                    <span class="eyebrow">${episode.startDate} - ${episode.endDate}</span>
+                    <h3>${episode.label}</h3>
+                  </div>
+                  <strong>${formatScore(episode.peakScore)}</strong>
+                </header>
+                <div class="stress-card__metrics">
+                  <span>고점대비 최대낙폭 <strong>-${formatPct(episode.kospiMaxDrawdownFromHighPct)}</strong></span>
+                  <span>구간 저점 <strong>${formatPct(episode.kospiLowFromStartPct)}</strong></span>
+                  <span>20D 선행 최대낙폭 <strong>${formatPct(episode.forward20dMaxDrawdownFromPeakPct)}</strong></span>
+                </div>
+                <div class="stress-card__bar" aria-hidden="true">
+                  <span style="width:${clampScore(episode.peakScore)}%"></span>
+                </div>
+                <footer>
+                  <span>피크 ${episode.peakDate}</span>
+                  <span>${episode.tradingDays}거래일</span>
+                </footer>
+                <div class="stress-contributors">
+                  ${(episode.topContributors ?? [])
+                    .slice(0, 3)
+                    .map(
+                      (item) => `
+                        <span title="${item.name}">
+                          ${item.name}
+                          <strong>+${Number(item.contribution).toFixed(2)}</strong>
+                        </span>
+                      `
+                    )
+                    .join("")}
+                </div>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
     </section>
   `;
 }
@@ -222,7 +301,7 @@ function renderIndicator(indicator, thresholds, timeseries) {
   `;
 }
 
-function renderSummary(data, backtest) {
+function renderSummary(data, backtest, stressEpisodes) {
   const market = data.sections.find((section) => section.id === "market");
   const plannedLabels = data.sections
     .filter((section) => section.status !== "active")
@@ -270,6 +349,7 @@ function renderSummary(data, backtest) {
     </section>
 
     ${renderBacktestPanel(backtest)}
+    ${renderStressEpisodesPanel(stressEpisodes)}
   `;
 }
 
@@ -330,7 +410,7 @@ function renderGroupScores(section) {
   `;
 }
 
-function renderSection(section, timeseries, backtest) {
+function renderSection(section, timeseries, backtest, stressEpisodes) {
   const isPlanned = section.status !== "active";
   const sortedIndicators = [...(section.indicators ?? [])].sort((a, b) => clampScore(b.value) - clampScore(a.value));
 
@@ -358,6 +438,7 @@ function renderSection(section, timeseries, backtest) {
             ${renderModelPanel(section)}
             ${renderGroupScores(section)}
             ${renderBacktestPanel(section.id === "market" ? backtest : null)}
+            ${renderStressEpisodesPanel(section.id === "market" ? stressEpisodes : null)}
             ${renderGauge(section.score, section.level, section.model.thresholds)}
             <div class="indicator-grid">
               ${sortedIndicators
@@ -377,7 +458,7 @@ function renderSection(section, timeseries, backtest) {
   `;
 }
 
-function renderDashboard(rawData, timeseries, backtest) {
+function renderDashboard(rawData, timeseries, backtest, stressEpisodes) {
   const data = evaluateDashboard(rawData);
   const enabledTabs = data.tabs.filter((tab) => tab.enabled);
 
@@ -416,9 +497,9 @@ function renderDashboard(rawData, timeseries, backtest) {
 
     <div class="panel-stack">
       <section class="tab-panel is-active" data-panel="summary">
-        ${renderSummary(data, backtest)}
+        ${renderSummary(data, backtest, stressEpisodes)}
       </section>
-      ${data.sections.map((section) => renderSection(section, timeseries, backtest)).join("")}
+      ${data.sections.map((section) => renderSection(section, timeseries, backtest, stressEpisodes)).join("")}
     </div>
   `;
 
@@ -449,9 +530,14 @@ Promise.all([
     .catch(() => null),
   fetch("./data/market-risk-backtest.json")
     .then((response) => (response.ok ? response.json() : null))
+    .catch(() => null),
+  fetch("./data/market-stress-episodes.json")
+    .then((response) => (response.ok ? response.json() : null))
     .catch(() => null)
 ])
-  .then(([dashboard, timeseries, backtest]) => renderDashboard(dashboard, timeseries, backtest))
+  .then(([dashboard, timeseries, backtest, stressEpisodes]) =>
+    renderDashboard(dashboard, timeseries, backtest, stressEpisodes)
+  )
   .catch((error) => {
     app.innerHTML = `
       <div class="loading-panel loading-panel--error">

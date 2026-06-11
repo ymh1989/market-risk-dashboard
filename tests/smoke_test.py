@@ -6,6 +6,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 DATA_FILE = ROOT / "data" / "risk-dashboard.json"
 TIMESERIES_FILE = ROOT / "data" / "market-risk-timeseries.json"
 BACKTEST_FILE = ROOT / "data" / "market-risk-backtest.json"
+STRESS_FILE = ROOT / "data" / "market-stress-episodes.json"
 
 
 def clamp_score(value):
@@ -37,6 +38,7 @@ def test_dashboard_contract():
     dashboard = json.loads(DATA_FILE.read_text(encoding="utf-8"))
     timeseries = json.loads(TIMESERIES_FILE.read_text(encoding="utf-8"))
     backtest = json.loads(BACKTEST_FILE.read_text(encoding="utf-8"))
+    stress = json.loads(STRESS_FILE.read_text(encoding="utf-8"))
     assert dashboard["metadata"]["title"] == "통합 리스크 모니터링 대시보드"
     assert any(section["id"] == "market" and section["status"] == "active" for section in dashboard["sections"])
     assert any(section["id"] == "credit" and section["status"] == "planned" for section in dashboard["sections"])
@@ -76,6 +78,13 @@ def test_dashboard_contract():
 
     assert backtest["sampleCount"] >= 60
     assert "byBucket" in backtest
+    assert stress["sampleStart"] >= "2020-01-01"
+    assert stress["sampleCount"] >= 120
+    assert stress["episodeCount"] >= 1
+    for episode in stress["episodes"]:
+        assert episode["startDate"] <= episode["endDate"]
+        assert episode["peakScore"] >= 0
+        assert "topContributors" in episode
 
     print("Smoke tests passed")
 

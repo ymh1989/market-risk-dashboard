@@ -225,6 +225,7 @@ select {
 .indicator-card,
 .narrative-band,
 .backtest-panel,
+.stress-panel,
 .risk-section,
 .action-panel,
 .empty-state {
@@ -283,6 +284,14 @@ select {
   margin-top: 16px;
   padding: 24px;
   background: var(--surface);
+}
+
+.stress-panel {
+  display: grid;
+  gap: 18px;
+  margin-top: 16px;
+  padding: 24px;
+  background: var(--surface-raised);
 }
 
 .backtest-panel__header {
@@ -392,6 +401,132 @@ select {
 
 .backtest-dot--정상 {
   background: var(--green);
+}
+
+.backtest-help {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 14px 16px;
+}
+
+.backtest-help strong {
+  font-size: 0.95rem;
+}
+
+.backtest-help p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.stress-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.stress-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 16px;
+}
+
+.stress-card header,
+.stress-card footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.stress-card header {
+  align-items: flex-start;
+}
+
+.stress-card h3 {
+  margin: 5px 0 0;
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.stress-card header > strong {
+  flex: 0 0 auto;
+  color: var(--red);
+  font-size: 1.25rem;
+}
+
+.stress-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stress-card__metrics span {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 10px;
+}
+
+.stress-card__metrics strong {
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+
+.stress-card__bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+
+.stress-card__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--blue), var(--amber), var(--red));
+}
+
+.stress-card footer {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.stress-contributors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.stress-contributors span {
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  overflow: hidden;
+  padding: 8px 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stress-contributors strong {
+  color: var(--ink);
+  margin-left: 4px;
 }
 
 .narrative-band h2,
@@ -764,6 +899,7 @@ select {
 
   .summary-grid,
   .backtest-grid,
+  .stress-grid,
   .group-panel,
   .indicator-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -806,6 +942,8 @@ select {
 
   .summary-grid,
   .backtest-grid,
+  .stress-grid,
+  .stress-card__metrics,
   .group-panel,
   .indicator-grid {
     grid-template-columns: 1fr;
@@ -820,6 +958,7 @@ select {
   }
 
   .backtest-panel__header,
+  .stress-card header,
   .backtest-card footer {
     display: grid;
   }
