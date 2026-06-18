@@ -159,6 +159,25 @@ function trendChartPath(points, width = 760, height = 210, padding = 18) {
     .join(" ");
 }
 
+function monthTicks(points, width = 760) {
+  const seen = new Set();
+  const ticks = [];
+
+  points.forEach((point, index) => {
+    const [year, month] = point.date.split("-");
+    const key = `${year}-${month}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    ticks.push({
+      key,
+      label: `${year.slice(2)}.${month}`,
+      x: points.length > 1 ? (index / (points.length - 1)) * width : 0
+    });
+  });
+
+  return ticks;
+}
+
 function renderCompositeTrend(section, timeseries) {
   const points = buildCompositeSeries(section, timeseries);
   if (points.length < 2) return "";
@@ -172,6 +191,7 @@ function renderCompositeTrend(section, timeseries) {
   const change1m = valueChange(latest.value, points, 20);
   const minPoint = points.reduce((min, point) => (point.value < min.value ? point : min), points[0]);
   const maxPoint = points.reduce((max, point) => (point.value > max.value ? point : max), points[0]);
+  const ticks = monthTicks(points);
 
   return `
     <section class="trend-panel">
@@ -197,6 +217,16 @@ function renderCompositeTrend(section, timeseries) {
           <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
           <path class="trend-chart__area" d="${areaPath}"></path>
           <path class="trend-chart__line" d="${path}"></path>
+          ${ticks
+            .map(
+              (tick, index) => `
+                <g class="trend-chart__tick" transform="translate(${tick.x.toFixed(2)} 0)">
+                  <line y1="194" y2="199"></line>
+                  <text y="207" text-anchor="${index === 0 ? "start" : index === ticks.length - 1 ? "end" : "middle"}">${tick.label}</text>
+                </g>
+              `
+            )
+            .join("")}
         </svg>
         <div class="trend-chart__meta">
           <span>${first.date}</span>
