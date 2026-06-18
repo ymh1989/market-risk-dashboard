@@ -11,6 +11,11 @@ const trendLabel = {
 
 const formatScore = (value) => `${clampScore(value).toFixed(1)} / 100`;
 const formatPct = (value) => `${Number(value).toFixed(2)}%`;
+const formatSignedPct = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
+  const number = Number(value);
+  return `${number > 0 ? "+" : ""}${number.toFixed(2)}%`;
+};
 const formatPointDelta = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
   const number = Number(value);
@@ -159,6 +164,24 @@ function trendChartPath(points, width = 760, height = 210, padding = 18) {
     .join(" ");
 }
 
+function linePath(points, valueKey, width = 760, height = 210, padding = 18) {
+  const valid = points.filter((point) => Number.isFinite(Number(point[valueKey])));
+  if (valid.length < 2) return "";
+  const values = valid.map((point) => Number(point[valueKey]));
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const step = width / (valid.length - 1);
+
+  return valid
+    .map((point, index) => {
+      const x = index * step;
+      const y = height - padding - ((Number(point[valueKey]) - min) / range) * (height - padding * 2);
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
 function monthTicks(points, width = 760) {
   const seen = new Set();
   const ticks = [];
@@ -176,6 +199,113 @@ function monthTicks(points, width = 760) {
   });
 
   return ticks;
+}
+
+function renderMlRiskSignalPanel(mlRisk) {
+  if (!mlRisk?.latest || !mlRisk?.series?.length) return "";
+
+  const latest = mlRisk.latest;
+  const series = mlRisk.series;
+  const riskPath = linePath(series, "riskOffProbabilityPct");
+  const volPath = linePath(series, "realizedVol20dPct");
+  const returnPath = linePath(series, "kospiReturn20dPct");
+  const ticks = monthTicks(series);
+  const first = series[0];
+  const last = series[series.length - 1];
+  const ml = mlRisk.metrics?.ml ?? {};
+  const baseline = mlRisk.metrics?.baseline ?? {};
+  const riskTone = latest.riskOffProbabilityPct >= 75 ? "danger" : latest.riskOffProbabilityPct >= 55 ? "caution" : "watch";
+
+  return `
+    <section class="ml-risk-panel">
+      <div class="ml-risk-panel__header">
+        <div>
+          <span class="eyebrow">ML Risk-off Signal</span>
+          <h2>고변동성 활황 구간 진단</h2>
+        </div>
+        <div class="ml-risk-state ml-risk-state--${riskTone}">
+          <span>${latest.interpretationLevel}</span>
+          <strong>${Number(latest.riskOffProbabilityPct).toFixed(1)}%</strong>
+        </div>
+      </div>
+
+      <div class="ml-risk-grid">
+        ${createMetricCard({
+          label: "ML Risk-off 확률",
+          value: `${Number(latest.riskOffProbabilityPct).toFixed(1)}%`,
+          meta: `${latest.regime} · 기준일 ${latest.date}`,
+          tone: riskTone
+        })}
+        ${createMetricCard({
+          label: "KOSPI 20D 모멘텀",
+          value: formatSignedPct(latest.kospiReturn20dPct),
+          meta: `KOSPI ${Number(latest.kospi).toLocaleString("ko-KR")}`,
+          tone: latest.kospiReturn20dPct >= 0 ? "good" : "danger"
+        })}
+        ${createMetricCard({
+          label: "20D 실현변동성",
+          value: `${Number(latest.realizedVol20dPct).toFixed(1)}%`,
+          meta: latest.baselineRiskOffSignal ? "변동성 기준 risk-off flag" : "변동성 기준 중립",
+          tone: latest.realizedVol20dPct >= 35 ? "caution" : "watch"
+        })}
+        ${createMetricCard({
+          label: "ELS 리스크 점수",
+          value: Number(latest.elsRiskScore).toFixed(1),
+          meta: latest.elsRiskBucket,
+          tone: latest.elsRiskScore >= 60 ? "caution" : "watch"
+        })}
+      </div>
+
+      <div class="ml-risk-body">
+        <div class="ml-risk-chart" aria-label="ML risk-off 확률과 KOSPI 최근 흐름">
+          <svg viewBox="0 0 760 210" role="img">
+            <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
+            <path class="ml-risk-chart__risk" d="${riskPath}"></path>
+            <path class="ml-risk-chart__vol" d="${volPath}"></path>
+            <path class="ml-risk-chart__return" d="${returnPath}"></path>
+            ${ticks
+              .map(
+                (tick, index) => `
+                  <g class="trend-chart__tick" transform="translate(${tick.x.toFixed(2)} 0)">
+                    <line y1="194" y2="199"></line>
+                    <text y="207" text-anchor="${index === 0 ? "start" : index === ticks.length - 1 ? "end" : "middle"}">${tick.label}</text>
+                  </g>
+                `
+              )
+              .join("")}
+          </svg>
+          <div class="ml-risk-chart__legend">
+            <span><i class="legend-risk"></i>Risk-off 확률</span>
+            <span><i class="legend-vol"></i>20D 변동성</span>
+            <span><i class="legend-return"></i>20D 수익률</span>
+          </div>
+          <div class="trend-chart__meta">
+            <span>${first.date}</span>
+            <span>${series.length} observations</span>
+            <span>${last.date}</span>
+          </div>
+        </div>
+
+        <div class="ml-risk-explain">
+          <strong>수치 해석</strong>
+          <p>
+            현재 신호는 약세장이 아니라, 주가 상승과 높은 변동성이 동시에 나타나는 구간으로 해석하는 편이 맞습니다.
+            KOSPI 20D 모멘텀은 ${formatSignedPct(latest.kospiReturn20dPct)}지만 20D 실현변동성이
+            ${Number(latest.realizedVol20dPct).toFixed(1)}%까지 올라와 ELS 관점의 risk-off 확률이 높아졌습니다.
+          </p>
+          <p>
+            백테스트상 risk-off 이진모델은 recall ${Number((ml.riskOffRecall ?? 0) * 100).toFixed(1)}%,
+            AUC ${Number(ml.riskOffAuc ?? 0).toFixed(3)}입니다. 기준모델 recall
+            ${Number((baseline.riskOffRecall ?? 0) * 100).toFixed(1)}%, AUC ${Number(baseline.riskOffAuc ?? 0).toFixed(3)}보다 높아
+            “위험 구간을 놓치지 않는 능력”은 개선됐지만, 활황장에서 과잉 경보 가능성은 함께 봐야 합니다.
+          </p>
+          <ul>
+            ${(mlRisk.interpretation ?? []).map((item) => `<li>${item}</li>`).join("")}
+          </ul>
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 function renderCompositeTrend(section, timeseries) {
@@ -484,7 +614,7 @@ function renderIndicator(indicator, thresholds, timeseries) {
   `;
 }
 
-function renderSummary(data, timeseries, backtest, stressEpisodes) {
+function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk) {
   const market = data.sections.find((section) => section.id === "market");
   market.asOf = data.metadata.asOf;
   const plannedLabels = data.sections
@@ -532,6 +662,7 @@ function renderSummary(data, timeseries, backtest, stressEpisodes) {
       </p>
     </section>
 
+    ${renderMlRiskSignalPanel(mlRisk)}
     ${renderCompositeTrend(market, timeseries)}
     ${renderBacktestPanel(backtest)}
     ${renderStressEpisodesPanel(stressEpisodes)}
@@ -644,7 +775,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes) {
   `;
 }
 
-function renderDashboard(rawData, timeseries, backtest, stressEpisodes) {
+function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk) {
   const data = evaluateDashboard(rawData);
   const enabledTabs = data.tabs.filter((tab) => tab.enabled);
 
@@ -683,7 +814,7 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes) {
 
     <div class="panel-stack">
       <section class="tab-panel is-active" data-panel="summary">
-        ${renderSummary(data, timeseries, backtest, stressEpisodes)}
+        ${renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk)}
       </section>
       ${data.sections.map((section) => renderSection(section, timeseries, backtest, stressEpisodes)).join("")}
     </div>
@@ -719,10 +850,13 @@ Promise.all([
     .catch(() => null),
   fetch("./data/market-stress-episodes.json")
     .then((response) => (response.ok ? response.json() : null))
+    .catch(() => null),
+  fetch("./data/ml-risk-signal.json")
+    .then((response) => (response.ok ? response.json() : null))
     .catch(() => null)
 ])
-  .then(([dashboard, timeseries, backtest, stressEpisodes]) =>
-    renderDashboard(dashboard, timeseries, backtest, stressEpisodes)
+  .then(([dashboard, timeseries, backtest, stressEpisodes, mlRisk]) =>
+    renderDashboard(dashboard, timeseries, backtest, stressEpisodes, mlRisk)
   )
   .catch((error) => {
     app.innerHTML = `

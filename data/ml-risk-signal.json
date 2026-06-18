@@ -1,0 +1,853 @@
+{
+  "generatedAt": "2026-06-18 15:12 KST",
+  "source": {
+    "features": "data/processed/features.parquet",
+    "model": "models/model_bundle.joblib",
+    "latestSignal": "reports/latest_signal.csv",
+    "metrics": "reports/model_metrics.csv"
+  },
+  "latest": {
+    "date": "2026-06-18",
+    "regime": "risk-off",
+    "riskOffProbabilityPct": 86.18,
+    "elsRiskScore": 56.3,
+    "elsRiskBucket": "중립 / 정상 모니터링",
+    "kospi": 8947.45,
+    "kospiReturn20dPct": 11.18,
+    "realizedVol20dPct": 60.18,
+    "drawdownFrom60dHighPct": 0.0,
+    "baselineRiskOffSignal": 1,
+    "interpretationLevel": "고변동성 활황"
+  },
+  "metrics": {
+    "ml": {
+      "regimeAccuracy": 0.6,
+      "regimeMacroF1": 0.2508710801393728,
+      "riskOffRecall": 0.9391304347826088,
+      "riskOffPrecision": 0.627906976744186,
+      "riskOffAuc": 0.3312374581939799,
+      "riskOffBrier": 0.3241271130555547
+    },
+    "baseline": {
+      "regimeAccuracy": 0.4555555555555555,
+      "regimeMacroF1": 0.2901701537972239,
+      "riskOffRecall": 0.5304347826086957,
+      "riskOffPrecision": 0.5865384615384616,
+      "riskOffAuc": 0.4344481605351171,
+      "riskOffBrier": 0.3371111111111111
+    }
+  },
+  "thresholds": {
+    "riskOffProbabilityWatchPct": 55,
+    "riskOffProbabilityHighPct": 75,
+    "realizedVolHighPct": 35,
+    "elsRiskCautionScore": 60
+  },
+  "interpretation": [
+    "Risk-off 확률은 주식 약세만 뜻하지 않습니다. 이 모델에서는 향후 20영업일의 하락, 낙폭, 고변동성 위험을 함께 반영합니다.",
+    "현재 KOSPI 모멘텀은 강하지만 20일 실현변동성이 높아 ELS 관점의 risk-off 확률이 크게 올라간 상태입니다.",
+    "활황 국면에서도 변동성이 높으면 헤지 비용, 낙인 접근 속도, 신규 발행 조건 리스크가 커질 수 있습니다."
+  ],
+  "series": [
+    {
+      "date": "2026-03-17",
+      "kospi": 5640.48,
+      "kospiReturn20dPct": 2.423642240056978,
+      "realizedVol20dPct": 74.34120093582139,
+      "drawdownFrom60dHighPct": -10.571769355009398,
+      "riskOffProbabilityPct": 76.32910150456627,
+      "elsRiskScore": 65.76714150629203,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-03-18",
+      "kospi": 5925.03,
+      "kospiReturn20dPct": 7.590689635971759,
+      "realizedVol20dPct": 76.26393615686372,
+      "drawdownFrom60dHighPct": -6.060311881231428,
+      "riskOffProbabilityPct": 87.27325221740786,
+      "elsRiskScore": 68.20523634191493,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-03-19",
+      "kospi": 5763.22,
+      "kospiReturn20dPct": 1.5142932730415337,
+      "realizedVol20dPct": 76.34749307725421,
+      "drawdownFrom60dHighPct": -8.625757308673665,
+      "riskOffProbabilityPct": 74.13404067147556,
+      "elsRiskScore": 67.40919421310754,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-03-20",
+      "kospi": 5781.2,
+      "kospiReturn20dPct": -0.47050787126186044,
+      "realizedVol20dPct": 75.90957308523433,
+      "drawdownFrom60dHighPct": -8.340689753089837,
+      "riskOffProbabilityPct": 74.4794885230139,
+      "elsRiskScore": 68.34217567123176,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-03-23",
+      "kospi": 5405.75,
+      "kospiReturn20dPct": -7.532211367239993,
+      "realizedVol20dPct": 79.46226274453528,
+      "drawdownFrom60dHighPct": -14.29334746632982,
+      "riskOffProbabilityPct": 62.897592789053114,
+      "elsRiskScore": 72.86742834690892,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-03-24",
+      "kospi": 5553.92,
+      "kospiReturn20dPct": -6.963907460462993,
+      "realizedVol20dPct": 79.74544791787616,
+      "drawdownFrom60dHighPct": -11.944154845494282,
+      "riskOffProbabilityPct": 66.86998949976837,
+      "elsRiskScore": 71.91237328593262,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-03-25",
+      "kospi": 5642.21,
+      "kospiReturn20dPct": -7.259370075390792,
+      "realizedVol20dPct": 79.63400371610707,
+      "drawdownFrom60dHighPct": -10.544340999105927,
+      "riskOffProbabilityPct": 67.28237565649948,
+      "elsRiskScore": 75.6544399976855,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-03-26",
+      "kospi": 5460.46,
+      "kospiReturn20dPct": -13.425936355530943,
+      "realizedVol20dPct": 78.81051470535004,
+      "drawdownFrom60dHighPct": -13.425936355530943,
+      "riskOffProbabilityPct": 62.10499030450133,
+      "elsRiskScore": 75.24238345518786,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-03-27",
+      "kospi": 5438.87,
+      "kospiReturn20dPct": -12.896268667337395,
+      "realizedVol20dPct": 78.81097249172463,
+      "drawdownFrom60dHighPct": -13.768237282606277,
+      "riskOffProbabilityPct": 58.56758214331934,
+      "elsRiskScore": 77.07130976828942,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-03-29",
+      "kospi": 5438.87,
+      "kospiReturn20dPct": -12.896268667337395,
+      "realizedVol20dPct": 78.81097249172463,
+      "drawdownFrom60dHighPct": -13.768237282606277,
+      "riskOffProbabilityPct": 49.22762833553177,
+      "elsRiskScore": 67.94651021353306,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-03-30",
+      "kospi": 5277.3,
+      "kospiReturn20dPct": -8.884985051213,
+      "realizedVol20dPct": 75.17421774974486,
+      "drawdownFrom60dHighPct": -16.329889344428228,
+      "riskOffProbabilityPct": 42.58204601879482,
+      "elsRiskScore": 73.1544804746301,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-03-31",
+      "kospi": 5052.46,
+      "kospiReturn20dPct": -0.8065133052838624,
+      "realizedVol20dPct": 61.399481416306166,
+      "drawdownFrom60dHighPct": -19.894662107505688,
+      "riskOffProbabilityPct": 43.12119004117527,
+      "elsRiskScore": 61.07956483181715,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-01",
+      "kospi": 5478.7,
+      "kospiReturn20dPct": -1.8839826800457926,
+      "realizedVol20dPct": 59.308221301864435,
+      "drawdownFrom60dHighPct": -13.136742547139724,
+      "riskOffProbabilityPct": 35.76444691729833,
+      "elsRiskScore": 54.16219987391224,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-02",
+      "kospi": 5234.05,
+      "kospiReturn20dPct": -6.281619896948842,
+      "realizedVol20dPct": 61.39003928171272,
+      "drawdownFrom60dHighPct": -17.015605983577508,
+      "riskOffProbabilityPct": 28.161651314248093,
+      "elsRiskScore": 56.42413904989147,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-03",
+      "kospi": 5377.3,
+      "kospiReturn20dPct": 2.3882861666649546,
+      "realizedVol20dPct": 58.209794838111996,
+      "drawdownFrom60dHighPct": -14.744417346395212,
+      "riskOffProbabilityPct": 25.558476129958933,
+      "elsRiskScore": 49.131187247013955,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-05",
+      "kospi": 5377.3,
+      "kospiReturn20dPct": -2.8068236295868965,
+      "realizedVol20dPct": 55.018836922722315,
+      "drawdownFrom60dHighPct": -14.744417346395212,
+      "riskOffProbabilityPct": 23.132443949251584,
+      "elsRiskScore": 48.7473608744147,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-06",
+      "kospi": 5450.33,
+      "kospiReturn20dPct": -2.8453036413919275,
+      "realizedVol20dPct": 55.00440034956391,
+      "drawdownFrom60dHighPct": -13.586542810956692,
+      "riskOffProbabilityPct": 30.927716734736798,
+      "elsRiskScore": 50.78656554952473,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-07",
+      "kospi": 5494.78,
+      "kospiReturn20dPct": -1.584564811601663,
+      "realizedVol20dPct": 55.09127943309515,
+      "drawdownFrom60dHighPct": -12.88180515276851,
+      "riskOffProbabilityPct": 32.38715258676923,
+      "elsRiskScore": 49.65698960190194,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-08",
+      "kospi": 5872.34,
+      "kospiReturn20dPct": 7.018092755672156,
+      "realizedVol20dPct": 59.5991374201556,
+      "drawdownFrom60dHighPct": -6.895696148007524,
+      "riskOffProbabilityPct": 39.289500827268625,
+      "elsRiskScore": 44.10038775702083,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-09",
+      "kospi": 5778.01,
+      "kospiReturn20dPct": 4.111096046812213,
+      "realizedVol20dPct": 59.91253243582128,
+      "drawdownFrom60dHighPct": -8.391273122402076,
+      "riskOffProbabilityPct": 31.436592010348697,
+      "elsRiskScore": 41.36827174320136,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-10",
+      "kospi": 5858.87,
+      "kospiReturn20dPct": 3.871836040105947,
+      "realizedVol20dPct": 59.8458186856223,
+      "drawdownFrom60dHighPct": -7.109254890867578,
+      "riskOffProbabilityPct": 35.56525856749913,
+      "elsRiskScore": 42.02194906888035,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-12",
+      "kospi": 5858.87,
+      "kospiReturn20dPct": -1.1166132554218944,
+      "realizedVol20dPct": 57.17504940569582,
+      "drawdownFrom60dHighPct": -7.109254890867578,
+      "riskOffProbabilityPct": 34.30910919368163,
+      "elsRiskScore": 42.37571584717917,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-13",
+      "kospi": 5808.62,
+      "kospiReturn20dPct": 0.7877523441984335,
+      "realizedVol20dPct": 56.36990701235614,
+      "drawdownFrom60dHighPct": -7.90595456987917,
+      "riskOffProbabilityPct": 31.06576684503771,
+      "elsRiskScore": 39.98280643334829,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-14",
+      "kospi": 5967.75,
+      "kospiReturn20dPct": 3.2268352311818793,
+      "realizedVol20dPct": 57.15663158438418,
+      "drawdownFrom60dHighPct": -5.382994837384225,
+      "riskOffProbabilityPct": 33.68287441457846,
+      "elsRiskScore": 39.09037094133358,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-15",
+      "kospi": 6091.39,
+      "kospiReturn20dPct": 12.683533954007299,
+      "realizedVol20dPct": 51.349400544619115,
+      "drawdownFrom60dHighPct": -3.422715091378692,
+      "riskOffProbabilityPct": 47.40293203022369,
+      "elsRiskScore": 42.618892634566514,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-16",
+      "kospi": 6226.05,
+      "kospiReturn20dPct": 12.101900860421289,
+      "realizedVol20dPct": 51.10001463411131,
+      "drawdownFrom60dHighPct": -1.2877237630899208,
+      "riskOffProbabilityPct": 50.134437358603975,
+      "elsRiskScore": 42.62754234092026,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-17",
+      "kospi": 6191.92,
+      "kospiReturn20dPct": 9.742812918046063,
+      "realizedVol20dPct": 51.10237140244692,
+      "drawdownFrom60dHighPct": -1.8288434980435864,
+      "riskOffProbabilityPct": 40.96639388962402,
+      "elsRiskScore": 39.35424420930292,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-19",
+      "kospi": 6191.92,
+      "kospiReturn20dPct": 13.39557411225696,
+      "realizedVol20dPct": 49.211538604196356,
+      "drawdownFrom60dHighPct": -1.8288434980435864,
+      "riskOffProbabilityPct": 44.97621810116886,
+      "elsRiskScore": 40.3056260835631,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-20",
+      "kospi": 6219.09,
+      "kospiReturn20dPct": 14.345253880891718,
+      "realizedVol20dPct": 49.07004650813513,
+      "drawdownFrom60dHighPct": -1.3980719948280207,
+      "riskOffProbabilityPct": 49.69837166897021,
+      "elsRiskScore": 42.230908028804436,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-21",
+      "kospi": 6388.47,
+      "kospiReturn20dPct": 17.459510471768702,
+      "realizedVol20dPct": 49.50831982011016,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 63.6461184666561,
+      "elsRiskScore": 47.903942779911326,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-22",
+      "kospi": 6417.93,
+      "kospiReturn20dPct": 21.61390130006633,
+      "realizedVol20dPct": 47.445393754800705,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 77.59228293527289,
+      "elsRiskScore": 50.7846644974148,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-23",
+      "kospi": 6475.81,
+      "kospiReturn20dPct": 28.171427555304017,
+      "realizedVol20dPct": 43.0782877867649,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 88.88677403842031,
+      "elsRiskScore": 54.1681981539336,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-04-24",
+      "kospi": 6475.63,
+      "kospiReturn20dPct": 18.19646361290146,
+      "realizedVol20dPct": 34.76895888097593,
+      "drawdownFrom60dHighPct": -0.0027822894683393606,
+      "riskOffProbabilityPct": 85.97539788739297,
+      "elsRiskScore": 54.47040302185782,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-04-26",
+      "kospi": 6475.63,
+      "kospiReturn20dPct": 23.721212530554613,
+      "realizedVol20dPct": 28.582518808722472,
+      "drawdownFrom60dHighPct": -0.0027822894683393606,
+      "riskOffProbabilityPct": 90.91572602361389,
+      "elsRiskScore": 54.633736352847976,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-04-27",
+      "kospi": 6615.03,
+      "kospiReturn20dPct": 23.01768592835005,
+      "realizedVol20dPct": 28.21902242436604,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 88.88380696535043,
+      "elsRiskScore": 54.141818928598354,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-04-28",
+      "kospi": 6641.02,
+      "kospiReturn20dPct": 23.501018368775718,
+      "realizedVol20dPct": 28.062015101798295,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 90.6772822222218,
+      "elsRiskScore": 55.02620619947436,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-04-29",
+      "kospi": 6690.9,
+      "kospiReturn20dPct": 22.761370530526204,
+      "realizedVol20dPct": 28.05967189504921,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 91.4113597165841,
+      "elsRiskScore": 56.25699435122725,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-04-30",
+      "kospi": 6598.87,
+      "kospiReturn20dPct": 20.09344096034331,
+      "realizedVol20dPct": 29.335943408580178,
+      "drawdownFrom60dHighPct": -1.3754470474743319,
+      "riskOffProbabilityPct": 87.11550752050779,
+      "elsRiskScore": 53.459487453669425,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-05-01",
+      "kospi": 6598.87,
+      "kospiReturn20dPct": 12.372074722663662,
+      "realizedVol20dPct": 20.173366422651682,
+      "drawdownFrom60dHighPct": -1.3754470474743319,
+      "riskOffProbabilityPct": 72.15311675221847,
+      "elsRiskScore": 48.16845757500727,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-05-03",
+      "kospi": 6598.87,
+      "kospiReturn20dPct": 14.206627971555674,
+      "realizedVol20dPct": 18.584693663306137,
+      "drawdownFrom60dHighPct": -1.3754470474743319,
+      "riskOffProbabilityPct": 81.32430111521425,
+      "elsRiskScore": 51.61105951833452,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-05-04",
+      "kospi": 6936.99,
+      "kospiReturn20dPct": 18.4015022627783,
+      "realizedVol20dPct": 24.05756668516789,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 96.1936004656382,
+      "elsRiskScore": 57.41328224701901,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-05-05",
+      "kospi": 6936.99,
+      "kospiReturn20dPct": 18.4015022627783,
+      "realizedVol20dPct": 24.05756668516789,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 92.5348041144205,
+      "elsRiskScore": 54.92213446761947,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-05-06",
+      "kospi": 7384.56,
+      "kospiReturn20dPct": 27.131055390300006,
+      "realizedVol20dPct": 29.907822239067595,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 93.63416167253521,
+      "elsRiskScore": 55.277658360095934,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-05-07",
+      "kospi": 7490.05,
+      "kospiReturn20dPct": 25.50877306669179,
+      "realizedVol20dPct": 29.395162788152895,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 94.70969435381207,
+      "elsRiskScore": 56.11187299516573,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-05-08",
+      "kospi": 7498.0,
+      "kospiReturn20dPct": 23.09177103601099,
+      "realizedVol20dPct": 29.40310436945126,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 94.6765855871682,
+      "elsRiskScore": 55.300371256299435,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-05-10",
+      "kospi": 7498.0,
+      "kospiReturn20dPct": 20.429489567443994,
+      "realizedVol20dPct": 29.295247767804867,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 94.36264721498681,
+      "elsRiskScore": 55.25110164113258,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-05-11",
+      "kospi": 7822.24,
+      "kospiReturn20dPct": 26.32980292171343,
+      "realizedVol20dPct": 30.964603159049663,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 95.27700619614373,
+      "elsRiskScore": 57.331534850769046,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-05-12",
+      "kospi": 7643.15,
+      "kospiReturn20dPct": 23.437479792685977,
+      "realizedVol20dPct": 33.13904691822362,
+      "drawdownFrom60dHighPct": -2.289501813613881,
+      "riskOffProbabilityPct": 92.21831760906177,
+      "elsRiskScore": 62.496788424297115,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-05-13",
+      "kospi": 7844.01,
+      "kospiReturn20dPct": 26.127937732046046,
+      "realizedVol20dPct": 33.49031884975282,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 95.78115881423803,
+      "elsRiskScore": 60.94050809517786,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-05-14",
+      "kospi": 7981.41,
+      "kospiReturn20dPct": 24.934607000358543,
+      "realizedVol20dPct": 33.08315076282945,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 95.39935659130136,
+      "elsRiskScore": 59.849223387986434,
+      "baselineRiskOffSignal": 0
+    },
+    {
+      "date": "2026-05-15",
+      "kospi": 7493.18,
+      "kospiReturn20dPct": 16.753843849183212,
+      "realizedVol20dPct": 42.30468097295773,
+      "drawdownFrom60dHighPct": -6.117089222465677,
+      "riskOffProbabilityPct": 96.3397235891187,
+      "elsRiskScore": 65.26808716528146,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-05-17",
+      "kospi": 7493.18,
+      "kospiReturn20dPct": 15.710314354223453,
+      "realizedVol20dPct": 42.389921761055874,
+      "drawdownFrom60dHighPct": -6.117089222465677,
+      "riskOffProbabilityPct": 95.33325307005542,
+      "elsRiskScore": 69.10823043105054,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-05-18",
+      "kospi": 7516.04,
+      "kospiReturn20dPct": 16.066547580358748,
+      "realizedVol20dPct": 42.333488034446596,
+      "drawdownFrom60dHighPct": -5.830675382884354,
+      "riskOffProbabilityPct": 93.51537922546778,
+      "elsRiskScore": 64.40637604613275,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-05-19",
+      "kospi": 7271.66,
+      "kospiReturn20dPct": 12.292708012085573,
+      "realizedVol20dPct": 44.66670535219449,
+      "drawdownFrom60dHighPct": -8.892538863501665,
+      "riskOffProbabilityPct": 93.62810882015278,
+      "elsRiskScore": 70.37841746356537,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-05-20",
+      "kospi": 7208.95,
+      "kospiReturn20dPct": 8.978348237962198,
+      "realizedVol20dPct": 44.55352595274317,
+      "drawdownFrom60dHighPct": -9.678239130871003,
+      "riskOffProbabilityPct": 78.72599825068195,
+      "elsRiskScore": 64.56528036555035,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-05-21",
+      "kospi": 7815.59,
+      "kospiReturn20dPct": 17.686587614016204,
+      "realizedVol20dPct": 52.17242005023041,
+      "drawdownFrom60dHighPct": -2.077581646022175,
+      "riskOffProbabilityPct": 95.84084151300027,
+      "elsRiskScore": 60.83777816901817,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-05-22",
+      "kospi": 7847.71,
+      "kospiReturn20dPct": 17.289304510272707,
+      "realizedVol20dPct": 52.19189688148733,
+      "drawdownFrom60dHighPct": -1.6751450269449353,
+      "riskOffProbabilityPct": 94.92499569631659,
+      "elsRiskScore": 58.95701096505826,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-05-24",
+      "kospi": 7847.71,
+      "kospiReturn20dPct": 18.925055677293233,
+      "realizedVol20dPct": 51.6525530063075,
+      "drawdownFrom60dHighPct": -1.6751450269449353,
+      "riskOffProbabilityPct": 95.86467694887206,
+      "elsRiskScore": 60.729897670838064,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-05-25",
+      "kospi": 7847.71,
+      "kospiReturn20dPct": 18.925055677293233,
+      "realizedVol20dPct": 51.6525530063075,
+      "drawdownFrom60dHighPct": -1.6751450269449353,
+      "riskOffProbabilityPct": 91.78384305926798,
+      "elsRiskScore": 58.41988693881989,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-05-26",
+      "kospi": 8047.51,
+      "kospiReturn20dPct": 21.952843785549824,
+      "realizedVol20dPct": 51.86359290454535,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 95.68686988628986,
+      "elsRiskScore": 58.623076273882084,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-05-27",
+      "kospi": 8228.7,
+      "kospiReturn20dPct": 18.620610917637805,
+      "realizedVol20dPct": 49.92237431352131,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 94.16927219272951,
+      "elsRiskScore": 57.16121915760533,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-05-28",
+      "kospi": 8185.29,
+      "kospiReturn20dPct": 17.994832953660158,
+      "realizedVol20dPct": 50.07742264595677,
+      "drawdownFrom60dHighPct": -0.527545726781109,
+      "riskOffProbabilityPct": 92.82871369878369,
+      "elsRiskScore": 57.01380773001114,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-05-29",
+      "kospi": 8476.15,
+      "kospiReturn20dPct": 14.782063161107573,
+      "realizedVol20dPct": 46.97351565803762,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 92.048204555593,
+      "elsRiskScore": 56.840911594113415,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-05-31",
+      "kospi": 8476.15,
+      "kospiReturn20dPct": 13.165474351323647,
+      "realizedVol20dPct": 46.95134697507411,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 92.21631726363084,
+      "elsRiskScore": 56.72112154039407,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-01",
+      "kospi": 8788.38,
+      "kospiReturn20dPct": 17.20965434532542,
+      "realizedVol20dPct": 48.083884953967505,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 94.17789960534422,
+      "elsRiskScore": 58.63362064232628,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-02",
+      "kospi": 8801.49,
+      "kospiReturn20dPct": 17.38450565984262,
+      "realizedVol20dPct": 48.05414091225451,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 94.37388005979919,
+      "elsRiskScore": 58.98046889531047,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-03",
+      "kospi": 8801.49,
+      "kospiReturn20dPct": 12.518792195829853,
+      "realizedVol20dPct": 46.3638668031601,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 91.91320242084092,
+      "elsRiskScore": 60.601265047823865,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-04",
+      "kospi": 8639.41,
+      "kospiReturn20dPct": 13.034681599019148,
+      "realizedVol20dPct": 46.010695233412335,
+      "drawdownFrom60dHighPct": -1.841507219902172,
+      "riskOffProbabilityPct": 90.64884528923763,
+      "elsRiskScore": 60.34559270368903,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-05",
+      "kospi": 8160.59,
+      "kospiReturn20dPct": 4.0359470166949185,
+      "realizedVol20dPct": 50.478702902959206,
+      "drawdownFrom60dHighPct": -7.281725861853561,
+      "riskOffProbabilityPct": 75.27627051211867,
+      "elsRiskScore": 64.59624684340938,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-07",
+      "kospi": 8160.59,
+      "kospiReturn20dPct": 2.244962782168125,
+      "realizedVol20dPct": 50.15195395484402,
+      "drawdownFrom60dHighPct": -7.281725861853561,
+      "riskOffProbabilityPct": 73.92671106777499,
+      "elsRiskScore": 66.38355468777576,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-08",
+      "kospi": 7484.41,
+      "kospiReturn20dPct": -0.11704001939785158,
+      "realizedVol20dPct": 54.61022079567495,
+      "drawdownFrom60dHighPct": -14.964284945531459,
+      "riskOffProbabilityPct": 62.25259851916043,
+      "elsRiskScore": 61.302809829821854,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-09",
+      "kospi": 8096.93,
+      "kospiReturn20dPct": 8.05732660681755,
+      "realizedVol20dPct": 61.344642289070116,
+      "drawdownFrom60dHighPct": -8.005008695482363,
+      "riskOffProbabilityPct": 85.28749860488787,
+      "elsRiskScore": 65.28727680853282,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-10",
+      "kospi": 7730.82,
+      "kospiReturn20dPct": 2.8576189594519574,
+      "realizedVol20dPct": 63.87836901119225,
+      "drawdownFrom60dHighPct": -12.164649186050925,
+      "riskOffProbabilityPct": 69.60073238868685,
+      "elsRiskScore": 63.58441205694793,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-11",
+      "kospi": 7763.95,
+      "kospiReturn20dPct": 6.769981386429014,
+      "realizedVol20dPct": 62.56806972853999,
+      "drawdownFrom60dHighPct": -11.788231440742791,
+      "riskOffProbabilityPct": 66.21483917580933,
+      "elsRiskScore": 59.47793957046436,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-12",
+      "kospi": 8123.62,
+      "kospiReturn20dPct": 12.687976710808035,
+      "realizedVol20dPct": 64.11421362125132,
+      "drawdownFrom60dHighPct": -7.7017652594786545,
+      "riskOffProbabilityPct": 81.08472741097339,
+      "elsRiskScore": 58.47678645917288,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-14",
+      "kospi": 8123.62,
+      "kospiReturn20dPct": 3.941228744031733,
+      "realizedVol20dPct": 57.701879712885294,
+      "drawdownFrom60dHighPct": -7.7017652594786545,
+      "riskOffProbabilityPct": 66.39780972314789,
+      "elsRiskScore": 52.590204717134775,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-15",
+      "kospi": 8545.98,
+      "kospiReturn20dPct": 8.89776140158325,
+      "realizedVol20dPct": 60.24724523854601,
+      "drawdownFrom60dHighPct": -2.903028451103473,
+      "riskOffProbabilityPct": 70.85542597364423,
+      "elsRiskScore": 51.298675400721336,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-16",
+      "kospi": 8726.6,
+      "kospiReturn20dPct": 11.199313593548087,
+      "realizedVol20dPct": 60.50786119890882,
+      "drawdownFrom60dHighPct": -0.8508857364575406,
+      "riskOffProbabilityPct": 77.26030388332971,
+      "elsRiskScore": 52.35184527726167,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-17",
+      "kospi": 8864.24,
+      "kospiReturn20dPct": 12.953209006160371,
+      "realizedVol20dPct": 60.58073843835833,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 88.18674829076434,
+      "elsRiskScore": 55.77498094158244,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-06-18",
+      "kospi": 8947.45,
+      "kospiReturn20dPct": 11.182843586367586,
+      "realizedVol20dPct": 60.180049644089486,
+      "drawdownFrom60dHighPct": 0.0,
+      "riskOffProbabilityPct": 86.18469957475642,
+      "elsRiskScore": 56.29900562829903,
+      "baselineRiskOffSignal": 1
+    }
+  ]
+}
