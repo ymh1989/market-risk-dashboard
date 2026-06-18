@@ -11,6 +11,11 @@ const trendLabel = {
 
 const formatScore = (value) => `${clampScore(value).toFixed(1)} / 100`;
 const formatPct = (value) => `${Number(value).toFixed(2)}%`;
+const formatPointDelta = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
+  const number = Number(value);
+  return `${number > 0 ? "+" : ""}${number.toFixed(1)}p`;
+};
 const categoryCountText = (indicators) => {
   const counts = indicators.reduce((acc, indicator) => {
     acc[indicator.category] = (acc[indicator.category] ?? 0) + 1;
@@ -70,6 +75,137 @@ function sparklinePath(points, width = 260, height = 62, padding = 5) {
       return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
     })
     .join(" ");
+}
+
+function valueChange(currentValue, points, offset) {
+  if (!points?.length || points.length <= offset) return null;
+  const base = points[points.length - 1 - offset];
+  if (!base) return null;
+  return clampScore(currentValue) - clampScore(base.value);
+}
+
+function changeTone(value) {
+  if (value === null || value === undefined || Math.abs(value) < 0.05) return "flat";
+  return value > 0 ? "up" : "down";
+}
+
+function renderChangePills(currentValue, points) {
+  const changes = [
+    ["1D", valueChange(currentValue, points, 1)],
+    ["1W", valueChange(currentValue, points, 5)],
+    ["1M", valueChange(currentValue, points, 20)]
+  ];
+
+  return `
+    <div class="change-pills" aria-label="점수 변화">
+      ${changes
+        .map(
+          ([label, value]) => `
+            <span class="change-pill change-pill--${changeTone(value)}">
+              <small>${label}</small>
+              <strong>${formatPointDelta(value)}</strong>
+            </span>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function buildCompositeSeries(section, timeseries) {
+  const indicators = section?.indicators ?? [];
+  const weights = Object.fromEntries(indicators.map((indicator) => [indicator.id, Number(indicator.weight) || 0]));
+  const dateScores = {};
+  const dateWeights = {};
+
+  Object.entries(timeseries?.series ?? {}).forEach(([indicatorId, points]) => {
+    const weight = weights[indicatorId];
+    if (!weight) return;
+    points.forEach((point) => {
+      dateScores[point.date] = (dateScores[point.date] ?? 0) + clampScore(point.value) * weight;
+      dateWeights[point.date] = (dateWeights[point.date] ?? 0) + weight;
+    });
+  });
+
+  const composite = Object.keys(dateScores)
+    .sort()
+    .filter((date) => dateWeights[date] > 0.7)
+    .map((date) => ({ date, value: dateScores[date] / dateWeights[date] }));
+
+  if (!composite.length) return composite;
+
+  const latest = composite[composite.length - 1];
+  const currentScore = Number(section.score);
+  if (Number.isFinite(currentScore) && Math.abs(latest.value - currentScore) > 0.05) {
+    composite.push({ date: section.asOf ?? latest.date, value: currentScore });
+  }
+  return composite;
+}
+
+function trendChartPath(points, width = 760, height = 210, padding = 18) {
+  if (points.length < 2) return "";
+  const values = points.map((point) => clampScore(point.value));
+  const min = Math.max(0, Math.min(...values) - 5);
+  const max = Math.min(100, Math.max(...values) + 5);
+  const range = max - min || 1;
+  const step = width / (points.length - 1);
+
+  return points
+    .map((point, index) => {
+      const x = index * step;
+      const y = height - padding - ((clampScore(point.value) - min) / range) * (height - padding * 2);
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
+function renderCompositeTrend(section, timeseries) {
+  const points = buildCompositeSeries(section, timeseries);
+  if (points.length < 2) return "";
+
+  const latest = points[points.length - 1];
+  const first = points[0];
+  const path = trendChartPath(points);
+  const areaPath = `${path} L 760 210 L 0 210 Z`;
+  const change1d = valueChange(latest.value, points, 1);
+  const change1w = valueChange(latest.value, points, 5);
+  const change1m = valueChange(latest.value, points, 20);
+  const minPoint = points.reduce((min, point) => (point.value < min.value ? point : min), points[0]);
+  const maxPoint = points.reduce((max, point) => (point.value > max.value ? point : max), points[0]);
+
+  return `
+    <section class="trend-panel">
+      <div class="trend-panel__header">
+        <div>
+          <span class="eyebrow">Composite Trend</span>
+          <h2>시장리스크 종합점수 흐름</h2>
+        </div>
+        <div class="trend-score">
+          <strong>${formatScore(latest.value)}</strong>
+          <span>${latest.date}</span>
+        </div>
+      </div>
+      <div class="trend-kpis">
+        <span class="change-pill change-pill--${changeTone(change1d)}"><small>1D</small><strong>${formatPointDelta(change1d)}</strong></span>
+        <span class="change-pill change-pill--${changeTone(change1w)}"><small>1W</small><strong>${formatPointDelta(change1w)}</strong></span>
+        <span class="change-pill change-pill--${changeTone(change1m)}"><small>1M</small><strong>${formatPointDelta(change1m)}</strong></span>
+        <span><small>High</small><strong>${maxPoint.value.toFixed(1)}</strong></span>
+        <span><small>Low</small><strong>${minPoint.value.toFixed(1)}</strong></span>
+      </div>
+      <div class="trend-chart" aria-label="시장리스크 종합점수 시계열">
+        <svg viewBox="0 0 760 210" role="img">
+          <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
+          <path class="trend-chart__area" d="${areaPath}"></path>
+          <path class="trend-chart__line" d="${path}"></path>
+        </svg>
+        <div class="trend-chart__meta">
+          <span>${first.date}</span>
+          <span>${points.length} observations</span>
+          <span>${latest.date}</span>
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 function renderSparkline(indicator, timeseries) {
@@ -288,6 +424,7 @@ function renderGauge(score, level, thresholds) {
 function renderIndicator(indicator, thresholds, timeseries) {
   const level = thresholds.find((threshold) => indicator.value >= threshold.min && indicator.value < threshold.max);
   const tone = level?.tone ?? "muted";
+  const indicatorPoints = timeseries?.series?.[indicator.id] ?? [];
 
   return `
     <article class="indicator-card">
@@ -303,6 +440,7 @@ function renderIndicator(indicator, thresholds, timeseries) {
         <span>${indicator.group ?? "risk"}</span>
         <strong>기여도 +${Number(indicator.contribution ?? 0).toFixed(2)}점</strong>
       </div>
+      ${renderChangePills(indicator.value, indicatorPoints)}
       <div class="mini-bar" aria-hidden="true">
         <span style="width:${clampScore(indicator.value)}%"></span>
       </div>
@@ -316,8 +454,9 @@ function renderIndicator(indicator, thresholds, timeseries) {
   `;
 }
 
-function renderSummary(data, backtest, stressEpisodes) {
+function renderSummary(data, timeseries, backtest, stressEpisodes) {
   const market = data.sections.find((section) => section.id === "market");
+  market.asOf = data.metadata.asOf;
   const plannedLabels = data.sections
     .filter((section) => section.status !== "active")
     .map((section) => section.label)
@@ -363,6 +502,7 @@ function renderSummary(data, backtest, stressEpisodes) {
       </p>
     </section>
 
+    ${renderCompositeTrend(market, timeseries)}
     ${renderBacktestPanel(backtest)}
     ${renderStressEpisodesPanel(stressEpisodes)}
   `;
@@ -452,6 +592,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes) {
           : `
             ${renderModelPanel(section)}
             ${renderGroupScores(section)}
+            ${renderCompositeTrend(section.id === "market" ? section : null, timeseries)}
             ${renderBacktestPanel(section.id === "market" ? backtest : null)}
             ${renderStressEpisodesPanel(section.id === "market" ? stressEpisodes : null)}
             ${renderGauge(section.score, section.level, section.model.thresholds)}
@@ -512,7 +653,7 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes) {
 
     <div class="panel-stack">
       <section class="tab-panel is-active" data-panel="summary">
-        ${renderSummary(data, backtest, stressEpisodes)}
+        ${renderSummary(data, timeseries, backtest, stressEpisodes)}
       </section>
       ${data.sections.map((section) => renderSection(section, timeseries, backtest, stressEpisodes)).join("")}
     </div>
