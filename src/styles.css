@@ -225,6 +225,7 @@ select {
 .indicator-card,
 .narrative-band,
 .ml-risk-panel,
+.els-index-panel,
 .trend-panel,
 .backtest-panel,
 .stress-panel,
@@ -442,6 +443,252 @@ select {
   gap: 6px;
   margin: 0;
   padding-left: 18px;
+}
+
+.els-index-panel {
+  display: grid;
+  gap: 18px;
+  margin-top: 16px;
+  padding: 24px;
+  background: var(--surface);
+}
+
+.els-index-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.els-index-panel__header h2 {
+  margin: 6px 0 0;
+  font-size: 1.35rem;
+}
+
+.els-basket-state {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  min-width: 190px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 12px 14px;
+}
+
+.els-basket-state span,
+.els-basket-state small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.els-basket-state strong {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.els-basket-state--good {
+  border-top: 4px solid var(--green);
+}
+
+.els-basket-state--watch {
+  border-top: 4px solid var(--blue);
+}
+
+.els-basket-state--caution {
+  border-top: 4px solid var(--amber);
+}
+
+.els-basket-state--danger {
+  border-top: 4px solid var(--red);
+}
+
+.els-index-summary {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 14px;
+}
+
+.els-index-summary article,
+.els-index-card,
+.els-index-chart {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-raised);
+}
+
+.els-index-summary article {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.els-index-summary h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.4;
+}
+
+.els-index-summary p,
+.els-index-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.els-index-cards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.els-index-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.els-index-card--good {
+  border-top: 4px solid var(--green);
+}
+
+.els-index-card--watch {
+  border-top: 4px solid var(--blue);
+}
+
+.els-index-card--caution {
+  border-top: 4px solid var(--amber);
+}
+
+.els-index-card--danger {
+  border-top: 4px solid var(--red);
+}
+
+.els-index-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.els-index-card h3 {
+  margin: 4px 0 0;
+  font-size: 1.02rem;
+}
+
+.els-index-card header > strong {
+  flex: 0 0 auto;
+  font-size: 1.35rem;
+}
+
+.els-index-card dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.els-index-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.els-index-card dt,
+.els-index-card dd {
+  margin: 0;
+}
+
+.els-index-card dd {
+  color: var(--ink);
+}
+
+.els-index-chart {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.els-index-chart svg {
+  display: block;
+  width: 100%;
+  height: 210px;
+  overflow: visible;
+}
+
+.els-index-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.els-line--spx {
+  stroke: var(--blue);
+}
+
+.els-line--sx5e {
+  stroke: var(--teal);
+}
+
+.els-line--nky {
+  stroke: var(--amber);
+}
+
+.els-line--hscei {
+  stroke: var(--red);
+}
+
+.els-line--kospi200 {
+  stroke: var(--green);
+}
+
+.els-index-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.els-index-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.els-index-legend i {
+  display: inline-block;
+  width: 18px;
+  height: 3px;
+  border-radius: 999px;
+}
+
+.els-index-legend .els-line--spx {
+  background: var(--blue);
+}
+
+.els-index-legend .els-line--sx5e {
+  background: var(--teal);
+}
+
+.els-index-legend .els-line--nky {
+  background: var(--amber);
+}
+
+.els-index-legend .els-line--hscei {
+  background: var(--red);
+}
+
+.els-index-legend .els-line--kospi200 {
+  background: var(--green);
 }
 
 .narrative-band {
@@ -1245,6 +1492,7 @@ select {
 
   .summary-grid,
   .ml-risk-grid,
+  .els-index-cards,
   .backtest-grid,
   .stress-grid,
   .group-panel,
@@ -1273,12 +1521,15 @@ select {
   }
 
   .ml-risk-panel__header,
+  .els-index-panel__header,
+  .els-index-summary,
   .ml-risk-body {
     display: grid;
     grid-template-columns: 1fr;
   }
 
-  .ml-risk-state {
+  .ml-risk-state,
+  .els-basket-state {
     justify-items: start;
   }
 }
@@ -1307,6 +1558,7 @@ select {
 
   .summary-grid,
   .ml-risk-grid,
+  .els-index-cards,
   .backtest-grid,
   .stress-grid,
   .stress-card__metrics,

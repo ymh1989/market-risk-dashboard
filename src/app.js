@@ -182,6 +182,20 @@ function linePath(points, valueKey, width = 760, height = 210, padding = 18) {
     .join(" ");
 }
 
+function scorePath(points, valueKey = "score", width = 760, height = 210, padding = 18) {
+  const valid = points.filter((point) => Number.isFinite(Number(point[valueKey])));
+  if (valid.length < 2) return "";
+  const step = width / (valid.length - 1);
+
+  return valid
+    .map((point, index) => {
+      const x = index * step;
+      const y = height - padding - (clampScore(point[valueKey]) / 100) * (height - padding * 2);
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
 function monthTicks(points, width = 760) {
   const seen = new Set();
   const ticks = [];
@@ -199,6 +213,109 @@ function monthTicks(points, width = 760) {
   });
 
   return ticks;
+}
+
+function renderElsIndexRiskPanel(elsRisk) {
+  if (!elsRisk?.indices?.length || !elsRisk?.basket) return "";
+
+  const sorted = [...elsRisk.indices].sort((a, b) => Number(b.score) - Number(a.score));
+  const basket = elsRisk.basket;
+  const ticks = monthTicks(sorted[0].series ?? []);
+  const colorClass = {
+    spx: "els-line--spx",
+    sx5e: "els-line--sx5e",
+    nky: "els-line--nky",
+    hscei: "els-line--hscei",
+    kospi200: "els-line--kospi200"
+  };
+
+  return `
+    <section class="els-index-panel">
+      <div class="els-index-panel__header">
+        <div>
+          <span class="eyebrow">ELS Underlying Indices</span>
+          <h2>기초지수별 ELS 리스크 판독</h2>
+        </div>
+        <div class="els-basket-state els-basket-state--${basket.tone}">
+          <span>Worst-of Basket</span>
+          <strong>${Number(basket.score).toFixed(1)}</strong>
+          <small>${basket.bucket} · ${basket.worstIndex} 주도</small>
+        </div>
+      </div>
+
+      <div class="els-index-summary">
+        <article>
+          <span class="eyebrow">Basket 해석</span>
+          <h3>${basket.interpretation}</h3>
+          <p>
+            Basket 점수는 평균이 아니라 worst-of 구조를 반영합니다. 가장 높은 개별 리스크 점수에 50%,
+            두 번째 취약 지수에 20%, 평균 점수와 동조화 점수에 각각 15%를 반영합니다.
+          </p>
+        </article>
+        <article>
+          <span class="eyebrow">동조화 점수</span>
+          <h3>${Number(basket.correlationScore).toFixed(1)} / 100</h3>
+          <p>
+            최근 지수 간 수익률 상관이 높을수록 동시 순연 가능성과 헤지 비용 부담이 커집니다.
+            현재 평균 개별 점수는 ${Number(basket.averageIndexScore).toFixed(1)}점입니다.
+          </p>
+        </article>
+      </div>
+
+      <div class="els-index-cards">
+        ${sorted
+          .map(
+            (item) => `
+              <article class="els-index-card els-index-card--${item.tone}">
+                <header>
+                  <div>
+                    <span class="eyebrow">${item.region}</span>
+                    <h3>${item.label}</h3>
+                  </div>
+                  <strong>${Number(item.score).toFixed(1)}</strong>
+                </header>
+                <div class="mini-bar" aria-hidden="true">
+                  <span style="width:${clampScore(item.score)}%"></span>
+                </div>
+                <dl>
+                  <div><dt>20D 수익률</dt><dd>${formatSignedPct(item.metrics.return20dPct)}</dd></div>
+                  <div><dt>20D 변동성</dt><dd>${Number(item.metrics.realizedVol20dPct).toFixed(1)}%</dd></div>
+                  <div><dt>252D 낙폭</dt><dd>${formatSignedPct(item.metrics.drawdown252dPct)}</dd></div>
+                </dl>
+                <p>${item.reading}</p>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+
+      <div class="els-index-chart" aria-label="기초지수별 ELS 리스크 점수 흐름">
+        <svg viewBox="0 0 760 210" role="img">
+          <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
+          ${elsRisk.indices
+            .map(
+              (item) => `<path class="els-index-line ${colorClass[item.id] ?? ""}" d="${scorePath(item.series)}"></path>`
+            )
+            .join("")}
+          ${ticks
+            .map(
+              (tick, index) => `
+                <g class="trend-chart__tick" transform="translate(${tick.x.toFixed(2)} 0)">
+                  <line y1="194" y2="199"></line>
+                  <text y="207" text-anchor="${index === 0 ? "start" : index === ticks.length - 1 ? "end" : "middle"}">${tick.label}</text>
+                </g>
+              `
+            )
+            .join("")}
+        </svg>
+        <div class="els-index-legend">
+          ${elsRisk.indices
+            .map((item) => `<span><i class="${colorClass[item.id] ?? ""}"></i>${item.label}</span>`)
+            .join("")}
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 function renderMlRiskSignalPanel(mlRisk) {
@@ -614,7 +731,7 @@ function renderIndicator(indicator, thresholds, timeseries) {
   `;
 }
 
-function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk) {
+function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk) {
   const market = data.sections.find((section) => section.id === "market");
   market.asOf = data.metadata.asOf;
   const plannedLabels = data.sections
@@ -663,6 +780,7 @@ function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk) {
     </section>
 
     ${renderMlRiskSignalPanel(mlRisk)}
+    ${renderElsIndexRiskPanel(elsRisk)}
     ${renderCompositeTrend(market, timeseries)}
     ${renderBacktestPanel(backtest)}
     ${renderStressEpisodesPanel(stressEpisodes)}
@@ -775,7 +893,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes) {
   `;
 }
 
-function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk) {
+function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, elsRisk) {
   const data = evaluateDashboard(rawData);
   const enabledTabs = data.tabs.filter((tab) => tab.enabled);
 
@@ -814,7 +932,7 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk) 
 
     <div class="panel-stack">
       <section class="tab-panel is-active" data-panel="summary">
-        ${renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk)}
+        ${renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk)}
       </section>
       ${data.sections.map((section) => renderSection(section, timeseries, backtest, stressEpisodes)).join("")}
     </div>
@@ -853,10 +971,13 @@ Promise.all([
     .catch(() => null),
   fetch("./data/ml-risk-signal.json")
     .then((response) => (response.ok ? response.json() : null))
+    .catch(() => null),
+  fetch("./data/els-index-risk.json")
+    .then((response) => (response.ok ? response.json() : null))
     .catch(() => null)
 ])
-  .then(([dashboard, timeseries, backtest, stressEpisodes, mlRisk]) =>
-    renderDashboard(dashboard, timeseries, backtest, stressEpisodes, mlRisk)
+  .then(([dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk]) =>
+    renderDashboard(dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk)
   )
   .catch((error) => {
     app.innerHTML = `
