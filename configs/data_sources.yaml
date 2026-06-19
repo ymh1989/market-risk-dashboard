@@ -1,0 +1,60 @@
+fetch:
+  provider: yahoo
+  interval: 1d
+  range: 10y
+  timeout_seconds: 20
+  user_agent: "Mozilla/5.0 (compatible; kospi-risk-regime-lab/0.1)"
+  alignment: outer
+  min_optional_coverage_ratio: 0.6
+
+required:
+  KOSPI:
+    provider: yahoo
+    symbol: "^KS11"
+    label: "KOSPI Composite Index"
+  SPX:
+    provider: yahoo
+    symbol: "^GSPC"
+    label: "S&P 500 Index"
+  SOX:
+    provider: yahoo
+    symbol: "^SOX"
+    label: "Philadelphia Semiconductor Index"
+  USDKRW:
+    provider: yahoo
+    symbol: "KRW=X"
+    label: "USD/KRW"
+
+optional:
+  VIX:
+    provider: yahoo
+    symbol: "^VIX"
+    label: "CBOE Volatility Index"
+  NASDAQ:
+    provider: yahoo
+    symbol: "^IXIC"
+    label: "NASDAQ Composite"
+  NIKKEI225:
+    provider: yahoo
+    symbol: "^N225"
+    label: "Nikkei 225"
+  CSI300:
+    provider: yahoo
+    symbol: "000300.SS"
+    label: "CSI 300"
+  US10Y:
+    provider: yahoo
+    symbol: "^TNX"
+    label: "US 10Y Treasury Yield"
+  WTI:
+    provider: yahoo
+    symbol: "CL=F"
+    label: "WTI Crude Oil Futures"
+  COPPER:
+    provider: yahoo
+    symbol: "HG=F"
+    label: "Copper Futures"
+  GOLD:
+    provider: yahoo
+    symbol: "GC=F"
+    label: "Gold Futures"
