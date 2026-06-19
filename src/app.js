@@ -2,6 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
+const ASSET_VERSION = "20260619-1";
 
 const trendLabel = {
   up: "상승",
@@ -60,6 +61,10 @@ function updateThemeButton(theme = document.documentElement.dataset.theme) {
   button.textContent = isDark ? "☀" : "◐";
   button.setAttribute("aria-label", isDark ? "라이트 모드로 전환" : "다크 모드로 전환");
   button.setAttribute("title", isDark ? "라이트 모드" : "다크 모드");
+}
+
+function versioned(path) {
+  return `${path}?v=${ASSET_VERSION}`;
 }
 
 applyTheme(getStoredTheme());
@@ -956,23 +961,23 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
 }
 
 Promise.all([
-  fetch("./data/risk-dashboard.json").then((response) => {
+  fetch(versioned("./data/risk-dashboard.json")).then((response) => {
     if (!response.ok) throw new Error(`Dashboard data load failed: ${response.status}`);
     return response.json();
   }),
-  fetch("./data/market-risk-timeseries.json")
+  fetch(versioned("./data/market-risk-timeseries.json"))
     .then((response) => (response.ok ? response.json() : null))
     .catch(() => null),
-  fetch("./data/market-risk-backtest.json")
+  fetch(versioned("./data/market-risk-backtest.json"))
     .then((response) => (response.ok ? response.json() : null))
     .catch(() => null),
-  fetch("./data/market-stress-episodes.json")
+  fetch(versioned("./data/market-stress-episodes.json"))
     .then((response) => (response.ok ? response.json() : null))
     .catch(() => null),
-  fetch("./data/ml-risk-signal.json")
+  fetch(versioned("./data/ml-risk-signal.json"))
     .then((response) => (response.ok ? response.json() : null))
     .catch(() => null),
-  fetch("./data/els-index-risk.json")
+  fetch(versioned("./data/els-index-risk.json"))
     .then((response) => (response.ok ? response.json() : null))
     .catch(() => null)
 ])
