@@ -343,11 +343,12 @@ function renderMlRiskSignalPanel(mlRisk) {
       <div class="ml-risk-panel__header">
         <div>
           <span class="eyebrow">ML Risk-off Signal</span>
-          <h2>고변동성 활황 구간 진단</h2>
+          <h2>Risk-off 확률과 국면 해석</h2>
         </div>
         <div class="ml-risk-state ml-risk-state--${riskTone}">
-          <span>${latest.interpretationLevel}</span>
-          <strong>${Number(latest.riskOffProbabilityPct).toFixed(1)}%</strong>
+          <span>국면 해석</span>
+          <strong>${latest.interpretationLevel}</strong>
+          <small>모멘텀·변동성 반영</small>
         </div>
       </div>
 
