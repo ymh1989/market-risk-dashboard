@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260619-1";
+const ASSET_VERSION = "20260619-2";
 
 const trendLabel = {
   up: "상승",
