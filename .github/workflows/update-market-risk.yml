@@ -3,6 +3,8 @@ name: Update market risk data
 on:
   workflow_dispatch:
   schedule:
+    # 08:30 KST on weekdays, before the Korean cash market opens.
+    - cron: "30 23 * * 0-4"
     # 16:10 KST on weekdays, after the Korean cash market close.
     - cron: "10 7 * * 1-5"
 
@@ -21,11 +23,15 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install Python dependencies
+        run: python -m pip install --upgrade pandas numpy
+
       - name: Refresh market risk data
         run: |
           make update-market-risk
           make backtest-market-risk
           REFRESH_STRESS_CACHE=1 make analyze-stress-episodes
+          python3 scripts/export_els_index_risk.py
 
       - name: Validate dashboard data
         run: make test
@@ -34,7 +40,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/risk-dashboard.json data/market-risk-snapshot.json data/market-risk-timeseries.json data/market-risk-backtest.json data/market-stress-episodes.json data/market-history-cache.json
+          git add data/risk-dashboard.json data/market-risk-snapshot.json data/market-risk-timeseries.json data/market-risk-backtest.json data/market-stress-episodes.json data/market-history-cache.json data/els-index-risk.json
           if git diff --cached --quiet; then
             echo "No data changes to commit."
           else
