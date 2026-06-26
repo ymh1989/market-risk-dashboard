@@ -329,6 +329,32 @@ def equity_stress_score_at(series, end_index):
     )
 
 
+def equity_stress_score_from_components(drawdowns, vols, negative_changes, end_index):
+    if end_index < 60 or vols[end_index] is None or negative_changes[end_index] is None:
+        return None
+
+    start_index = max(0, end_index - 251)
+    return score_from_metrics(
+        [
+            (hybrid_standard_score(drawdowns[start_index : end_index + 1], drawdowns[end_index]), 0.4),
+            (
+                hybrid_standard_score(
+                    [value for value in vols[start_index : end_index + 1] if value is not None],
+                    vols[end_index],
+                ),
+                0.35,
+            ),
+            (
+                hybrid_standard_score(
+                    [value for value in negative_changes[start_index : end_index + 1] if value is not None],
+                    negative_changes[end_index],
+                ),
+                0.25,
+            ),
+        ]
+    )
+
+
 def level_and_change_score(series, change_periods=20):
     values = closes(series)
     positive_changes = rolling_positive_changes(values, change_periods)
@@ -562,6 +588,111 @@ def semiconductor_global_score(series_map):
     }
 
 
+def single_name_semiconductor_leverage_points(series_map):
+    keys = ("samsung", "hynix")
+    all_keys = ("kospi", *keys)
+    indexes = {key: index_by_date(series_map[key]) for key in all_keys}
+    values = {key: closes(series_map[key]) for key in all_keys}
+    vols = {key: rolling_realized_vol(values[key]) for key in all_keys}
+    stress_components = {
+        key: {
+            "drawdowns": rolling_drawdowns(values[key]),
+            "negative_changes": rolling_negative_changes(values[key]),
+        }
+        for key in keys
+    }
+    ratio_history = {key: [] for key in keys}
+    points = []
+
+    for date in common_dates(series_map, all_keys):
+        kospi_index = indexes["kospi"][date]
+        stock_indexes = {key: indexes[key][date] for key in keys}
+        if min([kospi_index, *stock_indexes.values()]) < 60:
+            continue
+
+        stock_scores = [
+            equity_stress_score_from_components(
+                stress_components[key]["drawdowns"],
+                vols[key],
+                stress_components[key]["negative_changes"],
+                stock_indexes[key],
+            )
+            for key in keys
+        ]
+        if any(score is None for score in stock_scores):
+            continue
+
+        current_ratios = {}
+        ratio_scores = []
+        for key in keys:
+            stock_vol = vols[key][stock_indexes[key]]
+            kospi_vol = vols["kospi"][kospi_index]
+            if stock_vol is None or kospi_vol is None or kospi_vol <= 0:
+                continue
+            ratio = stock_vol / kospi_vol
+            ratio_history[key].append(ratio)
+            current_ratios[key] = ratio
+            ratio_scores.append(hybrid_standard_score(ratio_history[key][-252:], ratio))
+
+        if len(ratio_scores) != len(keys):
+            continue
+
+        points.append(
+            {
+                "date": date,
+                "value": score_from_metrics(
+                    [
+                        (statistics.fmean(stock_scores), 0.45),
+                        (max(stock_scores), 0.25),
+                        (statistics.fmean(ratio_scores), 0.3),
+                    ]
+                ),
+                "metrics": {
+                    "samsungLast": values["samsung"][stock_indexes["samsung"]],
+                    "hynixLast": values["hynix"][stock_indexes["hynix"]],
+                    "samsungReturn20dPct": round(
+                        (pct_change_at(values["samsung"], 20, stock_indexes["samsung"]) or 0) * 100,
+                        2,
+                    ),
+                    "hynixReturn20dPct": round(
+                        (pct_change_at(values["hynix"], 20, stock_indexes["hynix"]) or 0) * 100,
+                        2,
+                    ),
+                    "samsungVolRatioToKospi": round(current_ratios["samsung"], 2),
+                    "hynixVolRatioToKospi": round(current_ratios["hynix"], 2),
+                    "samsungStressScore": stock_scores[0],
+                    "hynixStressScore": stock_scores[1],
+                },
+            }
+        )
+
+    return points
+
+
+def single_name_semiconductor_leverage_timeseries(series_map, limit=120, step=1):
+    sampled_dates = set(sampled_recent(common_dates(series_map, ("kospi", "samsung", "hynix")), limit, step))
+    return [
+        {"date": point["date"], "value": point["value"]}
+        for point in single_name_semiconductor_leverage_points(series_map)
+        if point["date"] in sampled_dates
+    ]
+
+
+def single_name_semiconductor_leverage_score(series_map):
+    points = single_name_semiconductor_leverage_points(series_map)
+    if not points:
+        raise RuntimeError("삼성전자·SK하이닉스 단일종목 레버리지 점수를 계산할 공통 날짜가 없습니다.")
+
+    latest = points[-1]
+    prior = points[max(0, len(points) - 21)]
+
+    return {
+        "score": latest["value"],
+        "trend": trend_from_scores(latest["value"], prior["value"]),
+        "metrics": latest["metrics"],
+    }
+
+
 def index_by_date(series):
     return {point["date"]: index for index, point in enumerate(series)}
 
@@ -687,8 +818,8 @@ def build_timeseries(series_map, naver_map, limit=120, step=1):
             limit=limit,
             step=step,
         ),
-        "leveraged_etf_stress": single_indicator_timeseries(
-            series_map["kodex_leverage"], equity_stress_score_at, limit=limit, step=step
+        "single_name_semiconductor_leverage": single_name_semiconductor_leverage_timeseries(
+            series_map, limit=limit, step=step
         ),
         "global_credit_proxy_stress": single_indicator_timeseries(
             make_ratio_series(series_map["hyg"], series_map["lqd"]),
@@ -801,7 +932,7 @@ def build_indicators(series_map, naver_map):
         naver_map,
         ("samsung", "hynix", "hanmi", "kodex200", "kodex_leverage"),
     )
-    leveraged_etf = equity_stress_score(series_map["kodex_leverage"])
+    single_name_leverage = single_name_semiconductor_leverage_score(series_map)
     global_credit = equity_stress_score(make_ratio_series(series_map["hyg"], series_map["lqd"]))
     emerging_market = equity_stress_score(series_map["eem"])
 
@@ -946,20 +1077,23 @@ def build_indicators(series_map, naver_map):
             "source": "Naver Finance chart: 005930, 000660, 042700, 069500, 122630",
         },
         {
-            "id": "leveraged_etf_stress",
-            "name": "KOSPI 레버리지 ETF 스트레스",
-            "category": "파생/레버리지",
+            "id": "single_name_semiconductor_leverage",
+            "name": "삼성전자·하이닉스 단일종목 레버리지",
+            "category": "단일종목/레버리지",
             "group": "overheating",
-            "value": leveraged_etf["score"],
+            "value": single_name_leverage["score"],
             "unit": "score",
             "weight": 0.06,
-            "trend": leveraged_etf["trend"],
+            "trend": single_name_leverage["trend"],
             "detail": (
-                f"KODEX 레버리지 {fmt_number(leveraged_etf['metrics']['last'])}, 20일 수익률 "
-                f"{fmt_pct(leveraged_etf['metrics']['return20dPct'])}, 20일 변동성 "
-                f"{fmt_pct(leveraged_etf['metrics']['realizedVol20dPct'])}"
+                f"삼성전자 {fmt_number(single_name_leverage['metrics']['samsungLast'])}, "
+                f"SK하이닉스 {fmt_number(single_name_leverage['metrics']['hynixLast'])}, "
+                f"20일 수익률 삼성 {fmt_pct(single_name_leverage['metrics']['samsungReturn20dPct'])}·"
+                f"하이닉스 {fmt_pct(single_name_leverage['metrics']['hynixReturn20dPct'])}, "
+                f"KOSPI 대비 변동성 배율 삼성 {single_name_leverage['metrics']['samsungVolRatioToKospi']:.2f}x·"
+                f"하이닉스 {single_name_leverage['metrics']['hynixVolRatioToKospi']:.2f}x"
             ),
-            "source": "Yahoo Finance chart: 122630.KS",
+            "source": "Yahoo Finance chart: 005930.KS, 000660.KS, ^KS11",
         },
         {
             "id": "global_credit_proxy_stress",
@@ -1008,7 +1142,7 @@ def update_dashboard(series_map, indicators):
     market = next(section for section in dashboard["sections"] if section["id"] == "market")
     market["description"] = (
         "KOSPI/KOSDAQ, 원달러 환율, 글로벌 변동성·금리·크레딧, 외국인 보유비중, 거래량, "
-        "레버리지 ETF, AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다."
+        "대형 반도체 단일종목 레버리지성 스트레스, AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다."
     )
     market["model"]["version"] = "market-risk-v3-grouped-robust-zscore"
     market["model"]["methodology"] = (
