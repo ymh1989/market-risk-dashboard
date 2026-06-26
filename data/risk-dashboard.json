@@ -3,7 +3,7 @@
     "title": "통합 리스크 모니터링 대시보드",
     "subtitle": "시장 조기경보 · 신용리스크 확장 준비 · 유동성리스크 확장 준비",
     "asOf": "2026-06-26",
-    "generatedAt": "2026-06-26 10:36 KST",
+    "generatedAt": "2026-06-26 13:56 KST",
     "source": "Yahoo Finance and Naver Finance chart endpoints via scripts/update_market_risk.py"
   },
   "tabs": [
@@ -34,7 +34,7 @@
       "label": "시장리스크",
       "status": "active",
       "owner": "Risk Monitoring",
-      "description": "KOSPI/KOSDAQ, 원달러 환율, 글로벌 변동성·금리·크레딧, 외국인 보유비중, 거래량, 대형 반도체 단일종목 레버리지성 스트레스, AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다.",
+      "description": "KOSPI/KOSDAQ, 원달러 환율, 글로벌 변동성·금리·크레딧, 외국인 보유비중, 거래량, 대형 반도체 단일종목 레버리지성 스트레스, 빅테크 AI 수요 우려, AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다.",
       "model": {
         "aggregation": "weightedAverage",
         "thresholds": [
@@ -71,6 +71,7 @@
           "KOSPI/KOSDAQ price series",
           "USD/KRW, VIX, US 10Y proxy",
           "SOX, NVIDIA, TSMC ADR, Broadcom, AMD, Micron, ASML",
+          "Apple, Microsoft, Alphabet, Meta Platforms, Amazon",
           "Samsung Electronics, SK hynix, Hanmi Semiconductor, DB HiTek, Leeno Industrial",
           "Naver foreign ownership ratio and trading volume",
           "HYG/LQD credit proxy, EEM emerging market proxy"
@@ -104,7 +105,7 @@
           },
           "overheating": {
             "label": "Overheating",
-            "weight": 0.11
+            "weight": 0.09
           },
           "liquidity": {
             "label": "Liquidity",
@@ -120,7 +121,7 @@
           },
           "ai_semi": {
             "label": "AI Semi",
-            "weight": 0.24
+            "weight": 0.26
           }
         }
       },
@@ -130,13 +131,13 @@
           "name": "KOSPI 가격 스트레스",
           "category": "한국주식",
           "group": "crash",
-          "value": 80.8,
+          "value": 87.8,
           "unit": "score",
           "weight": 0.11,
           "trend": "up",
-          "detail": "KOSPI 8,683.07, 20일 수익률 +6.08%, 20일 변동성 +72.91%, 고점대비 -4.73%",
+          "detail": "KOSPI 8,211.68, 20일 수익률 +0.32%, 20일 변동성 +77.91%, 고점대비 -9.91%",
           "source": "Yahoo Finance chart: ^KS11",
-          "contribution": 8.89,
+          "contribution": 9.66,
           "contributionPct": 11.0
         },
         {
@@ -144,13 +145,13 @@
           "name": "KOSDAQ 성장주 스트레스",
           "category": "한국주식",
           "group": "crash",
-          "value": 93.6,
+          "value": 94.2,
           "unit": "score",
           "weight": 0.07,
           "trend": "up",
-          "detail": "KOSDAQ 877.49, 20일 수익률 -20.54%, 20일 변동성 +58.96%",
+          "detail": "KOSDAQ 844.02, 20일 수익률 -23.57%, 20일 변동성 +60.46%",
           "source": "Yahoo Finance chart: ^KQ11",
-          "contribution": 6.55,
+          "contribution": 6.59,
           "contributionPct": 7.0
         },
         {
@@ -158,13 +159,13 @@
           "name": "원/달러 환율 압력",
           "category": "외환",
           "group": "macro",
-          "value": 97.5,
+          "value": 96.6,
           "unit": "score",
           "weight": 0.1,
           "trend": "up",
-          "detail": "USD/KRW 1,549.08, 20일 변화율 +3.60%, 2년 분위 98.9",
+          "detail": "USD/KRW 1,544.66, 20일 변화율 +3.30%, 2년 분위 98.7",
           "source": "Yahoo Finance chart: KRW=X",
-          "contribution": 9.75,
+          "contribution": 9.66,
           "contributionPct": 10.0
         },
         {
@@ -202,26 +203,40 @@
           "group": "ai_semi",
           "value": 74.5,
           "unit": "score",
-          "weight": 0.12,
+          "weight": 0.1,
           "trend": "flat",
           "detail": "7개 글로벌 AI 반도체 basket, SOX 13,940.87, SOX 20일 수익률 +9.75%, NVDA 점수 92.6, TSM 점수 82.9",
           "source": "Yahoo Finance chart: ^SOX, NVDA, TSM, AVGO, AMD, MU, ASML",
-          "contribution": 8.94,
-          "contributionPct": 12.0
+          "contribution": 7.45,
+          "contributionPct": 10.0
+        },
+        {
+          "id": "bigtech_ai_demand_pressure",
+          "name": "빅테크 AI 수요 우려",
+          "category": "AI 수요",
+          "group": "ai_semi",
+          "value": 88.4,
+          "unit": "score",
+          "weight": 0.06,
+          "trend": "up",
+          "detail": "Apple 275.15, Apple 20일 수익률 -11.48%, 빅테크 바스켓 -13.73%, 메모리 공급자 바스켓 +25.85%, 비용압력 격차 +39.57%",
+          "source": "Yahoo Finance chart: AAPL, MSFT, GOOGL, META, AMZN, 005930.KS, 000660.KS, MU",
+          "contribution": 5.3,
+          "contributionPct": 6.0
         },
         {
           "id": "korea_ai_semiconductor_concentration",
           "name": "한국 AI 반도체 쏠림/스트레스",
           "category": "AI 반도체",
           "group": "ai_semi",
-          "value": 72.7,
+          "value": 75.7,
           "unit": "score",
-          "weight": 0.12,
+          "weight": 0.1,
           "trend": "flat",
-          "detail": "5개 한국 반도체 basket, 삼성전자 348,500.00, SK하이닉스 2,814,000.00, 반도체 60일 상대성과 +17.05%, 쏠림점수 56.8",
+          "detail": "5개 한국 반도체 basket, 삼성전자 326,000.00, SK하이닉스 2,621,000.00, 반도체 60일 상대성과 +16.23%, 쏠림점수 54.1",
           "source": "Yahoo Finance chart: 005930.KS, 000660.KS, 042700.KS, 000990.KS, 058470.KQ, ^KS11",
-          "contribution": 8.72,
-          "contributionPct": 12.0
+          "contribution": 7.57,
+          "contributionPct": 10.0
         },
         {
           "id": "foreign_ownership_pressure",
@@ -242,13 +257,13 @@
           "name": "거래량 과열/위축 압력",
           "category": "유동성",
           "group": "liquidity",
-          "value": 90.4,
+          "value": 42.4,
           "unit": "score",
           "weight": 0.07,
-          "trend": "down",
-          "detail": "주요 반도체·KODEX ETF 거래량의 60일 평균 대비 평균 괴리 -68.74%, 최대 괴리 -59.79%",
+          "trend": "flat",
+          "detail": "주요 반도체·KODEX ETF 거래량의 60일 평균 대비 평균 괴리 -25.39%, 최대 괴리 -5.56%",
           "source": "Naver Finance chart: 005930, 000660, 042700, 069500, 122630",
-          "contribution": 6.33,
+          "contribution": 2.97,
           "contributionPct": 7.0
         },
         {
@@ -256,14 +271,14 @@
           "name": "삼성전자·하이닉스 단일종목 레버리지",
           "category": "단일종목/레버리지",
           "group": "overheating",
-          "value": 51.3,
+          "value": 59.2,
           "unit": "score",
-          "weight": 0.06,
+          "weight": 0.04,
           "trend": "up",
-          "detail": "삼성전자 348,500.00, SK하이닉스 2,814,000.00, 20일 수익률 삼성 +16.36%·하이닉스 +22.94%, KOSPI 대비 변동성 배율 삼성 1.37x·하이닉스 1.49x",
+          "detail": "삼성전자 326,000.00, SK하이닉스 2,621,000.00, 20일 수익률 삼성 +8.85%·하이닉스 +14.50%, KOSPI 대비 변동성 배율 삼성 1.35x·하이닉스 1.47x",
           "source": "Yahoo Finance chart: 005930.KS, 000660.KS, ^KS11",
-          "contribution": 3.08,
-          "contributionPct": 6.0
+          "contribution": 2.37,
+          "contributionPct": 4.0
         },
         {
           "id": "global_credit_proxy_stress",
@@ -303,33 +318,33 @@
         {
           "id": "macro",
           "label": "Macro",
-          "score": 69.3,
+          "score": 69.0,
           "weight": 0.3,
-          "contribution": 20.8,
+          "contribution": 20.71,
           "indicatorCount": 4
         },
         {
           "id": "ai_semi",
           "label": "AI Semi",
-          "score": 73.6,
-          "weight": 0.24,
-          "contribution": 17.66,
-          "indicatorCount": 2
+          "score": 78.2,
+          "weight": 0.26,
+          "contribution": 20.32,
+          "indicatorCount": 3
         },
         {
           "id": "crash",
           "label": "Crash Stress",
-          "score": 85.8,
+          "score": 90.3,
           "weight": 0.18,
-          "contribution": 15.44,
+          "contribution": 16.25,
           "indicatorCount": 2
         },
         {
           "id": "overheating",
           "label": "Overheating",
-          "score": 66.5,
-          "weight": 0.11,
-          "contribution": 7.31,
+          "score": 73.4,
+          "weight": 0.09,
+          "contribution": 6.6,
           "indicatorCount": 2
         },
         {
@@ -343,9 +358,9 @@
         {
           "id": "liquidity",
           "label": "Liquidity",
-          "score": 90.4,
+          "score": 42.4,
           "weight": 0.07,
-          "contribution": 6.33,
+          "contribution": 2.97,
           "indicatorCount": 1
         }
       ]

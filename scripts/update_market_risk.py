@@ -31,6 +31,11 @@ TICKERS = {
     "amd": {"symbol": "AMD", "label": "AMD"},
     "mu": {"symbol": "MU", "label": "Micron"},
     "asml": {"symbol": "ASML", "label": "ASML ADR"},
+    "aapl": {"symbol": "AAPL", "label": "Apple"},
+    "msft": {"symbol": "MSFT", "label": "Microsoft"},
+    "googl": {"symbol": "GOOGL", "label": "Alphabet"},
+    "meta": {"symbol": "META", "label": "Meta Platforms"},
+    "amzn": {"symbol": "AMZN", "label": "Amazon"},
     "samsung": {"symbol": "005930.KS", "label": "Samsung Electronics"},
     "hynix": {"symbol": "000660.KS", "label": "SK hynix"},
     "hanmi": {"symbol": "042700.KS", "label": "Hanmi Semiconductor"},
@@ -53,11 +58,11 @@ NAVER_SYMBOLS = {
 
 RISK_GROUPS = {
     "crash": {"label": "Crash Stress", "weight": 0.18},
-    "overheating": {"label": "Overheating", "weight": 0.11},
+    "overheating": {"label": "Overheating", "weight": 0.09},
     "liquidity": {"label": "Liquidity", "weight": 0.07},
     "flow": {"label": "Flow", "weight": 0.1},
     "macro": {"label": "Macro", "weight": 0.3},
-    "ai_semi": {"label": "AI Semi", "weight": 0.24},
+    "ai_semi": {"label": "AI Semi", "weight": 0.26},
 }
 
 
@@ -693,6 +698,110 @@ def single_name_semiconductor_leverage_score(series_map):
     }
 
 
+def bigtech_ai_demand_pressure_points(series_map):
+    demand_keys = ("aapl", "msft", "googl", "meta", "amzn")
+    memory_keys = ("samsung", "hynix", "mu")
+    all_keys = (*demand_keys, *memory_keys)
+    indexes = {key: index_by_date(series_map[key]) for key in all_keys}
+    values = {key: closes(series_map[key]) for key in all_keys}
+    vols = {key: rolling_realized_vol(values[key]) for key in demand_keys}
+    stress_components = {
+        key: {
+            "drawdowns": rolling_drawdowns(values[key]),
+            "negative_changes": rolling_negative_changes(values[key]),
+        }
+        for key in demand_keys
+    }
+    gap_history = []
+    points = []
+
+    for date in common_dates(series_map, all_keys):
+        demand_indexes = {key: indexes[key][date] for key in demand_keys}
+        memory_indexes = {key: indexes[key][date] for key in memory_keys}
+        if min([*demand_indexes.values(), *memory_indexes.values()]) < 60:
+            continue
+
+        demand_scores = [
+            equity_stress_score_from_components(
+                stress_components[key]["drawdowns"],
+                vols[key],
+                stress_components[key]["negative_changes"],
+                demand_indexes[key],
+            )
+            for key in demand_keys
+        ]
+        if any(score is None for score in demand_scores):
+            continue
+
+        demand_returns = [
+            (pct_change_at(values[key], 20, demand_indexes[key]) or 0) * 100
+            for key in demand_keys
+        ]
+        memory_returns = [
+            (pct_change_at(values[key], 20, memory_indexes[key]) or 0) * 100
+            for key in memory_keys
+        ]
+        demand_return = statistics.fmean(demand_returns)
+        memory_return = statistics.fmean(memory_returns)
+        cost_pressure_gap = memory_return - demand_return
+        positive_gap = max(0.0, cost_pressure_gap)
+        gap_history.append(positive_gap)
+        gap_score = hybrid_standard_score(gap_history[-252:], positive_gap)
+
+        points.append(
+            {
+                "date": date,
+                "value": score_from_metrics(
+                    [
+                        (statistics.fmean(demand_scores), 0.45),
+                        (demand_scores[0], 0.25),
+                        (gap_score, 0.3),
+                    ]
+                ),
+                "metrics": {
+                    "appleLast": values["aapl"][demand_indexes["aapl"]],
+                    "appleReturn20dPct": round(demand_returns[0], 2),
+                    "bigtechReturn20dPct": round(demand_return, 2),
+                    "memorySupplierReturn20dPct": round(memory_return, 2),
+                    "costPressureGapPct": round(cost_pressure_gap, 2),
+                    "appleStressScore": demand_scores[0],
+                    "gapScore": gap_score,
+                },
+            }
+        )
+
+    return points
+
+
+def bigtech_ai_demand_pressure_timeseries(series_map, limit=120, step=1):
+    sampled_dates = set(
+        sampled_recent(
+            common_dates(series_map, ("aapl", "msft", "googl", "meta", "amzn", "samsung", "hynix", "mu")),
+            limit,
+            step,
+        )
+    )
+    return [
+        {"date": point["date"], "value": point["value"]}
+        for point in bigtech_ai_demand_pressure_points(series_map)
+        if point["date"] in sampled_dates
+    ]
+
+
+def bigtech_ai_demand_pressure_score(series_map):
+    points = bigtech_ai_demand_pressure_points(series_map)
+    if not points:
+        raise RuntimeError("빅테크 AI 수요 우려 점수를 계산할 공통 날짜가 없습니다.")
+
+    latest = points[-1]
+    prior = points[max(0, len(points) - 21)]
+    return {
+        "score": latest["value"],
+        "trend": trend_from_scores(latest["value"], prior["value"]),
+        "metrics": latest["metrics"],
+    }
+
+
 def index_by_date(series):
     return {point["date"]: index for index, point in enumerate(series)}
 
@@ -808,6 +917,9 @@ def build_timeseries(series_map, naver_map, limit=120, step=1):
             series_map["us10y"], level_and_change_score_at, limit=limit, step=step
         ),
         "global_ai_semiconductor_stress": global_ai_timeseries(series_map, limit=limit, step=step),
+        "bigtech_ai_demand_pressure": bigtech_ai_demand_pressure_timeseries(
+            series_map, limit=limit, step=step
+        ),
         "korea_ai_semiconductor_concentration": korea_ai_timeseries(series_map, limit=limit, step=step),
         "foreign_ownership_pressure": foreign_ownership_timeseries(
             naver_map, ("samsung", "hynix", "hanmi"), limit=limit, step=step
@@ -926,6 +1038,7 @@ def build_indicators(series_map, naver_map):
     vix = level_and_change_score(series_map["vix"])
     us10y = level_and_change_score(series_map["us10y"])
     global_ai = semiconductor_global_score(series_map)
+    bigtech_demand = bigtech_ai_demand_pressure_score(series_map)
     korea_ai = korean_ai_semiconductor_score(series_map)
     foreign_ownership = foreign_ownership_pressure_score(naver_map, ("samsung", "hynix", "hanmi"))
     trading_activity = basket_volume_pressure_score(
@@ -1019,7 +1132,7 @@ def build_indicators(series_map, naver_map):
             "group": "ai_semi",
             "value": global_ai["score"],
             "unit": "score",
-            "weight": 0.12,
+            "weight": 0.1,
             "trend": global_ai["trend"],
             "detail": (
                 f"{global_ai['metrics']['basketSize']}개 글로벌 AI 반도체 basket, SOX {fmt_number(global_ai['metrics']['soxLast'])}, SOX 20일 수익률 "
@@ -1029,13 +1142,31 @@ def build_indicators(series_map, naver_map):
             "source": "Yahoo Finance chart: ^SOX, NVDA, TSM, AVGO, AMD, MU, ASML",
         },
         {
+            "id": "bigtech_ai_demand_pressure",
+            "name": "빅테크 AI 수요 우려",
+            "category": "AI 수요",
+            "group": "ai_semi",
+            "value": bigtech_demand["score"],
+            "unit": "score",
+            "weight": 0.06,
+            "trend": bigtech_demand["trend"],
+            "detail": (
+                f"Apple {fmt_number(bigtech_demand['metrics']['appleLast'])}, Apple 20일 수익률 "
+                f"{fmt_pct(bigtech_demand['metrics']['appleReturn20dPct'])}, 빅테크 바스켓 "
+                f"{fmt_pct(bigtech_demand['metrics']['bigtechReturn20dPct'])}, 메모리 공급자 바스켓 "
+                f"{fmt_pct(bigtech_demand['metrics']['memorySupplierReturn20dPct'])}, 비용압력 격차 "
+                f"{fmt_pct(bigtech_demand['metrics']['costPressureGapPct'])}"
+            ),
+            "source": "Yahoo Finance chart: AAPL, MSFT, GOOGL, META, AMZN, 005930.KS, 000660.KS, MU",
+        },
+        {
             "id": "korea_ai_semiconductor_concentration",
             "name": "한국 AI 반도체 쏠림/스트레스",
             "category": "AI 반도체",
             "group": "ai_semi",
             "value": korea_ai["score"],
             "unit": "score",
-            "weight": 0.12,
+            "weight": 0.1,
             "trend": korea_ai["trend"],
             "detail": (
                 f"{korea_ai['metrics']['basketSize']}개 한국 반도체 basket, 삼성전자 {fmt_number(korea_ai['metrics']['samsungLast'])}, "
@@ -1083,7 +1214,7 @@ def build_indicators(series_map, naver_map):
             "group": "overheating",
             "value": single_name_leverage["score"],
             "unit": "score",
-            "weight": 0.06,
+            "weight": 0.04,
             "trend": single_name_leverage["trend"],
             "detail": (
                 f"삼성전자 {fmt_number(single_name_leverage['metrics']['samsungLast'])}, "
@@ -1142,7 +1273,8 @@ def update_dashboard(series_map, indicators):
     market = next(section for section in dashboard["sections"] if section["id"] == "market")
     market["description"] = (
         "KOSPI/KOSDAQ, 원달러 환율, 글로벌 변동성·금리·크레딧, 외국인 보유비중, 거래량, "
-        "대형 반도체 단일종목 레버리지성 스트레스, AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다."
+        "대형 반도체 단일종목 레버리지성 스트레스, 빅테크 AI 수요 우려, "
+        "AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다."
     )
     market["model"]["version"] = "market-risk-v3-grouped-robust-zscore"
     market["model"]["methodology"] = (
@@ -1165,6 +1297,7 @@ def update_dashboard(series_map, indicators):
         "KOSPI/KOSDAQ price series",
         "USD/KRW, VIX, US 10Y proxy",
         "SOX, NVIDIA, TSMC ADR, Broadcom, AMD, Micron, ASML",
+        "Apple, Microsoft, Alphabet, Meta Platforms, Amazon",
         "Samsung Electronics, SK hynix, Hanmi Semiconductor, DB HiTek, Leeno Industrial",
         "Naver foreign ownership ratio and trading volume",
         "HYG/LQD credit proxy, EEM emerging market proxy",
