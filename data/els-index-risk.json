@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-06-30 16:15 KST",
+  "generatedAt": "2026-07-01 08:34 KST",
   "methodology": "각 지수별 20일 실현변동성, 252일 변동성 분위수, 20/60/252일 낙폭, 단기 하락 모멘텀, 고변동성 급등 신호를 0~100점으로 합성합니다. Basket 점수는 worst-of ELS 구조를 반영해 가장 높은 리스크 지수에 50% 가중합니다.",
   "basket": {
-    "score": 55.63,
+    "score": 56.57,
     "bucket": "주의",
     "tone": "caution",
     "worstIndex": "HSCEI",
     "secondWorstIndex": "KOSPI200",
-    "averageIndexScore": 45.41,
-    "correlationScore": 32.25,
+    "averageIndexScore": 46.01,
+    "correlationScore": 32.33,
     "interpretation": "HSCEI가 basket 리스크를 가장 크게 끌어올리고, KOSPI200가 두 번째 취약 지수입니다."
   },
   "indices": [
@@ -18,31 +18,23 @@
       "label": "SPX",
       "name": "S&P 500",
       "region": "미국",
-      "lastDate": "2026-06-29",
-      "lastClose": 7440.43,
-      "score": 39.0,
+      "lastDate": "2026-06-30",
+      "lastClose": 7499.36,
+      "score": 37.55,
       "bucket": "정상",
       "tone": "watch",
       "reading": "현재 점수는 중립권이며, 변동성 확대 여부를 중심으로 보면 됩니다.",
       "metrics": {
-        "return20dPct": -1.84,
-        "return60dPct": 13.16,
-        "realizedVol20dPct": 17.48,
-        "realizedVol60dPct": 13.81,
+        "return20dPct": -1.32,
+        "return60dPct": 13.93,
+        "realizedVol20dPct": 17.72,
+        "realizedVol60dPct": 13.86,
         "volPercentile252d": 93.3,
-        "drawdown60dPct": -2.23,
-        "drawdown252dPct": -2.23,
+        "drawdown60dPct": -1.45,
+        "drawdown252dPct": -1.45,
         "maxAbsDailyMove20dPct": 2.64
       },
       "series": [
-        {
-          "date": "2026-03-05",
-          "close": 6830.71,
-          "score": 25.78,
-          "return20dPct": -0.76,
-          "realizedVol20dPct": 13.45,
-          "drawdown252dPct": -2.12
-        },
         {
           "date": "2026-03-06",
           "close": 6740.02,
@@ -674,6 +666,14 @@
           "return20dPct": -1.84,
           "realizedVol20dPct": 17.48,
           "drawdown252dPct": -2.23
+        },
+        {
+          "date": "2026-06-30",
+          "close": 7499.36,
+          "score": 37.55,
+          "return20dPct": -1.32,
+          "realizedVol20dPct": 17.72,
+          "drawdown252dPct": -1.45
         }
       ]
     },
@@ -1348,23 +1348,31 @@
       "label": "NKY",
       "name": "Nikkei 225",
       "region": "일본",
-      "lastDate": "2026-06-30",
-      "lastClose": 70062.32,
-      "score": 46.82,
+      "lastDate": "2026-06-29",
+      "lastClose": 69468.11,
+      "score": 46.23,
       "bucket": "정상",
       "tone": "watch",
       "reading": "현재 점수는 중립권이며, 변동성 확대 여부를 중심으로 보면 됩니다.",
       "metrics": {
-        "return20dPct": 4.99,
-        "return60dPct": 30.37,
-        "realizedVol20dPct": 40.33,
-        "realizedVol60dPct": 32.48,
+        "return20dPct": 3.79,
+        "return60dPct": 36.04,
+        "realizedVol20dPct": 40.31,
+        "realizedVol60dPct": 33.92,
         "volPercentile252d": 97.2,
-        "drawdown60dPct": -3.18,
-        "drawdown252dPct": -3.18,
+        "drawdown60dPct": -4.0,
+        "drawdown252dPct": -4.0,
         "maxAbsDailyMove20dPct": 4.99
       },
       "series": [
+        {
+          "date": "2026-03-03",
+          "close": 56279.05,
+          "score": 44.23,
+          "return20dPct": 5.54,
+          "realizedVol20dPct": 27.96,
+          "drawdown252dPct": -4.37
+        },
         {
           "date": "2026-03-04",
           "close": 54245.54,
@@ -1996,14 +2004,6 @@
           "return20dPct": 3.79,
           "realizedVol20dPct": 40.31,
           "drawdown252dPct": -4.0
-        },
-        {
-          "date": "2026-06-30",
-          "close": 70062.32,
-          "score": 46.82,
-          "return20dPct": 4.99,
-          "realizedVol20dPct": 40.33,
-          "drawdown252dPct": -3.18
         }
       ]
     },
@@ -2013,23 +2013,31 @@
       "label": "HSCEI",
       "name": "Hang Seng China Enterprises",
       "region": "중국/HK",
-      "lastDate": "2026-06-30",
-      "lastClose": 7532.32,
-      "score": 68.54,
+      "lastDate": "2026-06-29",
+      "lastClose": 7605.34,
+      "score": 67.99,
       "bucket": "높음",
       "tone": "danger",
       "reading": "고점 대비 낙폭이 커져 쿠폰 매력도는 높아질 수 있지만, 순연 가능성과 헤지 비용 증가를 우선 점검해야 합니다.",
       "metrics": {
-        "return20dPct": -11.47,
-        "return60dPct": -10.32,
-        "realizedVol20dPct": 22.72,
-        "realizedVol60dPct": 19.51,
-        "volPercentile252d": 88.5,
-        "drawdown60dPct": -15.78,
-        "drawdown252dPct": -22.54,
+        "return20dPct": -9.74,
+        "return60dPct": -10.04,
+        "realizedVol20dPct": 23.34,
+        "realizedVol60dPct": 19.46,
+        "volPercentile252d": 95.3,
+        "drawdown60dPct": -14.96,
+        "drawdown252dPct": -21.79,
         "maxAbsDailyMove20dPct": 3.0
       },
       "series": [
+        {
+          "date": "2026-03-02",
+          "close": 8701.91,
+          "score": 48.68,
+          "return20dPct": -8.52,
+          "realizedVol20dPct": 22.63,
+          "drawdown252dPct": -10.51
+        },
         {
           "date": "2026-03-03",
           "close": 8608.71,
@@ -2661,14 +2669,6 @@
           "return20dPct": -9.74,
           "realizedVol20dPct": 23.34,
           "drawdown252dPct": -21.79
-        },
-        {
-          "date": "2026-06-30",
-          "close": 7532.32,
-          "score": 68.54,
-          "return20dPct": -11.47,
-          "realizedVol20dPct": 22.72,
-          "drawdown252dPct": -22.54
         }
       ]
     },
@@ -2678,23 +2678,31 @@
       "label": "KOSPI200",
       "name": "KOSPI 200",
       "region": "한국",
-      "lastDate": "2026-06-30",
-      "lastClose": 1370.73,
-      "score": 48.54,
-      "bucket": "정상",
-      "tone": "watch",
-      "reading": "현재 점수는 중립권이며, 변동성 확대 여부를 중심으로 보면 됩니다.",
+      "lastDate": "2026-06-26",
+      "lastClose": 1366.49,
+      "score": 54.14,
+      "bucket": "주의",
+      "tone": "caution",
+      "reading": "상승 모멘텀은 강하지만 변동성이 높아 발행 조건은 좋아질 수 있고, 동시에 헤지 비용 관리가 중요합니다.",
       "metrics": {
-        "return20dPct": 2.08,
-        "return60dPct": 84.1,
-        "realizedVol20dPct": 81.97,
-        "realizedVol60dPct": 64.21,
-        "volPercentile252d": 98.0,
-        "drawdown60dPct": -7.21,
-        "drawdown252dPct": -7.21,
+        "return20dPct": 5.72,
+        "return60dPct": 75.12,
+        "realizedVol20dPct": 82.99,
+        "realizedVol60dPct": 65.24,
+        "volPercentile252d": 100.0,
+        "drawdown60dPct": -7.5,
+        "drawdown252dPct": -7.5,
         "maxAbsDailyMove20dPct": 10.53
       },
       "series": [
+        {
+          "date": "2026-03-03",
+          "close": 859.4,
+          "score": 63.56,
+          "return20dPct": 13.27,
+          "realizedVol20dPct": 56.58,
+          "drawdown252dPct": -8.96
+        },
         {
           "date": "2026-03-04",
           "close": 756.79,
@@ -3326,14 +3334,6 @@
           "return20dPct": 5.72,
           "realizedVol20dPct": 82.99,
           "drawdown252dPct": -7.5
-        },
-        {
-          "date": "2026-06-30",
-          "close": 1370.73,
-          "score": 48.54,
-          "return20dPct": 2.08,
-          "realizedVol20dPct": 81.97,
-          "drawdown252dPct": -7.21
         }
       ]
     }
