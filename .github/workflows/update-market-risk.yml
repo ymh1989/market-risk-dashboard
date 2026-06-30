@@ -2,11 +2,6 @@ name: Update market risk data
 
 on:
   workflow_dispatch:
-  schedule:
-    # 08:30 KST on weekdays, before the Korean cash market opens.
-    - cron: "30 23 * * 0-4"
-    # 16:10 KST on weekdays, after the Korean cash market close.
-    - cron: "10 7 * * 1-5"
 
 permissions:
   contents: write
