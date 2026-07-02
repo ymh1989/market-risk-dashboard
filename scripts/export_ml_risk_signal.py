@@ -143,14 +143,15 @@ def build_payload() -> dict:
             },
         },
         "thresholds": {
+            "riskOffDecisionThresholdPct": round(float(getattr(bundle, "risk_off_threshold", 0.5)) * 100, 2),
             "riskOffProbabilityWatchPct": 55,
             "riskOffProbabilityHighPct": 75,
             "realizedVolHighPct": 35,
             "elsRiskCautionScore": 60,
         },
         "interpretation": [
-            "Risk-off 확률은 주식 약세만 뜻하지 않습니다. 이 모델에서는 향후 20영업일의 하락, 낙폭, 고변동성 위험을 함께 반영합니다.",
-            "현재 KOSPI 모멘텀은 강하지만 20일 실현변동성이 높아 ELS 관점의 risk-off 확률이 크게 올라간 상태입니다.",
+            "현재 시장 스트레스는 이미 관측된 가격·변동성·수급 부담이고, ML 확률은 현재 수준에서 향후 20영업일 동안 추가로 악화될 가능성입니다.",
+            "급락 직후에는 충격이 이미 가격에 반영됐다고 학습해 ML 확률이 낮아질 수 있으므로, 확률 하락을 현재 위험 해소로 해석하면 안 됩니다.",
             "활황 국면에서도 변동성이 높으면 신규 발행 조건은 매력적일 수 있지만, 기존 북의 순연 가능성과 헤지 비용 부담이 커질 수 있습니다.",
         ],
         "series": series,

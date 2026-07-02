@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260626-2";
+const ASSET_VERSION = "20260702-1";
 
 const trendLabel = {
   up: "상승",
@@ -323,11 +323,12 @@ function renderElsIndexRiskPanel(elsRisk) {
   `;
 }
 
-function renderMlRiskSignalPanel(mlRisk) {
+function renderMlRiskSignalPanel(mlRisk, market) {
   if (!mlRisk?.latest || !mlRisk?.series?.length) return "";
 
   const latest = mlRisk.latest;
   const series = mlRisk.series;
+  const previous = series.length > 1 ? series[series.length - 2] : null;
   const riskPath = linePath(series, "riskOffProbabilityPct");
   const volPath = linePath(series, "realizedVol20dPct");
   const returnPath = linePath(series, "kospiReturn20dPct");
@@ -336,27 +337,61 @@ function renderMlRiskSignalPanel(mlRisk) {
   const last = series[series.length - 1];
   const ml = mlRisk.metrics?.ml ?? {};
   const baseline = mlRisk.metrics?.baseline ?? {};
-  const riskTone = latest.riskOffProbabilityPct >= 75 ? "danger" : latest.riskOffProbabilityPct >= 55 ? "caution" : "watch";
+  const marketScore = Number(market?.score);
+  const marketLevel = market?.level ?? { label: "확인 필요", tone: "watch" };
+  const probabilityDelta = previous
+    ? Number(latest.riskOffProbabilityPct) - Number(previous.riskOffProbabilityPct)
+    : null;
+  const decisionThreshold = Number(mlRisk.thresholds?.riskOffDecisionThresholdPct);
+  const riskTone =
+    latest.riskOffProbabilityPct >= 75
+      ? "danger"
+      : latest.riskOffProbabilityPct >= 55 ||
+          (Number.isFinite(decisionThreshold) && latest.riskOffProbabilityPct >= decisionThreshold)
+        ? "caution"
+        : "watch";
+  const probabilityChangeText = probabilityDelta === null ? "직전 관측치 없음" : `직전 대비 ${formatPointDelta(probabilityDelta)}`;
+  const decisionText = Number.isFinite(decisionThreshold)
+    ? `${latest.regime} 판정 · 임계치 ${decisionThreshold.toFixed(1)}%`
+    : `모델 판정 ${latest.regime}`;
+  const divergenceText =
+    Number.isFinite(marketScore) && marketScore >= 55 && probabilityDelta !== null && probabilityDelta <= -5
+      ? `현재 스트레스는 ${marketLevel.label} 단계지만 추가 악화 확률은 직전보다 ${Math.abs(probabilityDelta).toFixed(1)}%p 낮아졌습니다. 급락이 이미 반영되면서 모델이 과거 유사 구간의 평균회귀 가능성을 함께 본 결과일 수 있으며, 현재 위험이 해소됐다는 뜻은 아닙니다.`
+      : `현재 스트레스는 ${marketLevel.label} 단계이고, 추가 악화 확률은 ${Number(latest.riskOffProbabilityPct).toFixed(1)}%입니다. 두 수치는 서로 다른 시간축을 측정하므로 같은 방향으로 움직이지 않을 수 있습니다.`;
 
   return `
     <section class="ml-risk-panel">
       <div class="ml-risk-panel__header">
         <div>
-          <span class="eyebrow">ML Risk-off Signal</span>
-          <h2>Risk-off 확률과 국면 해석</h2>
+          <span class="eyebrow">Current Stress vs Forward Risk</span>
+          <h2>현재 스트레스와 향후 20일 추가 악화 가능성</h2>
         </div>
-        <div class="ml-risk-state ml-risk-state--${riskTone}">
-          <span>국면 해석</span>
-          <strong>${latest.interpretationLevel}</strong>
-          <small>모멘텀·변동성 반영</small>
+        <div class="ml-risk-state ml-risk-state--${marketLevel.tone}">
+          <span>현재 시장 스트레스</span>
+          <strong>${marketLevel.label} · ${Number.isFinite(marketScore) ? marketScore.toFixed(1) : "-"}</strong>
+          <small>관측 지표 종합점수</small>
         </div>
+      </div>
+
+      <div class="ml-risk-horizons" aria-label="현재 스트레스와 미래 추가 악화 가능성 비교">
+        <article>
+          <span class="eyebrow">현재 · 관측값</span>
+          <strong>${Number.isFinite(marketScore) ? `${marketScore.toFixed(1)} / 100` : "-"}</strong>
+          <p>가격·변동성·환율·수급 등 지금 확인되는 시장 부담입니다.</p>
+        </article>
+        <div class="ml-risk-horizons__divider" aria-hidden="true"><span>별도 시간축</span></div>
+        <article>
+          <span class="eyebrow">미래 · ML 전망</span>
+          <strong>${Number(latest.riskOffProbabilityPct).toFixed(1)}%</strong>
+          <p>현재 수준에서 향후 20영업일 안에 추가 하락·낙폭·고변동성이 나타날 가능성입니다.</p>
+        </article>
       </div>
 
       <div class="ml-risk-grid">
         ${createMetricCard({
-          label: "ML Risk-off 확률",
+          label: "20D 추가 악화 확률",
           value: `${Number(latest.riskOffProbabilityPct).toFixed(1)}%`,
-          meta: `${latest.regime} · 기준일 ${latest.date}`,
+          meta: `${decisionText} · ${probabilityChangeText}`,
           tone: riskTone
         })}
         ${createMetricCard({
@@ -368,19 +403,23 @@ function renderMlRiskSignalPanel(mlRisk) {
         ${createMetricCard({
           label: "20D 실현변동성",
           value: `${Number(latest.realizedVol20dPct).toFixed(1)}%`,
-          meta: latest.baselineRiskOffSignal ? "변동성 기준 risk-off flag" : "변동성 기준 중립",
+          meta: latest.baselineRiskOffSignal ? "현재 기준모델 risk-off" : "현재 기준모델 중립",
           tone: latest.realizedVol20dPct >= 35 ? "caution" : "watch"
         })}
         ${createMetricCard({
-          label: "ELS 리스크 점수",
-          value: Number(latest.elsRiskScore).toFixed(1),
-          meta: latest.elsRiskBucket,
-          tone: latest.elsRiskScore >= 60 ? "caution" : "watch"
+          label: "60D 고점 대비 낙폭",
+          value: formatSignedPct(latest.drawdownFrom60dHighPct),
+          meta: "현재 가격 충격 확인",
+          tone: latest.drawdownFrom60dHighPct <= -10 ? "danger" : "watch"
         })}
       </div>
 
       <div class="ml-risk-body">
-        <div class="ml-risk-chart" aria-label="ML risk-off 확률과 KOSPI 최근 흐름">
+        <div class="ml-risk-chart" aria-label="향후 20일 추가 악화 확률과 KOSPI 최근 흐름">
+          <div class="ml-risk-chart__header">
+            <strong>최근 흐름</strong>
+            <span>${probabilityChangeText}</span>
+          </div>
           <svg viewBox="0 0 760 210" role="img">
             <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
             <path class="ml-risk-chart__risk" d="${riskPath}"></path>
@@ -398,7 +437,7 @@ function renderMlRiskSignalPanel(mlRisk) {
               .join("")}
           </svg>
           <div class="ml-risk-chart__legend">
-            <span><i class="legend-risk"></i>Risk-off 확률</span>
+            <span><i class="legend-risk"></i>20D 추가 악화 확률</span>
             <span><i class="legend-vol"></i>20D 변동성</span>
             <span><i class="legend-return"></i>20D 수익률</span>
           </div>
@@ -410,17 +449,13 @@ function renderMlRiskSignalPanel(mlRisk) {
         </div>
 
         <div class="ml-risk-explain">
-          <strong>수치 해석</strong>
+          <strong>현재와 전망을 분리해서 읽으세요</strong>
+          <p>${divergenceText}</p>
           <p>
-            현재 신호는 약세장이 아니라, 주가 상승과 높은 변동성이 동시에 나타나는 구간으로 해석하는 편이 맞습니다.
-            KOSPI 20D 모멘텀은 ${formatSignedPct(latest.kospiReturn20dPct)}지만 20D 실현변동성이
-            ${Number(latest.realizedVol20dPct).toFixed(1)}%까지 올라와 ELS 관점의 risk-off 확률이 높아졌습니다.
-          </p>
-          <p>
-            백테스트상 risk-off 이진모델은 recall ${Number((ml.riskOffRecall ?? 0) * 100).toFixed(1)}%,
+            백테스트상 추가 악화 탐지모델은 recall ${Number((ml.riskOffRecall ?? 0) * 100).toFixed(1)}%,
             AUC ${Number(ml.riskOffAuc ?? 0).toFixed(3)}입니다. 기준모델 recall
             ${Number((baseline.riskOffRecall ?? 0) * 100).toFixed(1)}%, AUC ${Number(baseline.riskOffAuc ?? 0).toFixed(3)}보다 높아
-            “위험 구간을 놓치지 않는 능력”은 개선됐지만, 활황장에서 과잉 경보 가능성은 함께 봐야 합니다.
+            위험 구간을 놓치지 않는 능력은 개선됐지만, 확률 자체는 현재 스트레스 점수와 함께 판단해야 합니다.
           </p>
           <ul>
             ${(mlRisk.interpretation ?? []).map((item) => `<li>${item}</li>`).join("")}
@@ -785,7 +820,7 @@ function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRi
       </p>
     </section>
 
-    ${renderMlRiskSignalPanel(mlRisk)}
+    ${renderMlRiskSignalPanel(mlRisk, market)}
     ${renderElsIndexRiskPanel(elsRisk)}
     ${renderCompositeTrend(market, timeseries)}
     ${renderBacktestPanel(backtest)}
