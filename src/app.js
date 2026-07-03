@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260702-1";
+const ASSET_VERSION = "20260703-1";
 
 const trendLabel = {
   up: "상승",
@@ -201,23 +201,69 @@ function scorePath(points, valueKey = "score", width = 760, height = 210, paddin
     .join(" ");
 }
 
-function monthTicks(points, width = 760) {
-  const seen = new Set();
-  const ticks = [];
+function monthSegments(points, width = 760) {
+  if (!points.length) return [];
 
+  const groups = [];
   points.forEach((point, index) => {
     const [year, month] = point.date.split("-");
     const key = `${year}-${month}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    ticks.push({
-      key,
-      label: `${year.slice(2)}.${month}`,
-      x: points.length > 1 ? (index / (points.length - 1)) * width : 0
-    });
+    const current = groups[groups.length - 1];
+    if (current?.key === key) {
+      current.endIndex = index;
+      return;
+    }
+    groups.push({ key, year, month, startIndex: index, endIndex: index });
   });
 
-  return ticks;
+  const denominator = Math.max(points.length - 1, 1);
+  return groups.map((group, index) => {
+    const startX = group.startIndex === 0 ? 0 : ((group.startIndex - 0.5) / denominator) * width;
+    const endX = group.endIndex === points.length - 1 ? width : ((group.endIndex + 0.5) / denominator) * width;
+    return {
+      ...group,
+      startX,
+      endX,
+      centerX: (startX + endX) / 2,
+      label:
+        width <= 300
+          ? group.month === "01"
+            ? `${group.year.slice(2)}.01`
+            : `${Number(group.month)}월`
+          : index === 0 || group.month === "01"
+            ? `${group.year}.${group.month}`
+            : `${Number(group.month)}월`
+    };
+  });
+}
+
+function renderMonthAxis(points, width = 760, plotTop = 18, plotBottom = 190, labelY = 207) {
+  const segments = monthSegments(points, width);
+  return {
+    grid: `
+      ${segments
+      .map(
+        (segment, index) =>
+          index % 2 === 1
+            ? `<rect class="chart-month-band" x="${segment.startX.toFixed(2)}" y="${plotTop}" width="${(segment.endX - segment.startX).toFixed(2)}" height="${plotBottom - plotTop}"></rect>`
+            : ""
+      )
+      .join("")}
+    ${segments
+      .slice(1)
+      .map(
+        (segment) =>
+          `<line class="chart-month-divider" x1="${segment.startX.toFixed(2)}" x2="${segment.startX.toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>`
+      )
+      .join("")}
+    `,
+    labels: segments
+      .map(
+        (segment) =>
+          `<text class="chart-month-label" x="${segment.centerX.toFixed(2)}" y="${labelY}" text-anchor="middle">${segment.label}</text>`
+      )
+      .join("")
+  };
 }
 
 function renderElsIndexRiskPanel(elsRisk) {
@@ -225,7 +271,7 @@ function renderElsIndexRiskPanel(elsRisk) {
 
   const sorted = [...elsRisk.indices].sort((a, b) => Number(b.score) - Number(a.score));
   const basket = elsRisk.basket;
-  const ticks = monthTicks(sorted[0].series ?? []);
+  const monthAxis = renderMonthAxis(sorted[0].series ?? []);
   const colorClass = {
     spx: "els-line--spx",
     sx5e: "els-line--sx5e",
@@ -296,22 +342,14 @@ function renderElsIndexRiskPanel(elsRisk) {
 
       <div class="els-index-chart" aria-label="기초지수별 ELS 리스크 점수 흐름">
         <svg viewBox="0 0 760 210" role="img">
+          ${monthAxis.grid}
           <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
           ${elsRisk.indices
             .map(
               (item) => `<path class="els-index-line ${colorClass[item.id] ?? ""}" d="${scorePath(item.series)}"></path>`
             )
             .join("")}
-          ${ticks
-            .map(
-              (tick, index) => `
-                <g class="trend-chart__tick" transform="translate(${tick.x.toFixed(2)} 0)">
-                  <line y1="194" y2="199"></line>
-                  <text y="207" text-anchor="${index === 0 ? "start" : index === ticks.length - 1 ? "end" : "middle"}">${tick.label}</text>
-                </g>
-              `
-            )
-            .join("")}
+          ${monthAxis.labels}
         </svg>
         <div class="els-index-legend">
           ${elsRisk.indices
@@ -332,9 +370,7 @@ function renderMlRiskSignalPanel(mlRisk, market) {
   const riskPath = linePath(series, "riskOffProbabilityPct");
   const volPath = linePath(series, "realizedVol20dPct");
   const returnPath = linePath(series, "kospiReturn20dPct");
-  const ticks = monthTicks(series);
-  const first = series[0];
-  const last = series[series.length - 1];
+  const monthAxis = renderMonthAxis(series);
   const ml = mlRisk.metrics?.ml ?? {};
   const baseline = mlRisk.metrics?.baseline ?? {};
   const marketScore = Number(market?.score);
@@ -379,7 +415,7 @@ function renderMlRiskSignalPanel(mlRisk, market) {
           <strong>${Number.isFinite(marketScore) ? `${marketScore.toFixed(1)} / 100` : "-"}</strong>
           <p>가격·변동성·환율·수급 등 지금 확인되는 시장 부담입니다.</p>
         </article>
-        <div class="ml-risk-horizons__divider" aria-hidden="true"><span>별도 시간축</span></div>
+        <div class="ml-risk-horizons__divider" aria-hidden="true"></div>
         <article>
           <span class="eyebrow">미래 · ML 전망</span>
           <strong>${Number(latest.riskOffProbabilityPct).toFixed(1)}%</strong>
@@ -418,33 +454,20 @@ function renderMlRiskSignalPanel(mlRisk, market) {
         <div class="ml-risk-chart" aria-label="향후 20일 추가 악화 확률과 KOSPI 최근 흐름">
           <div class="ml-risk-chart__header">
             <strong>최근 흐름</strong>
-            <span>${probabilityChangeText}</span>
+            <span>${series.length}개 관측 · ${probabilityChangeText}</span>
           </div>
           <svg viewBox="0 0 760 210" role="img">
+            ${monthAxis.grid}
             <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
             <path class="ml-risk-chart__risk" d="${riskPath}"></path>
             <path class="ml-risk-chart__vol" d="${volPath}"></path>
             <path class="ml-risk-chart__return" d="${returnPath}"></path>
-            ${ticks
-              .map(
-                (tick, index) => `
-                  <g class="trend-chart__tick" transform="translate(${tick.x.toFixed(2)} 0)">
-                    <line y1="194" y2="199"></line>
-                    <text y="207" text-anchor="${index === 0 ? "start" : index === ticks.length - 1 ? "end" : "middle"}">${tick.label}</text>
-                  </g>
-                `
-              )
-              .join("")}
+            ${monthAxis.labels}
           </svg>
           <div class="ml-risk-chart__legend">
             <span><i class="legend-risk"></i>20D 추가 악화 확률</span>
             <span><i class="legend-vol"></i>20D 변동성</span>
             <span><i class="legend-return"></i>20D 수익률</span>
-          </div>
-          <div class="trend-chart__meta">
-            <span>${first.date}</span>
-            <span>${series.length} observations</span>
-            <span>${last.date}</span>
           </div>
         </div>
 
@@ -471,15 +494,14 @@ function renderCompositeTrend(section, timeseries) {
   if (points.length < 2) return "";
 
   const latest = points[points.length - 1];
-  const first = points[0];
   const path = trendChartPath(points);
-  const areaPath = `${path} L 760 210 L 0 210 Z`;
+  const areaPath = `${path} L 760 190 L 0 190 Z`;
   const change1d = valueChange(latest.value, points, 1);
   const change1w = valueChange(latest.value, points, 5);
   const change1m = valueChange(latest.value, points, 20);
   const minPoint = points.reduce((min, point) => (point.value < min.value ? point : min), points[0]);
   const maxPoint = points.reduce((max, point) => (point.value > max.value ? point : max), points[0]);
-  const ticks = monthTicks(points);
+  const monthAxis = renderMonthAxis(points);
 
   return `
     <section class="trend-panel">
@@ -502,25 +524,12 @@ function renderCompositeTrend(section, timeseries) {
       </div>
       <div class="trend-chart" aria-label="시장리스크 종합점수 시계열">
         <svg viewBox="0 0 760 210" role="img">
+          ${monthAxis.grid}
           <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
           <path class="trend-chart__area" d="${areaPath}"></path>
           <path class="trend-chart__line" d="${path}"></path>
-          ${ticks
-            .map(
-              (tick, index) => `
-                <g class="trend-chart__tick" transform="translate(${tick.x.toFixed(2)} 0)">
-                  <line y1="194" y2="199"></line>
-                  <text y="207" text-anchor="${index === 0 ? "start" : index === ticks.length - 1 ? "end" : "middle"}">${tick.label}</text>
-                </g>
-              `
-            )
-            .join("")}
+          ${monthAxis.labels}
         </svg>
-        <div class="trend-chart__meta">
-          <span>${first.date}</span>
-          <span>${points.length} observations</span>
-          <span>${latest.date}</span>
-        </div>
       </div>
     </section>
   `;
@@ -532,23 +541,20 @@ function renderSparkline(indicator, timeseries) {
     return `<div class="sparkline sparkline--empty">시계열 준비중</div>`;
   }
 
-  const first = points[0];
   const last = points[points.length - 1];
-  const change = clampScore(last.value) - clampScore(first.value);
+  const change = clampScore(last.value) - clampScore(points[0].value);
   const trend = change > 3 ? "up" : change < -3 ? "down" : "flat";
-  const path = sparklinePath(points);
+  const path = sparklinePath(points, 260, 58, 5);
+  const monthAxis = renderMonthAxis(points, 260, 5, 56, 72);
 
   return `
     <div class="sparkline sparkline--${trend}" aria-label="${indicator.name} 최근 점수 추세">
-      <svg viewBox="0 0 260 62" role="img">
+      <svg viewBox="0 0 260 76" role="img">
+        ${monthAxis.grid}
         <path class="sparkline__baseline" d="M 0 55 L 260 55"></path>
         <path class="sparkline__line" d="${path}"></path>
+        ${monthAxis.labels}
       </svg>
-      <div class="sparkline__meta">
-        <span>${first.date}</span>
-        <strong>${clampScore(last.value).toFixed(1)}</strong>
-        <span>${last.date}</span>
-      </div>
     </div>
   `;
 }

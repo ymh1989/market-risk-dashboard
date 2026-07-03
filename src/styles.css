@@ -345,7 +345,7 @@ select {
 
 .ml-risk-horizons {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
   align-items: stretch;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -382,21 +382,8 @@ select {
 }
 
 .ml-risk-horizons__divider {
-  display: grid;
-  place-items: center;
   width: 1px;
   background: var(--line);
-}
-
-.ml-risk-horizons__divider span {
-  width: max-content;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
-  padding: 5px 9px;
-  color: var(--muted);
-  font-size: 0.7rem;
-  font-weight: 900;
 }
 
 .ml-risk-body {
@@ -927,33 +914,21 @@ select {
   stroke-width: 3;
 }
 
-.trend-chart__tick line {
-  stroke: var(--line);
-  stroke-width: 1;
+.chart-month-band {
+  fill: color-mix(in srgb, var(--blue) 4%, transparent);
 }
 
-.trend-chart__tick text {
+.chart-month-divider {
+  stroke: color-mix(in srgb, var(--muted) 35%, transparent);
+  stroke-dasharray: 3 6;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-month-label {
   fill: var(--muted);
   font-size: 0.72rem;
   font-weight: 800;
-}
-
-.trend-chart__meta {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 800;
-}
-
-.trend-chart__meta span:nth-child(2) {
-  text-align: center;
-}
-
-.trend-chart__meta span:last-child {
-  text-align: right;
 }
 
 .backtest-panel__header {
@@ -1413,7 +1388,7 @@ select {
   display: grid;
   gap: 14px;
   padding: 18px;
-  grid-template-rows: auto auto auto auto auto 92px 1fr auto;
+  grid-template-rows: auto auto auto auto auto 104px 1fr auto;
 }
 
 .indicator-card h3 {
@@ -1448,9 +1423,7 @@ select {
 }
 
 .sparkline {
-  display: grid;
-  gap: 6px;
-  min-height: 92px;
+  min-height: 104px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-raised);
@@ -1460,7 +1433,7 @@ select {
 .sparkline svg {
   display: block;
   width: 100%;
-  height: 62px;
+  height: 76px;
   overflow: visible;
 }
 
@@ -1496,29 +1469,11 @@ select {
 }
 
 .sparkline--empty {
+  display: grid;
   place-items: center;
   color: var(--muted);
   font-size: 0.82rem;
   font-weight: 800;
-}
-
-.sparkline__meta {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-.sparkline__meta strong {
-  color: var(--ink);
-  font-size: 0.92rem;
-}
-
-.sparkline__meta span:last-child {
-  text-align: right;
 }
 
 .indicator-card footer {
@@ -1690,13 +1645,4 @@ select {
     height: 170px;
   }
 
-  .trend-chart__meta {
-    grid-template-columns: 1fr;
-  }
-
-  .trend-chart__meta span,
-  .trend-chart__meta span:nth-child(2),
-  .trend-chart__meta span:last-child {
-    text-align: left;
-  }
 }
