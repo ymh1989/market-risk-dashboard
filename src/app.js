@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260703-5";
+const ASSET_VERSION = "20260704-1";
 
 const trendLabel = {
   up: "상승",
@@ -443,6 +443,8 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
   const baseline = mlRisk.metrics?.baseline ?? {};
   const downside5dMetrics = mlRisk.metrics?.downside5d ?? {};
   const downside20dMetrics = mlRisk.metrics?.downside20d ?? {};
+  const downside5dValidated = Number(downside5dMetrics.auc) >= 0.55 && Number(downside5dMetrics.topDecileLift) > 1;
+  const downside20dValidated = Number(downside20dMetrics.auc) >= 0.55 && Number(downside20dMetrics.topDecileLift) > 1;
   const marketScore = Number(market?.score);
   const marketLevel = market?.level ?? { label: "확인 필요", tone: "watch" };
   const decisionThreshold = Number(mlRisk.thresholds?.riskOffDecisionThresholdPct);
@@ -496,7 +498,7 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
         <article>
           <span class="eyebrow">미래 · 20D 급락 전망</span>
           <strong>${downside20d.toFixed(1)}%</strong>
-          <p>현재 수준에서 향후 20영업일 수익률이 ${Number(mlRisk.thresholds?.downside20dReturnPct ?? -5).toFixed(1)}% 이하가 될 확률입니다.</p>
+          <p>현재 수준에서 향후 20영업일 수익률이 ${Number(mlRisk.thresholds?.downside20dReturnPct ?? -5).toFixed(1)}% 이하가 될 확률입니다. ${downside20dValidated ? "OOS 선별력이 확인됐습니다." : "현재 OOS 선별력이 확인되지 않아 연구 참고값으로만 봐야 합니다."}</p>
         </article>
       </div>
 
@@ -504,13 +506,13 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
         ${createMetricCard({
           label: "5D 급락확률",
           value: `${downside5d.toFixed(1)}%`,
-          meta: `5일 수익률 ${Number(mlRisk.thresholds?.downside5dReturnPct ?? -3).toFixed(1)}% 이하`,
+          meta: `5일 수익률 ${Number(mlRisk.thresholds?.downside5dReturnPct ?? -3).toFixed(1)}% 이하 · ${downside5dValidated ? "OOS 검증 통과" : "연구 참고값"}`,
           tone: downside5dTone
         })}
         ${createMetricCard({
           label: "20D 급락확률",
           value: `${downside20d.toFixed(1)}%`,
-          meta: `20일 수익률 ${Number(mlRisk.thresholds?.downside20dReturnPct ?? -5).toFixed(1)}% 이하`,
+          meta: `20일 수익률 ${Number(mlRisk.thresholds?.downside20dReturnPct ?? -5).toFixed(1)}% 이하 · ${downside20dValidated ? "OOS 검증 통과" : "OOS 검증 미흡"}`,
           tone: downside20dTone
         })}
         ${createMetricCard({
@@ -561,6 +563,7 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
             20D ${Number(downside20dMetrics.averagePrecision ?? 0).toFixed(3)}입니다. 확률 상위 10% 구간의 급락 적중률은
             각각 ${Number((downside5dMetrics.topDecileHitRate ?? 0) * 100).toFixed(1)}%,
             ${Number((downside20dMetrics.topDecileHitRate ?? 0) * 100).toFixed(1)}%입니다.
+            ${downside20dValidated ? "20D 급락확률도 운영 참고가 가능합니다." : "20D 급락확률은 OOS 선별력이 부족하므로 의사결정 신호로 사용하면 안 됩니다."}
           </p>
           <ul>
             ${(mlRisk.interpretation ?? []).map((item) => `<li>${item}</li>`).join("")}
