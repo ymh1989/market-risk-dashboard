@@ -129,7 +129,7 @@ def fetch_naver_chart(symbol, lookback_days=760, start_date=None, end_date=None)
         headers={"User-Agent": USER_AGENT, "Accept": "text/plain"},
     )
     with urllib.request.urlopen(request, timeout=20) as response:
-        text = response.read().decode("euc-kr", errors="ignore").strip()
+        text = response.read().decode("utf-8", errors="ignore").strip()
 
     rows = ast.literal_eval(text)
     series = []
@@ -249,6 +249,16 @@ def rolling_negative_changes(values, periods=20):
     for index in range(len(values)):
         change = pct_change_at(values, periods, index)
         changes.append(max(0.0, -change * 100) if change is not None else None)
+    return changes
+
+
+def rolling_negative_point_changes(values, periods=20):
+    changes = []
+    for index, value in enumerate(values):
+        if index < periods:
+            changes.append(None)
+            continue
+        changes.append(max(0.0, values[index - periods] - value))
     return changes
 
 
@@ -513,7 +523,7 @@ def foreign_ownership_pressure_score(naver_map, keys):
     for key in keys:
         series = naver_map[key]
         ownership = [point["foreignOwnership"] for point in series if point.get("foreignOwnership") is not None]
-        drops = rolling_negative_changes(ownership, 20)
+        drops = rolling_negative_point_changes(ownership, 20)
         score = hybrid_standard_score([value for value in drops[-252:] if value is not None], drops[-1])
         prior_offset = min(20, len(drops) - 2)
         prior_score = hybrid_standard_score([value for value in drops[-252:] if value is not None], value_at(drops, prior_offset))
@@ -553,7 +563,7 @@ def foreign_ownership_pressure_score_at(naver_map, keys, date):
             for point in naver_map[key][: index + 1]
             if point.get("foreignOwnership") is not None
         ]
-        drops = rolling_negative_changes(ownership, 20)
+        drops = rolling_negative_point_changes(ownership, 20)
         if drops[-1] is None:
             return None
         scores.append(hybrid_standard_score([value for value in drops[-252:] if value is not None], drops[-1]))
@@ -1178,7 +1188,7 @@ def build_indicators(series_map, naver_map):
         },
         {
             "id": "foreign_ownership_pressure",
-            "name": "외국인 보유비중 이탈 압력",
+            "name": "외국인 소진율 이탈 압력",
             "category": "수급",
             "group": "flow",
             "value": foreign_ownership["score"],
@@ -1186,7 +1196,7 @@ def build_indicators(series_map, naver_map):
             "weight": 0.1,
             "trend": foreign_ownership["trend"],
             "detail": (
-                f"삼성전자·SK하이닉스·한미반도체 외국인소진율 20일 변화 기준, "
+                f"대형 메모리 2개사·수급 민감 장비주 한미반도체의 외국인소진율 20일 %p 변화 기준, "
                 f"최대 이탈폭 {foreign_ownership['metrics']['max20dDropPctp']:.2f}%p"
             ),
             "source": "Naver Finance chart: 005930, 000660, 042700",
