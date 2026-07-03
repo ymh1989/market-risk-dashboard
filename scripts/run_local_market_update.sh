@@ -11,6 +11,10 @@ REMOTE="${LOCAL_MARKET_UPDATE_REMOTE:-origin}"
 TIMES="${LOCAL_MARKET_UPDATE_TIMES:-08:30,12:30,16:10}"
 LABEL="${LOCAL_MARKET_UPDATE_LABEL:-com.marketlab.market-risk-update}"
 PYTHON_BIN="${LOCAL_MARKET_UPDATE_PYTHON:-}"
+PAGES_URL="${LOCAL_MARKET_UPDATE_PAGES_URL:-https://ymh1989.github.io/market-risk-dashboard}"
+PAGES_VERIFY_ATTEMPTS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_ATTEMPTS:-12}"
+PAGES_VERIFY_INTERVAL_SECONDS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_INTERVAL_SECONDS:-10}"
+PAGES_DEPLOY_RETRIES="${LOCAL_MARKET_UPDATE_PAGES_DEPLOY_RETRIES:-2}"
 ONLY_AT_SCHEDULED_KST=0
 SCHEDULE_STATE_FILE=""
 
@@ -23,6 +27,10 @@ if [[ -f "$ENV_FILE" ]]; then
   TIMES="${LOCAL_MARKET_UPDATE_TIMES:-$TIMES}"
   LABEL="${LOCAL_MARKET_UPDATE_LABEL:-$LABEL}"
   PYTHON_BIN="${LOCAL_MARKET_UPDATE_PYTHON:-$PYTHON_BIN}"
+  PAGES_URL="${LOCAL_MARKET_UPDATE_PAGES_URL:-$PAGES_URL}"
+  PAGES_VERIFY_ATTEMPTS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_ATTEMPTS:-$PAGES_VERIFY_ATTEMPTS}"
+  PAGES_VERIFY_INTERVAL_SECONDS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_INTERVAL_SECONDS:-$PAGES_VERIFY_INTERVAL_SECONDS}"
+  PAGES_DEPLOY_RETRIES="${LOCAL_MARKET_UPDATE_PAGES_DEPLOY_RETRIES:-$PAGES_DEPLOY_RETRIES}"
 fi
 
 for arg in "$@"; do
@@ -83,6 +91,31 @@ mark_scheduled_done() {
   if [[ -n "$SCHEDULE_STATE_FILE" ]]; then
     printf "%s\n" "$(kst_now '+%Y-%m-%d %H:%M:%S KST')" > "$SCHEDULE_STATE_FILE"
   fi
+}
+
+pages_generated_at() {
+  local response
+  response="$(curl -fsSL --max-time 20 -H "Cache-Control: no-cache" "${PAGES_URL%/}/data/ml-risk-signal.json?check=$(date +%s)" 2>/dev/null || true)"
+  if [[ -z "$response" ]]; then
+    return 0
+  fi
+  "$PYTHON_BIN" -c 'import json, sys; print(json.load(sys.stdin).get("generatedAt", ""))' <<< "$response" 2>/dev/null || true
+}
+
+wait_for_pages_deployment() {
+  local expected_generated_at="$1"
+  local attempt deployed_generated_at
+
+  for ((attempt = 1; attempt <= PAGES_VERIFY_ATTEMPTS; attempt++)); do
+    deployed_generated_at="$(pages_generated_at)"
+    if [[ "$deployed_generated_at" == "$expected_generated_at" ]]; then
+      echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] GitHub Pages 반영을 확인했습니다: $deployed_generated_at"
+      return 0
+    fi
+    echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] Pages 반영 대기 중 ($attempt/$PAGES_VERIFY_ATTEMPTS): ${deployed_generated_at:-응답 없음}"
+    sleep "$PAGES_VERIFY_INTERVAL_SECONDS"
+  done
+  return 1
 }
 
 if (( ONLY_AT_SCHEDULED_KST )); then
@@ -149,12 +182,25 @@ git add \
 
 if git diff --cached --quiet; then
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 변경된 데이터가 없어 커밋하지 않습니다."
-  mark_scheduled_done
-  exit 0
+else
+  git commit -m "Update market risk data"
+  git push "$REMOTE" "HEAD:$BRANCH"
 fi
 
-git commit -m "Update market risk data"
-git push "$REMOTE" "HEAD:$BRANCH"
+EXPECTED_GENERATED_AT="$("$PYTHON_BIN" -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["generatedAt"])' data/ml-risk-signal.json)"
+for ((retry = 0; retry <= PAGES_DEPLOY_RETRIES; retry++)); do
+  if wait_for_pages_deployment "$EXPECTED_GENERATED_AT"; then
+    mark_scheduled_done
+    echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 로컬 예약 갱신을 완료했습니다."
+    exit 0
+  fi
 
-mark_scheduled_done
-echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 로컬 예약 갱신을 완료했습니다."
+  if ((retry < PAGES_DEPLOY_RETRIES)); then
+    echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] Pages 미반영으로 재배포를 요청합니다 ($((retry + 1))/$PAGES_DEPLOY_RETRIES)."
+    git commit --allow-empty -m "Retry GitHub Pages deployment"
+    git push "$REMOTE" "HEAD:$BRANCH"
+  fi
+done
+
+echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] GitHub Pages가 최신 데이터로 반영되지 않았습니다." >&2
+exit 1
