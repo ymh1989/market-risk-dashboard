@@ -70,6 +70,24 @@ def cmd_backtest(args: argparse.Namespace) -> None:
     metrics_path = Path(config["paths"]["metrics"])
     metrics_path.parent.mkdir(parents=True, exist_ok=True)
     metrics.to_csv(metrics_path, index=False)
+    predictions_path = Path(config["paths"]["walk_forward_predictions"])
+    predictions_path.parent.mkdir(parents=True, exist_ok=True)
+    prediction_columns = [
+        "date",
+        "fold",
+        "prob_risk_off",
+        "pred_regime",
+        "target_regime",
+        "fwd_ret_20d",
+        "fwd_max_drawdown_20d",
+        "target_vol_20d",
+    ]
+    walk_forward_predictions = (
+        scored.sort_values(["date", "fold"])
+        .drop_duplicates("date", keep="last")[prediction_columns]
+        .reset_index(drop=True)
+    )
+    walk_forward_predictions.to_csv(predictions_path, index=False)
     bucket = score_bucket_analysis(scored)
     bucket_path = Path(config["paths"]["score_bucket_analysis"])
     bucket_path.parent.mkdir(parents=True, exist_ok=True)
@@ -83,6 +101,7 @@ def cmd_backtest(args: argparse.Namespace) -> None:
     write_backtest_report(args.output, metrics, matrices, scored, figure_paths=figure_paths)
     print(f"Wrote backtest report: {args.output}")
     print(f"Wrote model metrics: {metrics_path}")
+    print(f"Wrote walk-forward predictions: {predictions_path}")
     print(f"Wrote score bucket analysis: {bucket_path}")
     print(f"Wrote figures: {Path(args.output).parent / 'figures'}")
 

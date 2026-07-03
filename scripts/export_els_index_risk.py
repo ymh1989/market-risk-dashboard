@@ -134,6 +134,8 @@ def _reading(latest: pd.Series, score: float) -> str:
 def _index_payload(spec: dict[str, str]) -> tuple[dict, pd.DataFrame]:
     frame = _features(_fetch_yahoo(spec["symbol"]))
     latest = frame.dropna(subset=["els_risk_score"]).iloc[-1]
+    latest_year = int(str(latest["date"])[:4])
+    ytd_prices = frame.loc[pd.to_datetime(frame["date"]).dt.year == latest_year, ["date", "close"]]
     score = float(latest["els_risk_score"])
     bucket = _bucket(score)
     series = []
@@ -167,6 +169,10 @@ def _index_payload(spec: dict[str, str]) -> tuple[dict, pd.DataFrame]:
                 "drawdown252dPct": _round(latest["drawdown_252d"] * 100, 2),
                 "maxAbsDailyMove20dPct": _round(latest["max_abs_daily_move_20d"] * 100, 2),
             },
+            "ytdPriceSeries": [
+                {"date": row["date"], "close": _round(row["close"], 2)}
+                for row in ytd_prices.to_dict(orient="records")
+            ],
             "series": series,
         },
         frame[["date", "ret_1d"]].assign(index_id=spec["id"]),

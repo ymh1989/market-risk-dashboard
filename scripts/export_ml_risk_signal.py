@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FEATURES_FILE = ROOT / "data" / "processed" / "features.parquet"
 LATEST_SIGNAL_FILE = ROOT / "reports" / "latest_signal.csv"
 METRICS_FILE = ROOT / "reports" / "model_metrics.csv"
+WALK_FORWARD_FILE = ROOT / "reports" / "walk_forward_predictions.csv"
 MODEL_FILE = ROOT / "models" / "model_bundle.joblib"
 OUTPUT_FILE = ROOT / "data" / "ml-risk-signal.json"
 
@@ -70,6 +71,19 @@ def build_payload() -> dict:
     latest_row = features.iloc[-1]
     latest_signal = pd.read_csv(LATEST_SIGNAL_FILE).iloc[-1].to_dict() if LATEST_SIGNAL_FILE.exists() else ytd_scored.iloc[-1].to_dict()
     metrics = pd.read_csv(METRICS_FILE) if METRICS_FILE.exists() else pd.DataFrame(columns=["model", "task", "metric", "value"])
+    walk_forward_series = []
+    if WALK_FORWARD_FILE.exists():
+        walk_forward = pd.read_csv(WALK_FORWARD_FILE)
+        walk_forward["date"] = pd.to_datetime(walk_forward["date"])
+        walk_forward = walk_forward.loc[walk_forward["date"].dt.year == latest_year].sort_values("date")
+        walk_forward_series = [
+            {
+                "date": row["date"].date().isoformat(),
+                "riskOffProbabilityPct": _pct(row["prob_risk_off"]),
+                "fold": int(row["fold"]),
+            }
+            for row in walk_forward.to_dict(orient="records")
+        ]
 
     momentum_pct = _pct_from_log(latest_row.get("kospi_log_ret_20d"))
     realized_vol_pct = _pct(latest_row.get("kospi_realized_vol_20d"))
@@ -114,6 +128,7 @@ def build_payload() -> dict:
             "model": "models/model_bundle.joblib",
             "latestSignal": "reports/latest_signal.csv",
             "metrics": "reports/model_metrics.csv",
+            "walkForwardPredictions": "reports/walk_forward_predictions.csv",
             "seriesWindow": "YTD",
         },
         "latest": {
@@ -159,6 +174,7 @@ def build_payload() -> dict:
             "급락 직후에는 충격이 이미 가격에 반영됐다고 학습해 ML 확률이 낮아질 수 있으므로, 확률 하락을 현재 위험 해소로 해석하면 안 됩니다.",
             "활황 국면에서도 변동성이 높으면 신규 발행 조건은 매력적일 수 있지만, 기존 북의 순연 가능성과 헤지 비용 부담이 커질 수 있습니다.",
         ],
+        "walkForwardSeries": walk_forward_series,
         "series": series,
     }
     return payload

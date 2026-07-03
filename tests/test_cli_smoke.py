@@ -10,12 +10,14 @@ from kospi_risk.cli import main
 def write_config(path: Path) -> None:
     metrics = path.parent / "model_metrics.csv"
     buckets = path.parent / "score_bucket_analysis.csv"
+    predictions = path.parent / "walk_forward_predictions.csv"
     path.write_text(
         f"""
 random_state: 42
 paths:
   metrics: {metrics}
   score_bucket_analysis: {buckets}
+  walk_forward_predictions: {predictions}
 validation:
   initial_train_days: 520
   test_days: 40
@@ -49,6 +51,9 @@ def test_cli_pipeline_smoke(tmp_path):
     assert model.exists()
     assert report.exists()
     signal = pd.read_csv(latest)
+    walk_forward = pd.read_csv(tmp_path / "walk_forward_predictions.csv")
     assert len(signal) == 1
+    assert walk_forward["date"].is_unique
+    assert walk_forward["prob_risk_off"].between(0, 1).all()
     assert signal.loc[0, "els_risk_score"] >= 0
     assert signal.loc[0, "els_risk_score"] <= 100

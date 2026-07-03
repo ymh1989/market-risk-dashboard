@@ -18,6 +18,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "model_bundle": "models/model_bundle.joblib",
         "metrics": "reports/model_metrics.csv",
         "score_bucket_analysis": "reports/score_bucket_analysis.csv",
+        "walk_forward_predictions": "reports/walk_forward_predictions.csv",
     },
         "validation": {
             "initial_train_days": 1260,

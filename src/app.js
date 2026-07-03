@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260703-2";
+const ASSET_VERSION = "20260703-3";
 
 const trendLabel = {
   up: "상승",
@@ -187,6 +187,68 @@ function linePath(points, valueKey, width = 760, height = 210, padding = 18) {
     .join(" ");
 }
 
+function datedLinePath(points, valueKey, startDate, endDate, width = 760, height = 210, padding = 18) {
+  const valid = points.filter((point) => Number.isFinite(Number(point[valueKey])));
+  if (valid.length < 2) return "";
+  const values = valid.map((point) => Number(point[valueKey]));
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const start = Date.parse(`${startDate}T00:00:00Z`);
+  const end = Date.parse(`${endDate}T00:00:00Z`);
+  const dateRange = end - start || 1;
+
+  return valid
+    .map((point, index) => {
+      const x = ((Date.parse(`${point.date}T00:00:00Z`) - start) / dateRange) * width;
+      const y = height - padding - ((Number(point[valueKey]) - min) / range) * (height - padding * 2);
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
+function pearsonCorrelation(pairs) {
+  if (pairs.length < 3) return null;
+  const meanX = pairs.reduce((sum, pair) => sum + pair[0], 0) / pairs.length;
+  const meanY = pairs.reduce((sum, pair) => sum + pair[1], 0) / pairs.length;
+  const covariance = pairs.reduce((sum, pair) => sum + (pair[0] - meanX) * (pair[1] - meanY), 0);
+  const varianceX = pairs.reduce((sum, pair) => sum + (pair[0] - meanX) ** 2, 0);
+  const varianceY = pairs.reduce((sum, pair) => sum + (pair[1] - meanY) ** 2, 0);
+  const denominator = Math.sqrt(varianceX * varianceY);
+  return denominator > 0 ? covariance / denominator : null;
+}
+
+function buildLeadLagComparison(mlRisk, elsRisk, horizon = 20) {
+  const kospi200 = elsRisk?.indices?.find((item) => item.id === "kospi200");
+  const prices = (kospi200?.ytdPriceSeries ?? []).filter((point) => Number.isFinite(Number(point.close)));
+  const signals = (mlRisk?.walkForwardSeries ?? []).filter((point) => Number.isFinite(Number(point.riskOffProbabilityPct)));
+  if (prices.length < horizon + 2 || signals.length < 3) return null;
+
+  const base = Number(prices[0].close);
+  const indexedPrices = prices.map((point) => ({
+    date: point.date,
+    kospi200YtdIndex: (Number(point.close) / base) * 100
+  }));
+  const signalByDate = new Map(signals.map((point) => [point.date, Number(point.riskOffProbabilityPct)]));
+  const pairs = [];
+  prices.forEach((point, index) => {
+    const probability = signalByDate.get(point.date);
+    if (probability === undefined || index + horizon >= prices.length) return;
+    const forwardReturn = Number(prices[index + horizon].close) / Number(point.close) - 1;
+    pairs.push([probability, forwardReturn]);
+  });
+
+  return {
+    signalSeries: signals,
+    priceSeries: indexedPrices,
+    startDate: indexedPrices[0].date,
+    endDate: indexedPrices[indexedPrices.length - 1].date,
+    correlation: pearsonCorrelation(pairs),
+    observations: pairs.length,
+    horizon
+  };
+}
+
 function scorePath(points, valueKey = "score", width = 760, height = 210, padding = 18) {
   const valid = points.filter((point) => Number.isFinite(Number(point[valueKey])));
   if (valid.length < 2) return "";
@@ -361,16 +423,21 @@ function renderElsIndexRiskPanel(elsRisk) {
   `;
 }
 
-function renderMlRiskSignalPanel(mlRisk, market) {
+function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
   if (!mlRisk?.latest || !mlRisk?.series?.length) return "";
 
   const latest = mlRisk.latest;
   const series = mlRisk.series;
   const previous = series.length > 1 ? series[series.length - 2] : null;
-  const riskPath = linePath(series, "riskOffProbabilityPct");
-  const volPath = linePath(series, "realizedVol20dPct");
-  const returnPath = linePath(series, "kospiReturn20dPct");
-  const monthAxis = renderMonthAxis(series);
+  const comparison = buildLeadLagComparison(mlRisk, elsRisk);
+  const chartSeries = comparison?.priceSeries ?? series;
+  const monthAxis = renderMonthAxis(chartSeries);
+  const riskPath = comparison
+    ? datedLinePath(comparison.signalSeries, "riskOffProbabilityPct", comparison.startDate, comparison.endDate)
+    : linePath(series, "riskOffProbabilityPct");
+  const kospi200Path = comparison
+    ? datedLinePath(comparison.priceSeries, "kospi200YtdIndex", comparison.startDate, comparison.endDate)
+    : "";
   const ml = mlRisk.metrics?.ml ?? {};
   const baseline = mlRisk.metrics?.baseline ?? {};
   const marketScore = Number(market?.score);
@@ -390,6 +457,17 @@ function renderMlRiskSignalPanel(mlRisk, market) {
   const decisionText = Number.isFinite(decisionThreshold)
     ? `${latest.regime} 판정 · 임계치 ${decisionThreshold.toFixed(1)}%`
     : `모델 판정 ${latest.regime}`;
+  const leadCorrelation = comparison?.correlation;
+  const leadCorrelationText = Number.isFinite(leadCorrelation)
+    ? `${leadCorrelation > 0 ? "+" : ""}${leadCorrelation.toFixed(2)}`
+    : "산출 대기";
+  const leadReading = !Number.isFinite(leadCorrelation)
+    ? "워크포워드 관측치가 더 쌓이면 선행성을 계산합니다."
+    : leadCorrelation <= -0.2
+      ? "확률 상승 뒤 KOSPI200 수익률이 낮아지는 선행 패턴이 관찰됩니다."
+      : leadCorrelation >= 0.2
+        ? "현재 YTD 표본에서는 기대한 역방향 선행 패턴이 확인되지 않습니다."
+        : "현재 YTD 표본의 선행 관계는 약합니다.";
   const divergenceText =
     Number.isFinite(marketScore) && marketScore >= 55 && probabilityDelta !== null && probabilityDelta <= -5
       ? `현재 스트레스는 ${marketLevel.label} 단계지만 추가 악화 확률은 직전보다 ${Math.abs(probabilityDelta).toFixed(1)}%p 낮아졌습니다. 급락이 이미 반영되면서 모델이 과거 유사 구간의 평균회귀 가능성을 함께 본 결과일 수 있으며, 현재 위험이 해소됐다는 뜻은 아닙니다.`
@@ -451,24 +529,23 @@ function renderMlRiskSignalPanel(mlRisk, market) {
       </div>
 
       <div class="ml-risk-body">
-        <div class="ml-risk-chart" aria-label="향후 20일 추가 악화 확률과 KOSPI YTD 흐름">
+        <div class="ml-risk-chart" aria-label="워크포워드 risk-off 확률과 KOSPI200 YTD 선행성 비교">
           <div class="ml-risk-chart__header">
-            <strong>YTD 흐름</strong>
-            <span>${latest.date.slice(0, 4)}년 · ${series.length}개 관측 · ${probabilityChangeText}</span>
+            <strong>YTD 선행성 비교</strong>
+            <span>20D 선행상관 ${leadCorrelationText} · ${comparison?.observations ?? 0}개 표본</span>
           </div>
           <svg viewBox="0 0 760 210" role="img">
             ${monthAxis.grid}
             <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
             <path class="ml-risk-chart__risk" d="${riskPath}"></path>
-            <path class="ml-risk-chart__vol" d="${volPath}"></path>
-            <path class="ml-risk-chart__return" d="${returnPath}"></path>
+            <path class="ml-risk-chart__kospi200" d="${kospi200Path}"></path>
             ${monthAxis.labels}
           </svg>
           <div class="ml-risk-chart__legend">
-            <span><i class="legend-risk"></i>20D 추가 악화 확률</span>
-            <span><i class="legend-vol"></i>20D 변동성</span>
-            <span><i class="legend-return"></i>20D 수익률</span>
+            <span><i class="legend-risk"></i>ML Risk-off 확률 · 워크포워드 OOS</span>
+            <span><i class="legend-kospi200"></i>KOSPI200 · 연초=100</span>
           </div>
+          <p class="ml-risk-chart__note">${leadReading} 두 선은 방향 비교를 위해 독립 축을 사용하며, OOS 신호는 향후 결과를 확인할 수 있는 날짜까지만 표시합니다.</p>
         </div>
 
         <div class="ml-risk-explain">
@@ -826,7 +903,7 @@ function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRi
       </p>
     </section>
 
-    ${renderMlRiskSignalPanel(mlRisk, market)}
+    ${renderMlRiskSignalPanel(mlRisk, market, elsRisk)}
     ${renderElsIndexRiskPanel(elsRisk)}
     ${renderCompositeTrend(market, timeseries)}
     ${renderBacktestPanel(backtest)}
