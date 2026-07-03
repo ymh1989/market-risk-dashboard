@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260703-4";
+const ASSET_VERSION = "20260703-5";
 
 const trendLabel = {
   up: "상승",
@@ -470,14 +470,14 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
         ? "현재 YTD 표본에서는 기대한 역방향 선행 패턴이 확인되지 않습니다."
         : "현재 YTD 표본의 선행 관계는 약합니다.";
   const divergenceText =
-    `현재 스트레스는 ${marketLevel.label} 단계입니다. 변동성 조건을 제외한 순수 하방확률은 5일 ${downside5d.toFixed(1)}%, 20일 ${downside20d.toFixed(1)}%이며, 기존 Risk-off ${Number(latest.riskOffProbabilityPct).toFixed(1)}%와 구분해서 봐야 합니다.`;
+    `현재 스트레스는 ${marketLevel.label} 단계입니다. 변동성 조건을 제외한 급락확률은 5일 ${downside5d.toFixed(1)}%, 20일 ${downside20d.toFixed(1)}%이며, 기존 Risk-off ${Number(latest.riskOffProbabilityPct).toFixed(1)}%와 구분해서 봐야 합니다.`;
 
   return `
     <section class="ml-risk-panel">
       <div class="ml-risk-panel__header">
         <div>
           <span class="eyebrow">Current Stress vs Forward Risk</span>
-          <h2>현재 스트레스와 5D·20D 하방 전망</h2>
+          <h2>현재 스트레스와 5D·20D 급락 전망</h2>
         </div>
         <div class="ml-risk-state ml-risk-state--${marketLevel.tone}">
           <span>현재 시장 스트레스</span>
@@ -494,23 +494,23 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
         </article>
         <div class="ml-risk-horizons__divider" aria-hidden="true"></div>
         <article>
-          <span class="eyebrow">미래 · 20D 하방 전망</span>
+          <span class="eyebrow">미래 · 20D 급락 전망</span>
           <strong>${downside20d.toFixed(1)}%</strong>
-          <p>현재 수준에서 향후 20영업일 수익률이 ${Number(mlRisk.thresholds?.downside20dReturnPct ?? -3).toFixed(1)}% 이하가 될 확률입니다.</p>
+          <p>현재 수준에서 향후 20영업일 수익률이 ${Number(mlRisk.thresholds?.downside20dReturnPct ?? -5).toFixed(1)}% 이하가 될 확률입니다.</p>
         </article>
       </div>
 
       <div class="ml-risk-grid">
         ${createMetricCard({
-          label: "5D 하방확률",
+          label: "5D 급락확률",
           value: `${downside5d.toFixed(1)}%`,
-          meta: `5일 수익률 ${Number(mlRisk.thresholds?.downside5dReturnPct ?? -2).toFixed(1)}% 이하`,
+          meta: `5일 수익률 ${Number(mlRisk.thresholds?.downside5dReturnPct ?? -3).toFixed(1)}% 이하`,
           tone: downside5dTone
         })}
         ${createMetricCard({
-          label: "20D 하방확률",
+          label: "20D 급락확률",
           value: `${downside20d.toFixed(1)}%`,
-          meta: `20일 수익률 ${Number(mlRisk.thresholds?.downside20dReturnPct ?? -3).toFixed(1)}% 이하`,
+          meta: `20일 수익률 ${Number(mlRisk.thresholds?.downside20dReturnPct ?? -5).toFixed(1)}% 이하`,
           tone: downside20dTone
         })}
         ${createMetricCard({
@@ -528,7 +528,7 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
       </div>
 
       <div class="ml-risk-body">
-        <div class="ml-risk-chart" aria-label="워크포워드 20일 하방확률과 KOSPI200 YTD 선행성 비교">
+        <div class="ml-risk-chart" aria-label="워크포워드 20일 급락확률과 KOSPI200 YTD 선행성 비교">
           <div class="ml-risk-chart__header">
             <strong>YTD 선행성 비교</strong>
             <span>20D 선행상관 ${leadCorrelationText} · ${comparison?.observations ?? 0}개 표본</span>
@@ -541,7 +541,7 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
             ${monthAxis.labels}
           </svg>
           <div class="ml-risk-chart__legend">
-            <span><i class="legend-risk"></i>ML 20D 하방확률 · 워크포워드 OOS</span>
+            <span><i class="legend-risk"></i>ML 20D 급락확률 · 워크포워드 OOS</span>
             <span><i class="legend-kospi200"></i>KOSPI200 · 연초=100</span>
           </div>
           <p class="ml-risk-chart__note">${leadReading} 두 선은 방향 비교를 위해 독립 축을 사용하며, OOS 신호는 향후 결과를 확인할 수 있는 날짜까지만 표시합니다.</p>
@@ -557,9 +557,10 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
             위험 구간을 놓치지 않는 능력은 개선됐지만, 확률 자체는 현재 스트레스 점수와 함께 판단해야 합니다.
           </p>
           <p>
-            순수 하방모델 OOS AUC는 5D ${Number(downside5dMetrics.auc ?? 0).toFixed(3)},
-            20D ${Number(downside20dMetrics.auc ?? 0).toFixed(3)}이며, Brier score는 각각
-            ${Number(downside5dMetrics.brier ?? 0).toFixed(3)}, ${Number(downside20dMetrics.brier ?? 0).toFixed(3)}입니다.
+            급락모델 OOS PR-AUC는 5D ${Number(downside5dMetrics.averagePrecision ?? 0).toFixed(3)},
+            20D ${Number(downside20dMetrics.averagePrecision ?? 0).toFixed(3)}입니다. 확률 상위 10% 구간의 급락 적중률은
+            각각 ${Number((downside5dMetrics.topDecileHitRate ?? 0) * 100).toFixed(1)}%,
+            ${Number((downside20dMetrics.topDecileHitRate ?? 0) * 100).toFixed(1)}%입니다.
           </p>
           <ul>
             ${(mlRisk.interpretation ?? []).map((item) => `<li>${item}</li>`).join("")}

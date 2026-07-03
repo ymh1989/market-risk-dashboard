@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import (
     accuracy_score,
+    average_precision_score,
     balanced_accuracy_score,
     brier_score_loss,
     confusion_matrix,
@@ -63,6 +64,21 @@ def _safe_auc(y_true: pd.Series, y_prob: pd.Series) -> float:
     if y_true.nunique(dropna=True) < 2:
         return math.nan
     return float(roc_auc_score(y_true, y_prob))
+
+
+def _safe_average_precision(y_true: pd.Series, y_prob: pd.Series) -> float:
+    if y_true.nunique(dropna=True) < 2:
+        return math.nan
+    return float(average_precision_score(y_true, y_prob))
+
+
+def _top_decile_metrics(y_true: pd.Series, y_prob: pd.Series) -> tuple[float, float]:
+    count = max(1, math.ceil(len(y_prob) * 0.1))
+    top_index = y_prob.nlargest(count).index
+    hit_rate = float(y_true.loc[top_index].mean())
+    event_rate = float(y_true.mean())
+    lift = hit_rate / event_rate if event_rate > 0 else math.nan
+    return hit_rate, lift
 
 
 def calibration_table(y_true: pd.Series, y_prob: pd.Series, buckets: int = 5) -> pd.DataFrame:
@@ -141,9 +157,14 @@ def evaluate_predictions(scored: pd.DataFrame, model_name: str = "ml_selected") 
         y = scored[target].astype(int)
         p = scored[prob].astype(float)
         pred = p >= 0.5
+        top_decile_hit_rate, top_decile_lift = _top_decile_metrics(y, p)
         metrics.extend(
             [
                 {"model": model_name, "task": name, "metric": "auc", "value": _safe_auc(y, p)},
+                {"model": model_name, "task": name, "metric": "average_precision", "value": _safe_average_precision(y, p)},
+                {"model": model_name, "task": name, "metric": "event_rate", "value": float(y.mean())},
+                {"model": model_name, "task": name, "metric": "top_decile_hit_rate", "value": top_decile_hit_rate},
+                {"model": model_name, "task": name, "metric": "top_decile_lift", "value": top_decile_lift},
                 {"model": model_name, "task": name, "metric": "accuracy", "value": accuracy_score(y, pred)},
                 {"model": model_name, "task": name, "metric": "precision", "value": precision_score(y, pred, zero_division=0)},
                 {"model": model_name, "task": name, "metric": "recall", "value": recall_score(y, pred, zero_division=0)},

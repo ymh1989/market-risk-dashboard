@@ -13,7 +13,7 @@ from sklearn.base import clone
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression, Ridge
-from sklearn.metrics import brier_score_loss, f1_score, mean_absolute_error, mean_squared_error, roc_auc_score
+from sklearn.metrics import average_precision_score, brier_score_loss, f1_score, mean_absolute_error, mean_squared_error, roc_auc_score
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -235,6 +235,12 @@ def _safe_auc(y_true: pd.Series, y_prob: np.ndarray) -> float:
     return float(roc_auc_score(y_true.astype(int), y_prob))
 
 
+def _safe_average_precision(y_true: pd.Series, y_prob: np.ndarray) -> float:
+    if y_true.nunique(dropna=True) < 2:
+        return float("nan")
+    return float(average_precision_score(y_true.astype(int), y_prob))
+
+
 def _probability_for_class(model: Any, x: pd.DataFrame, class_label: str | int) -> np.ndarray:
     probabilities = model.predict_proba(x)
     classes = list(model.classes_)
@@ -352,6 +358,7 @@ def _select_classifier(
     valid_x: pd.DataFrame,
     valid_y: pd.Series,
     positive_class: str | int | None = None,
+    selection_metric: str = "brier",
 ) -> tuple[str, list[dict[str, float | str]]]:
     rows: list[dict[str, float | str]] = []
     for name, model in candidates.items():
@@ -370,6 +377,7 @@ def _select_classifier(
                     prob = _probability_for_class(fitted, valid_x, positive_class)
                     row["brier"] = float(brier_score_loss(valid_y.astype(int), prob))
                     row["auc"] = _safe_auc(valid_y, prob)
+                    row["average_precision"] = _safe_average_precision(valid_y, prob)
             row["status"] = "ok"
         except (RuntimeWarning, FloatingPointError, ValueError) as exc:
             if positive_class is None:
@@ -378,6 +386,7 @@ def _select_classifier(
             else:
                 row["brier"] = float("inf")
                 row["auc"] = float("nan")
+                row["average_precision"] = float("nan")
             row["status"] = f"failed: {exc}"
         rows.append(row)
     if not rows:
@@ -388,6 +397,11 @@ def _select_classifier(
             raise ValueError(f"No valid {task} model candidate remained after numerical checks.")
         best = max(valid_rows, key=lambda row: row.get("macro_f1", float("-inf")))
     else:
+        if selection_metric == "average_precision":
+            valid_rows = [row for row in rows if np.isfinite(float(row.get("average_precision", float("nan"))))]
+            if valid_rows:
+                best = max(valid_rows, key=lambda row: row.get("average_precision", float("-inf")))
+                return str(best["candidate"]), rows
         valid_rows = [row for row in rows if np.isfinite(float(row.get("brier", float("inf"))))]
         if not valid_rows:
             raise ValueError(f"No valid {task} model candidate remained after numerical checks.")
@@ -569,6 +583,7 @@ def train_bundle(df: pd.DataFrame, config: dict) -> ModelBundle:
         select_valid_x,
         select_valid["target_downside_5d"].astype(int),
         positive_class=1,
+        selection_metric="average_precision",
     )
     selection_rows.extend(rows)
     best_downside_20d, rows = _select_classifier(
@@ -579,6 +594,7 @@ def train_bundle(df: pd.DataFrame, config: dict) -> ModelBundle:
         select_valid_x,
         select_valid["target_downside_20d"].astype(int),
         positive_class=1,
+        selection_metric="average_precision",
     )
     selection_rows.extend(rows)
 

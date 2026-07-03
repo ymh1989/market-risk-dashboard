@@ -48,10 +48,10 @@ def add_targets(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     out.loc[invalid_future, ["target_outperform_spx_20d", "target_outperform_sox_20d"]] = np.nan
 
     out["target_downside_5d"] = (
-        out["fwd_ret_5d"] <= float(downside_config.get("return_threshold_5d", -0.02))
+        out["fwd_ret_5d"] <= float(downside_config.get("return_threshold_5d", -0.03))
     ).astype("float")
     out["target_downside_20d"] = (
-        out["fwd_ret_20d"] <= float(downside_config.get("return_threshold_20d", -0.03))
+        out["fwd_ret_20d"] <= float(downside_config.get("return_threshold_20d", -0.05))
     ).astype("float")
     out.loc[out["fwd_ret_5d"].isna(), "target_downside_5d"] = np.nan
     out.loc[invalid_future, "target_downside_20d"] = np.nan

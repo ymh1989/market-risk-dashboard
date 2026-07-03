@@ -55,3 +55,18 @@ def test_outperformance_targets_are_binary_or_nan():
     assert risk_off_values <= {0.0, 1.0}
     assert set(targeted["target_downside_5d"].dropna().unique()) <= {0.0, 1.0}
     assert set(targeted["target_downside_20d"].dropna().unique()) <= {0.0, 1.0}
+
+
+def test_crash_targets_use_configured_large_declines():
+    config = load_config()
+    assert config["downside"]["return_threshold_5d"] == -0.03
+    assert config["downside"]["return_threshold_20d"] == -0.05
+
+    raw = make_sample_market_data(rows=80, seed=11)
+    targeted = add_targets(build_features_from_market_data(raw), config)
+    valid_5d = targeted["fwd_ret_5d"].notna()
+    valid_20d = targeted["fwd_ret_20d"].notna()
+    expected_5d = (targeted.loc[valid_5d, "fwd_ret_5d"] <= -0.03).astype(float)
+    expected_20d = (targeted.loc[valid_20d, "fwd_ret_20d"] <= -0.05).astype(float)
+    pd.testing.assert_series_equal(targeted.loc[valid_5d, "target_downside_5d"], expected_5d, check_names=False)
+    pd.testing.assert_series_equal(targeted.loc[valid_20d, "target_downside_20d"], expected_20d, check_names=False)
