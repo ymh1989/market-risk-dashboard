@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260703-3";
+const ASSET_VERSION = "20260703-4";
 
 const trendLabel = {
   up: "상승",
@@ -221,7 +221,7 @@ function pearsonCorrelation(pairs) {
 function buildLeadLagComparison(mlRisk, elsRisk, horizon = 20) {
   const kospi200 = elsRisk?.indices?.find((item) => item.id === "kospi200");
   const prices = (kospi200?.ytdPriceSeries ?? []).filter((point) => Number.isFinite(Number(point.close)));
-  const signals = (mlRisk?.walkForwardSeries ?? []).filter((point) => Number.isFinite(Number(point.riskOffProbabilityPct)));
+  const signals = (mlRisk?.walkForwardSeries ?? []).filter((point) => Number.isFinite(Number(point.downside20dProbabilityPct)));
   if (prices.length < horizon + 2 || signals.length < 3) return null;
 
   const base = Number(prices[0].close);
@@ -229,7 +229,7 @@ function buildLeadLagComparison(mlRisk, elsRisk, horizon = 20) {
     date: point.date,
     kospi200YtdIndex: (Number(point.close) / base) * 100
   }));
-  const signalByDate = new Map(signals.map((point) => [point.date, Number(point.riskOffProbabilityPct)]));
+  const signalByDate = new Map(signals.map((point) => [point.date, Number(point.downside20dProbabilityPct)]));
   const pairs = [];
   prices.forEach((point, index) => {
     const probability = signalByDate.get(point.date);
@@ -428,23 +428,23 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
 
   const latest = mlRisk.latest;
   const series = mlRisk.series;
-  const previous = series.length > 1 ? series[series.length - 2] : null;
+  const downside5d = Number(latest.downside5dProbabilityPct);
+  const downside20d = Number(latest.downside20dProbabilityPct);
   const comparison = buildLeadLagComparison(mlRisk, elsRisk);
   const chartSeries = comparison?.priceSeries ?? series;
   const monthAxis = renderMonthAxis(chartSeries);
   const riskPath = comparison
-    ? datedLinePath(comparison.signalSeries, "riskOffProbabilityPct", comparison.startDate, comparison.endDate)
+    ? datedLinePath(comparison.signalSeries, "downside20dProbabilityPct", comparison.startDate, comparison.endDate)
     : linePath(series, "riskOffProbabilityPct");
   const kospi200Path = comparison
     ? datedLinePath(comparison.priceSeries, "kospi200YtdIndex", comparison.startDate, comparison.endDate)
     : "";
   const ml = mlRisk.metrics?.ml ?? {};
   const baseline = mlRisk.metrics?.baseline ?? {};
+  const downside5dMetrics = mlRisk.metrics?.downside5d ?? {};
+  const downside20dMetrics = mlRisk.metrics?.downside20d ?? {};
   const marketScore = Number(market?.score);
   const marketLevel = market?.level ?? { label: "확인 필요", tone: "watch" };
-  const probabilityDelta = previous
-    ? Number(latest.riskOffProbabilityPct) - Number(previous.riskOffProbabilityPct)
-    : null;
   const decisionThreshold = Number(mlRisk.thresholds?.riskOffDecisionThresholdPct);
   const riskTone =
     latest.riskOffProbabilityPct >= 75
@@ -453,7 +453,8 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
           (Number.isFinite(decisionThreshold) && latest.riskOffProbabilityPct >= decisionThreshold)
         ? "caution"
         : "watch";
-  const probabilityChangeText = probabilityDelta === null ? "직전 관측치 없음" : `직전 대비 ${formatPointDelta(probabilityDelta)}`;
+  const downside5dTone = downside5d >= 50 ? "danger" : downside5d >= 30 ? "caution" : "watch";
+  const downside20dTone = downside20d >= 50 ? "danger" : downside20d >= 30 ? "caution" : "watch";
   const decisionText = Number.isFinite(decisionThreshold)
     ? `${latest.regime} 판정 · 임계치 ${decisionThreshold.toFixed(1)}%`
     : `모델 판정 ${latest.regime}`;
@@ -469,16 +470,14 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
         ? "현재 YTD 표본에서는 기대한 역방향 선행 패턴이 확인되지 않습니다."
         : "현재 YTD 표본의 선행 관계는 약합니다.";
   const divergenceText =
-    Number.isFinite(marketScore) && marketScore >= 55 && probabilityDelta !== null && probabilityDelta <= -5
-      ? `현재 스트레스는 ${marketLevel.label} 단계지만 추가 악화 확률은 직전보다 ${Math.abs(probabilityDelta).toFixed(1)}%p 낮아졌습니다. 급락이 이미 반영되면서 모델이 과거 유사 구간의 평균회귀 가능성을 함께 본 결과일 수 있으며, 현재 위험이 해소됐다는 뜻은 아닙니다.`
-      : `현재 스트레스는 ${marketLevel.label} 단계이고, 추가 악화 확률은 ${Number(latest.riskOffProbabilityPct).toFixed(1)}%입니다. 두 수치는 서로 다른 시간축을 측정하므로 같은 방향으로 움직이지 않을 수 있습니다.`;
+    `현재 스트레스는 ${marketLevel.label} 단계입니다. 변동성 조건을 제외한 순수 하방확률은 5일 ${downside5d.toFixed(1)}%, 20일 ${downside20d.toFixed(1)}%이며, 기존 Risk-off ${Number(latest.riskOffProbabilityPct).toFixed(1)}%와 구분해서 봐야 합니다.`;
 
   return `
     <section class="ml-risk-panel">
       <div class="ml-risk-panel__header">
         <div>
           <span class="eyebrow">Current Stress vs Forward Risk</span>
-          <h2>현재 스트레스와 향후 20일 추가 악화 가능성</h2>
+          <h2>현재 스트레스와 5D·20D 하방 전망</h2>
         </div>
         <div class="ml-risk-state ml-risk-state--${marketLevel.tone}">
           <span>현재 시장 스트레스</span>
@@ -495,24 +494,30 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
         </article>
         <div class="ml-risk-horizons__divider" aria-hidden="true"></div>
         <article>
-          <span class="eyebrow">미래 · ML 전망</span>
-          <strong>${Number(latest.riskOffProbabilityPct).toFixed(1)}%</strong>
-          <p>현재 수준에서 향후 20영업일 안에 추가 하락·낙폭·고변동성이 나타날 가능성입니다.</p>
+          <span class="eyebrow">미래 · 20D 하방 전망</span>
+          <strong>${downside20d.toFixed(1)}%</strong>
+          <p>현재 수준에서 향후 20영업일 수익률이 ${Number(mlRisk.thresholds?.downside20dReturnPct ?? -3).toFixed(1)}% 이하가 될 확률입니다.</p>
         </article>
       </div>
 
       <div class="ml-risk-grid">
         ${createMetricCard({
-          label: "20D 추가 악화 확률",
-          value: `${Number(latest.riskOffProbabilityPct).toFixed(1)}%`,
-          meta: `${decisionText} · ${probabilityChangeText}`,
-          tone: riskTone
+          label: "5D 하방확률",
+          value: `${downside5d.toFixed(1)}%`,
+          meta: `5일 수익률 ${Number(mlRisk.thresholds?.downside5dReturnPct ?? -2).toFixed(1)}% 이하`,
+          tone: downside5dTone
         })}
         ${createMetricCard({
-          label: "KOSPI 20D 모멘텀",
-          value: formatSignedPct(latest.kospiReturn20dPct),
-          meta: `KOSPI ${Number(latest.kospi).toLocaleString("ko-KR")}`,
-          tone: latest.kospiReturn20dPct >= 0 ? "good" : "danger"
+          label: "20D 하방확률",
+          value: `${downside20d.toFixed(1)}%`,
+          meta: `20일 수익률 ${Number(mlRisk.thresholds?.downside20dReturnPct ?? -3).toFixed(1)}% 이하`,
+          tone: downside20dTone
+        })}
+        ${createMetricCard({
+          label: "기존 ML Risk-off",
+          value: `${Number(latest.riskOffProbabilityPct).toFixed(1)}%`,
+          meta: `${decisionText} · 변동성·낙폭 포함`,
+          tone: riskTone
         })}
         ${createMetricCard({
           label: "20D 실현변동성",
@@ -520,16 +525,10 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
           meta: latest.baselineRiskOffSignal ? "현재 기준모델 risk-off" : "현재 기준모델 중립",
           tone: latest.realizedVol20dPct >= 35 ? "caution" : "watch"
         })}
-        ${createMetricCard({
-          label: "60D 고점 대비 낙폭",
-          value: formatSignedPct(latest.drawdownFrom60dHighPct),
-          meta: "현재 가격 충격 확인",
-          tone: latest.drawdownFrom60dHighPct <= -10 ? "danger" : "watch"
-        })}
       </div>
 
       <div class="ml-risk-body">
-        <div class="ml-risk-chart" aria-label="워크포워드 risk-off 확률과 KOSPI200 YTD 선행성 비교">
+        <div class="ml-risk-chart" aria-label="워크포워드 20일 하방확률과 KOSPI200 YTD 선행성 비교">
           <div class="ml-risk-chart__header">
             <strong>YTD 선행성 비교</strong>
             <span>20D 선행상관 ${leadCorrelationText} · ${comparison?.observations ?? 0}개 표본</span>
@@ -542,7 +541,7 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
             ${monthAxis.labels}
           </svg>
           <div class="ml-risk-chart__legend">
-            <span><i class="legend-risk"></i>ML Risk-off 확률 · 워크포워드 OOS</span>
+            <span><i class="legend-risk"></i>ML 20D 하방확률 · 워크포워드 OOS</span>
             <span><i class="legend-kospi200"></i>KOSPI200 · 연초=100</span>
           </div>
           <p class="ml-risk-chart__note">${leadReading} 두 선은 방향 비교를 위해 독립 축을 사용하며, OOS 신호는 향후 결과를 확인할 수 있는 날짜까지만 표시합니다.</p>
@@ -556,6 +555,11 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
             AUC ${Number(ml.riskOffAuc ?? 0).toFixed(3)}입니다. 기준모델 recall
             ${Number((baseline.riskOffRecall ?? 0) * 100).toFixed(1)}%, AUC ${Number(baseline.riskOffAuc ?? 0).toFixed(3)}보다 높아
             위험 구간을 놓치지 않는 능력은 개선됐지만, 확률 자체는 현재 스트레스 점수와 함께 판단해야 합니다.
+          </p>
+          <p>
+            순수 하방모델 OOS AUC는 5D ${Number(downside5dMetrics.auc ?? 0).toFixed(3)},
+            20D ${Number(downside20dMetrics.auc ?? 0).toFixed(3)}이며, Brier score는 각각
+            ${Number(downside5dMetrics.brier ?? 0).toFixed(3)}, ${Number(downside20dMetrics.brier ?? 0).toFixed(3)}입니다.
           </p>
           <ul>
             ${(mlRisk.interpretation ?? []).map((item) => `<li>${item}</li>`).join("")}

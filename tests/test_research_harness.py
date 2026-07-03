@@ -65,3 +65,9 @@ def test_model_bundle_uses_sklearn_pipelines_for_preprocessing():
     assert isinstance(bundle.vol_model, Pipeline)
     assert "imputer" in bundle.vol_model.named_steps
     assert bundle.selected_models["vol"] in {"ridge", "random_forest", "lightgbm"}
+    assert bundle.selected_models["downside_5d"] in {"logistic", "random_forest", "lightgbm"}
+    assert bundle.selected_models["downside_20d"] in {"logistic", "random_forest", "lightgbm"}
+    assert "target_downside_5d" not in bundle.feature_columns
+    assert "target_downside_20d" not in bundle.feature_columns
+    assert "KOSPI" not in bundle.feature_columns
+    assert "SPX" not in bundle.feature_columns

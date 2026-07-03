@@ -38,6 +38,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "vol_top_percentile": 0.75,
         "min_history_for_vol_percentile": 60,
     },
+    "downside": {
+        "return_threshold_5d": -0.02,
+        "return_threshold_20d": -0.03,
+    },
     "models": {
         "rf_estimators": 80,
         "rf_n_jobs": -1,

@@ -21,6 +21,8 @@ def test_targets_use_strictly_future_rows_and_leave_tail_empty():
     assert targeted.tail(20)["target_vol_20d"].isna().all()
     assert targeted.tail(20)["target_regime"].isna().all()
     assert targeted.tail(20)["target_risk_off_20d"].isna().all()
+    assert targeted.tail(5)["target_downside_5d"].isna().all()
+    assert targeted.tail(20)["target_downside_20d"].isna().all()
 
 
 def test_target_alignment_on_deterministic_price_series():
@@ -37,6 +39,7 @@ def test_target_alignment_on_deterministic_price_series():
     targeted = add_targets(build_features_from_market_data(raw), config)
     t = 5
     assert np.isclose(targeted.loc[t, "fwd_ret_20d"], raw.loc[t + 20, "KOSPI"] / raw.loc[t, "KOSPI"] - 1)
+    assert np.isclose(targeted.loc[t, "fwd_ret_5d"], raw.loc[t + 5, "KOSPI"] / raw.loc[t, "KOSPI"] - 1)
     future_returns = np.log(raw["KOSPI"] / raw["KOSPI"].shift(1)).iloc[t + 1 : t + 21]
     assert np.isclose(targeted.loc[t, "target_vol_20d"], future_returns.std(ddof=1) * np.sqrt(252))
     assert targeted.tail(20)["target_vol_20d"].isna().all()
@@ -50,3 +53,5 @@ def test_outperformance_targets_are_binary_or_nan():
     assert values <= {0.0, 1.0}
     risk_off_values = set(targeted["target_risk_off_20d"].dropna().unique())
     assert risk_off_values <= {0.0, 1.0}
+    assert set(targeted["target_downside_5d"].dropna().unique()) <= {0.0, 1.0}
+    assert set(targeted["target_downside_20d"].dropna().unique()) <= {0.0, 1.0}

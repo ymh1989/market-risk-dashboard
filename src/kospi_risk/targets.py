@@ -35,8 +35,10 @@ def add_targets(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     horizon = int(config.get("horizon", 20))
     annualization = int(config.get("annualization_factor", 252))
     regime_config = config.get("regime", {})
+    downside_config = config.get("downside", {})
 
     out["target_vol_20d"] = _future_realized_vol(out["KOSPI"], horizon, annualization)
+    out["fwd_ret_5d"] = out["KOSPI"].shift(-5) / out["KOSPI"] - 1
     out["fwd_ret_20d"] = out["KOSPI"].shift(-horizon) / out["KOSPI"] - 1
     out["fwd_max_drawdown_20d"] = _future_max_drawdown(out["KOSPI"], horizon)
     out["target_outperform_spx_20d"] = (out["fwd_ret_20d"] > (out["SPX"].shift(-horizon) / out["SPX"] - 1)).astype("float")
@@ -44,6 +46,15 @@ def add_targets(df: pd.DataFrame, config: dict) -> pd.DataFrame:
 
     invalid_future = out["fwd_ret_20d"].isna()
     out.loc[invalid_future, ["target_outperform_spx_20d", "target_outperform_sox_20d"]] = np.nan
+
+    out["target_downside_5d"] = (
+        out["fwd_ret_5d"] <= float(downside_config.get("return_threshold_5d", -0.02))
+    ).astype("float")
+    out["target_downside_20d"] = (
+        out["fwd_ret_20d"] <= float(downside_config.get("return_threshold_20d", -0.03))
+    ).astype("float")
+    out.loc[out["fwd_ret_5d"].isna(), "target_downside_5d"] = np.nan
+    out.loc[invalid_future, "target_downside_20d"] = np.nan
 
     min_history = int(regime_config.get("min_history_for_vol_percentile", 60))
     vol_threshold = (
@@ -77,6 +88,8 @@ def target_columns() -> list[str]:
         "target_vol_20d",
         "target_regime",
         "target_risk_off_20d",
+        "target_downside_5d",
+        "target_downside_20d",
         "target_outperform_spx_20d",
         "target_outperform_sox_20d",
     ]

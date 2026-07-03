@@ -87,6 +87,8 @@ def baseline_predictions(train_df: pd.DataFrame, test_df: pd.DataFrame) -> pd.Da
 
     result["prob_kospi_outperform_spx_20d"] = np.where(test_df["kospi_minus_spx_ret_20d"] > 0, 0.6, 0.4)
     result["prob_kospi_outperform_sox_20d"] = np.where(test_df["kospi_minus_sox_ret_20d"] > 0, 0.6, 0.4)
+    result["prob_downside_5d"] = np.where(test_df["kospi_log_ret_5d"] < 0, 0.6, 0.4)
+    result["prob_downside_20d"] = np.where(test_df["kospi_log_ret_20d"] < 0, 0.6, 0.4)
     return result
 
 
@@ -133,13 +135,19 @@ def evaluate_predictions(scored: pd.DataFrame, model_name: str = "ml_selected") 
     for name, target, prob in [
         ("outperform_spx", "target_outperform_spx_20d", "prob_kospi_outperform_spx_20d"),
         ("outperform_sox", "target_outperform_sox_20d", "prob_kospi_outperform_sox_20d"),
+        ("downside_5d", "target_downside_5d", "prob_downside_5d"),
+        ("downside_20d", "target_downside_20d", "prob_downside_20d"),
     ]:
         y = scored[target].astype(int)
         p = scored[prob].astype(float)
+        pred = p >= 0.5
         metrics.extend(
             [
                 {"model": model_name, "task": name, "metric": "auc", "value": _safe_auc(y, p)},
-                {"model": model_name, "task": name, "metric": "accuracy", "value": accuracy_score(y, p >= 0.5)},
+                {"model": model_name, "task": name, "metric": "accuracy", "value": accuracy_score(y, pred)},
+                {"model": model_name, "task": name, "metric": "precision", "value": precision_score(y, pred, zero_division=0)},
+                {"model": model_name, "task": name, "metric": "recall", "value": recall_score(y, pred, zero_division=0)},
+                {"model": model_name, "task": name, "metric": "f1", "value": f1_score(y, pred, zero_division=0)},
                 {"model": model_name, "task": name, "metric": "brier", "value": brier_score_loss(y, p)},
             ]
         )

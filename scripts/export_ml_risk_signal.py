@@ -80,6 +80,8 @@ def build_payload() -> dict:
             {
                 "date": row["date"].date().isoformat(),
                 "riskOffProbabilityPct": _pct(row["prob_risk_off"]),
+                "downside5dProbabilityPct": _pct(row.get("prob_downside_5d")),
+                "downside20dProbabilityPct": _pct(row.get("prob_downside_20d")),
                 "fold": int(row["fold"]),
             }
             for row in walk_forward.to_dict(orient="records")
@@ -103,7 +105,7 @@ def build_payload() -> dict:
                     "baseline_risk_off_signal",
                 ]
             ].reset_index(drop=True),
-            ytd_scored[["prob_risk_off", "els_risk_score"]].reset_index(drop=True),
+            ytd_scored[["prob_risk_off", "prob_downside_5d", "prob_downside_20d", "els_risk_score"]].reset_index(drop=True),
         ],
         axis=1,
     )
@@ -116,6 +118,8 @@ def build_payload() -> dict:
                 "realizedVol20dPct": _pct(row.get("kospi_realized_vol_20d")),
                 "drawdownFrom60dHighPct": _pct(row.get("kospi_dist_high_60d")),
                 "riskOffProbabilityPct": _pct(row.get("prob_risk_off")),
+                "downside5dProbabilityPct": _pct(row.get("prob_downside_5d")),
+                "downside20dProbabilityPct": _pct(row.get("prob_downside_20d")),
                 "elsRiskScore": float(row["els_risk_score"]),
                 "baselineRiskOffSignal": int(row.get("baseline_risk_off_signal") or 0),
             }
@@ -135,6 +139,8 @@ def build_payload() -> dict:
             "date": str(latest_signal.get("date", pd.to_datetime(latest_row["date"]).date())),
             "regime": str(latest_signal.get("pred_regime", "")),
             "riskOffProbabilityPct": round(probability * 100, 2),
+            "downside5dProbabilityPct": round(float(latest_signal.get("prob_downside_5d", ytd_scored.iloc[-1]["prob_downside_5d"])) * 100, 2),
+            "downside20dProbabilityPct": round(float(latest_signal.get("prob_downside_20d", ytd_scored.iloc[-1]["prob_downside_20d"])) * 100, 2),
             "elsRiskScore": round(float(latest_signal.get("els_risk_score", ytd_scored.iloc[-1]["els_risk_score"])), 2),
             "elsRiskBucket": str(latest_signal.get("els_risk_bucket", "")),
             "kospi": round(float(latest_row["KOSPI"]), 2),
@@ -161,6 +167,22 @@ def build_payload() -> dict:
                 "riskOffAuc": _metric(metrics, "baseline", "risk_off_binary", "auc"),
                 "riskOffBrier": _metric(metrics, "baseline", "risk_off_binary", "brier"),
             },
+            "downside5d": {
+                "auc": _metric(metrics, "ml_selected", "downside_5d", "auc"),
+                "brier": _metric(metrics, "ml_selected", "downside_5d", "brier"),
+                "precision": _metric(metrics, "ml_selected", "downside_5d", "precision"),
+                "recall": _metric(metrics, "ml_selected", "downside_5d", "recall"),
+                "baselineAuc": _metric(metrics, "baseline", "downside_5d", "auc"),
+                "baselineBrier": _metric(metrics, "baseline", "downside_5d", "brier"),
+            },
+            "downside20d": {
+                "auc": _metric(metrics, "ml_selected", "downside_20d", "auc"),
+                "brier": _metric(metrics, "ml_selected", "downside_20d", "brier"),
+                "precision": _metric(metrics, "ml_selected", "downside_20d", "precision"),
+                "recall": _metric(metrics, "ml_selected", "downside_20d", "recall"),
+                "baselineAuc": _metric(metrics, "baseline", "downside_20d", "auc"),
+                "baselineBrier": _metric(metrics, "baseline", "downside_20d", "brier"),
+            },
         },
         "thresholds": {
             "riskOffDecisionThresholdPct": round(float(getattr(bundle, "risk_off_threshold", 0.5)) * 100, 2),
@@ -168,11 +190,14 @@ def build_payload() -> dict:
             "riskOffProbabilityHighPct": 75,
             "realizedVolHighPct": 35,
             "elsRiskCautionScore": 60,
+            "downside5dReturnPct": round(float(bundle.config.get("downside", {}).get("return_threshold_5d", -0.02)) * 100, 2),
+            "downside20dReturnPct": round(float(bundle.config.get("downside", {}).get("return_threshold_20d", -0.03)) * 100, 2),
         },
         "interpretation": [
             "현재 시장 스트레스는 이미 관측된 가격·변동성·수급 부담이고, ML 확률은 현재 수준에서 향후 20영업일 동안 추가로 악화될 가능성입니다.",
             "급락 직후에는 충격이 이미 가격에 반영됐다고 학습해 ML 확률이 낮아질 수 있으므로, 확률 하락을 현재 위험 해소로 해석하면 안 됩니다.",
             "활황 국면에서도 변동성이 높으면 신규 발행 조건은 매력적일 수 있지만, 기존 북의 순연 가능성과 헤지 비용 부담이 커질 수 있습니다.",
+            "하방확률은 변동성 조건을 제외하고 KOSPI가 5일 -2% 또는 20일 -3% 이하로 하락할 가능성만 별도로 추정합니다.",
         ],
         "walkForwardSeries": walk_forward_series,
         "series": series,
