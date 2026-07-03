@@ -19,6 +19,8 @@ def harness_config():
     config["validation"]["step_days"] = 80
     config["models"]["rf_estimators"] = 8
     config["models"]["calibration_enabled"] = False
+    config["crash"]["moderate_threshold"] = -0.02
+    config["crash"]["severe_threshold"] = -0.04
     return config
 
 
@@ -65,9 +67,9 @@ def test_model_bundle_uses_sklearn_pipelines_for_preprocessing():
     assert isinstance(bundle.vol_model, Pipeline)
     assert "imputer" in bundle.vol_model.named_steps
     assert bundle.selected_models["vol"] in {"ridge", "random_forest", "lightgbm"}
-    assert bundle.selected_models["downside_5d"] in {"logistic", "random_forest", "lightgbm"}
-    assert bundle.selected_models["downside_20d"] in {"logistic", "random_forest", "lightgbm"}
-    assert "target_downside_5d" not in bundle.feature_columns
-    assert "target_downside_20d" not in bundle.feature_columns
+    assert bundle.selected_models["crash_5d_5pct"] in {"logistic", "random_forest", "lightgbm"}
+    assert bundle.selected_models["crash_5d_10pct"] in {"logistic", "random_forest", "lightgbm"}
+    assert "target_crash_5d_5pct" not in bundle.feature_columns
+    assert "target_crash_5d_10pct" not in bundle.feature_columns
     assert "KOSPI" not in bundle.feature_columns
     assert "SPX" not in bundle.feature_columns

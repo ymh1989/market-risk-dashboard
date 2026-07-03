@@ -22,9 +22,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
         "validation": {
             "initial_train_days": 1260,
-            "test_days": 63,
+            "test_days": 21,
             "step_days": 21,
-            "max_backtest_folds": 12,
+            "max_backtest_folds": 84,
             "min_train_rows": 500,
             "reliability_warning_rows": 1500,
             "model_selection_fraction": 0.2,
@@ -38,9 +38,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "vol_top_percentile": 0.75,
         "min_history_for_vol_percentile": 60,
     },
-    "downside": {
-        "return_threshold_5d": -0.03,
-        "return_threshold_20d": -0.05,
+    "crash": {
+        "horizon_days": 5,
+        "moderate_threshold": -0.05,
+        "severe_threshold": -0.10,
     },
     "models": {
         "rf_estimators": 80,

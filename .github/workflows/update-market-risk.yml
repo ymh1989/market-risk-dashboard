@@ -32,7 +32,7 @@ jobs:
 
       - name: Refresh ML risk-off signal
         run: |
-          python3 -m kospi_risk.cli fetch-market-data --source-config configs/data_sources.yaml --output data/raw/market_data.csv --metadata data/raw/market_data_sources.json --range 10y --min-rows 1500
+          python3 -m kospi_risk.cli fetch-market-data --source-config configs/data_sources.yaml --output data/raw/market_data.csv --metadata data/raw/market_data_sources.json --min-rows 1500
           python3 -m kospi_risk.cli build-features --input data/raw/market_data.csv --output data/processed/features.parquet --config configs/base.yaml
           python3 -m kospi_risk.cli train --features data/processed/features.parquet --config configs/base.yaml
           python3 -m kospi_risk.cli backtest --features data/processed/features.parquet --config configs/base.yaml --output reports/backtest_report.md

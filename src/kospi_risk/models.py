@@ -31,9 +31,10 @@ TARGET_COLUMNS = {
     "target_risk_off_20d",
     "target_outperform_spx_20d",
     "target_outperform_sox_20d",
-    "target_downside_5d",
-    "target_downside_20d",
+    "target_crash_5d_5pct",
+    "target_crash_5d_10pct",
     "fwd_ret_5d",
+    "fwd_min_ret_5d",
     "fwd_ret_20d",
     "fwd_max_drawdown_20d",
 }
@@ -55,8 +56,8 @@ class ModelBundle:
     risk_off_threshold: float
     regime_strategy: str
     baseline_vol_threshold: float
-    downside_5d_model: Any | None = None
-    downside_20d_model: Any | None = None
+    crash_5d_5pct_model: Any | None = None
+    crash_5d_10pct_model: Any | None = None
 
 
 def feature_columns(df: pd.DataFrame) -> list[str]:
@@ -81,8 +82,8 @@ def eligible_training_frame(df: pd.DataFrame) -> pd.DataFrame:
         "target_vol_20d",
         "target_regime",
         "target_risk_off_20d",
-        "target_downside_5d",
-        "target_downside_20d",
+        "target_crash_5d_5pct",
+        "target_crash_5d_10pct",
         "target_outperform_spx_20d",
         "target_outperform_sox_20d",
     ]
@@ -200,7 +201,7 @@ def make_model_candidates(config: dict) -> dict[str, dict[str, Any]]:
             "logistic": _binary_logistic(random_state, max_iter),
             "random_forest": _rf_classifier(config),
         },
-        "downside": {
+        "crash": {
             "logistic": _binary_logistic(random_state, max_iter),
             "random_forest": _rf_classifier(config),
         },
@@ -210,7 +211,7 @@ def make_model_candidates(config: dict) -> dict[str, dict[str, Any]]:
         candidates["regime"]["lightgbm"] = LGBMClassifier(random_state=random_state, verbosity=-1)
         candidates["outperform"]["lightgbm"] = LGBMClassifier(random_state=random_state, verbosity=-1)
         candidates["risk_off"]["lightgbm"] = LGBMClassifier(random_state=random_state, verbosity=-1)
-        candidates["downside"]["lightgbm"] = LGBMClassifier(random_state=random_state, verbosity=-1)
+        candidates["crash"]["lightgbm"] = LGBMClassifier(random_state=random_state, verbosity=-1)
     return candidates
 
 
@@ -575,24 +576,24 @@ def train_bundle(df: pd.DataFrame, config: dict) -> ModelBundle:
         positive_class=1,
     )
     selection_rows.extend(rows)
-    best_downside_5d, rows = _select_classifier(
-        "downside_5d",
-        candidates["downside"],
+    best_crash_5d_5pct, rows = _select_classifier(
+        "crash_5d_5pct",
+        candidates["crash"],
         select_train_x,
-        select_train["target_downside_5d"].astype(int),
+        select_train["target_crash_5d_5pct"].astype(int),
         select_valid_x,
-        select_valid["target_downside_5d"].astype(int),
+        select_valid["target_crash_5d_5pct"].astype(int),
         positive_class=1,
         selection_metric="average_precision",
     )
     selection_rows.extend(rows)
-    best_downside_20d, rows = _select_classifier(
-        "downside_20d",
-        candidates["downside"],
+    best_crash_5d_10pct, rows = _select_classifier(
+        "crash_5d_10pct",
+        candidates["crash"],
         select_train_x,
-        select_train["target_downside_20d"].astype(int),
+        select_train["target_crash_5d_10pct"].astype(int),
         select_valid_x,
-        select_valid["target_downside_20d"].astype(int),
+        select_valid["target_crash_5d_10pct"].astype(int),
         positive_class=1,
         selection_metric="average_precision",
     )
@@ -604,8 +605,8 @@ def train_bundle(df: pd.DataFrame, config: dict) -> ModelBundle:
     risk_off_model = _calibrated_classifier_if_possible(clone(candidates["risk_off"][best_risk_off]), x, train_df["target_risk_off_20d"].astype(int), config)
     outperform_spx_model = _calibrated_classifier_if_possible(clone(candidates["outperform"][best_spx]), x, train_df["target_outperform_spx_20d"].astype(int), config)
     outperform_sox_model = _calibrated_classifier_if_possible(clone(candidates["outperform"][best_sox]), x, train_df["target_outperform_sox_20d"].astype(int), config)
-    downside_5d_model = _calibrated_classifier_if_possible(clone(candidates["downside"][best_downside_5d]), x, train_df["target_downside_5d"].astype(int), config)
-    downside_20d_model = _calibrated_classifier_if_possible(clone(candidates["downside"][best_downside_20d]), x, train_df["target_downside_20d"].astype(int), config)
+    crash_5d_5pct_model = _calibrated_classifier_if_possible(clone(candidates["crash"][best_crash_5d_5pct]), x, train_df["target_crash_5d_5pct"].astype(int), config)
+    crash_5d_10pct_model = _calibrated_classifier_if_possible(clone(candidates["crash"][best_crash_5d_10pct]), x, train_df["target_crash_5d_10pct"].astype(int), config)
 
     predicted_vol_history = np.asarray(vol_model.predict(x), dtype=float)
     baseline_vol_threshold = _baseline_vol_threshold(train_df)
@@ -626,15 +627,15 @@ def train_bundle(df: pd.DataFrame, config: dict) -> ModelBundle:
             "regime_strategy": regime_strategy,
             "outperform_spx": best_spx,
             "outperform_sox": best_sox,
-            "downside_5d": best_downside_5d,
-            "downside_20d": best_downside_20d,
+            "crash_5d_5pct": best_crash_5d_5pct,
+            "crash_5d_10pct": best_crash_5d_10pct,
         },
         model_selection_metrics=selection_rows,
         risk_off_threshold=risk_off_threshold,
         regime_strategy=regime_strategy,
         baseline_vol_threshold=baseline_vol_threshold,
-        downside_5d_model=downside_5d_model,
-        downside_20d_model=downside_20d_model,
+        crash_5d_5pct_model=crash_5d_5pct_model,
+        crash_5d_10pct_model=crash_5d_10pct_model,
     )
 
 
@@ -690,12 +691,12 @@ def predict_bundle(bundle: ModelBundle, df: pd.DataFrame) -> pd.DataFrame:
     result["prob_kospi_outperform_sox_20d"] = np.clip(
         predict_proba_for_class(bundle.outperform_sox_model, x, 1), 0, 1
     )
-    downside_5d_model = getattr(bundle, "downside_5d_model", None)
-    downside_20d_model = getattr(bundle, "downside_20d_model", None)
-    result["prob_downside_5d"] = (
-        np.clip(predict_proba_for_class(downside_5d_model, x, 1), 0, 1) if downside_5d_model is not None else 0.5
+    crash_5d_5pct_model = getattr(bundle, "crash_5d_5pct_model", None)
+    crash_5d_10pct_model = getattr(bundle, "crash_5d_10pct_model", None)
+    result["prob_crash_5d_5pct"] = (
+        np.clip(predict_proba_for_class(crash_5d_5pct_model, x, 1), 0, 1) if crash_5d_5pct_model is not None else 0.5
     )
-    result["prob_downside_20d"] = (
-        np.clip(predict_proba_for_class(downside_20d_model, x, 1), 0, 1) if downside_20d_model is not None else 0.5
+    result["prob_crash_5d_10pct"] = (
+        np.clip(predict_proba_for_class(crash_5d_10pct_model, x, 1), 0, 1) if crash_5d_10pct_model is not None else 0.5
     )
     return result

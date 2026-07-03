@@ -103,8 +103,9 @@ def baseline_predictions(train_df: pd.DataFrame, test_df: pd.DataFrame) -> pd.Da
 
     result["prob_kospi_outperform_spx_20d"] = np.where(test_df["kospi_minus_spx_ret_20d"] > 0, 0.6, 0.4)
     result["prob_kospi_outperform_sox_20d"] = np.where(test_df["kospi_minus_sox_ret_20d"] > 0, 0.6, 0.4)
-    result["prob_downside_5d"] = np.where(test_df["kospi_log_ret_5d"] < 0, 0.6, 0.4)
-    result["prob_downside_20d"] = np.where(test_df["kospi_log_ret_20d"] < 0, 0.6, 0.4)
+    recent_return_5d = np.expm1(test_df["kospi_log_ret_5d"].astype(float))
+    result["prob_crash_5d_5pct"] = np.clip((-recent_return_5d - 0.01) / 0.12, 0.01, 0.8)
+    result["prob_crash_5d_10pct"] = np.clip((-recent_return_5d - 0.03) / 0.18, 0.005, 0.6)
     return result
 
 
@@ -151,8 +152,8 @@ def evaluate_predictions(scored: pd.DataFrame, model_name: str = "ml_selected") 
     for name, target, prob in [
         ("outperform_spx", "target_outperform_spx_20d", "prob_kospi_outperform_spx_20d"),
         ("outperform_sox", "target_outperform_sox_20d", "prob_kospi_outperform_sox_20d"),
-        ("downside_5d", "target_downside_5d", "prob_downside_5d"),
-        ("downside_20d", "target_downside_20d", "prob_downside_20d"),
+        ("crash_5d_5pct", "target_crash_5d_5pct", "prob_crash_5d_5pct"),
+        ("crash_5d_10pct", "target_crash_5d_10pct", "prob_crash_5d_10pct"),
     ]:
         y = scored[target].astype(int)
         p = scored[prob].astype(float)
@@ -162,6 +163,7 @@ def evaluate_predictions(scored: pd.DataFrame, model_name: str = "ml_selected") 
             [
                 {"model": model_name, "task": name, "metric": "auc", "value": _safe_auc(y, p)},
                 {"model": model_name, "task": name, "metric": "average_precision", "value": _safe_average_precision(y, p)},
+                {"model": model_name, "task": name, "metric": "event_count", "value": int(y.sum())},
                 {"model": model_name, "task": name, "metric": "event_rate", "value": float(y.mean())},
                 {"model": model_name, "task": name, "metric": "top_decile_hit_rate", "value": top_decile_hit_rate},
                 {"model": model_name, "task": name, "metric": "top_decile_lift", "value": top_decile_lift},

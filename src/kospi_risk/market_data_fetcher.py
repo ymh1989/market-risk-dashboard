@@ -4,7 +4,7 @@ import json
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 
@@ -127,6 +127,9 @@ def fetch_market_data(
     fetcher: Callable[[str, dict[str, Any], dict[str, Any], str | None, str | None, str | None], SourceFetchResult] = fetch_yahoo_series,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     fetch_config = source_config.get("fetch") or {}
+    if not range_value and not start and not end and fetch_config.get("start"):
+        start = str(fetch_config["start"])
+        end = (date.today() + timedelta(days=2)).isoformat()
     frames: list[pd.DataFrame] = []
     sources = []
     required_failures = []

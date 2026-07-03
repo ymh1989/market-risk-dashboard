@@ -63,3 +63,41 @@ def test_optional_source_failure_is_recorded_not_fatal():
     assert "VIX" not in df.columns
     failed = [source for source in metadata["sources"] if source["status"] == "failed"]
     assert failed[0]["column"] == "VIX"
+
+
+def test_left_alignment_uses_kospi_trading_calendar():
+    config = fake_source_config()
+    config["fetch"]["alignment"] = "left"
+
+    def mismatched_fetcher(column, spec, fetch_config, range_value, start, end):
+        dates = pd.bdate_range("2024-01-01", periods=5)
+        if column != "KOSPI":
+            dates = dates.append(pd.DatetimeIndex([pd.Timestamp("2024-01-08")]))
+        return SourceFetchResult(
+            column=column,
+            provider="yahoo",
+            symbol=spec["symbol"],
+            label=spec["label"],
+            frame=pd.DataFrame({"date": dates, column: range(100, 100 + len(dates))}),
+            status="ok",
+        )
+
+    df, metadata = fetch_market_data(config, fetcher=mismatched_fetcher)
+    assert len(df) == 5
+    assert df["date"].max() == pd.Timestamp("2024-01-05")
+    assert metadata["alignment"] == "left"
+
+
+def test_configured_start_date_is_forwarded_to_sources():
+    config = fake_source_config()
+    config["fetch"].pop("range")
+    config["fetch"]["start"] = "1996-01-01"
+    observed = []
+
+    def recording_fetcher(column, spec, fetch_config, range_value, start, end):
+        observed.append((range_value, start, end))
+        return fake_fetcher(column, spec, fetch_config, range_value, start, end)
+
+    fetch_market_data(config, fetcher=recording_fetcher)
+    assert observed
+    assert all(item[0] is None and item[1] == "1996-01-01" and item[2] for item in observed)

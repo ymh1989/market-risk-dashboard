@@ -95,6 +95,9 @@ def make_sample_market_data(rows: int = 1800, seed: int = 42) -> pd.DataFrame:
             "KOSPI_SKEW": np.clip(0.03 + rng.normal(0, 0.015, rows), -0.05, 0.15),
         }
     )
+    for crash_index in (220, 440, 660, 1100, 1500):
+        if crash_index < rows:
+            df.loc[crash_index:, "KOSPI"] *= 0.88
     stress_idx = np.arange(700, min(760, rows))
     if len(stress_idx):
         df.loc[stress_idx, "KOSPI"] *= np.linspace(1.0, 0.78, len(stress_idx))
