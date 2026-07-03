@@ -59,23 +59,27 @@ def build_payload() -> dict:
 
     features = pd.read_parquet(FEATURES_FILE).sort_values("date").reset_index(drop=True)
     bundle = joblib.load(MODEL_FILE)
-    recent_features = features.tail(80).reset_index(drop=True)
-    recent_predictions = predict_bundle(bundle, recent_features)
-    recent_scored = add_els_scores(recent_predictions, recent_features, bundle.predicted_vol_history)
+    feature_dates = pd.to_datetime(features["date"])
+    latest_year = int(feature_dates.iloc[-1].year)
+    ytd_features = features.loc[feature_dates.dt.year == latest_year].reset_index(drop=True)
+    if len(ytd_features) < 2:
+        ytd_features = features.tail(80).reset_index(drop=True)
+    ytd_predictions = predict_bundle(bundle, ytd_features)
+    ytd_scored = add_els_scores(ytd_predictions, ytd_features, bundle.predicted_vol_history)
 
     latest_row = features.iloc[-1]
-    latest_signal = pd.read_csv(LATEST_SIGNAL_FILE).iloc[-1].to_dict() if LATEST_SIGNAL_FILE.exists() else recent_scored.iloc[-1].to_dict()
+    latest_signal = pd.read_csv(LATEST_SIGNAL_FILE).iloc[-1].to_dict() if LATEST_SIGNAL_FILE.exists() else ytd_scored.iloc[-1].to_dict()
     metrics = pd.read_csv(METRICS_FILE) if METRICS_FILE.exists() else pd.DataFrame(columns=["model", "task", "metric", "value"])
 
     momentum_pct = _pct_from_log(latest_row.get("kospi_log_ret_20d"))
     realized_vol_pct = _pct(latest_row.get("kospi_realized_vol_20d"))
-    probability = float(latest_signal.get("prob_risk_off", recent_scored.iloc[-1]["prob_risk_off"]))
+    probability = float(latest_signal.get("prob_risk_off", ytd_scored.iloc[-1]["prob_risk_off"]))
     level = _level(probability, momentum_pct, realized_vol_pct)
 
     series = []
     merged = pd.concat(
         [
-            recent_features[
+            ytd_features[
                 [
                     "date",
                     "KOSPI",
@@ -85,7 +89,7 @@ def build_payload() -> dict:
                     "baseline_risk_off_signal",
                 ]
             ].reset_index(drop=True),
-            recent_scored[["prob_risk_off", "els_risk_score"]].reset_index(drop=True),
+            ytd_scored[["prob_risk_off", "els_risk_score"]].reset_index(drop=True),
         ],
         axis=1,
     )
@@ -110,12 +114,13 @@ def build_payload() -> dict:
             "model": "models/model_bundle.joblib",
             "latestSignal": "reports/latest_signal.csv",
             "metrics": "reports/model_metrics.csv",
+            "seriesWindow": "YTD",
         },
         "latest": {
             "date": str(latest_signal.get("date", pd.to_datetime(latest_row["date"]).date())),
             "regime": str(latest_signal.get("pred_regime", "")),
             "riskOffProbabilityPct": round(probability * 100, 2),
-            "elsRiskScore": round(float(latest_signal.get("els_risk_score", recent_scored.iloc[-1]["els_risk_score"])), 2),
+            "elsRiskScore": round(float(latest_signal.get("els_risk_score", ytd_scored.iloc[-1]["els_risk_score"])), 2),
             "elsRiskBucket": str(latest_signal.get("els_risk_bucket", "")),
             "kospi": round(float(latest_row["KOSPI"]), 2),
             "kospiReturn20dPct": None if momentum_pct is None else round(momentum_pct, 2),

@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260703-1";
+const ASSET_VERSION = "20260703-2";
 
 const trendLabel = {
   up: "상승",
@@ -451,10 +451,10 @@ function renderMlRiskSignalPanel(mlRisk, market) {
       </div>
 
       <div class="ml-risk-body">
-        <div class="ml-risk-chart" aria-label="향후 20일 추가 악화 확률과 KOSPI 최근 흐름">
+        <div class="ml-risk-chart" aria-label="향후 20일 추가 악화 확률과 KOSPI YTD 흐름">
           <div class="ml-risk-chart__header">
-            <strong>최근 흐름</strong>
-            <span>${series.length}개 관측 · ${probabilityChangeText}</span>
+            <strong>YTD 흐름</strong>
+            <span>${latest.date.slice(0, 4)}년 · ${series.length}개 관측 · ${probabilityChangeText}</span>
           </div>
           <svg viewBox="0 0 760 210" role="img">
             ${monthAxis.grid}
