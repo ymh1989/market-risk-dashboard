@@ -13,7 +13,7 @@ from .models import load_bundle, predict_bundle, save_bundle, train_bundle
 from .reporting import write_backtest_report
 from .scoring import add_els_scores, score_bucket_analysis
 from .targets import add_targets
-from .validation import run_walk_forward_backtest
+from .validation import run_crash_walk_forward_backtest, run_walk_forward_backtest
 from .visualization import create_backtest_visualizations
 
 
@@ -65,6 +65,19 @@ def cmd_backtest(args: argparse.Namespace) -> None:
     config = load_config(args.config)
     df = load_frame(args.features)
     scored, metrics, matrices = run_walk_forward_backtest(df, config)
+    crash_scored, crash_metrics = run_crash_walk_forward_backtest(df, config)
+    broad_selection = metrics.attrs.get("model_selection")
+    broad_splits = metrics.attrs.get("splits")
+    crash_selection = crash_metrics.attrs.get("model_selection")
+    crash_tasks = {"crash_5d_5pct", "crash_5d_10pct"}
+    broad_metrics = metrics.loc[~metrics["task"].isin(crash_tasks)].copy()
+    crash_metrics_values = crash_metrics.copy()
+    broad_metrics.attrs = {}
+    crash_metrics_values.attrs = {}
+    metrics = pd.concat([broad_metrics, crash_metrics_values], ignore_index=True)
+    selections = [value for value in (broad_selection, crash_selection) if isinstance(value, pd.DataFrame) and not value.empty]
+    metrics.attrs["model_selection"] = pd.concat(selections, ignore_index=True) if selections else pd.DataFrame()
+    metrics.attrs["splits"] = broad_splits
     scored = add_els_scores(scored, scored, scored["pred_vol_20d"].dropna().tolist())
 
     metrics_path = Path(config["paths"]["metrics"])
@@ -72,27 +85,36 @@ def cmd_backtest(args: argparse.Namespace) -> None:
     metrics.to_csv(metrics_path, index=False)
     predictions_path = Path(config["paths"]["walk_forward_predictions"])
     predictions_path.parent.mkdir(parents=True, exist_ok=True)
-    prediction_columns = [
+    broad_prediction_columns = [
         "date",
-        "fold",
         "prob_risk_off",
-        "prob_crash_5d_5pct",
-        "prob_crash_5d_10pct",
         "pred_regime",
         "target_regime",
-        "target_crash_5d_5pct",
-        "target_crash_5d_10pct",
-        "fwd_ret_5d",
-        "fwd_min_ret_5d",
         "fwd_ret_20d",
         "fwd_max_drawdown_20d",
         "target_vol_20d",
     ]
-    walk_forward_predictions = (
+    broad_predictions = (
         scored.sort_values(["date", "fold"])
-        .drop_duplicates("date", keep="last")[prediction_columns]
+        .drop_duplicates("date", keep="last")[broad_prediction_columns]
         .reset_index(drop=True)
     )
+    crash_prediction_columns = [
+        "date",
+        "fold",
+        "prob_crash_5d_5pct",
+        "prob_crash_5d_10pct",
+        "target_crash_5d_5pct",
+        "target_crash_5d_10pct",
+        "fwd_ret_5d",
+        "fwd_min_ret_5d",
+    ]
+    crash_predictions = (
+        crash_scored.sort_values(["date", "fold"])
+        .drop_duplicates("date", keep="last")[crash_prediction_columns]
+        .reset_index(drop=True)
+    )
+    walk_forward_predictions = crash_predictions.merge(broad_predictions, on="date", how="left")
     walk_forward_predictions.to_csv(predictions_path, index=False)
     bucket = score_bucket_analysis(scored)
     bucket_path = Path(config["paths"]["score_bucket_analysis"])

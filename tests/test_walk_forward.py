@@ -4,7 +4,7 @@ from kospi_risk.config import load_config
 from kospi_risk.data_loader import make_sample_market_data
 from kospi_risk.feature_engineering import build_features_from_market_data
 from kospi_risk.targets import add_targets
-from kospi_risk.validation import make_walk_forward_splits, run_walk_forward_backtest
+from kospi_risk.validation import make_walk_forward_splits, run_crash_walk_forward_backtest, run_walk_forward_backtest
 
 
 def small_config():
@@ -39,3 +39,17 @@ def test_walk_forward_backtest_outputs_metrics():
     selection = metrics.attrs["model_selection"]
     assert (splits["train_end_date"] < splits["test_start_date"]).all()
     assert "regime_strategy" in set(selection["task"])
+
+
+def test_crash_walk_forward_uses_five_day_target_tail():
+    config = small_config()
+    raw = make_sample_market_data(rows=720, seed=12)
+    df = add_targets(build_features_from_market_data(raw), config)
+    broad_scored, _, _ = run_walk_forward_backtest(df, config)
+    crash_scored, crash_metrics = run_crash_walk_forward_backtest(df, config)
+
+    expected_end = df.loc[df["target_crash_5d_5pct"].notna(), "date"].max()
+    assert crash_scored["date"].max() == expected_end
+    assert crash_scored["date"].max() > broad_scored["date"].max()
+    assert {"crash_5d_5pct", "crash_5d_10pct"} == set(crash_metrics["task"])
+    assert (crash_metrics.attrs["splits"]["train_end_date"] < crash_metrics.attrs["splits"]["test_start_date"]).all()

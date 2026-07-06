@@ -20,7 +20,20 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-from .models import eligible_training_frame, predict_bundle, train_bundle
+from .models import (
+    eligible_crash_training_frame,
+    eligible_training_frame,
+    predict_bundle,
+    predict_crash_bundle,
+    train_bundle,
+    train_crash_bundle,
+)
+
+
+CRASH_TASKS = [
+    ("crash_5d_5pct", "target_crash_5d_5pct", "prob_crash_5d_5pct"),
+    ("crash_5d_10pct", "target_crash_5d_10pct", "prob_crash_5d_10pct"),
+]
 
 
 @dataclass
@@ -109,6 +122,43 @@ def baseline_predictions(train_df: pd.DataFrame, test_df: pd.DataFrame) -> pd.Da
     return result
 
 
+def crash_baseline_predictions(test_df: pd.DataFrame) -> pd.DataFrame:
+    result = pd.DataFrame({"date": test_df["date"].values})
+    recent_return_5d = np.expm1(test_df["kospi_log_ret_5d"].astype(float))
+    result["prob_crash_5d_5pct"] = np.clip((-recent_return_5d - 0.01) / 0.12, 0.01, 0.8)
+    result["prob_crash_5d_10pct"] = np.clip((-recent_return_5d - 0.03) / 0.18, 0.005, 0.6)
+    return result
+
+
+def _binary_task_metric_rows(
+    scored: pd.DataFrame,
+    model_name: str,
+    tasks: list[tuple[str, str, str]],
+) -> list[dict[str, float | str]]:
+    metrics: list[dict[str, float | str]] = []
+    for name, target, prob in tasks:
+        y = scored[target].astype(int)
+        p = scored[prob].astype(float)
+        pred = p >= 0.5
+        top_decile_hit_rate, top_decile_lift = _top_decile_metrics(y, p)
+        metrics.extend(
+            [
+                {"model": model_name, "task": name, "metric": "auc", "value": _safe_auc(y, p)},
+                {"model": model_name, "task": name, "metric": "average_precision", "value": _safe_average_precision(y, p)},
+                {"model": model_name, "task": name, "metric": "event_count", "value": int(y.sum())},
+                {"model": model_name, "task": name, "metric": "event_rate", "value": float(y.mean())},
+                {"model": model_name, "task": name, "metric": "top_decile_hit_rate", "value": top_decile_hit_rate},
+                {"model": model_name, "task": name, "metric": "top_decile_lift", "value": top_decile_lift},
+                {"model": model_name, "task": name, "metric": "accuracy", "value": accuracy_score(y, pred)},
+                {"model": model_name, "task": name, "metric": "precision", "value": precision_score(y, pred, zero_division=0)},
+                {"model": model_name, "task": name, "metric": "recall", "value": recall_score(y, pred, zero_division=0)},
+                {"model": model_name, "task": name, "metric": "f1", "value": f1_score(y, pred, zero_division=0)},
+                {"model": model_name, "task": name, "metric": "brier", "value": brier_score_loss(y, p)},
+            ]
+        )
+    return metrics
+
+
 def evaluate_predictions(scored: pd.DataFrame, model_name: str = "ml_selected") -> tuple[pd.DataFrame, dict[str, np.ndarray]]:
     metrics: list[dict[str, float | str]] = []
     y_vol = scored["target_vol_20d"].to_numpy(dtype=float)
@@ -149,31 +199,11 @@ def evaluate_predictions(scored: pd.DataFrame, model_name: str = "ml_selected") 
         ]
     )
 
-    for name, target, prob in [
+    binary_tasks = [
         ("outperform_spx", "target_outperform_spx_20d", "prob_kospi_outperform_spx_20d"),
         ("outperform_sox", "target_outperform_sox_20d", "prob_kospi_outperform_sox_20d"),
-        ("crash_5d_5pct", "target_crash_5d_5pct", "prob_crash_5d_5pct"),
-        ("crash_5d_10pct", "target_crash_5d_10pct", "prob_crash_5d_10pct"),
-    ]:
-        y = scored[target].astype(int)
-        p = scored[prob].astype(float)
-        pred = p >= 0.5
-        top_decile_hit_rate, top_decile_lift = _top_decile_metrics(y, p)
-        metrics.extend(
-            [
-                {"model": model_name, "task": name, "metric": "auc", "value": _safe_auc(y, p)},
-                {"model": model_name, "task": name, "metric": "average_precision", "value": _safe_average_precision(y, p)},
-                {"model": model_name, "task": name, "metric": "event_count", "value": int(y.sum())},
-                {"model": model_name, "task": name, "metric": "event_rate", "value": float(y.mean())},
-                {"model": model_name, "task": name, "metric": "top_decile_hit_rate", "value": top_decile_hit_rate},
-                {"model": model_name, "task": name, "metric": "top_decile_lift", "value": top_decile_lift},
-                {"model": model_name, "task": name, "metric": "accuracy", "value": accuracy_score(y, pred)},
-                {"model": model_name, "task": name, "metric": "precision", "value": precision_score(y, pred, zero_division=0)},
-                {"model": model_name, "task": name, "metric": "recall", "value": recall_score(y, pred, zero_division=0)},
-                {"model": model_name, "task": name, "metric": "f1", "value": f1_score(y, pred, zero_division=0)},
-                {"model": model_name, "task": name, "metric": "brier", "value": brier_score_loss(y, p)},
-            ]
-        )
+    ] + CRASH_TASKS
+    metrics.extend(_binary_task_metric_rows(scored, model_name, binary_tasks))
     return pd.DataFrame(metrics), matrices
 
 
@@ -237,3 +267,55 @@ def run_walk_forward_backtest(df: pd.DataFrame, config: dict) -> tuple[pd.DataFr
     metrics.attrs["splits"] = pd.DataFrame(split_rows)
     matrices = {**ml_matrices, **baseline_matrices}
     return scored, metrics, matrices
+
+
+def run_crash_walk_forward_backtest(df: pd.DataFrame, config: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
+    clean = eligible_crash_training_frame(df)
+    splits = make_walk_forward_splits(len(clean), config)
+    if not splits:
+        raise ValueError("Insufficient history for crash walk-forward validation.")
+
+    scored_parts = []
+    baseline_parts = []
+    selection_rows = []
+    split_rows = []
+    for fold, split in enumerate(splits, start=1):
+        train_df = clean.iloc[split.train_start : split.train_end].reset_index(drop=True)
+        test_df = clean.iloc[split.test_start : split.test_end].reset_index(drop=True)
+        if pd.to_datetime(train_df["date"].iloc[-1]) >= pd.to_datetime(test_df["date"].iloc[0]):
+            raise ValueError("Crash walk-forward split is invalid: train end date must be before test start date.")
+        fold_config = {**config, "_suppress_reliability_warning": True}
+        bundle = train_crash_bundle(train_df, fold_config)
+        predictions = predict_crash_bundle(bundle, test_df)
+        baseline = crash_baseline_predictions(test_df)
+        ml_scored = pd.concat([test_df.reset_index(drop=True), predictions.drop(columns=["date"])], axis=1)
+        baseline_scored = pd.concat([test_df.reset_index(drop=True), baseline.drop(columns=["date"])], axis=1)
+        ml_scored["fold"] = fold
+        baseline_scored["fold"] = fold
+        scored_parts.append(ml_scored)
+        baseline_parts.append(baseline_scored)
+        for row in bundle.model_selection_metrics:
+            selection_rows.append(
+                {**row, "fold": fold, "selected": str(row["candidate"]) == bundle.selected_models.get(str(row["task"]), "")}
+            )
+        split_rows.append(
+            {
+                "fold": fold,
+                "train_start_date": train_df["date"].iloc[0],
+                "train_end_date": train_df["date"].iloc[-1],
+                "test_start_date": test_df["date"].iloc[0],
+                "test_end_date": test_df["date"].iloc[-1],
+                "train_rows": len(train_df),
+                "test_rows": len(test_df),
+            }
+        )
+
+    scored = pd.concat(scored_parts, ignore_index=True)
+    baseline_scored = pd.concat(baseline_parts, ignore_index=True)
+    metrics = pd.DataFrame(
+        _binary_task_metric_rows(scored, "ml_selected", CRASH_TASKS)
+        + _binary_task_metric_rows(baseline_scored, "baseline", CRASH_TASKS)
+    )
+    metrics.attrs["model_selection"] = pd.DataFrame(selection_rows)
+    metrics.attrs["splits"] = pd.DataFrame(split_rows)
+    return scored, metrics

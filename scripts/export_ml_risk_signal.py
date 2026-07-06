@@ -61,6 +61,8 @@ def build_payload() -> dict:
     features = pd.read_parquet(FEATURES_FILE).sort_values("date").reset_index(drop=True)
     bundle = joblib.load(MODEL_FILE)
     feature_dates = pd.to_datetime(features["date"])
+    trading_dates = [value.date().isoformat() for value in feature_dates]
+    trading_date_index = {value: index for index, value in enumerate(trading_dates)}
     latest_year = int(feature_dates.iloc[-1].year)
     ytd_features = features.loc[feature_dates.dt.year == latest_year].reset_index(drop=True)
     if len(ytd_features) < 2:
@@ -79,6 +81,9 @@ def build_payload() -> dict:
         walk_forward_series = [
             {
                 "date": row["date"].date().isoformat(),
+                "resultKnownThroughDate": trading_dates[
+                    min(trading_date_index[row["date"].date().isoformat()] + 5, len(trading_dates) - 1)
+                ],
                 "riskOffProbabilityPct": _pct(row["prob_risk_off"]),
                 "crash5d5pctProbabilityPct": _pct(row.get("prob_crash_5d_5pct")),
                 "crash5d10pctProbabilityPct": _pct(row.get("prob_crash_5d_10pct")),
@@ -137,6 +142,8 @@ def build_payload() -> dict:
             "trainingStartDate": feature_dates.iloc[0].date().isoformat(),
             "trainingEndDate": feature_dates.iloc[-1].date().isoformat(),
             "trainingObservations": len(features),
+            "oosSignalEndDate": walk_forward_series[-1]["date"] if walk_forward_series else None,
+            "oosResultKnownThroughDate": walk_forward_series[-1]["resultKnownThroughDate"] if walk_forward_series else None,
         },
         "latest": {
             "date": str(latest_signal.get("date", pd.to_datetime(latest_row["date"]).date())),
@@ -204,7 +211,7 @@ def build_payload() -> dict:
             "crash5d10pctReturnPct": round(float(bundle.config.get("crash", {}).get("severe_threshold", -0.10)) * 100, 2),
         },
         "interpretation": [
-            "현재 시장 스트레스는 이미 관측된 가격·변동성·수급 부담이고, ML 확률은 현재 수준에서 향후 20영업일 동안 추가로 악화될 가능성입니다.",
+            "현재 시장 스트레스는 이미 관측된 가격·변동성·수급 부담이고, 20D 레짐 Risk-off는 향후 20영업일의 추가 악화 가능성입니다.",
             "급락 직후에는 충격이 이미 가격에 반영됐다고 학습해 ML 확률이 낮아질 수 있으므로, 확률 하락을 현재 위험 해소로 해석하면 안 됩니다.",
             "활황 국면에서도 변동성이 높으면 신규 발행 조건은 매력적일 수 있지만, 기존 북의 순연 가능성과 헤지 비용 부담이 커질 수 있습니다.",
             "급락확률은 현재 KOSPI 수준에서 향후 5거래일 중 최저점이 -5% 또는 -10% 이하에 도달할 가능성을 별도로 추정합니다.",

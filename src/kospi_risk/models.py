@@ -60,6 +60,15 @@ class ModelBundle:
     crash_5d_10pct_model: Any | None = None
 
 
+@dataclass
+class CrashModelBundle:
+    feature_columns: list[str]
+    crash_5d_5pct_model: Any
+    crash_5d_10pct_model: Any
+    selected_models: dict[str, str]
+    model_selection_metrics: list[dict[str, float | str]]
+
+
 def feature_columns(df: pd.DataFrame) -> list[str]:
     excluded = TARGET_COLUMNS | {"date"}
     columns = []
@@ -82,12 +91,15 @@ def eligible_training_frame(df: pd.DataFrame) -> pd.DataFrame:
         "target_vol_20d",
         "target_regime",
         "target_risk_off_20d",
-        "target_crash_5d_5pct",
-        "target_crash_5d_10pct",
         "target_outperform_spx_20d",
         "target_outperform_sox_20d",
     ]
     return work.dropna(subset=required).reset_index(drop=True)
+
+
+def eligible_crash_training_frame(df: pd.DataFrame) -> pd.DataFrame:
+    required = ["target_crash_5d_5pct", "target_crash_5d_10pct"]
+    return df.dropna(subset=required).reset_index(drop=True)
 
 
 def _ridge(alpha: float) -> Pipeline:
@@ -484,11 +496,76 @@ def _calibrated_classifier_if_possible(model: Any, x: pd.DataFrame, y: pd.Series
         return model.fit(x, y)
 
 
+def train_crash_bundle(df: pd.DataFrame, config: dict) -> CrashModelBundle:
+    train_df = eligible_crash_training_frame(df)
+    min_rows = max(500, int(config.get("validation", {}).get("min_train_rows", 500)))
+    if len(train_df) < min_rows:
+        raise ValueError(f"Insufficient crash training history: {len(train_df)} rows, need at least {min_rows}.")
+
+    cols = feature_columns(train_df)
+    candidates = make_model_candidates(config)["crash"]
+    select_train, select_valid = _selection_split(train_df, config)
+    select_train_x = select_train[cols]
+    select_valid_x = select_valid[cols]
+    selection_rows: list[dict[str, float | str]] = []
+
+    best_crash_5d_5pct, rows = _select_classifier(
+        "crash_5d_5pct",
+        candidates,
+        select_train_x,
+        select_train["target_crash_5d_5pct"].astype(int),
+        select_valid_x,
+        select_valid["target_crash_5d_5pct"].astype(int),
+        positive_class=1,
+        selection_metric="average_precision",
+    )
+    selection_rows.extend(rows)
+    best_crash_5d_10pct, rows = _select_classifier(
+        "crash_5d_10pct",
+        candidates,
+        select_train_x,
+        select_train["target_crash_5d_10pct"].astype(int),
+        select_valid_x,
+        select_valid["target_crash_5d_10pct"].astype(int),
+        positive_class=1,
+        selection_metric="average_precision",
+    )
+    selection_rows.extend(rows)
+
+    x = train_df[cols]
+    return CrashModelBundle(
+        feature_columns=cols,
+        crash_5d_5pct_model=_calibrated_classifier_if_possible(
+            clone(candidates[best_crash_5d_5pct]), x, train_df["target_crash_5d_5pct"].astype(int), config
+        ),
+        crash_5d_10pct_model=_calibrated_classifier_if_possible(
+            clone(candidates[best_crash_5d_10pct]), x, train_df["target_crash_5d_10pct"].astype(int), config
+        ),
+        selected_models={
+            "crash_5d_5pct": best_crash_5d_5pct,
+            "crash_5d_10pct": best_crash_5d_10pct,
+        },
+        model_selection_metrics=selection_rows,
+    )
+
+
+def predict_crash_bundle(bundle: CrashModelBundle, df: pd.DataFrame) -> pd.DataFrame:
+    x = df[bundle.feature_columns]
+    return pd.DataFrame(
+        {
+            "date": df["date"].values,
+            "prob_crash_5d_5pct": np.clip(predict_proba_for_class(bundle.crash_5d_5pct_model, x, 1), 0, 1),
+            "prob_crash_5d_10pct": np.clip(predict_proba_for_class(bundle.crash_5d_10pct_model, x, 1), 0, 1),
+        }
+    )
+
+
 def train_bundle(df: pd.DataFrame, config: dict) -> ModelBundle:
     train_df = eligible_training_frame(df)
     min_rows = max(500, int(config.get("validation", {}).get("min_train_rows", 500)))
     if len(train_df) < min_rows:
         raise ValueError(f"Insufficient training history: {len(train_df)} rows, need at least {min_rows}.")
+    crash_bundle = train_crash_bundle(df, config)
     warning_rows = int(config.get("validation", {}).get("reliability_warning_rows", 1500))
     if len(train_df) < warning_rows and not bool(config.get("_suppress_reliability_warning", False)):
         warnings.warn(
@@ -576,28 +653,7 @@ def train_bundle(df: pd.DataFrame, config: dict) -> ModelBundle:
         positive_class=1,
     )
     selection_rows.extend(rows)
-    best_crash_5d_5pct, rows = _select_classifier(
-        "crash_5d_5pct",
-        candidates["crash"],
-        select_train_x,
-        select_train["target_crash_5d_5pct"].astype(int),
-        select_valid_x,
-        select_valid["target_crash_5d_5pct"].astype(int),
-        positive_class=1,
-        selection_metric="average_precision",
-    )
-    selection_rows.extend(rows)
-    best_crash_5d_10pct, rows = _select_classifier(
-        "crash_5d_10pct",
-        candidates["crash"],
-        select_train_x,
-        select_train["target_crash_5d_10pct"].astype(int),
-        select_valid_x,
-        select_valid["target_crash_5d_10pct"].astype(int),
-        positive_class=1,
-        selection_metric="average_precision",
-    )
-    selection_rows.extend(rows)
+    selection_rows.extend(crash_bundle.model_selection_metrics)
 
     x = train_df[cols]
     vol_model = clone(candidates["vol"][best_vol]).fit(x, train_df["target_vol_20d"])
@@ -605,8 +661,6 @@ def train_bundle(df: pd.DataFrame, config: dict) -> ModelBundle:
     risk_off_model = _calibrated_classifier_if_possible(clone(candidates["risk_off"][best_risk_off]), x, train_df["target_risk_off_20d"].astype(int), config)
     outperform_spx_model = _calibrated_classifier_if_possible(clone(candidates["outperform"][best_spx]), x, train_df["target_outperform_spx_20d"].astype(int), config)
     outperform_sox_model = _calibrated_classifier_if_possible(clone(candidates["outperform"][best_sox]), x, train_df["target_outperform_sox_20d"].astype(int), config)
-    crash_5d_5pct_model = _calibrated_classifier_if_possible(clone(candidates["crash"][best_crash_5d_5pct]), x, train_df["target_crash_5d_5pct"].astype(int), config)
-    crash_5d_10pct_model = _calibrated_classifier_if_possible(clone(candidates["crash"][best_crash_5d_10pct]), x, train_df["target_crash_5d_10pct"].astype(int), config)
 
     predicted_vol_history = np.asarray(vol_model.predict(x), dtype=float)
     baseline_vol_threshold = _baseline_vol_threshold(train_df)
@@ -627,15 +681,14 @@ def train_bundle(df: pd.DataFrame, config: dict) -> ModelBundle:
             "regime_strategy": regime_strategy,
             "outperform_spx": best_spx,
             "outperform_sox": best_sox,
-            "crash_5d_5pct": best_crash_5d_5pct,
-            "crash_5d_10pct": best_crash_5d_10pct,
+            **crash_bundle.selected_models,
         },
         model_selection_metrics=selection_rows,
         risk_off_threshold=risk_off_threshold,
         regime_strategy=regime_strategy,
         baseline_vol_threshold=baseline_vol_threshold,
-        crash_5d_5pct_model=crash_5d_5pct_model,
-        crash_5d_10pct_model=crash_5d_10pct_model,
+        crash_5d_5pct_model=crash_bundle.crash_5d_5pct_model,
+        crash_5d_10pct_model=crash_bundle.crash_5d_10pct_model,
     )
 
 

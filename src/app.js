@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260704-2";
+const ASSET_VERSION = "20260706-1";
 
 const trendLabel = {
   up: "상승",
@@ -21,6 +21,11 @@ const formatPointDelta = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
   const number = Number(value);
   return `${number > 0 ? "+" : ""}${number.toFixed(1)}p`;
+};
+const formatShortDate = (value) => {
+  if (!value) return "-";
+  const date = new Date(`${value}T00:00:00Z`);
+  return `${date.getUTCMonth() + 1}.${String(date.getUTCDate()).padStart(2, "0")}`;
 };
 const categoryCountText = (indicators) => {
   const counts = indicators.reduce((acc, indicator) => {
@@ -237,6 +242,11 @@ function buildLeadLagComparison(mlRisk, elsRisk, horizon = 5) {
     const forwardReturn = Number(prices[index + horizon].close) / Number(point.close) - 1;
     pairs.push([probability, forwardReturn]);
   });
+  const signalEndDate = signals[signals.length - 1].date;
+  const resultKnownThroughDate = signals[signals.length - 1].resultKnownThroughDate;
+  const chartStart = Date.parse(`${indexedPrices[0].date}T00:00:00Z`);
+  const chartEnd = Date.parse(`${indexedPrices[indexedPrices.length - 1].date}T00:00:00Z`);
+  const signalEndX = ((Date.parse(`${signalEndDate}T00:00:00Z`) - chartStart) / (chartEnd - chartStart || 1)) * 760;
 
   return {
     signalSeries: signals,
@@ -245,7 +255,10 @@ function buildLeadLagComparison(mlRisk, elsRisk, horizon = 5) {
     endDate: indexedPrices[indexedPrices.length - 1].date,
     correlation: pearsonCorrelation(pairs),
     observations: pairs.length,
-    horizon
+    horizon,
+    signalEndDate,
+    resultKnownThroughDate,
+    signalEndX: Math.max(0, Math.min(760, signalEndX))
   };
 }
 
@@ -521,13 +534,13 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
           tone: crashTone(crash10pct, crash10pctMetrics)
         })}
         ${createMetricCard({
-          label: "기존 ML Risk-off",
+          label: "20D 레짐 Risk-off",
           value: `${Number(latest.riskOffProbabilityPct).toFixed(1)}%`,
           meta: `${decisionText} · 변동성·낙폭 포함`,
           tone: riskTone
         })}
         ${createMetricCard({
-          label: "20D 실현변동성",
+          label: "현재 20D 변동성",
           value: `${Number(latest.realizedVol20dPct).toFixed(1)}%`,
           meta: latest.baselineRiskOffSignal ? "현재 기준모델 risk-off" : "현재 기준모델 중립",
           tone: latest.realizedVol20dPct >= 35 ? "caution" : "watch"
@@ -537,10 +550,11 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
       <div class="ml-risk-body">
         <div class="ml-risk-chart" aria-label="워크포워드 5일 -5% 급락확률과 KOSPI200 YTD 선행성 비교">
           <div class="ml-risk-chart__header">
-            <strong>YTD 선행성 비교</strong>
-            <span>5D 선행상관 ${leadCorrelationText} · ${comparison?.observations ?? 0}개 표본</span>
+            <strong>5일 급락신호 → KOSPI200</strong>
+            <span>신호 ${formatShortDate(comparison?.signalEndDate)} · 결과 ${formatShortDate(comparison?.resultKnownThroughDate)}까지 확인</span>
           </div>
           <svg viewBox="0 0 760 210" role="img">
+            ${comparison && comparison.signalEndX < 760 ? `<rect class="ml-risk-chart__pending" x="${comparison.signalEndX.toFixed(2)}" y="0" width="${(760 - comparison.signalEndX).toFixed(2)}" height="210"></rect><line class="ml-risk-chart__cutoff" x1="${comparison.signalEndX.toFixed(2)}" y1="0" x2="${comparison.signalEndX.toFixed(2)}" y2="210"></line>` : ""}
             ${monthAxis.grid}
             <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
             <path class="ml-risk-chart__risk" d="${riskPath}"></path>
@@ -550,12 +564,13 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
           <div class="ml-risk-chart__legend">
             <span><i class="legend-risk"></i>ML 5D -5% 도달확률 · 워크포워드 OOS</span>
             <span><i class="legend-kospi200"></i>KOSPI200 · 연초=100</span>
+            <span><i class="legend-pending"></i>결과 대기 구간</span>
           </div>
-          <p class="ml-risk-chart__note">${leadReading} 두 선은 방향 비교를 위해 독립 축을 사용하며, OOS 신호는 향후 결과를 확인할 수 있는 날짜까지만 표시합니다.</p>
+          <p class="ml-risk-chart__note">5D 선행상관 ${leadCorrelationText} · ${comparison?.observations ?? 0}개 표본. ${leadReading} 음영 구간은 5거래일 결과가 아직 확정되지 않아 OOS 평가에서 제외됩니다.</p>
         </div>
 
         <div class="ml-risk-explain">
-          <strong>현재와 전망을 분리해서 읽으세요</strong>
+          <strong>시간축을 나눠 읽으세요</strong>
           <p>${divergenceText}</p>
           <p>
             백테스트상 추가 악화 탐지모델은 recall ${Number((ml.riskOffRecall ?? 0) * 100).toFixed(1)}%,
