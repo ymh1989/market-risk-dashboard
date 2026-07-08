@@ -15,8 +15,11 @@ PAGES_URL="${LOCAL_MARKET_UPDATE_PAGES_URL:-https://ymh1989.github.io/market-ris
 PAGES_VERIFY_ATTEMPTS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_ATTEMPTS:-12}"
 PAGES_VERIFY_INTERVAL_SECONDS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_INTERVAL_SECONDS:-10}"
 PAGES_DEPLOY_RETRIES="${LOCAL_MARKET_UPDATE_PAGES_DEPLOY_RETRIES:-2}"
+MODE="${LOCAL_MARKET_UPDATE_MODE:-auto}"
+FULL_TIMES="${LOCAL_MARKET_UPDATE_FULL_TIMES:-08:30}"
 ONLY_AT_SCHEDULED_KST=0
 SCHEDULE_STATE_FILE=""
+SCHEDULED_TIME=""
 
 if [[ -f "$ENV_FILE" ]]; then
   set -a
@@ -31,12 +34,23 @@ if [[ -f "$ENV_FILE" ]]; then
   PAGES_VERIFY_ATTEMPTS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_ATTEMPTS:-$PAGES_VERIFY_ATTEMPTS}"
   PAGES_VERIFY_INTERVAL_SECONDS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_INTERVAL_SECONDS:-$PAGES_VERIFY_INTERVAL_SECONDS}"
   PAGES_DEPLOY_RETRIES="${LOCAL_MARKET_UPDATE_PAGES_DEPLOY_RETRIES:-$PAGES_DEPLOY_RETRIES}"
+  MODE="${LOCAL_MARKET_UPDATE_MODE:-$MODE}"
+  FULL_TIMES="${LOCAL_MARKET_UPDATE_FULL_TIMES:-$FULL_TIMES}"
 fi
 
 for arg in "$@"; do
   case "$arg" in
     --only-at-scheduled-kst)
       ONLY_AT_SCHEDULED_KST=1
+      ;;
+    --fast|--mode=fast)
+      MODE="fast"
+      ;;
+    --full|--mode=full)
+      MODE="full"
+      ;;
+    --mode=auto)
+      MODE="auto"
       ;;
     *)
       echo "알 수 없는 옵션입니다: $arg" >&2
@@ -79,6 +93,7 @@ is_scheduled_now() {
         return 1
       fi
       SCHEDULE_STATE_FILE="$state_file"
+      SCHEDULED_TIME="$scheduled_time"
       return 0
     fi
   done
@@ -118,9 +133,39 @@ wait_for_pages_deployment() {
   return 1
 }
 
+resolve_update_mode() {
+  local full_time
+  case "$MODE" in
+    full|fast)
+      echo "$MODE"
+      ;;
+    auto)
+      if [[ -z "$SCHEDULED_TIME" ]]; then
+        echo "full"
+        return 0
+      fi
+      IFS=',' read -ra full_times <<< "$FULL_TIMES"
+      for full_time in "${full_times[@]}"; do
+        full_time="${full_time//[[:space:]]/}"
+        if [[ "$SCHEDULED_TIME" == "$full_time" ]]; then
+          echo "full"
+          return 0
+        fi
+      done
+      echo "fast"
+      ;;
+    *)
+      echo "알 수 없는 갱신 모드입니다: $MODE" >&2
+      exit 2
+      ;;
+  esac
+}
+
 if (( ONLY_AT_SCHEDULED_KST )); then
   is_scheduled_now || exit 0
 fi
+
+UPDATE_MODE="$(resolve_update_mode)"
 
 mkdir -p "$LOG_DIR"
 LOCK_DIR="$LOG_DIR/.local-market-update.lock"
@@ -150,6 +195,7 @@ cd "$WORKTREE"
 export PYTHONUNBUFFERED=1
 export PYTHONPATH="$WORKTREE/src"
 
+echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 갱신 모드: $UPDATE_MODE"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 시장리스크 데이터를 갱신합니다."
 make update-market-risk
 make backtest-market-risk
@@ -160,7 +206,11 @@ echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] ML risk-off 산출물을 갱신합�
 "$PYTHON_BIN" -m kospi_risk.cli fetch-market-data --source-config configs/data_sources.yaml --output data/raw/market_data.csv --metadata data/raw/market_data_sources.json --min-rows 1500
 "$PYTHON_BIN" -m kospi_risk.cli build-features --input data/raw/market_data.csv --output data/processed/features.parquet --config configs/base.yaml
 "$PYTHON_BIN" -m kospi_risk.cli train --features data/processed/features.parquet --config configs/base.yaml
-"$PYTHON_BIN" -m kospi_risk.cli backtest --features data/processed/features.parquet --config configs/base.yaml --output reports/backtest_report.md
+if [[ "$UPDATE_MODE" == "full" ]]; then
+  "$PYTHON_BIN" -m kospi_risk.cli backtest --features data/processed/features.parquet --config configs/base.yaml --output reports/backtest_report.md
+else
+  echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] fast 모드: ML walk-forward 백테스트를 생략하고 직전 OOS 메트릭을 재사용합니다."
+fi
 "$PYTHON_BIN" -m kospi_risk.cli predict-latest --features data/processed/features.parquet --config configs/base.yaml --output reports/latest_signal.csv
 "$PYTHON_BIN" scripts/export_ml_risk_signal.py
 

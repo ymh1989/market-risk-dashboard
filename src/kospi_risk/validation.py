@@ -159,7 +159,11 @@ def _binary_task_metric_rows(
     return metrics
 
 
-def evaluate_predictions(scored: pd.DataFrame, model_name: str = "ml_selected") -> tuple[pd.DataFrame, dict[str, np.ndarray]]:
+def evaluate_predictions(
+    scored: pd.DataFrame,
+    model_name: str = "ml_selected",
+    include_crash_tasks: bool = True,
+) -> tuple[pd.DataFrame, dict[str, np.ndarray]]:
     metrics: list[dict[str, float | str]] = []
     y_vol = scored["target_vol_20d"].to_numpy(dtype=float)
     p_vol = scored["pred_vol_20d"].to_numpy(dtype=float)
@@ -202,7 +206,9 @@ def evaluate_predictions(scored: pd.DataFrame, model_name: str = "ml_selected") 
     binary_tasks = [
         ("outperform_spx", "target_outperform_spx_20d", "prob_kospi_outperform_spx_20d"),
         ("outperform_sox", "target_outperform_sox_20d", "prob_kospi_outperform_sox_20d"),
-    ] + CRASH_TASKS
+    ]
+    if include_crash_tasks:
+        binary_tasks.extend(CRASH_TASKS)
     metrics.extend(_binary_task_metric_rows(scored, model_name, binary_tasks))
     return pd.DataFrame(metrics), matrices
 
@@ -228,7 +234,7 @@ def run_walk_forward_backtest(df: pd.DataFrame, config: dict) -> tuple[pd.DataFr
         test_df = clean.iloc[split.test_start : split.test_end].reset_index(drop=True)
         if pd.to_datetime(train_df["date"].iloc[-1]) >= pd.to_datetime(test_df["date"].iloc[0]):
             raise ValueError("Walk-forward split is invalid: train end date must be before test start date.")
-        fold_config = {**config, "_suppress_reliability_warning": True}
+        fold_config = {**config, "_suppress_reliability_warning": True, "_skip_crash_models": True}
         bundle = train_bundle(train_df, fold_config)
         predictions = predict_bundle(bundle, test_df)
         baseline = baseline_predictions(train_df, test_df)
@@ -260,8 +266,8 @@ def run_walk_forward_backtest(df: pd.DataFrame, config: dict) -> tuple[pd.DataFr
         )
     scored = pd.concat(scored_parts, ignore_index=True)
     baseline_scored = pd.concat(baseline_parts, ignore_index=True)
-    ml_metrics, ml_matrices = evaluate_predictions(scored, model_name="ml_selected")
-    baseline_metrics, baseline_matrices = evaluate_predictions(baseline_scored, model_name="baseline")
+    ml_metrics, ml_matrices = evaluate_predictions(scored, model_name="ml_selected", include_crash_tasks=False)
+    baseline_metrics, baseline_matrices = evaluate_predictions(baseline_scored, model_name="baseline", include_crash_tasks=False)
     metrics = pd.concat([ml_metrics, baseline_metrics], ignore_index=True)
     metrics.attrs["model_selection"] = pd.DataFrame(selection_rows)
     metrics.attrs["splits"] = pd.DataFrame(split_rows)

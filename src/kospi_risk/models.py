@@ -565,7 +565,8 @@ def train_bundle(df: pd.DataFrame, config: dict) -> ModelBundle:
     min_rows = max(500, int(config.get("validation", {}).get("min_train_rows", 500)))
     if len(train_df) < min_rows:
         raise ValueError(f"Insufficient training history: {len(train_df)} rows, need at least {min_rows}.")
-    crash_bundle = train_crash_bundle(df, config)
+    skip_crash_models = bool(config.get("_skip_crash_models", False))
+    crash_bundle = None if skip_crash_models else train_crash_bundle(df, config)
     warning_rows = int(config.get("validation", {}).get("reliability_warning_rows", 1500))
     if len(train_df) < warning_rows and not bool(config.get("_suppress_reliability_warning", False)):
         warnings.warn(
@@ -653,7 +654,8 @@ def train_bundle(df: pd.DataFrame, config: dict) -> ModelBundle:
         positive_class=1,
     )
     selection_rows.extend(rows)
-    selection_rows.extend(crash_bundle.model_selection_metrics)
+    if crash_bundle is not None:
+        selection_rows.extend(crash_bundle.model_selection_metrics)
 
     x = train_df[cols]
     vol_model = clone(candidates["vol"][best_vol]).fit(x, train_df["target_vol_20d"])
@@ -681,14 +683,14 @@ def train_bundle(df: pd.DataFrame, config: dict) -> ModelBundle:
             "regime_strategy": regime_strategy,
             "outperform_spx": best_spx,
             "outperform_sox": best_sox,
-            **crash_bundle.selected_models,
+            **(crash_bundle.selected_models if crash_bundle is not None else {}),
         },
         model_selection_metrics=selection_rows,
         risk_off_threshold=risk_off_threshold,
         regime_strategy=regime_strategy,
         baseline_vol_threshold=baseline_vol_threshold,
-        crash_5d_5pct_model=crash_bundle.crash_5d_5pct_model,
-        crash_5d_10pct_model=crash_bundle.crash_5d_10pct_model,
+        crash_5d_5pct_model=crash_bundle.crash_5d_5pct_model if crash_bundle is not None else None,
+        crash_5d_10pct_model=crash_bundle.crash_5d_10pct_model if crash_bundle is not None else None,
     )
 
 

@@ -52,12 +52,22 @@ def _level(probability: float, momentum_pct: float | None, realized_vol_pct: flo
     return "중립"
 
 
+def _previous_payload() -> dict:
+    if not OUTPUT_FILE.exists():
+        return {}
+    try:
+        return json.loads(OUTPUT_FILE.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+
+
 def build_payload() -> dict:
     if not FEATURES_FILE.exists():
         raise FileNotFoundError(f"features file not found: {FEATURES_FILE}")
     if not MODEL_FILE.exists():
         raise FileNotFoundError(f"model bundle not found: {MODEL_FILE}")
 
+    previous_payload = _previous_payload()
     features = pd.read_parquet(FEATURES_FILE).sort_values("date").reset_index(drop=True)
     bundle = joblib.load(MODEL_FILE)
     feature_dates = pd.to_datetime(features["date"])
@@ -90,6 +100,12 @@ def build_payload() -> dict:
                 "fold": int(row["fold"]),
             }
             for row in walk_forward.to_dict(orient="records")
+        ]
+    elif previous_payload.get("walkForwardSeries"):
+        walk_forward_series = [
+            row
+            for row in previous_payload.get("walkForwardSeries", [])
+            if str(row.get("date", "")).startswith(f"{latest_year}-")
         ]
 
     momentum_pct = _pct_from_log(latest_row.get("kospi_log_ret_20d"))
@@ -130,6 +146,49 @@ def build_payload() -> dict:
             }
         )
 
+    metrics_payload = {
+        "ml": {
+            "regimeAccuracy": _metric(metrics, "ml_selected", "regime", "accuracy"),
+            "regimeMacroF1": _metric(metrics, "ml_selected", "regime", "macro_f1"),
+            "riskOffRecall": _metric(metrics, "ml_selected", "risk_off_binary", "recall"),
+            "riskOffPrecision": _metric(metrics, "ml_selected", "risk_off_binary", "precision"),
+            "riskOffAuc": _metric(metrics, "ml_selected", "risk_off_binary", "auc"),
+            "riskOffBrier": _metric(metrics, "ml_selected", "risk_off_binary", "brier"),
+        },
+        "baseline": {
+            "regimeAccuracy": _metric(metrics, "baseline", "regime", "accuracy"),
+            "regimeMacroF1": _metric(metrics, "baseline", "regime", "macro_f1"),
+            "riskOffRecall": _metric(metrics, "baseline", "risk_off_binary", "recall"),
+            "riskOffPrecision": _metric(metrics, "baseline", "risk_off_binary", "precision"),
+            "riskOffAuc": _metric(metrics, "baseline", "risk_off_binary", "auc"),
+            "riskOffBrier": _metric(metrics, "baseline", "risk_off_binary", "brier"),
+        },
+        "crash5d5pct": {
+            "auc": _metric(metrics, "ml_selected", "crash_5d_5pct", "auc"),
+            "averagePrecision": _metric(metrics, "ml_selected", "crash_5d_5pct", "average_precision"),
+            "eventCount": _metric(metrics, "ml_selected", "crash_5d_5pct", "event_count"),
+            "eventRate": _metric(metrics, "ml_selected", "crash_5d_5pct", "event_rate"),
+            "topDecileHitRate": _metric(metrics, "ml_selected", "crash_5d_5pct", "top_decile_hit_rate"),
+            "topDecileLift": _metric(metrics, "ml_selected", "crash_5d_5pct", "top_decile_lift"),
+            "brier": _metric(metrics, "ml_selected", "crash_5d_5pct", "brier"),
+            "baselineAuc": _metric(metrics, "baseline", "crash_5d_5pct", "auc"),
+            "baselineBrier": _metric(metrics, "baseline", "crash_5d_5pct", "brier"),
+        },
+        "crash5d10pct": {
+            "auc": _metric(metrics, "ml_selected", "crash_5d_10pct", "auc"),
+            "averagePrecision": _metric(metrics, "ml_selected", "crash_5d_10pct", "average_precision"),
+            "eventCount": _metric(metrics, "ml_selected", "crash_5d_10pct", "event_count"),
+            "eventRate": _metric(metrics, "ml_selected", "crash_5d_10pct", "event_rate"),
+            "topDecileHitRate": _metric(metrics, "ml_selected", "crash_5d_10pct", "top_decile_hit_rate"),
+            "topDecileLift": _metric(metrics, "ml_selected", "crash_5d_10pct", "top_decile_lift"),
+            "brier": _metric(metrics, "ml_selected", "crash_5d_10pct", "brier"),
+            "baselineAuc": _metric(metrics, "baseline", "crash_5d_10pct", "auc"),
+            "baselineBrier": _metric(metrics, "baseline", "crash_5d_10pct", "brier"),
+        },
+    }
+    if metrics.empty and previous_payload.get("metrics"):
+        metrics_payload = previous_payload["metrics"]
+
     payload = {
         "generatedAt": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M KST"),
         "source": {
@@ -160,46 +219,7 @@ def build_payload() -> dict:
             "baselineRiskOffSignal": int(latest_row.get("baseline_risk_off_signal") or 0),
             "interpretationLevel": level,
         },
-        "metrics": {
-            "ml": {
-                "regimeAccuracy": _metric(metrics, "ml_selected", "regime", "accuracy"),
-                "regimeMacroF1": _metric(metrics, "ml_selected", "regime", "macro_f1"),
-                "riskOffRecall": _metric(metrics, "ml_selected", "risk_off_binary", "recall"),
-                "riskOffPrecision": _metric(metrics, "ml_selected", "risk_off_binary", "precision"),
-                "riskOffAuc": _metric(metrics, "ml_selected", "risk_off_binary", "auc"),
-                "riskOffBrier": _metric(metrics, "ml_selected", "risk_off_binary", "brier"),
-            },
-            "baseline": {
-                "regimeAccuracy": _metric(metrics, "baseline", "regime", "accuracy"),
-                "regimeMacroF1": _metric(metrics, "baseline", "regime", "macro_f1"),
-                "riskOffRecall": _metric(metrics, "baseline", "risk_off_binary", "recall"),
-                "riskOffPrecision": _metric(metrics, "baseline", "risk_off_binary", "precision"),
-                "riskOffAuc": _metric(metrics, "baseline", "risk_off_binary", "auc"),
-                "riskOffBrier": _metric(metrics, "baseline", "risk_off_binary", "brier"),
-            },
-            "crash5d5pct": {
-                "auc": _metric(metrics, "ml_selected", "crash_5d_5pct", "auc"),
-                "averagePrecision": _metric(metrics, "ml_selected", "crash_5d_5pct", "average_precision"),
-                "eventCount": _metric(metrics, "ml_selected", "crash_5d_5pct", "event_count"),
-                "eventRate": _metric(metrics, "ml_selected", "crash_5d_5pct", "event_rate"),
-                "topDecileHitRate": _metric(metrics, "ml_selected", "crash_5d_5pct", "top_decile_hit_rate"),
-                "topDecileLift": _metric(metrics, "ml_selected", "crash_5d_5pct", "top_decile_lift"),
-                "brier": _metric(metrics, "ml_selected", "crash_5d_5pct", "brier"),
-                "baselineAuc": _metric(metrics, "baseline", "crash_5d_5pct", "auc"),
-                "baselineBrier": _metric(metrics, "baseline", "crash_5d_5pct", "brier"),
-            },
-            "crash5d10pct": {
-                "auc": _metric(metrics, "ml_selected", "crash_5d_10pct", "auc"),
-                "averagePrecision": _metric(metrics, "ml_selected", "crash_5d_10pct", "average_precision"),
-                "eventCount": _metric(metrics, "ml_selected", "crash_5d_10pct", "event_count"),
-                "eventRate": _metric(metrics, "ml_selected", "crash_5d_10pct", "event_rate"),
-                "topDecileHitRate": _metric(metrics, "ml_selected", "crash_5d_10pct", "top_decile_hit_rate"),
-                "topDecileLift": _metric(metrics, "ml_selected", "crash_5d_10pct", "top_decile_lift"),
-                "brier": _metric(metrics, "ml_selected", "crash_5d_10pct", "brier"),
-                "baselineAuc": _metric(metrics, "baseline", "crash_5d_10pct", "auc"),
-                "baselineBrier": _metric(metrics, "baseline", "crash_5d_10pct", "brier"),
-            },
-        },
+        "metrics": metrics_payload,
         "thresholds": {
             "riskOffDecisionThresholdPct": round(float(getattr(bundle, "risk_off_threshold", 0.5)) * 100, 2),
             "riskOffProbabilityWatchPct": 55,
