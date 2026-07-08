@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260706-1";
+const ASSET_VERSION = "20260708-1";
 
 const trendLabel = {
   up: "상승",
@@ -192,12 +192,12 @@ function linePath(points, valueKey, width = 760, height = 210, padding = 18) {
     .join(" ");
 }
 
-function datedLinePath(points, valueKey, startDate, endDate, width = 760, height = 210, padding = 18) {
+function datedLinePath(points, valueKey, startDate, endDate, width = 760, height = 210, padding = 18, domain = null) {
   const valid = points.filter((point) => Number.isFinite(Number(point[valueKey])));
   if (valid.length < 2) return "";
   const values = valid.map((point) => Number(point[valueKey]));
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const min = domain?.min ?? Math.min(...values);
+  const max = domain?.max ?? Math.max(...values);
   const range = max - min || 1;
   const start = Date.parse(`${startDate}T00:00:00Z`);
   const end = Date.parse(`${endDate}T00:00:00Z`);
@@ -226,15 +226,15 @@ function pearsonCorrelation(pairs) {
 function buildLeadLagComparison(mlRisk, elsRisk, horizon = 5) {
   const kospi200 = elsRisk?.indices?.find((item) => item.id === "kospi200");
   const prices = (kospi200?.ytdPriceSeries ?? []).filter((point) => Number.isFinite(Number(point.close)));
-  const signals = (mlRisk?.walkForwardSeries ?? []).filter((point) => Number.isFinite(Number(point.crash5d5pctProbabilityPct)));
-  if (prices.length < horizon + 2 || signals.length < 3) return null;
+  const oosSignals = (mlRisk?.walkForwardSeries ?? []).filter((point) => Number.isFinite(Number(point.crash5d5pctProbabilityPct)));
+  if (prices.length < horizon + 2 || oosSignals.length < 3) return null;
 
   const base = Number(prices[0].close);
   const indexedPrices = prices.map((point) => ({
     date: point.date,
     kospi200YtdIndex: (Number(point.close) / base) * 100
   }));
-  const signalByDate = new Map(signals.map((point) => [point.date, Number(point.crash5d5pctProbabilityPct)]));
+  const signalByDate = new Map(oosSignals.map((point) => [point.date, Number(point.crash5d5pctProbabilityPct)]));
   const pairs = [];
   prices.forEach((point, index) => {
     const probability = signalByDate.get(point.date);
@@ -242,22 +242,38 @@ function buildLeadLagComparison(mlRisk, elsRisk, horizon = 5) {
     const forwardReturn = Number(prices[index + horizon].close) / Number(point.close) - 1;
     pairs.push([probability, forwardReturn]);
   });
-  const signalEndDate = signals[signals.length - 1].date;
-  const resultKnownThroughDate = signals[signals.length - 1].resultKnownThroughDate;
+  const signalEndDate = oosSignals[oosSignals.length - 1].date;
+  const resultKnownThroughDate = oosSignals[oosSignals.length - 1].resultKnownThroughDate;
+  const liveSignals = (mlRisk?.series ?? [])
+    .filter((point) => Number.isFinite(Number(point.crash5d5pctProbabilityPct)) && point.date > signalEndDate)
+    .map((point) => ({
+      date: point.date,
+      crash5d5pctProbabilityPct: Number(point.crash5d5pctProbabilityPct),
+      crash5d10pctProbabilityPct: Number(point.crash5d10pctProbabilityPct)
+    }));
+  const pendingSignals = liveSignals.length ? [oosSignals[oosSignals.length - 1], ...liveSignals] : [];
+  const signalValues = [...oosSignals, ...liveSignals].map((point) => Number(point.crash5d5pctProbabilityPct));
+  const signalDomain = {
+    min: Math.max(0, Math.min(...signalValues) - 3),
+    max: Math.min(100, Math.max(...signalValues) + 3)
+  };
   const chartStart = Date.parse(`${indexedPrices[0].date}T00:00:00Z`);
   const chartEnd = Date.parse(`${indexedPrices[indexedPrices.length - 1].date}T00:00:00Z`);
   const signalEndX = ((Date.parse(`${signalEndDate}T00:00:00Z`) - chartStart) / (chartEnd - chartStart || 1)) * 760;
 
   return {
-    signalSeries: signals,
+    signalSeries: oosSignals,
+    pendingSignalSeries: pendingSignals,
     priceSeries: indexedPrices,
     startDate: indexedPrices[0].date,
     endDate: indexedPrices[indexedPrices.length - 1].date,
+    currentSignalDate: liveSignals.length ? liveSignals[liveSignals.length - 1].date : signalEndDate,
     correlation: pearsonCorrelation(pairs),
     observations: pairs.length,
     horizon,
     signalEndDate,
     resultKnownThroughDate,
+    signalDomain,
     signalEndX: Math.max(0, Math.min(760, signalEndX))
   };
 }
@@ -447,8 +463,11 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
   const chartSeries = comparison?.priceSeries ?? series;
   const monthAxis = renderMonthAxis(chartSeries);
   const riskPath = comparison
-    ? datedLinePath(comparison.signalSeries, "crash5d5pctProbabilityPct", comparison.startDate, comparison.endDate)
+    ? datedLinePath(comparison.signalSeries, "crash5d5pctProbabilityPct", comparison.startDate, comparison.endDate, 760, 210, 18, comparison.signalDomain)
     : linePath(series, "riskOffProbabilityPct");
+  const pendingRiskPath = comparison
+    ? datedLinePath(comparison.pendingSignalSeries, "crash5d5pctProbabilityPct", comparison.startDate, comparison.endDate, 760, 210, 18, comparison.signalDomain)
+    : "";
   const kospi200Path = comparison
     ? datedLinePath(comparison.priceSeries, "kospi200YtdIndex", comparison.startDate, comparison.endDate)
     : "";
@@ -551,22 +570,24 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
         <div class="ml-risk-chart" aria-label="워크포워드 5일 -5% 급락확률과 KOSPI200 YTD 선행성 비교">
           <div class="ml-risk-chart__header">
             <strong>5일 급락신호 → KOSPI200</strong>
-            <span>신호 ${formatShortDate(comparison?.signalEndDate)} · 결과 ${formatShortDate(comparison?.resultKnownThroughDate)}까지 확인</span>
+            <span>현재 신호 ${formatShortDate(comparison?.currentSignalDate)} · OOS 결과 ${formatShortDate(comparison?.resultKnownThroughDate)}까지 확인</span>
           </div>
           <svg viewBox="0 0 760 210" role="img">
             ${comparison && comparison.signalEndX < 760 ? `<rect class="ml-risk-chart__pending" x="${comparison.signalEndX.toFixed(2)}" y="0" width="${(760 - comparison.signalEndX).toFixed(2)}" height="210"></rect><line class="ml-risk-chart__cutoff" x1="${comparison.signalEndX.toFixed(2)}" y1="0" x2="${comparison.signalEndX.toFixed(2)}" y2="210"></line>` : ""}
             ${monthAxis.grid}
             <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
             <path class="ml-risk-chart__risk" d="${riskPath}"></path>
+            <path class="ml-risk-chart__risk-pending" d="${pendingRiskPath}"></path>
             <path class="ml-risk-chart__kospi200" d="${kospi200Path}"></path>
             ${monthAxis.labels}
           </svg>
           <div class="ml-risk-chart__legend">
-            <span><i class="legend-risk"></i>ML 5D -5% 도달확률 · 워크포워드 OOS</span>
+            <span><i class="legend-risk"></i>ML 5D -5% 도달확률 · OOS 확인</span>
+            <span><i class="legend-risk-pending"></i>현재까지의 최신 예측</span>
             <span><i class="legend-kospi200"></i>KOSPI200 · 연초=100</span>
-            <span><i class="legend-pending"></i>결과 대기 구간</span>
+            <span><i class="legend-pending"></i>향후 5거래일 결과 대기</span>
           </div>
-          <p class="ml-risk-chart__note">5D 선행상관 ${leadCorrelationText} · ${comparison?.observations ?? 0}개 표본. ${leadReading} 음영 구간은 5거래일 결과가 아직 확정되지 않아 OOS 평가에서 제외됩니다.</p>
+          <p class="ml-risk-chart__note">5D 선행상관 ${leadCorrelationText} · ${comparison?.observations ?? 0}개 표본. ${leadReading} 점선 구간은 현재까지 관측된 신호지만, 향후 5거래일 결과가 아직 확정되지 않아 OOS 평가에서는 제외됩니다.</p>
         </div>
 
         <div class="ml-risk-explain">

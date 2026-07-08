@@ -423,6 +423,7 @@ select {
 }
 
 .ml-risk-chart__risk,
+.ml-risk-chart__risk-pending,
 .ml-risk-chart__vol,
 .ml-risk-chart__return,
 .ml-risk-chart__kospi200 {
@@ -446,6 +447,12 @@ select {
 
 .ml-risk-chart__risk {
   stroke: var(--red);
+  stroke-width: 3;
+}
+
+.ml-risk-chart__risk-pending {
+  stroke: var(--red);
+  stroke-dasharray: 7 6;
   stroke-width: 3;
 }
 
@@ -489,6 +496,10 @@ select {
 
 .legend-risk {
   background: var(--red);
+}
+
+.legend-risk-pending {
+  background: repeating-linear-gradient(90deg, var(--red) 0 7px, transparent 7px 12px);
 }
 
 .legend-vol {
