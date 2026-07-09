@@ -199,7 +199,11 @@ echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 갱신 모드: $UPDATE_MODE"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 시장리스크 데이터를 갱신합니다."
 make update-market-risk
 make backtest-market-risk
-REFRESH_STRESS_CACHE=1 make analyze-stress-episodes
+if [[ "$UPDATE_MODE" == "full" ]]; then
+  REFRESH_STRESS_CACHE=1 make analyze-stress-episodes
+else
+  echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] fast 모드: 스트레스 에피소드 히스토리 재계산을 생략합니다."
+fi
 python3 scripts/export_els_index_risk.py
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] ML risk-off 산출물을 갱신합니다."
