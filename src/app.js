@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260710-4";
+const ASSET_VERSION = "20260710-5";
 
 const trendLabel = {
   up: "상승",
@@ -680,7 +680,7 @@ function renderHmmRegimePanel(hmmRegime) {
                   <small>${item.regime} · 부담 ${Number(item.issuerScore).toFixed(1)}</small>
                 </div>
                 <div class="hmm-regime-row__track">
-                  <svg viewBox="0 0 260 86" role="img" aria-label="${item.label} HMM 레짐과 부담 점수">
+                  <svg viewBox="0 0 260 86" preserveAspectRatio="none" role="img" aria-label="${item.label} HMM 레짐과 부담 점수">
                     <rect class="hmm-regime-band-bg" x="0" y="4" width="260" height="12"></rect>
                     ${renderHmmRegimeBands(item.series, timelineDomainValue)}
                     <path class="hmm-regime-spark-grid" d="M 0 30 L 260 30 M 0 48 L 260 48 M 0 66 L 260 66"></path>
