@@ -205,6 +205,7 @@ else
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] fast 모드: 스트레스 에피소드 히스토리 재계산을 생략합니다."
 fi
 python3 scripts/export_els_index_risk.py
+python3 scripts/export_hmm_regime.py
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] ML risk-off 산출물을 갱신합니다."
 "$PYTHON_BIN" -m kospi_risk.cli fetch-market-data --source-config configs/data_sources.yaml --output data/raw/market_data.csv --metadata data/raw/market_data_sources.json --min-rows 1500
@@ -232,6 +233,7 @@ git add \
   data/market-stress-episodes.json \
   data/market-history-cache.json \
   data/els-index-risk.json \
+  data/hmm-regime.json \
   data/ml-risk-signal.json
 
 if git diff --cached --quiet; then

@@ -226,6 +226,7 @@ select {
 .narrative-band,
 .ml-risk-panel,
 .els-index-panel,
+.hmm-regime-panel,
 .trend-panel,
 .backtest-panel,
 .stress-panel,
@@ -801,6 +802,250 @@ select {
 }
 
 .els-index-legend .els-line--kospi200 {
+  background: var(--green);
+}
+
+.hmm-regime-panel {
+  display: grid;
+  gap: 18px;
+  margin-top: 16px;
+  padding: 24px;
+  background: var(--surface);
+}
+
+.hmm-regime-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.hmm-regime-panel__header h2 {
+  margin: 6px 0 0;
+  font-size: 1.35rem;
+}
+
+.hmm-basket-state {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  min-width: 220px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 12px 14px;
+  text-align: right;
+}
+
+.hmm-basket-state span,
+.hmm-basket-state small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.hmm-basket-state strong {
+  font-size: 1.26rem;
+  line-height: 1.15;
+}
+
+.hmm-basket-state--good {
+  border-top: 4px solid var(--green);
+}
+
+.hmm-basket-state--caution {
+  border-top: 4px solid var(--amber);
+}
+
+.hmm-basket-state--danger {
+  border-top: 4px solid var(--red);
+}
+
+.hmm-regime-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.hmm-regime-summary article,
+.hmm-regime-card,
+.hmm-regime-chart {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-raised);
+}
+
+.hmm-regime-summary article {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.hmm-regime-summary h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.4;
+}
+
+.hmm-regime-summary p,
+.hmm-regime-card p,
+.hmm-regime-card small {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.hmm-regime-cards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hmm-regime-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.hmm-regime-card--good {
+  border-top: 4px solid var(--green);
+}
+
+.hmm-regime-card--caution {
+  border-top: 4px solid var(--amber);
+}
+
+.hmm-regime-card--danger {
+  border-top: 4px solid var(--red);
+}
+
+.hmm-regime-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hmm-regime-card h3 {
+  margin: 4px 0 0;
+  font-size: 1.02rem;
+}
+
+.hmm-regime-card header > strong {
+  flex: 0 0 auto;
+  max-width: 110px;
+  color: var(--ink);
+  font-size: 0.96rem;
+  line-height: 1.25;
+  text-align: right;
+}
+
+.hmm-regime-card dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.hmm-regime-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.hmm-regime-card dt,
+.hmm-regime-card dd {
+  margin: 0;
+}
+
+.hmm-regime-card dd {
+  color: var(--ink);
+}
+
+.hmm-regime-chart {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.hmm-regime-chart svg {
+  display: block;
+  width: 100%;
+  height: 210px;
+  overflow: visible;
+}
+
+.hmm-regime-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.hmm-line--spx {
+  stroke: var(--blue);
+}
+
+.hmm-line--sx5e {
+  stroke: var(--teal);
+}
+
+.hmm-line--nky {
+  stroke: var(--amber);
+}
+
+.hmm-line--hscei {
+  stroke: var(--red);
+}
+
+.hmm-line--kospi200 {
+  stroke: var(--green);
+}
+
+.hmm-regime-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.hmm-regime-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hmm-regime-legend i {
+  display: inline-block;
+  width: 18px;
+  height: 3px;
+  border-radius: 999px;
+}
+
+.hmm-regime-legend .hmm-line--spx {
+  background: var(--blue);
+}
+
+.hmm-regime-legend .hmm-line--sx5e {
+  background: var(--teal);
+}
+
+.hmm-regime-legend .hmm-line--nky {
+  background: var(--amber);
+}
+
+.hmm-regime-legend .hmm-line--hscei {
+  background: var(--red);
+}
+
+.hmm-regime-legend .hmm-line--kospi200 {
   background: var(--green);
 }
 
@@ -1574,6 +1819,7 @@ select {
   .summary-grid,
   .ml-risk-grid,
   .els-index-cards,
+  .hmm-regime-cards,
   .backtest-grid,
   .stress-grid,
   .group-panel,
@@ -1604,6 +1850,8 @@ select {
   .ml-risk-panel__header,
   .els-index-panel__header,
   .els-index-summary,
+  .hmm-regime-panel__header,
+  .hmm-regime-summary,
   .ml-risk-body,
   .ml-risk-horizons {
     display: grid;
@@ -1624,8 +1872,10 @@ select {
   }
 
   .ml-risk-state,
-  .els-basket-state {
+  .els-basket-state,
+  .hmm-basket-state {
     justify-items: start;
+    text-align: left;
   }
 }
 
@@ -1654,6 +1904,7 @@ select {
   .summary-grid,
   .ml-risk-grid,
   .els-index-cards,
+  .hmm-regime-cards,
   .backtest-grid,
   .stress-grid,
   .stress-card__metrics,

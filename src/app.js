@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260708-1";
+const ASSET_VERSION = "20260710-1";
 
 const trendLabel = {
   up: "상승",
@@ -444,6 +444,102 @@ function renderElsIndexRiskPanel(elsRisk) {
         </svg>
         <div class="els-index-legend">
           ${elsRisk.indices
+            .map((item) => `<span><i class="${colorClass[item.id] ?? ""}"></i>${item.label}</span>`)
+            .join("")}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderHmmRegimePanel(hmmRegime) {
+  if (!hmmRegime?.indices?.length || !hmmRegime?.basket) return "";
+
+  const sorted = [...hmmRegime.indices].sort((a, b) => Number(b.issuerScore) - Number(a.issuerScore));
+  const basket = hmmRegime.basket;
+  const monthAxis = renderMonthAxis(sorted[0].series ?? []);
+  const colorClass = {
+    spx: "hmm-line--spx",
+    sx5e: "hmm-line--sx5e",
+    nky: "hmm-line--nky",
+    hscei: "hmm-line--hscei",
+    kospi200: "hmm-line--kospi200"
+  };
+  const regimeText = (item) =>
+    `${item.regime} · 위험회피 ${Number(item.probabilities["위험회피"]).toFixed(1)}% · 활황 ${Number(item.probabilities["고변동성 활황"]).toFixed(1)}%`;
+
+  return `
+    <section class="hmm-regime-panel">
+      <div class="hmm-regime-panel__header">
+        <div>
+          <span class="eyebrow">HMM Market Regime</span>
+          <h2>국가별 3상태 HMM 레짐 판독</h2>
+        </div>
+        <div class="hmm-basket-state hmm-basket-state--${basket.tone}">
+          <span>Cross-market HMM</span>
+          <strong>${basket.regime}</strong>
+          <small>위험회피 ${basket.riskOffCount} · 활황 ${basket.highVolBullCount} · 안정 ${basket.stableCount}</small>
+        </div>
+      </div>
+
+      <div class="hmm-regime-summary">
+        <article>
+          <span class="eyebrow">개선 포인트</span>
+          <h3>고변동성을 모두 주의로 보지 않습니다</h3>
+          <p>${hmmRegime.designNote}</p>
+        </article>
+        <article>
+          <span class="eyebrow">Basket 해석</span>
+          <h3>${basket.interpretation}</h3>
+          <p>
+            최근 상태는 ${basket.regime}입니다. 평균 발행/헤지 부담 점수는 ${Number(basket.averageIssuerScore).toFixed(1)}점이고,
+            위험회피 확률이 가장 높은 지수는 ${basket.highestRiskOffIndex}입니다.
+          </p>
+        </article>
+      </div>
+
+      <div class="hmm-regime-cards">
+        ${sorted
+          .map(
+            (item) => `
+              <article class="hmm-regime-card hmm-regime-card--${item.tone}">
+                <header>
+                  <div>
+                    <span class="eyebrow">${item.region} · ${item.volSource}</span>
+                    <h3>${item.label}</h3>
+                  </div>
+                  <strong>${item.regime}</strong>
+                </header>
+                <div class="mini-bar" aria-hidden="true">
+                  <span style="width:${clampScore(item.issuerScore)}%"></span>
+                </div>
+                <dl>
+                  <div><dt>부담점수</dt><dd>${Number(item.issuerScore).toFixed(1)}</dd></div>
+                  <div><dt>위험회피</dt><dd>${Number(item.probabilities["위험회피"]).toFixed(1)}%</dd></div>
+                  <div><dt>20D 수익률</dt><dd>${formatSignedPct(item.metrics.return20dPct)}</dd></div>
+                  <div><dt>20D 변동성</dt><dd>${Number(item.metrics.realizedVol20dPct).toFixed(1)}%</dd></div>
+                </dl>
+                <p>${item.reading}</p>
+                <small>${regimeText(item)} · 신뢰도 ${Number(item.confidencePct).toFixed(1)}%</small>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+
+      <div class="hmm-regime-chart" aria-label="HMM 발행/헤지 부담 점수 흐름">
+        <svg viewBox="0 0 760 210" role="img">
+          ${monthAxis.grid}
+          <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
+          ${hmmRegime.indices
+            .map(
+              (item) => `<path class="hmm-regime-line ${colorClass[item.id] ?? ""}" d="${scorePath(item.series, "issuerScore")}"></path>`
+            )
+            .join("")}
+          ${monthAxis.labels}
+        </svg>
+        <div class="hmm-regime-legend">
+          ${hmmRegime.indices
             .map((item) => `<span><i class="${colorClass[item.id] ?? ""}"></i>${item.label}</span>`)
             .join("")}
         </div>
@@ -906,7 +1002,7 @@ function renderIndicator(indicator, thresholds, timeseries) {
   `;
 }
 
-function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk) {
+function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime) {
   const market = data.sections.find((section) => section.id === "market");
   market.asOf = data.metadata.asOf;
   const plannedLabels = data.sections
@@ -956,6 +1052,7 @@ function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRi
 
     ${renderMlRiskSignalPanel(mlRisk, market, elsRisk)}
     ${renderElsIndexRiskPanel(elsRisk)}
+    ${renderHmmRegimePanel(hmmRegime)}
     ${renderCompositeTrend(market, timeseries)}
     ${renderBacktestPanel(backtest)}
     ${renderStressEpisodesPanel(stressEpisodes)}
@@ -1068,7 +1165,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes) {
   `;
 }
 
-function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, elsRisk) {
+function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime) {
   const data = evaluateDashboard(rawData);
   const enabledTabs = data.tabs.filter((tab) => tab.enabled);
 
@@ -1107,7 +1204,7 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
 
     <div class="panel-stack">
       <section class="tab-panel is-active" data-panel="summary">
-        ${renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk)}
+        ${renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime)}
       </section>
       ${data.sections.map((section) => renderSection(section, timeseries, backtest, stressEpisodes)).join("")}
     </div>
@@ -1149,10 +1246,13 @@ Promise.all([
     .catch(() => null),
   fetch(versioned("./data/els-index-risk.json"))
     .then((response) => (response.ok ? response.json() : null))
+    .catch(() => null),
+  fetch(versioned("./data/hmm-regime.json"))
+    .then((response) => (response.ok ? response.json() : null))
     .catch(() => null)
 ])
-  .then(([dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk]) =>
-    renderDashboard(dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk)
+  .then(([dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime]) =>
+    renderDashboard(dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime)
   )
   .catch((error) => {
     app.innerHTML = `
