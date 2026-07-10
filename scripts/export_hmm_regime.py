@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import urllib.parse
 import urllib.request
 import warnings
@@ -18,6 +19,7 @@ from sklearn.cluster import KMeans
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_FILE = ROOT / "data" / "hmm-regime.json"
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d"
+INVESTING_VKOSPI_HISTORY_URL = "https://kr.investing.com/indices/kospi-volatility-historical-data"
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-hmm-regime/0.1)"
 RANGE_VALUE = "5y"
 FIT_WINDOW = 756
@@ -30,7 +32,17 @@ INDICES = [
     {"id": "sx5e", "symbol": "^STOXX50E", "volSymbols": ["^V2TX"], "label": "SX5E", "name": "Euro Stoxx 50", "region": "유럽", "volLabel": "VSTOXX"},
     {"id": "nky", "symbol": "^N225", "volSymbols": ["^JNIV"], "label": "NKY", "name": "Nikkei 225", "region": "일본", "volLabel": "Nikkei VI"},
     {"id": "hscei", "symbol": "^HSCE", "volSymbols": ["^VHSI"], "label": "HSCEI", "name": "Hang Seng China Enterprises", "region": "중국/HK", "volLabel": "VHSI"},
-    {"id": "kospi200", "symbol": "^KS200", "volSymbols": ["^VKOSPI"], "label": "KOSPI200", "name": "KOSPI 200", "region": "한국", "volLabel": "VKOSPI"},
+    {
+        "id": "kospi200",
+        "symbol": "^KS200",
+        "volSymbols": ["^VKOSPI"],
+        "investingVol": {"url": INVESTING_VKOSPI_HISTORY_URL, "symbol": "KSVKOSPI", "label": "VKOSPI (Investing.com)"},
+        "preferInvestingVol": True,
+        "label": "KOSPI200",
+        "name": "KOSPI 200",
+        "region": "한국",
+        "volLabel": "VKOSPI",
+    },
 ]
 
 
@@ -83,13 +95,71 @@ def _fetch_yahoo(symbol: str, range_value: str = RANGE_VALUE, min_rows: int = 12
     return frame
 
 
-def _fetch_first_available(symbols: list[str]) -> tuple[pd.DataFrame | None, str | None]:
-    for symbol in symbols:
+def _fetch_investing_historical(url: str, min_rows: int = 5) -> pd.DataFrame:
+    request = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        html = response.read().decode("utf-8", errors="replace")
+
+    match = re.search(r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>', html)
+    if not match:
+        raise RuntimeError("Investing.com HTML에서 __NEXT_DATA__를 찾지 못했습니다.")
+
+    payload = json.loads(match.group(1))
+    state = payload.get("props", {}).get("pageProps", {}).get("state", {})
+    rows = state.get("historicalDataStore", {}).get("historicalData", {}).get("data") or []
+    parsed_rows = []
+    for row in rows:
+        timestamp = row.get("rowDateTimestamp")
+        close_value = row.get("last_closeRaw") or row.get("last_close")
+        if not timestamp or close_value in {None, ""}:
+            continue
+        date = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00")).date().isoformat()
+        close = float(str(close_value).replace(",", ""))
+        parsed_rows.append({"date": date, "close": close})
+
+    frame = pd.DataFrame(parsed_rows).drop_duplicates("date").sort_values("date").reset_index(drop=True)
+    if len(frame) < min_rows:
+        raise RuntimeError(f"Investing.com VKOSPI 관측치가 부족합니다: {len(frame)}")
+    return frame
+
+
+def _fetch_vol_proxy(spec: dict) -> tuple[pd.DataFrame | None, str | None, str | None]:
+    def fetch_investing_vol() -> tuple[pd.DataFrame | None, str | None, str | None]:
+        investing_vol = spec.get("investingVol")
+        if not investing_vol:
+            return None, None, None
+        return (
+            _fetch_investing_historical(investing_vol["url"], min_rows=5),
+            investing_vol["symbol"],
+            investing_vol["label"],
+        )
+
+    if spec.get("preferInvestingVol"):
         try:
-            return _fetch_yahoo(symbol, min_rows=80), symbol
+            return fetch_investing_vol()
+        except Exception:
+            pass
+
+    for symbol in spec.get("volSymbols", []):
+        try:
+            return _fetch_yahoo(symbol, min_rows=80), symbol, spec.get("volLabel", symbol)
         except Exception:
             continue
-    return None, None
+
+    if not spec.get("preferInvestingVol"):
+        try:
+            return fetch_investing_vol()
+        except Exception:
+            pass
+
+    return None, None, None
 
 
 def _percentile_rank(values: pd.Series, value: float) -> float:
@@ -321,7 +391,7 @@ def _reading(regime: str, latest: pd.Series, probabilities: dict[str, float], vo
 
 def _index_payload(spec: dict) -> dict:
     price = _fetch_yahoo(spec["symbol"], min_rows=320)
-    vol, vol_symbol = _fetch_first_available(spec.get("volSymbols", []))
+    vol, vol_symbol, vol_source_label = _fetch_vol_proxy(spec)
     frame = _features(price, vol)
     columns = ["ret_20d", "realized_vol_20d", "drawdown_60d", "vol_proxy_rank_252d", "vol_proxy_change_20d"]
     clean = frame.dropna(subset=columns + ["drawdown_252d"]).reset_index(drop=True)
@@ -337,7 +407,7 @@ def _index_payload(spec: dict) -> dict:
         probabilities[labels.get(state, "안정")] += float(probability)
     regime = max(probabilities, key=probabilities.get)
     issuer_score = _clamp(probabilities["위험회피"] * 100 + probabilities["고변동성 활황"] * 45)
-    vol_source = spec["volLabel"] if vol is not None else "20D 실현변동성"
+    vol_source = vol_source_label if vol is not None else "20D 실현변동성"
     series = []
     for row, state, posterior_row in zip(train.to_dict(orient="records"), path, posterior):
         state_probabilities = {"안정": 0.0, "고변동성 활황": 0.0, "위험회피": 0.0}
