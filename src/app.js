@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260710-2";
+const ASSET_VERSION = "20260710-3";
 
 const trendLabel = {
   up: "상승",
@@ -292,6 +292,40 @@ function scorePath(points, valueKey = "score", width = 760, height = 210, paddin
     .join(" ");
 }
 
+function dateMs(date) {
+  return Date.parse(`${date}T00:00:00Z`);
+}
+
+function timelineDomain(seriesList) {
+  const dates = seriesList
+    .flatMap((series) => series ?? [])
+    .map((point) => dateMs(point.date))
+    .filter((value) => Number.isFinite(value));
+  if (!dates.length) return null;
+  const start = Math.min(...dates);
+  const end = Math.max(...dates);
+  return { start, end, span: Math.max(end - start, 1) };
+}
+
+function xFromDate(date, domain, width = 100) {
+  if (!domain) return 0;
+  return ((dateMs(date) - domain.start) / domain.span) * width;
+}
+
+function scorePathByDate(points, valueKey = "score", width = 260, height = 62, padding = 7, domain = null) {
+  const valid = points.filter((point) => Number.isFinite(Number(point[valueKey])) && Number.isFinite(dateMs(point.date)));
+  const safeDomain = domain ?? timelineDomain([valid]);
+  if (valid.length < 2 || !safeDomain) return "";
+
+  return valid
+    .map((point, index) => {
+      const x = xFromDate(point.date, safeDomain, width);
+      const y = height - padding - (clampScore(point[valueKey]) / 100) * (height - padding * 2);
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
 function monthSegments(points, width = 760) {
   if (!points.length) return [];
 
@@ -355,6 +389,32 @@ function renderMonthAxis(points, width = 760, plotTop = 18, plotBottom = 190, la
       )
       .join("")
   };
+}
+
+function monthSegmentsFromDomain(domain, width = 100) {
+  if (!domain) return [];
+  const startDate = new Date(domain.start);
+  const endDate = new Date(domain.end);
+  const cursor = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1));
+  const segments = [];
+
+  while (cursor.getTime() <= domain.end) {
+    const next = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1));
+    const startX = ((Math.max(cursor.getTime(), domain.start) - domain.start) / domain.span) * width;
+    const endX = ((Math.min(next.getTime(), domain.end) - domain.start) / domain.span) * width;
+    const month = String(cursor.getUTCMonth() + 1).padStart(2, "0");
+    const year = String(cursor.getUTCFullYear());
+    segments.push({
+      key: `${year}-${month}`,
+      startX,
+      endX,
+      centerX: (startX + endX) / 2,
+      label: segments.length === 0 || month === "01" ? `${year}.${month}` : `${Number(month)}월`
+    });
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+
+  return segments.filter((segment) => segment.endX > segment.startX);
 }
 
 function renderElsIndexRiskPanel(elsRisk) {
@@ -452,8 +512,8 @@ function renderElsIndexRiskPanel(elsRisk) {
   `;
 }
 
-function renderHmmMonthRail(points) {
-  const segments = monthSegments(points, 100);
+function renderHmmMonthRail(domain) {
+  const segments = monthSegmentsFromDomain(domain, 100);
   if (!segments.length) return "";
 
   return `
@@ -471,20 +531,34 @@ function renderHmmMonthRail(points) {
   `;
 }
 
-function renderHmmRegimeStrip(points) {
+function renderHmmRegimeStrip(points, domain) {
   if (!points?.length) return "";
+  const valid = points
+    .filter((point) => Number.isFinite(Number(point.issuerScore)) && Number.isFinite(dateMs(point.date)))
+    .sort((a, b) => dateMs(a.date) - dateMs(b.date));
+  if (!valid.length || !domain) return "";
 
   return `
-    <div class="hmm-regime-strip" style="grid-template-columns:repeat(${points.length}, minmax(1px, 1fr))">
-      ${points
-      .map(
-        (point) => `
+    <div class="hmm-regime-strip">
+      ${valid
+      .map((point, index) => {
+        const previous = valid[index - 1];
+        const next = valid[index + 1];
+        const currentX = xFromDate(point.date, domain, 100);
+        const previousX = previous ? xFromDate(previous.date, domain, 100) : 0;
+        const nextX = next ? xFromDate(next.date, domain, 100) : 100;
+        const left = index === 0 ? Math.max(0, currentX) : (previousX + currentX) / 2;
+        const right = index === valid.length - 1 ? Math.min(100, currentX) : (currentX + nextX) / 2;
+        const safeLeft = Math.max(0, Math.min(100, left));
+        const safeRight = Math.max(safeLeft + 0.35, Math.min(100, right));
+        return `
           <span
             class="hmm-regime-strip__cell hmm-regime-strip__cell--${point.tone}"
+            style="left:${safeLeft.toFixed(2)}%;width:${(safeRight - safeLeft).toFixed(2)}%"
             title="${point.date} · ${point.regime} · 부담 ${Number(point.issuerScore).toFixed(1)}"
           ></span>
-        `
-      )
+        `;
+      })
       .join("")}
     </div>
   `;
@@ -495,7 +569,8 @@ function renderHmmRegimePanel(hmmRegime) {
 
   const sorted = [...hmmRegime.indices].sort((a, b) => Number(b.issuerScore) - Number(a.issuerScore));
   const basket = hmmRegime.basket;
-  const timelineAxis = renderHmmMonthRail(hmmRegime.indices[0]?.series ?? []);
+  const timelineDomainValue = timelineDomain(hmmRegime.indices.map((item) => item.series ?? []));
+  const timelineAxis = renderHmmMonthRail(timelineDomainValue);
   const colorClass = {
     spx: "hmm-line--spx",
     sx5e: "hmm-line--sx5e",
@@ -591,10 +666,10 @@ function renderHmmRegimePanel(hmmRegime) {
                   <small>${item.regime} · 부담 ${Number(item.issuerScore).toFixed(1)}</small>
                 </div>
                 <div class="hmm-regime-row__track">
-                  ${renderHmmRegimeStrip(item.series)}
+                  ${renderHmmRegimeStrip(item.series, timelineDomainValue)}
                   <svg viewBox="0 0 260 62" role="img" aria-label="${item.label} HMM 부담 점수">
                     <path class="hmm-regime-spark-grid" d="M 0 16 L 260 16 M 0 31 L 260 31 M 0 46 L 260 46"></path>
-                    <path class="hmm-regime-spark ${colorClass[item.id] ?? ""}" d="${scorePath(item.series, "issuerScore", 260, 62, 7)}"></path>
+                    <path class="hmm-regime-spark ${colorClass[item.id] ?? ""}" d="${scorePathByDate(item.series, "issuerScore", 260, 62, 7, timelineDomainValue)}"></path>
                   </svg>
                 </div>
                 <dl class="hmm-regime-row__stats">
