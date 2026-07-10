@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260710-1";
+const ASSET_VERSION = "20260710-2";
 
 const trendLabel = {
   up: "상승",
@@ -452,12 +452,50 @@ function renderElsIndexRiskPanel(elsRisk) {
   `;
 }
 
+function renderHmmMonthRail(points) {
+  const segments = monthSegments(points, 100);
+  if (!segments.length) return "";
+
+  return `
+    <div class="hmm-regime-month-rail" aria-hidden="true">
+      ${segments
+      .map(
+        (segment) => `
+          <span style="left:${segment.startX.toFixed(2)}%;width:${(segment.endX - segment.startX).toFixed(2)}%">
+            ${segment.label}
+          </span>
+        `
+      )
+      .join("")}
+    </div>
+  `;
+}
+
+function renderHmmRegimeStrip(points) {
+  if (!points?.length) return "";
+
+  return `
+    <div class="hmm-regime-strip" style="grid-template-columns:repeat(${points.length}, minmax(1px, 1fr))">
+      ${points
+      .map(
+        (point) => `
+          <span
+            class="hmm-regime-strip__cell hmm-regime-strip__cell--${point.tone}"
+            title="${point.date} · ${point.regime} · 부담 ${Number(point.issuerScore).toFixed(1)}"
+          ></span>
+        `
+      )
+      .join("")}
+    </div>
+  `;
+}
+
 function renderHmmRegimePanel(hmmRegime) {
   if (!hmmRegime?.indices?.length || !hmmRegime?.basket) return "";
 
   const sorted = [...hmmRegime.indices].sort((a, b) => Number(b.issuerScore) - Number(a.issuerScore));
   const basket = hmmRegime.basket;
-  const monthAxis = renderMonthAxis(sorted[0].series ?? []);
+  const timelineAxis = renderHmmMonthRail(hmmRegime.indices[0]?.series ?? []);
   const colorClass = {
     spx: "hmm-line--spx",
     sx5e: "hmm-line--sx5e",
@@ -527,21 +565,47 @@ function renderHmmRegimePanel(hmmRegime) {
           .join("")}
       </div>
 
-      <div class="hmm-regime-chart" aria-label="HMM 발행/헤지 부담 점수 흐름">
-        <svg viewBox="0 0 760 210" role="img">
-          ${monthAxis.grid}
-          <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
+      <div class="hmm-regime-timeline" aria-label="국가별 HMM 레짐 흐름">
+        <div class="hmm-regime-timeline__header">
+          <div>
+            <span class="eyebrow">Regime Timeline</span>
+            <h3>지수별 레짐 흐름</h3>
+          </div>
+          <div class="hmm-regime-key" aria-label="레짐 색상">
+            <span><i class="hmm-regime-strip__cell--good"></i>안정</span>
+            <span><i class="hmm-regime-strip__cell--caution"></i>고변동성 활황</span>
+            <span><i class="hmm-regime-strip__cell--danger"></i>위험회피</span>
+          </div>
+        </div>
+
+        ${timelineAxis}
+
+        <div class="hmm-regime-rows">
           ${hmmRegime.indices
-            .map(
-              (item) => `<path class="hmm-regime-line ${colorClass[item.id] ?? ""}" d="${scorePath(item.series, "issuerScore")}"></path>`
-            )
-            .join("")}
-          ${monthAxis.labels}
-        </svg>
-        <div class="hmm-regime-legend">
-          ${hmmRegime.indices
-            .map((item) => `<span><i class="${colorClass[item.id] ?? ""}"></i>${item.label}</span>`)
-            .join("")}
+          .map(
+            (item) => `
+              <article class="hmm-regime-row hmm-regime-row--${item.tone}">
+                <div class="hmm-regime-row__meta">
+                  <strong>${item.label}</strong>
+                  <span>${item.region} · ${item.volSource}</span>
+                  <small>${item.regime} · 부담 ${Number(item.issuerScore).toFixed(1)}</small>
+                </div>
+                <div class="hmm-regime-row__track">
+                  ${renderHmmRegimeStrip(item.series)}
+                  <svg viewBox="0 0 260 62" role="img" aria-label="${item.label} HMM 부담 점수">
+                    <path class="hmm-regime-spark-grid" d="M 0 16 L 260 16 M 0 31 L 260 31 M 0 46 L 260 46"></path>
+                    <path class="hmm-regime-spark ${colorClass[item.id] ?? ""}" d="${scorePath(item.series, "issuerScore", 260, 62, 7)}"></path>
+                  </svg>
+                </div>
+                <dl class="hmm-regime-row__stats">
+                  <div><dt>위험회피</dt><dd>${Number(item.probabilities["위험회피"]).toFixed(1)}%</dd></div>
+                  <div><dt>활황</dt><dd>${Number(item.probabilities["고변동성 활황"]).toFixed(1)}%</dd></div>
+                  <div><dt>20D</dt><dd>${formatSignedPct(item.metrics.return20dPct)}</dd></div>
+                </dl>
+              </article>
+            `
+          )
+          .join("")}
         </div>
       </div>
     </section>
