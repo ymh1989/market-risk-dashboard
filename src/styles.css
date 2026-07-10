@@ -1081,23 +1081,6 @@ select {
   min-width: 0;
 }
 
-.hmm-regime-strip {
-  position: relative;
-  display: block;
-  height: 18px;
-  overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.1);
-}
-
-.hmm-regime-strip__cell {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  min-width: 1px;
-}
-
 .hmm-regime-strip__cell--good {
   background: rgba(113, 204, 140, 0.82);
 }
@@ -1113,8 +1096,26 @@ select {
 .hmm-regime-row__track svg {
   display: block;
   width: 100%;
-  height: 62px;
+  height: 86px;
   overflow: visible;
+}
+
+.hmm-regime-band-bg {
+  fill: rgba(148, 163, 184, 0.1);
+  stroke: rgba(148, 163, 184, 0.18);
+  stroke-width: 1;
+}
+
+.hmm-regime-band--good {
+  fill: rgba(113, 204, 140, 0.82);
+}
+
+.hmm-regime-band--caution {
+  fill: rgba(224, 168, 75, 0.9);
+}
+
+.hmm-regime-band--danger {
+  fill: rgba(237, 107, 99, 0.9);
 }
 
 .hmm-regime-spark-grid {

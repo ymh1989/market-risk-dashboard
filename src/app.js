@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260710-3";
+const ASSET_VERSION = "20260710-4";
 
 const trendLabel = {
   up: "상승",
@@ -326,6 +326,20 @@ function scorePathByDate(points, valueKey = "score", width = 260, height = 62, p
     .join(" ");
 }
 
+function scorePathByDatePlot(points, valueKey = "score", width = 260, plotTop = 26, plotBottom = 80, domain = null) {
+  const valid = points.filter((point) => Number.isFinite(Number(point[valueKey])) && Number.isFinite(dateMs(point.date)));
+  const safeDomain = domain ?? timelineDomain([valid]);
+  if (valid.length < 2 || !safeDomain) return "";
+
+  return valid
+    .map((point, index) => {
+      const x = xFromDate(point.date, safeDomain, width);
+      const y = plotBottom - (clampScore(point[valueKey]) / 100) * (plotBottom - plotTop);
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
 function monthSegments(points, width = 760) {
   if (!points.length) return [];
 
@@ -531,37 +545,37 @@ function renderHmmMonthRail(domain) {
   `;
 }
 
-function renderHmmRegimeStrip(points, domain) {
-  if (!points?.length) return "";
+function renderHmmRegimeBands(points, domain, width = 260) {
+  if (!points?.length || !domain) return "";
   const valid = points
     .filter((point) => Number.isFinite(Number(point.issuerScore)) && Number.isFinite(dateMs(point.date)))
     .sort((a, b) => dateMs(a.date) - dateMs(b.date));
-  if (!valid.length || !domain) return "";
+  if (!valid.length) return "";
 
-  return `
-    <div class="hmm-regime-strip">
-      ${valid
-      .map((point, index) => {
-        const previous = valid[index - 1];
-        const next = valid[index + 1];
-        const currentX = xFromDate(point.date, domain, 100);
-        const previousX = previous ? xFromDate(previous.date, domain, 100) : 0;
-        const nextX = next ? xFromDate(next.date, domain, 100) : 100;
-        const left = index === 0 ? Math.max(0, currentX) : (previousX + currentX) / 2;
-        const right = index === valid.length - 1 ? Math.min(100, currentX) : (currentX + nextX) / 2;
-        const safeLeft = Math.max(0, Math.min(100, left));
-        const safeRight = Math.max(safeLeft + 0.35, Math.min(100, right));
-        return `
-          <span
-            class="hmm-regime-strip__cell hmm-regime-strip__cell--${point.tone}"
-            style="left:${safeLeft.toFixed(2)}%;width:${(safeRight - safeLeft).toFixed(2)}%"
-            title="${point.date} · ${point.regime} · 부담 ${Number(point.issuerScore).toFixed(1)}"
-          ></span>
-        `;
-      })
-      .join("")}
-    </div>
-  `;
+  return valid
+    .map((point, index) => {
+      const previous = valid[index - 1];
+      const next = valid[index + 1];
+      const currentX = xFromDate(point.date, domain, width);
+      const previousX = previous ? xFromDate(previous.date, domain, width) : 0;
+      const nextX = next ? xFromDate(next.date, domain, width) : width;
+      const left = index === 0 ? Math.max(0, currentX) : (previousX + currentX) / 2;
+      const right = index === valid.length - 1 ? Math.min(width, currentX) : (currentX + nextX) / 2;
+      const safeLeft = Math.max(0, Math.min(width, left));
+      const safeRight = Math.max(safeLeft + 0.8, Math.min(width, right));
+      return `
+        <rect
+          class="hmm-regime-band hmm-regime-band--${point.tone}"
+          x="${safeLeft.toFixed(2)}"
+          y="4"
+          width="${(safeRight - safeLeft).toFixed(2)}"
+          height="12"
+        >
+          <title>${point.date} · ${point.regime} · 부담 ${Number(point.issuerScore).toFixed(1)}</title>
+        </rect>
+      `;
+    })
+    .join("");
 }
 
 function renderHmmRegimePanel(hmmRegime) {
@@ -666,10 +680,11 @@ function renderHmmRegimePanel(hmmRegime) {
                   <small>${item.regime} · 부담 ${Number(item.issuerScore).toFixed(1)}</small>
                 </div>
                 <div class="hmm-regime-row__track">
-                  ${renderHmmRegimeStrip(item.series, timelineDomainValue)}
-                  <svg viewBox="0 0 260 62" role="img" aria-label="${item.label} HMM 부담 점수">
-                    <path class="hmm-regime-spark-grid" d="M 0 16 L 260 16 M 0 31 L 260 31 M 0 46 L 260 46"></path>
-                    <path class="hmm-regime-spark ${colorClass[item.id] ?? ""}" d="${scorePathByDate(item.series, "issuerScore", 260, 62, 7, timelineDomainValue)}"></path>
+                  <svg viewBox="0 0 260 86" role="img" aria-label="${item.label} HMM 레짐과 부담 점수">
+                    <rect class="hmm-regime-band-bg" x="0" y="4" width="260" height="12"></rect>
+                    ${renderHmmRegimeBands(item.series, timelineDomainValue)}
+                    <path class="hmm-regime-spark-grid" d="M 0 30 L 260 30 M 0 48 L 260 48 M 0 66 L 260 66"></path>
+                    <path class="hmm-regime-spark ${colorClass[item.id] ?? ""}" d="${scorePathByDatePlot(item.series, "issuerScore", 260, 26, 80, timelineDomainValue)}"></path>
                   </svg>
                 </div>
                 <dl class="hmm-regime-row__stats">
