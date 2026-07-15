@@ -7,7 +7,7 @@ from .data_loader import load_market_data
 
 
 CORE_MARKETS = ["KOSPI", "SPX", "SOX", "USDKRW"]
-OPTIONAL_RETURN_COLUMNS = ["WTI", "COPPER", "GOLD", "NIKKEI225", "HSCEI", "CSI300"]
+OPTIONAL_RETURN_COLUMNS = ["NASDAQ", "WTI", "COPPER", "GOLD", "NIKKEI225", "HSCEI", "CSI300"]
 
 
 def _log_return(series: pd.Series, window: int = 1) -> pd.Series:
@@ -18,6 +18,14 @@ def _log_return(series: pd.Series, window: int = 1) -> pd.Series:
 
 def _realized_vol(log_returns: pd.Series, window: int, annualization: int = 252) -> pd.Series:
     return log_returns.rolling(window=window, min_periods=window).std() * np.sqrt(annualization)
+
+
+def _positive_part(series: pd.Series) -> pd.Series:
+    return series.clip(lower=0)
+
+
+def _safe_ratio(numerator: pd.Series, denominator: pd.Series) -> pd.Series:
+    return numerator / denominator.replace(0, np.nan)
 
 
 def build_features_from_market_data(df: pd.DataFrame, annualization: int = 252) -> pd.DataFrame:
@@ -60,6 +68,9 @@ def build_features_from_market_data(df: pd.DataFrame, annualization: int = 252) 
     out["kospi_minus_spx_ret_20d"] = out["kospi_log_ret_20d"] - out["spx_log_ret_20d"]
     out["kospi_minus_sox_ret_20d"] = out["kospi_log_ret_20d"] - out["sox_log_ret_20d"]
     out["usdkrw_vol_20d"] = out["usdkrw_realized_vol_20d"]
+    out["sox_minus_spx_ret_20d"] = out["sox_log_ret_20d"] - out["spx_log_ret_20d"]
+    out["kospi_vol_spx_vol_ratio_20d"] = _safe_ratio(out["kospi_realized_vol_20d"], out["spx_realized_vol_20d"])
+    out["kospi_vol_sox_vol_ratio_20d"] = _safe_ratio(out["kospi_realized_vol_20d"], out["sox_realized_vol_20d"])
 
     for column in ["VIX", "VKOSPI", "KOSPI_ATM_IV", "KOSPI_SKEW", "KOSPI_PUT_CALL_RATIO", "KOSPI_FUTURES_BASIS", "CREDIT_SPREAD_KR"]:
         if column in out.columns:
@@ -83,6 +94,37 @@ def build_features_from_market_data(df: pd.DataFrame, annualization: int = 252) 
         if column in out.columns:
             for window in [5, 20]:
                 out[f"{column.lower()}_log_ret_{window}d"] = _log_return(out[column], window)
+
+    if "nasdaq_log_ret_20d" in out.columns:
+        out["kospi_minus_nasdaq_ret_20d"] = out["kospi_log_ret_20d"] - out["nasdaq_log_ret_20d"]
+    if "nikkei225_log_ret_20d" in out.columns:
+        out["kospi_minus_nikkei225_ret_20d"] = out["kospi_log_ret_20d"] - out["nikkei225_log_ret_20d"]
+    if "csi300_log_ret_20d" in out.columns:
+        out["kospi_minus_csi300_ret_20d"] = out["kospi_log_ret_20d"] - out["csi300_log_ret_20d"]
+
+    global_growth_columns = [
+        column
+        for column in ["spx_log_ret_20d", "sox_log_ret_20d", "nasdaq_log_ret_20d", "nikkei225_log_ret_20d"]
+        if column in out.columns
+    ]
+    if global_growth_columns:
+        out["global_growth_log_ret_20d"] = out[global_growth_columns].mean(axis=1)
+        out["kospi_minus_global_growth_ret_20d"] = out["kospi_log_ret_20d"] - out["global_growth_log_ret_20d"]
+
+    kospi_down_20d = _positive_part(-out["kospi_log_ret_20d"])
+    sox_down_20d = _positive_part(-out["sox_log_ret_20d"])
+    usdkrw_up_20d = _positive_part(out["usdkrw_log_ret_20d"])
+    out["usdkrw_up_kospi_down_stress_20d"] = usdkrw_up_20d * kospi_down_20d
+    out["sox_down_kospi_down_stress_20d"] = sox_down_20d * kospi_down_20d
+    out["kospi_high_vol_weak_momentum_20d"] = out["kospi_realized_vol_20d"] * kospi_down_20d
+    if "vix_chg_20d" in out.columns:
+        vix_up_20d = _positive_part(out["vix_chg_20d"])
+        out["vix_up_kospi_down_stress_20d"] = vix_up_20d * kospi_down_20d
+        out["vix_up_sox_down_stress_20d"] = vix_up_20d * sox_down_20d
+    if "gold_log_ret_20d" in out.columns and "copper_log_ret_20d" in out.columns:
+        out["gold_minus_copper_ret_20d"] = out["gold_log_ret_20d"] - out["copper_log_ret_20d"]
+    if "wti_log_ret_20d" in out.columns and "usdkrw_log_ret_20d" in out.columns:
+        out["oil_up_usdkrw_up_stress_20d"] = _positive_part(out["wti_log_ret_20d"]) * usdkrw_up_20d
 
     return out
 
