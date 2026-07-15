@@ -262,3 +262,73 @@ def write_transformer_lab_outputs(
     metrics_path.parent.mkdir(parents=True, exist_ok=True)
     predictions.to_csv(predictions_path, index=False)
     metrics_path.write_text(json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def run_transformer_lab_optimization(
+    df: pd.DataFrame,
+    targets: list[str],
+    sequence_lengths: list[int],
+    d_models: list[int],
+    num_layers_values: list[int],
+    epochs_values: list[int],
+    max_folds: int,
+    batch_size: int,
+    nhead: int,
+    dropout: float,
+    learning_rate: float,
+    random_state: int,
+) -> pd.DataFrame:
+    rows: list[dict[str, float | int | str]] = []
+    for target in targets:
+        for sequence_length in sequence_lengths:
+            for d_model in d_models:
+                if d_model % nhead != 0:
+                    rows.append(
+                        {
+                            "target": target,
+                            "sequenceLength": sequence_length,
+                            "dModel": d_model,
+                            "numLayers": "",
+                            "epochs": "",
+                            "status": f"skipped: d_model({d_model}) must be divisible by nhead({nhead})",
+                        }
+                    )
+                    continue
+                for num_layers in num_layers_values:
+                    for epochs in epochs_values:
+                        config = TransformerLabConfig(
+                            target=target,
+                            sequence_length=sequence_length,
+                            max_folds=max_folds,
+                            epochs=epochs,
+                            batch_size=batch_size,
+                            d_model=d_model,
+                            nhead=nhead,
+                            num_layers=num_layers,
+                            dropout=dropout,
+                            learning_rate=learning_rate,
+                            random_state=random_state,
+                        )
+                        try:
+                            _, metrics = run_transformer_lab(df, config)
+                            rows.append({**metrics, "dModel": d_model, "numLayers": num_layers, "epochs": epochs, "status": "ok"})
+                        except Exception as exc:  # pragma: no cover - defensive experiment logging.
+                            rows.append(
+                                {
+                                    "target": target,
+                                    "sequenceLength": sequence_length,
+                                    "dModel": d_model,
+                                    "numLayers": num_layers,
+                                    "epochs": epochs,
+                                    "status": f"failed: {exc}",
+                                }
+                            )
+    result = pd.DataFrame(rows)
+    if result.empty or "averagePrecision" not in result.columns:
+        return result
+    result["_rankAveragePrecision"] = pd.to_numeric(result["averagePrecision"], errors="coerce").fillna(-np.inf)
+    result["_rankBrier"] = pd.to_numeric(result["brier"], errors="coerce").fillna(np.inf)
+    result = result.sort_values(["target", "_rankAveragePrecision", "_rankBrier"], ascending=[True, False, True]).drop(
+        columns=["_rankAveragePrecision", "_rankBrier"]
+    )
+    return result.reset_index(drop=True)

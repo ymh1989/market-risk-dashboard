@@ -16,6 +16,7 @@ from .targets import add_targets
 from .transformer_lab import (
     TransformerLabConfig,
     ensure_transformer_lab_available,
+    run_transformer_lab_optimization,
     run_transformer_lab,
     write_transformer_lab_outputs,
 )
@@ -204,6 +205,44 @@ def cmd_transformer_lab(args: argparse.Namespace) -> None:
     print(f"Wrote transformer lab metrics: {args.metrics_output}")
 
 
+def _csv_ints(value: str) -> list[int]:
+    return [int(item.strip()) for item in value.split(",") if item.strip()]
+
+
+def _csv_strings(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def cmd_transformer_lab_optimize(args: argparse.Namespace) -> None:
+    try:
+        ensure_transformer_lab_available()
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from None
+    df = load_frame(args.features)
+    results = run_transformer_lab_optimization(
+        df=df,
+        targets=_csv_strings(args.targets),
+        sequence_lengths=_csv_ints(args.sequence_lengths),
+        d_models=_csv_ints(args.d_models),
+        num_layers_values=_csv_ints(args.num_layers),
+        epochs_values=_csv_ints(args.epochs),
+        max_folds=args.max_folds,
+        batch_size=args.batch_size,
+        nhead=args.nhead,
+        dropout=args.dropout,
+        learning_rate=args.learning_rate,
+        random_state=args.seed,
+    )
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    results.to_csv(output_path, index=False)
+    print(f"Wrote transformer lab optimization: {output_path}")
+    ok = results.loc[results.get("status", "") == "ok"] if "status" in results.columns else results
+    if not ok.empty and "averagePrecision" in ok.columns:
+        best = ok.sort_values(["target", "averagePrecision", "brier"], ascending=[True, False, True]).groupby("target").head(1)
+        print(best[["target", "sequenceLength", "dModel", "numLayers", "epochs", "averagePrecision", "auc", "brier"]].to_string(index=False))
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m kospi_risk.cli")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -265,6 +304,22 @@ def build_parser() -> argparse.ArgumentParser:
     transformer.add_argument("--learning-rate", type=float, default=0.001)
     transformer.add_argument("--seed", type=int, default=42)
     transformer.set_defaults(func=cmd_transformer_lab)
+
+    transformer_opt = subparsers.add_parser("transformer-lab-optimize")
+    transformer_opt.add_argument("--features", default="data/processed/features.parquet")
+    transformer_opt.add_argument("--targets", default="crash_5d_5pct,crash_5d_10pct")
+    transformer_opt.add_argument("--output", default="reports/transformer_lab_optimization.csv")
+    transformer_opt.add_argument("--sequence-lengths", default="10,20,40")
+    transformer_opt.add_argument("--d-models", default="16,32")
+    transformer_opt.add_argument("--num-layers", default="1,2")
+    transformer_opt.add_argument("--epochs", default="4")
+    transformer_opt.add_argument("--max-folds", type=int, default=3)
+    transformer_opt.add_argument("--batch-size", type=int, default=64)
+    transformer_opt.add_argument("--nhead", type=int, default=4)
+    transformer_opt.add_argument("--dropout", type=float, default=0.1)
+    transformer_opt.add_argument("--learning-rate", type=float, default=0.001)
+    transformer_opt.add_argument("--seed", type=int, default=42)
+    transformer_opt.set_defaults(func=cmd_transformer_lab_optimize)
     return parser
 
 
