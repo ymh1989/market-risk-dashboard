@@ -13,6 +13,12 @@ from .models import load_bundle, predict_bundle, save_bundle, train_bundle
 from .reporting import write_backtest_report
 from .scoring import add_els_scores, score_bucket_analysis
 from .targets import add_targets
+from .transformer_lab import (
+    TransformerLabConfig,
+    ensure_transformer_lab_available,
+    run_transformer_lab,
+    write_transformer_lab_outputs,
+)
 from .validation import run_crash_walk_forward_backtest, run_walk_forward_backtest
 from .visualization import create_backtest_visualizations
 
@@ -170,6 +176,34 @@ def cmd_predict_latest(args: argparse.Namespace) -> None:
     print(f"Wrote latest signal: {args.output}")
 
 
+def cmd_transformer_lab(args: argparse.Namespace) -> None:
+    try:
+        ensure_transformer_lab_available()
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from None
+    df = load_frame(args.features)
+    lab_config = TransformerLabConfig(
+        target=args.target,
+        sequence_length=args.sequence_length,
+        max_folds=args.max_folds,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        d_model=args.d_model,
+        nhead=args.nhead,
+        num_layers=args.num_layers,
+        dropout=args.dropout,
+        learning_rate=args.learning_rate,
+        random_state=args.seed,
+    )
+    try:
+        predictions, metrics = run_transformer_lab(df, lab_config)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from None
+    write_transformer_lab_outputs(predictions, metrics, args.output, args.metrics_output)
+    print(f"Wrote transformer lab predictions: {args.output}")
+    print(f"Wrote transformer lab metrics: {args.metrics_output}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m kospi_risk.cli")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -214,6 +248,23 @@ def build_parser() -> argparse.ArgumentParser:
     latest.add_argument("--model", default=None)
     latest.add_argument("--output", default="reports/latest_signal.csv")
     latest.set_defaults(func=cmd_predict_latest)
+
+    transformer = subparsers.add_parser("transformer-lab")
+    transformer.add_argument("--features", default="data/processed/features.parquet")
+    transformer.add_argument("--target", choices=["crash_5d_5pct", "crash_5d_10pct"], default="crash_5d_5pct")
+    transformer.add_argument("--output", default="reports/transformer_lab_predictions.csv")
+    transformer.add_argument("--metrics-output", default="reports/transformer_lab_metrics.json")
+    transformer.add_argument("--sequence-length", type=int, default=20)
+    transformer.add_argument("--max-folds", type=int, default=3)
+    transformer.add_argument("--epochs", type=int, default=12)
+    transformer.add_argument("--batch-size", type=int, default=64)
+    transformer.add_argument("--d-model", type=int, default=32)
+    transformer.add_argument("--nhead", type=int, default=4)
+    transformer.add_argument("--num-layers", type=int, default=2)
+    transformer.add_argument("--dropout", type=float, default=0.1)
+    transformer.add_argument("--learning-rate", type=float, default=0.001)
+    transformer.add_argument("--seed", type=int, default=42)
+    transformer.set_defaults(func=cmd_transformer_lab)
     return parser
 
 
