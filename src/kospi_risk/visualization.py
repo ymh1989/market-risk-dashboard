@@ -7,6 +7,9 @@ import pandas as pd
 
 
 def create_backtest_visualizations(scored: pd.DataFrame, output_dir: str | Path = "reports/figures") -> list[Path]:
+    import matplotlib
+
+    matplotlib.use("Agg", force=True)
     import matplotlib.pyplot as plt
     from matplotlib import font_manager
 
