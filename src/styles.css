@@ -1106,6 +1106,16 @@ select {
   stroke-width: 1;
 }
 
+.hmm-regime-month-guide-band {
+  fill: rgba(148, 163, 184, 0.045);
+}
+
+.hmm-regime-month-guide-line {
+  stroke: rgba(148, 163, 184, 0.2);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
 .hmm-regime-band--good {
   fill: rgba(113, 204, 140, 0.82);
 }
@@ -1156,16 +1166,21 @@ select {
 
 .hmm-regime-row__stats {
   display: grid;
-  gap: 6px;
+  grid-template-columns: 1fr;
+  gap: 8px;
   margin: 0;
 }
 
 .hmm-regime-row__stats div {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  background: rgba(2, 8, 23, 0.14);
+  padding: 8px 10px;
   color: var(--muted);
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   font-weight: 900;
 }
 
@@ -1176,6 +1191,8 @@ select {
 
 .hmm-regime-row__stats dd {
   color: var(--ink);
+  font-size: 0.86rem;
+  line-height: 1.15;
 }
 
 .narrative-band {

@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260710-5";
+const ASSET_VERSION = "20260715-1";
 
 const trendLabel = {
   up: "상승",
@@ -578,6 +578,28 @@ function renderHmmRegimeBands(points, domain, width = 260) {
     .join("");
 }
 
+function renderHmmMonthGuides(domain, width = 260) {
+  const segments = monthSegmentsFromDomain(domain, width);
+  if (!segments.length) return "";
+
+  return `
+    ${segments
+      .map((segment, index) =>
+        index % 2 === 1
+          ? `<rect class="hmm-regime-month-guide-band" x="${segment.startX.toFixed(2)}" y="4" width="${(segment.endX - segment.startX).toFixed(2)}" height="76"></rect>`
+          : ""
+      )
+      .join("")}
+    ${segments
+      .slice(1)
+      .map(
+        (segment) =>
+          `<line class="hmm-regime-month-guide-line" x1="${segment.startX.toFixed(2)}" x2="${segment.startX.toFixed(2)}" y1="4" y2="80"></line>`
+      )
+      .join("")}
+  `;
+}
+
 function renderHmmRegimePanel(hmmRegime) {
   if (!hmmRegime?.indices?.length || !hmmRegime?.basket) return "";
 
@@ -681,6 +703,7 @@ function renderHmmRegimePanel(hmmRegime) {
                 </div>
                 <div class="hmm-regime-row__track">
                   <svg viewBox="0 0 260 86" preserveAspectRatio="none" role="img" aria-label="${item.label} HMM 레짐과 부담 점수">
+                    ${renderHmmMonthGuides(timelineDomainValue)}
                     <rect class="hmm-regime-band-bg" x="0" y="4" width="260" height="12"></rect>
                     ${renderHmmRegimeBands(item.series, timelineDomainValue)}
                     <path class="hmm-regime-spark-grid" d="M 0 30 L 260 30 M 0 48 L 260 48 M 0 66 L 260 66"></path>
