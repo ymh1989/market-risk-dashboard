@@ -2,7 +2,14 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260715-1";
+const ASSET_VERSION = "20260716-2";
+
+const indicatorSortOptions = [
+  { key: "score", label: "점수순", description: "현재 점수가 높은 지표부터 봅니다." },
+  { key: "change1d", label: "1D 상승", description: "전일 대비 점수 상승폭이 큰 지표부터 봅니다.", offset: 1 },
+  { key: "change1w", label: "1W 상승", description: "최근 5거래일 점수 상승폭이 큰 지표부터 봅니다.", offset: 5 },
+  { key: "change1m", label: "1M 상승", description: "최근 20거래일 점수 상승폭이 큰 지표부터 봅니다.", offset: 20 }
+];
 
 const trendLabel = {
   up: "상승",
@@ -97,6 +104,24 @@ function valueChange(currentValue, points, offset) {
   const base = points[points.length - 1 - offset];
   if (!base) return null;
   return clampScore(currentValue) - clampScore(base.value);
+}
+
+function indicatorSortValue(indicator, timeseries, sortKey) {
+  if (sortKey === "score") return clampScore(indicator.value);
+  const option = indicatorSortOptions.find((item) => item.key === sortKey);
+  if (!option?.offset) return clampScore(indicator.value);
+  return valueChange(indicator.value, timeseries?.series?.[indicator.id] ?? [], option.offset);
+}
+
+function sortedIndicators(section, timeseries, sortKey = "score") {
+  return [...(section.indicators ?? [])].sort((a, b) => {
+    const left = indicatorSortValue(a, timeseries, sortKey);
+    const right = indicatorSortValue(b, timeseries, sortKey);
+    const leftRank = Number.isFinite(Number(left)) ? Number(left) : Number.NEGATIVE_INFINITY;
+    const rightRank = Number.isFinite(Number(right)) ? Number(right) : Number.NEGATIVE_INFINITY;
+    if (rightRank !== leftRank) return rightRank - leftRank;
+    return clampScore(b.value) - clampScore(a.value);
+  });
 }
 
 function changeTone(value) {
@@ -1179,6 +1204,35 @@ function renderIndicator(indicator, thresholds, timeseries) {
   `;
 }
 
+function renderIndicatorSortControls(sectionId) {
+  return `
+    <div class="indicator-toolbar">
+      <div>
+        <span class="eyebrow">Indicator Sort</span>
+        <h3>시장리스크 카드 정렬</h3>
+      </div>
+      <div class="indicator-sort" role="group" aria-label="시장리스크 카드 정렬 기준">
+        ${indicatorSortOptions
+          .map(
+            (option, index) => `
+              <button
+                type="button"
+                class="indicator-sort__button ${index === 0 ? "is-active" : ""}"
+                data-indicator-sort="${option.key}"
+                data-section-id="${sectionId}"
+                title="${option.description}"
+                aria-pressed="${index === 0 ? "true" : "false"}"
+              >
+                ${option.label}
+              </button>
+            `
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
 function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime) {
   const market = data.sections.find((section) => section.id === "market");
   market.asOf = data.metadata.asOf;
@@ -1295,7 +1349,7 @@ function renderGroupScores(section) {
 
 function renderSection(section, timeseries, backtest, stressEpisodes) {
   const isPlanned = section.status !== "active";
-  const sortedIndicators = [...(section.indicators ?? [])].sort((a, b) => clampScore(b.value) - clampScore(a.value));
+  const initiallySortedIndicators = sortedIndicators(section, timeseries);
 
   return `
     <section class="risk-section" data-panel="${section.id}">
@@ -1324,8 +1378,9 @@ function renderSection(section, timeseries, backtest, stressEpisodes) {
             ${renderBacktestPanel(section.id === "market" ? backtest : null)}
             ${renderStressEpisodesPanel(section.id === "market" ? stressEpisodes : null)}
             ${renderGauge(section.score, section.level, section.model.thresholds)}
-            <div class="indicator-grid">
-              ${sortedIndicators
+            ${section.id === "market" ? renderIndicatorSortControls(section.id) : ""}
+            <div class="indicator-grid" data-indicator-grid="${section.id}">
+              ${initiallySortedIndicators
                 .map((indicator) => renderIndicator(indicator, section.model.thresholds, timeseries))
                 .join("")}
             </div>
@@ -1396,6 +1451,28 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
       app
         .querySelectorAll("[data-panel]")
         .forEach((panel) => panel.classList.toggle("is-active", panel.dataset.panel === target));
+    });
+  });
+
+  app.querySelectorAll("[data-indicator-sort]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const sectionId = button.dataset.sectionId;
+      const sortKey = button.dataset.indicatorSort;
+      const section = data.sections.find((item) => item.id === sectionId);
+      const grid = app.querySelector(`[data-indicator-grid="${sectionId}"]`);
+      if (!section || !grid) return;
+
+      app
+        .querySelectorAll(`[data-section-id="${sectionId}"]`)
+        .forEach((item) => {
+          const active = item === button;
+          item.classList.toggle("is-active", active);
+          item.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+
+      grid.innerHTML = sortedIndicators(section, timeseries, sortKey)
+        .map((indicator) => renderIndicator(indicator, section.model.thresholds, timeseries))
+        .join("");
     });
   });
 

@@ -1820,6 +1820,53 @@ select {
   gap: 14px;
 }
 
+.indicator-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+}
+
+.indicator-toolbar h3 {
+  margin: 4px 0 0;
+  font-size: 1rem;
+}
+
+.indicator-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.indicator-sort__button {
+  min-width: 76px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 900;
+  padding: 9px 11px;
+}
+
+.indicator-sort__button:hover,
+.indicator-sort__button:focus-visible {
+  color: var(--ink);
+  outline: 0;
+}
+
+.indicator-sort__button.is-active {
+  background: var(--ink);
+  color: var(--surface);
+}
+
 .indicator-card {
   display: grid;
   gap: 14px;
@@ -1985,6 +2032,14 @@ select {
     justify-items: start;
   }
 
+  .indicator-toolbar {
+    display: grid;
+  }
+
+  .indicator-sort {
+    justify-self: start;
+  }
+
   .trend-panel__header {
     display: grid;
   }
@@ -2089,6 +2144,16 @@ select {
 
   .indicator-card footer {
     display: grid;
+  }
+
+  .indicator-sort {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .indicator-sort__button {
+    min-width: 0;
   }
 
   .backtest-panel__header,
