@@ -2,13 +2,31 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260716-2";
+const ASSET_VERSION = "20260716-3";
 
 const indicatorSortOptions = [
   { key: "score", label: "점수순", description: "현재 점수가 높은 지표부터 봅니다." },
-  { key: "change1d", label: "1D 상승", description: "전일 대비 점수 상승폭이 큰 지표부터 봅니다.", offset: 1 },
-  { key: "change1w", label: "1W 상승", description: "최근 5거래일 점수 상승폭이 큰 지표부터 봅니다.", offset: 5 },
-  { key: "change1m", label: "1M 상승", description: "최근 20거래일 점수 상승폭이 큰 지표부터 봅니다.", offset: 20 }
+  {
+    key: "change1d",
+    label: "1D",
+    description: "전일 대비 점수 상승폭이 큰 지표부터 봅니다.",
+    reverseDescription: "전일 대비 점수 하락폭이 큰 지표부터 봅니다.",
+    offset: 1
+  },
+  {
+    key: "change1w",
+    label: "1W",
+    description: "최근 5거래일 점수 상승폭이 큰 지표부터 봅니다.",
+    reverseDescription: "최근 5거래일 점수 하락폭이 큰 지표부터 봅니다.",
+    offset: 5
+  },
+  {
+    key: "change1m",
+    label: "1M",
+    description: "최근 20거래일 점수 상승폭이 큰 지표부터 봅니다.",
+    reverseDescription: "최근 20거래일 점수 하락폭이 큰 지표부터 봅니다.",
+    offset: 20
+  }
 ];
 
 const trendLabel = {
@@ -113,13 +131,26 @@ function indicatorSortValue(indicator, timeseries, sortKey) {
   return valueChange(indicator.value, timeseries?.series?.[indicator.id] ?? [], option.offset);
 }
 
-function sortedIndicators(section, timeseries, sortKey = "score") {
+function sortOptionLabel(option, active = false, direction = "desc") {
+  if (!option.offset) return option.label;
+  return `${option.label} ${active && direction === "asc" ? "하락" : "상승"}`;
+}
+
+function sortOptionDescription(option, active = false, direction = "desc") {
+  if (option.offset && active && direction === "asc") return option.reverseDescription;
+  return option.description;
+}
+
+function sortedIndicators(section, timeseries, sortKey = "score", direction = "desc") {
   return [...(section.indicators ?? [])].sort((a, b) => {
     const left = indicatorSortValue(a, timeseries, sortKey);
     const right = indicatorSortValue(b, timeseries, sortKey);
+    const leftValid = Number.isFinite(Number(left));
+    const rightValid = Number.isFinite(Number(right));
+    if (leftValid !== rightValid) return leftValid ? -1 : 1;
     const leftRank = Number.isFinite(Number(left)) ? Number(left) : Number.NEGATIVE_INFINITY;
     const rightRank = Number.isFinite(Number(right)) ? Number(right) : Number.NEGATIVE_INFINITY;
-    if (rightRank !== leftRank) return rightRank - leftRank;
+    if (rightRank !== leftRank) return direction === "asc" ? leftRank - rightRank : rightRank - leftRank;
     return clampScore(b.value) - clampScore(a.value);
   });
 }
@@ -1220,10 +1251,12 @@ function renderIndicatorSortControls(sectionId) {
                 class="indicator-sort__button ${index === 0 ? "is-active" : ""}"
                 data-indicator-sort="${option.key}"
                 data-section-id="${sectionId}"
-                title="${option.description}"
+                data-sort-direction="desc"
+                title="${sortOptionDescription(option, index === 0, "desc")}"
                 aria-pressed="${index === 0 ? "true" : "false"}"
+                aria-label="${sortOptionLabel(option, index === 0, "desc")} 정렬"
               >
-                ${option.label}
+                ${sortOptionLabel(option, index === 0, "desc")}
               </button>
             `
           )
@@ -1400,6 +1433,9 @@ function renderSection(section, timeseries, backtest, stressEpisodes) {
 function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime) {
   const data = evaluateDashboard(rawData);
   const enabledTabs = data.tabs.filter((tab) => tab.enabled);
+  const indicatorSortStates = Object.fromEntries(
+    data.sections.map((section) => [section.id, { key: "score", direction: "desc" }])
+  );
 
   app.innerHTML = `
     <header class="hero">
@@ -1461,16 +1497,24 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
       const section = data.sections.find((item) => item.id === sectionId);
       const grid = app.querySelector(`[data-indicator-grid="${sectionId}"]`);
       if (!section || !grid) return;
+      const current = indicatorSortStates[sectionId] ?? { key: "score", direction: "desc" };
+      const nextDirection = sortKey !== "score" && current.key === sortKey && current.direction === "desc" ? "asc" : "desc";
+      indicatorSortStates[sectionId] = { key: sortKey, direction: nextDirection };
 
       app
         .querySelectorAll(`[data-section-id="${sectionId}"]`)
         .forEach((item) => {
+          const option = indicatorSortOptions.find((candidate) => candidate.key === item.dataset.indicatorSort);
           const active = item === button;
           item.classList.toggle("is-active", active);
           item.setAttribute("aria-pressed", active ? "true" : "false");
+          item.dataset.sortDirection = active ? nextDirection : "desc";
+          item.textContent = sortOptionLabel(option, active, nextDirection);
+          item.title = sortOptionDescription(option, active, nextDirection);
+          item.setAttribute("aria-label", `${sortOptionLabel(option, active, nextDirection)} 정렬`);
         });
 
-      grid.innerHTML = sortedIndicators(section, timeseries, sortKey)
+      grid.innerHTML = sortedIndicators(section, timeseries, sortKey, nextDirection)
         .map((indicator) => renderIndicator(indicator, section.model.thresholds, timeseries))
         .join("");
     });
