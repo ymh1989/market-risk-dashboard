@@ -2,10 +2,12 @@ import json
 from pathlib import Path
 
 from update_market_risk import (
+    FRED_SERIES,
     ROOT,
     TICKERS,
     fetch_yahoo_chart,
     build_timeseries,
+    fetch_fred_series_with_fallback,
     fetch_naver_chart,
     NAVER_SYMBOLS,
     clamp,
@@ -75,8 +77,9 @@ def main():
 
     series_map = {key: fetch_yahoo_chart(config["symbol"]) for key, config in TICKERS.items()}
     naver_map = {key: fetch_naver_chart(config["symbol"]) for key, config in NAVER_SYMBOLS.items()}
+    fred_map = {key: fetch_fred_series_with_fallback(config) for key, config in FRED_SERIES.items()}
     timeseries = {
-        "series": build_timeseries(series_map, naver_map),
+        "series": build_timeseries(series_map, naver_map, fred_map),
     }
     score_points = weighted_dashboard_timeseries(timeseries, market["indicators"])
 

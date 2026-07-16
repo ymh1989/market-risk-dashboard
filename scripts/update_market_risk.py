@@ -2,6 +2,9 @@ import json
 import math
 import statistics
 import ast
+import csv
+import io
+import subprocess
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -13,6 +16,7 @@ DASHBOARD_FILE = ROOT / "data" / "risk-dashboard.json"
 SNAPSHOT_FILE = ROOT / "data" / "market-risk-snapshot.json"
 TIMESERIES_FILE = ROOT / "data" / "market-risk-timeseries.json"
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d"
+FRED_GRAPH_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-risk-dashboard/0.1)"
 KST = timezone(timedelta(hours=9))
 
@@ -54,6 +58,30 @@ NAVER_SYMBOLS = {
     "leeno": {"symbol": "058470", "label": "Leeno Industrial"},
     "kodex200": {"symbol": "069500", "label": "KODEX 200"},
     "kodex_leverage": {"symbol": "122630", "label": "KODEX Leverage"},
+}
+
+FRED_SERIES = {
+    "us2y": {"series_id": "DGS2", "local_column": "US2Y", "label": "US 2Y Treasury"},
+    "us_yield_curve_10y2y": {
+        "series_id": "T10Y2Y",
+        "local_column": "US_YIELD_CURVE_10Y2Y",
+        "label": "US 10Y-2Y Treasury Spread",
+    },
+    "us_high_yield_oas": {
+        "series_id": "BAMLH0A0HYM2",
+        "local_column": "US_HIGH_YIELD_OAS",
+        "label": "US High Yield OAS",
+    },
+    "us_financial_stress_stlfsi": {
+        "series_id": "STLFSI4",
+        "local_column": "US_FINANCIAL_STRESS_STLFSI",
+        "label": "St. Louis Fed Financial Stress Index",
+    },
+    "us_financial_conditions_nfci": {
+        "series_id": "NFCI",
+        "local_column": "US_FINANCIAL_CONDITIONS_NFCI",
+        "label": "Chicago Fed National Financial Conditions Index",
+    },
 }
 
 RISK_GROUPS = {
@@ -149,6 +177,108 @@ def fetch_naver_chart(symbol, lookback_days=760, start_date=None, end_date=None)
     if len(series) < 80:
         raise RuntimeError(f"{symbol}: not enough Naver observations ({len(series)})")
     return series
+
+
+def fetch_fred_series(series_id, lookback_days=1100, start_date=None, end_date=None):
+    end_date = end_date or datetime.now(KST).date()
+    start_date = start_date or (end_date - timedelta(days=lookback_days))
+    params = urllib.parse.urlencode(
+        {
+            "id": series_id,
+            "cosd": start_date.isoformat(),
+            "coed": end_date.isoformat(),
+        }
+    )
+    url = f"{FRED_GRAPH_URL}?{params}"
+    curl_result = subprocess.run(
+        ["curl", "-fsSL", "--max-time", "12", "-A", USER_AGENT, url],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if curl_result.returncode == 0 and curl_result.stdout.strip():
+        text = curl_result.stdout
+    else:
+        request = urllib.request.Request(
+            url,
+            headers={"User-Agent": USER_AGENT, "Accept": "text/csv"},
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            text = response.read().decode("utf-8", errors="ignore")
+
+    series = []
+    for row in csv.DictReader(io.StringIO(text)):
+        raw_value = row.get(series_id) or row.get("VALUE") or row.get("value")
+        if raw_value in (None, "", "."):
+            continue
+        try:
+            close = float(raw_value)
+        except ValueError:
+            continue
+        series.append(
+            {
+                "date": row["DATE"],
+                "close": close,
+                "volume": None,
+            }
+        )
+
+    if len(series) < 80:
+        raise RuntimeError(f"{series_id}: not enough FRED observations ({len(series)})")
+    return series
+
+
+def load_local_fred_series(column):
+    market_data_file = ROOT / "data" / "raw" / "market_data.csv"
+    if not market_data_file.exists():
+        raise RuntimeError(f"{market_data_file.relative_to(ROOT)} 파일이 없어 FRED fallback을 사용할 수 없습니다.")
+
+    series = []
+    with market_data_file.open(encoding="utf-8") as file:
+        for row in csv.DictReader(file):
+            raw_value = row.get(column)
+            if raw_value in (None, "", "."):
+                continue
+            try:
+                close = float(raw_value)
+            except ValueError:
+                continue
+            series.append({"date": row["date"], "close": close, "volume": None})
+
+    if len(series) < 80:
+        raise RuntimeError(f"{column}: not enough local FRED observations ({len(series)})")
+    return series
+
+
+def _is_recent_fred_fallback(series, max_age_days=7):
+    try:
+        last_date = datetime.strptime(series[-1]["date"], "%Y-%m-%d").date()
+    except (IndexError, KeyError, TypeError, ValueError):
+        return False
+    return (datetime.now(KST).date() - last_date).days <= max_age_days
+
+
+def fetch_fred_series_with_fallback(config):
+    local_error = None
+    try:
+        local_series = load_local_fred_series(config["local_column"])
+        if _is_recent_fred_fallback(local_series):
+            return local_series
+    except Exception as exc:
+        local_error = exc
+
+    try:
+        return fetch_fred_series(config["series_id"])
+    except Exception as exc:
+        if local_error is not None:
+            raise RuntimeError(
+                f"FRED 직접 조회와 로컬 fallback이 모두 실패했습니다: {config['series_id']} / {config['local_column']}"
+            ) from exc
+        print(
+            f"FRED 직접 조회 실패: {config['series_id']} ({exc}). "
+            f"data/raw/market_data.csv의 {config['local_column']} 컬럼을 사용합니다."
+        )
+        return load_local_fred_series(config["local_column"])
 
 
 def closes(series):
@@ -259,6 +389,16 @@ def rolling_negative_point_changes(values, periods=20):
             changes.append(None)
             continue
         changes.append(max(0.0, values[index - periods] - value))
+    return changes
+
+
+def rolling_positive_point_changes(values, periods=20):
+    changes = []
+    for index, value in enumerate(values):
+        if index < periods:
+            changes.append(None)
+            continue
+        changes.append(max(0.0, value - values[index - periods]))
     return changes
 
 
@@ -418,6 +558,79 @@ def level_and_change_score_at(series, end_index, change_periods=20):
                 hybrid_standard_score(
                     [value for value in positive_changes[-252:] if value is not None],
                     positive_changes[-1],
+                ),
+                0.45,
+            ),
+        ]
+    )
+
+
+def level_and_point_change_score(series, change_periods=20, direction="up"):
+    values = closes(series)
+    if direction not in ("up", "down"):
+        raise ValueError(f"지원하지 않는 direction입니다: {direction}")
+
+    risk_levels = values if direction == "up" else [-value for value in values]
+    point_changes = (
+        rolling_positive_point_changes(values, change_periods)
+        if direction == "up"
+        else rolling_negative_point_changes(values, change_periods)
+    )
+    level_score = hybrid_standard_score(risk_levels[-504:], risk_levels[-1])
+    change_score = hybrid_standard_score([value for value in point_changes[-252:] if value is not None], point_changes[-1])
+    score = score_from_metrics([(level_score, 0.55), (change_score, 0.45)])
+
+    prior_offset = min(change_periods, len(values) - 2)
+    prior_score = score_from_metrics(
+        [
+            (hybrid_standard_score(risk_levels[-504:], value_at(risk_levels, prior_offset)), 0.55),
+            (
+                hybrid_standard_score(
+                    [value for value in point_changes[-252:] if value is not None],
+                    value_at(point_changes, prior_offset),
+                ),
+                0.45,
+            ),
+        ]
+    )
+
+    point_change = values[-1] - values[-change_periods - 1] if len(values) > change_periods else 0.0
+    return {
+        "score": score,
+        "trend": trend_from_scores(score, prior_score),
+        "metrics": {
+            "last": values[-1],
+            "changePoints": round(point_change, 3),
+            "riskLevelPercentile": round(level_score, 1),
+            "changePeriods": change_periods,
+        },
+    }
+
+
+def level_and_point_change_score_at(series, end_index, change_periods=20, direction="up"):
+    if end_index < max(60, change_periods):
+        return None
+
+    values = closes(series[: end_index + 1])
+    if direction not in ("up", "down"):
+        raise ValueError(f"지원하지 않는 direction입니다: {direction}")
+
+    risk_levels = values if direction == "up" else [-value for value in values]
+    point_changes = (
+        rolling_positive_point_changes(values, change_periods)
+        if direction == "up"
+        else rolling_negative_point_changes(values, change_periods)
+    )
+    if point_changes[-1] is None:
+        return None
+
+    return score_from_metrics(
+        [
+            (hybrid_standard_score(risk_levels[-504:], risk_levels[-1]), 0.55),
+            (
+                hybrid_standard_score(
+                    [value for value in point_changes[-252:] if value is not None],
+                    point_changes[-1],
                 ),
                 0.45,
             ),
@@ -812,6 +1025,142 @@ def bigtech_ai_demand_pressure_score(series_map):
     }
 
 
+def _component_score_points(series, score_at_fn):
+    points = []
+    for index, point in enumerate(series):
+        score = score_at_fn(series, index)
+        if score is None:
+            continue
+        points.append({"date": point["date"], "value": score})
+    return points
+
+
+def _asof_score(points, date):
+    latest = None
+    for point in points:
+        if point["date"] <= date:
+            latest = point["value"]
+        else:
+            break
+    return latest
+
+
+def _weighted_asof_score_points(component_points, limit=120, step=1):
+    dates = sorted({point["date"] for config in component_points.values() for point in config["points"]})
+    points = []
+    for date in sampled_recent(dates, limit, step):
+        weighted_sum = 0.0
+        total_weight = 0.0
+        for config in component_points.values():
+            score = _asof_score(config["points"], date)
+            if score is None:
+                total_weight = 0.0
+                break
+            weighted_sum += score * config["weight"]
+            total_weight += config["weight"]
+        if total_weight <= 0:
+            continue
+        points.append({"date": date, "value": round_score(weighted_sum / total_weight)})
+    return points
+
+
+def us_credit_spread_score(fred_map):
+    score = level_and_point_change_score(fred_map["us_high_yield_oas"], change_periods=20, direction="up")
+    return {
+        "score": score["score"],
+        "trend": score["trend"],
+        "metrics": {
+            "highYieldOasLast": score["metrics"]["last"],
+            "highYieldOasChange20Obs": score["metrics"]["changePoints"],
+            "highYieldOasRiskPercentile": score["metrics"]["riskLevelPercentile"],
+        },
+    }
+
+
+def us_credit_spread_score_at(fred_map, date):
+    indexes = index_by_date(fred_map["us_high_yield_oas"])
+    eligible_dates = [item for item in indexes if item <= date]
+    if not eligible_dates:
+        return None
+    return level_and_point_change_score_at(
+        fred_map["us_high_yield_oas"],
+        indexes[max(eligible_dates)],
+        change_periods=20,
+        direction="up",
+    )
+
+
+def us_credit_spread_timeseries(fred_map, limit=120, step=1):
+    return single_indicator_timeseries(
+        fred_map["us_high_yield_oas"],
+        lambda series, index: level_and_point_change_score_at(series, index, change_periods=20, direction="up"),
+        limit=limit,
+        step=step,
+    )
+
+
+def us_financial_conditions_component_points(fred_map, limit=120, step=1):
+    component_points = {
+        "stlfsi": {
+            "weight": 0.3,
+            "points": _component_score_points(
+                fred_map["us_financial_stress_stlfsi"],
+                lambda series, index: level_and_point_change_score_at(series, index, change_periods=4, direction="up"),
+            ),
+        },
+        "nfci": {
+            "weight": 0.3,
+            "points": _component_score_points(
+                fred_map["us_financial_conditions_nfci"],
+                lambda series, index: level_and_point_change_score_at(series, index, change_periods=4, direction="up"),
+            ),
+        },
+        "us2y": {
+            "weight": 0.2,
+            "points": _component_score_points(
+                fred_map["us2y"],
+                lambda series, index: level_and_point_change_score_at(series, index, change_periods=20, direction="up"),
+            ),
+        },
+        "curve": {
+            "weight": 0.2,
+            "points": _component_score_points(
+                fred_map["us_yield_curve_10y2y"],
+                lambda series, index: level_and_point_change_score_at(series, index, change_periods=20, direction="down"),
+            ),
+        },
+    }
+    return _weighted_asof_score_points(component_points, limit=limit, step=step)
+
+
+def us_financial_conditions_score(fred_map):
+    points = us_financial_conditions_component_points(fred_map, limit=504, step=1)
+    if not points:
+        raise RuntimeError("미국 금융여건 긴축 압력 점수를 계산할 FRED 공통 데이터가 없습니다.")
+
+    latest = points[-1]
+    prior = points[max(0, len(points) - 21)]
+    stlfsi = level_and_point_change_score(fred_map["us_financial_stress_stlfsi"], change_periods=4, direction="up")
+    nfci = level_and_point_change_score(fred_map["us_financial_conditions_nfci"], change_periods=4, direction="up")
+    us2y = level_and_point_change_score(fred_map["us2y"], change_periods=20, direction="up")
+    curve = level_and_point_change_score(fred_map["us_yield_curve_10y2y"], change_periods=20, direction="down")
+
+    return {
+        "score": latest["value"],
+        "trend": trend_from_scores(latest["value"], prior["value"]),
+        "metrics": {
+            "stlfsiLast": stlfsi["metrics"]["last"],
+            "stlfsiChange4Obs": stlfsi["metrics"]["changePoints"],
+            "nfciLast": nfci["metrics"]["last"],
+            "nfciChange4Obs": nfci["metrics"]["changePoints"],
+            "us2yLast": us2y["metrics"]["last"],
+            "us2yChange20Obs": us2y["metrics"]["changePoints"],
+            "curveLast": curve["metrics"]["last"],
+            "curveChange20Obs": curve["metrics"]["changePoints"],
+        },
+    }
+
+
 def index_by_date(series):
     return {point["date"]: index for index, point in enumerate(series)}
 
@@ -909,7 +1258,7 @@ def korea_ai_timeseries(series_map, limit=120, step=1):
     return points
 
 
-def build_timeseries(series_map, naver_map, limit=120, step=1):
+def build_timeseries(series_map, naver_map, fred_map, limit=120, step=1):
     return {
         "kospi_price_stress": single_indicator_timeseries(
             series_map["kospi"], equity_stress_score_at, limit=limit, step=step
@@ -925,6 +1274,10 @@ def build_timeseries(series_map, naver_map, limit=120, step=1):
         ),
         "rates_pressure": single_indicator_timeseries(
             series_map["us10y"], level_and_change_score_at, limit=limit, step=step
+        ),
+        "us_credit_spread_stress": us_credit_spread_timeseries(fred_map, limit=limit, step=step),
+        "us_financial_conditions_stress": us_financial_conditions_component_points(
+            fred_map, limit=limit, step=step
         ),
         "global_ai_semiconductor_stress": global_ai_timeseries(series_map, limit=limit, step=step),
         "bigtech_ai_demand_pressure": bigtech_ai_demand_pressure_timeseries(
@@ -1041,12 +1394,14 @@ def enrich_indicators(indicators):
     return enriched, sorted(group_scores, key=lambda group: group["contribution"], reverse=True)
 
 
-def build_indicators(series_map, naver_map):
+def build_indicators(series_map, naver_map, fred_map):
     kospi = equity_stress_score(series_map["kospi"])
     kosdaq = equity_stress_score(series_map["kosdaq"])
     usdkrw = level_and_change_score(series_map["usdkrw"])
     vix = level_and_change_score(series_map["vix"])
     us10y = level_and_change_score(series_map["us10y"])
+    us_credit_spread = us_credit_spread_score(fred_map)
+    us_financial_conditions = us_financial_conditions_score(fred_map)
     global_ai = semiconductor_global_score(series_map)
     bigtech_demand = bigtech_ai_demand_pressure_score(series_map)
     korea_ai = korean_ai_semiconductor_score(series_map)
@@ -1097,7 +1452,7 @@ def build_indicators(series_map, naver_map):
             "group": "macro",
             "value": usdkrw["score"],
             "unit": "score",
-            "weight": 0.1,
+            "weight": 0.07,
             "trend": usdkrw["trend"],
             "detail": (
                 f"USD/KRW {fmt_number(usdkrw['metrics']['last'])}, 20일 변화율 {fmt_pct(usdkrw['metrics']['return20dPct'])}, "
@@ -1112,7 +1467,7 @@ def build_indicators(series_map, naver_map):
             "group": "macro",
             "value": vix["score"],
             "unit": "score",
-            "weight": 0.08,
+            "weight": 0.06,
             "trend": vix["trend"],
             "detail": (
                 f"VIX {fmt_number(vix['metrics']['last'])}, 20일 변화율 {fmt_pct(vix['metrics']['return20dPct'])}, "
@@ -1127,13 +1482,46 @@ def build_indicators(series_map, naver_map):
             "group": "macro",
             "value": us10y["score"],
             "unit": "score",
-            "weight": 0.07,
+            "weight": 0.04,
             "trend": us10y["trend"],
             "detail": (
                 f"미 10년 금리 proxy {fmt_number(us10y['metrics']['last'])}, 20일 변화율 "
                 f"{fmt_pct(us10y['metrics']['return20dPct'])}, 2년 분위 {us10y['metrics']['levelPercentile']:.1f}"
             ),
             "source": "Yahoo Finance chart: ^TNX",
+        },
+        {
+            "id": "us_credit_spread_stress",
+            "name": "미국 신용스프레드 스트레스",
+            "category": "신용/크레딧",
+            "group": "macro",
+            "value": us_credit_spread["score"],
+            "unit": "score",
+            "weight": 0.06,
+            "trend": us_credit_spread["trend"],
+            "detail": (
+                f"미국 하이일드 OAS {us_credit_spread['metrics']['highYieldOasLast']:.2f}%, "
+                f"최근 20개 관측치 변화 {us_credit_spread['metrics']['highYieldOasChange20Obs']:+.2f}%p, "
+                f"위험분위 {us_credit_spread['metrics']['highYieldOasRiskPercentile']:.1f}"
+            ),
+            "source": "FRED: BAMLH0A0HYM2",
+        },
+        {
+            "id": "us_financial_conditions_stress",
+            "name": "미국 금융여건 긴축 압력",
+            "category": "금융여건",
+            "group": "macro",
+            "value": us_financial_conditions["score"],
+            "unit": "score",
+            "weight": 0.04,
+            "trend": us_financial_conditions["trend"],
+            "detail": (
+                f"STLFSI {us_financial_conditions['metrics']['stlfsiLast']:.2f}, "
+                f"NFCI {us_financial_conditions['metrics']['nfciLast']:.2f}, "
+                f"미 2년 {us_financial_conditions['metrics']['us2yLast']:.2f}%, "
+                f"10Y-2Y {us_financial_conditions['metrics']['curveLast']:.2f}%p"
+            ),
+            "source": "FRED: STLFSI4, NFCI, DGS2, T10Y2Y",
         },
         {
             "id": "global_ai_semiconductor_stress",
@@ -1243,7 +1631,7 @@ def build_indicators(series_map, naver_map):
             "group": "macro",
             "value": global_credit["score"],
             "unit": "score",
-            "weight": 0.05,
+            "weight": 0.03,
             "trend": global_credit["trend"],
             "detail": (
                 f"HYG/LQD 상대가격 기준, 20일 수익률 {fmt_pct(global_credit['metrics']['return20dPct'])}, "
@@ -1270,23 +1658,27 @@ def build_indicators(series_map, naver_map):
     ]
 
 
-def update_dashboard(series_map, indicators):
+def update_dashboard(series_map, fred_map, indicators):
     dashboard = json.loads(DASHBOARD_FILE.read_text(encoding="utf-8"))
     generated_at = datetime.now(KST).strftime("%Y-%m-%d %H:%M KST")
-    as_of = max(point["date"] for series in series_map.values() for point in series[-1:])
+    as_of = max(
+        [point["date"] for series in series_map.values() for point in series[-1:]]
+        + [point["date"] for series in fred_map.values() for point in series[-1:]]
+    )
     enriched_indicators, group_scores = enrich_indicators(indicators)
 
     dashboard["metadata"]["asOf"] = as_of
     dashboard["metadata"]["generatedAt"] = generated_at
-    dashboard["metadata"]["source"] = "Yahoo Finance and Naver Finance chart endpoints via scripts/update_market_risk.py"
+    dashboard["metadata"]["source"] = "Yahoo Finance, Naver Finance, and FRED endpoints via scripts/update_market_risk.py"
 
     market = next(section for section in dashboard["sections"] if section["id"] == "market")
     market["description"] = (
-        "KOSPI/KOSDAQ, 원달러 환율, 글로벌 변동성·금리·크레딧, 외국인 보유비중, 거래량, "
+        "KOSPI/KOSDAQ, 원달러 환율, 글로벌 변동성·금리·크레딧, 미국 신용스프레드·금융여건, "
+        "외국인 보유비중, 거래량, "
         "대형 반도체 단일종목 레버리지성 스트레스, 빅테크 AI 수요 우려, "
         "AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다."
     )
-    market["model"]["version"] = "market-risk-v3-grouped-robust-zscore"
+    market["model"]["version"] = "market-risk-v4-fred-credit-financial-conditions"
     market["model"]["methodology"] = (
         "각 시계열의 2년 히스토리에서 레벨, 20일 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 "
         "분위수 점수, z-score 정규분포 변환 점수, median/MAD 기반 robust z-score 변환 점수로 "
@@ -1306,6 +1698,7 @@ def update_dashboard(series_map, indicators):
         "Naver Finance chart endpoint",
         "KOSPI/KOSDAQ price series",
         "USD/KRW, VIX, US 10Y proxy",
+        "FRED US 2Y, 10Y-2Y spread, high yield OAS, STLFSI, NFCI",
         "SOX, NVIDIA, TSMC ADR, Broadcom, AMD, Micron, ASML",
         "Apple, Microsoft, Alphabet, Meta Platforms, Amazon",
         "Samsung Electronics, SK hynix, Hanmi Semiconductor, DB HiTek, Leeno Industrial",
@@ -1325,6 +1718,14 @@ def update_dashboard(series_map, indicators):
             "label": "Naver Finance chart endpoint",
             "url": "https://api.finance.naver.com/siseJson.naver?symbol=005930&requestType=1&timeframe=day",
         },
+        {
+            "label": "FRED high yield OAS",
+            "url": "https://fred.stlouisfed.org/series/BAMLH0A0HYM2",
+        },
+        {
+            "label": "FRED financial conditions and stress indices",
+            "url": "https://fred.stlouisfed.org/series/NFCI",
+        },
     ]
     market["groupScores"] = group_scores
     market["indicators"] = enriched_indicators
@@ -1337,11 +1738,11 @@ def update_dashboard(series_map, indicators):
     DASHBOARD_FILE.write_text(json.dumps(dashboard, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def write_snapshot(series_map, naver_map, indicators):
+def write_snapshot(series_map, naver_map, fred_map, indicators):
     enriched_indicators, group_scores = enrich_indicators(indicators)
     snapshot = {
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "source": "Yahoo Finance and Naver Finance chart endpoints",
+        "source": "Yahoo Finance, Naver Finance, and FRED endpoints",
         "yahooSymbols": {
             key: {
                 "symbol": config["symbol"],
@@ -1364,19 +1765,29 @@ def write_snapshot(series_map, naver_map, indicators):
             }
             for key, config in NAVER_SYMBOLS.items()
         },
+        "fredSeries": {
+            key: {
+                "seriesId": config["series_id"],
+                "label": config["label"],
+                "lastDate": fred_map[key][-1]["date"],
+                "lastClose": round(fred_map[key][-1]["close"], 4),
+                "observations": len(fred_map[key]),
+            }
+            for key, config in FRED_SERIES.items()
+        },
         "groupScores": group_scores,
         "indicators": enriched_indicators,
     }
     SNAPSHOT_FILE.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def write_timeseries(series_map, naver_map):
+def write_timeseries(series_map, naver_map, fred_map):
     timeseries = {
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "source": "Yahoo Finance and Naver Finance chart endpoints",
+        "source": "Yahoo Finance, Naver Finance, and FRED endpoints",
         "window": "recent 120 observations per indicator",
         "unit": "risk score",
-        "series": build_timeseries(series_map, naver_map),
+        "series": build_timeseries(series_map, naver_map, fred_map),
     }
     TIMESERIES_FILE.write_text(json.dumps(timeseries, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -1384,10 +1795,11 @@ def write_timeseries(series_map, naver_map):
 def main():
     series_map = {key: fetch_yahoo_chart(config["symbol"]) for key, config in TICKERS.items()}
     naver_map = {key: fetch_naver_chart(config["symbol"]) for key, config in NAVER_SYMBOLS.items()}
-    indicators = build_indicators(series_map, naver_map)
-    update_dashboard(series_map, indicators)
-    write_snapshot(series_map, naver_map, indicators)
-    write_timeseries(series_map, naver_map)
+    fred_map = {key: fetch_fred_series_with_fallback(config) for key, config in FRED_SERIES.items()}
+    indicators = build_indicators(series_map, naver_map, fred_map)
+    update_dashboard(series_map, fred_map, indicators)
+    write_snapshot(series_map, naver_map, fred_map, indicators)
+    write_timeseries(series_map, naver_map, fred_map)
 
     total_weight = sum(indicator["weight"] for indicator in indicators)
     weighted_score = sum(indicator["value"] * indicator["weight"] for indicator in indicators) / total_weight

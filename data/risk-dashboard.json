@@ -3,8 +3,8 @@
     "title": "통합 리스크 모니터링 대시보드",
     "subtitle": "시장 조기경보 · 신용리스크 확장 준비 · 유동성리스크 확장 준비",
     "asOf": "2026-07-16",
-    "generatedAt": "2026-07-16 15:35 KST",
-    "source": "Yahoo Finance and Naver Finance chart endpoints via scripts/update_market_risk.py"
+    "generatedAt": "2026-07-16 16:01 KST",
+    "source": "Yahoo Finance, Naver Finance, and FRED endpoints via scripts/update_market_risk.py"
   },
   "tabs": [
     {
@@ -34,7 +34,7 @@
       "label": "시장리스크",
       "status": "active",
       "owner": "Risk Monitoring",
-      "description": "KOSPI/KOSDAQ, 원달러 환율, 글로벌 변동성·금리·크레딧, 외국인 보유비중, 거래량, 대형 반도체 단일종목 레버리지성 스트레스, 빅테크 AI 수요 우려, AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다.",
+      "description": "KOSPI/KOSDAQ, 원달러 환율, 글로벌 변동성·금리·크레딧, 미국 신용스프레드·금융여건, 외국인 보유비중, 거래량, 대형 반도체 단일종목 레버리지성 스트레스, 빅테크 AI 수요 우려, AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다.",
       "model": {
         "aggregation": "weightedAverage",
         "thresholds": [
@@ -63,13 +63,14 @@
             "tone": "danger"
           }
         ],
-        "version": "market-risk-v3-grouped-robust-zscore",
+        "version": "market-risk-v4-fred-credit-financial-conditions",
         "methodology": "각 시계열의 2년 히스토리에서 레벨, 20일 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 분위수 점수, z-score 정규분포 변환 점수, median/MAD 기반 robust z-score 변환 점수로 각각 0~100 표준화하고, 하위 리스크 그룹별 기여도를 함께 산출합니다.",
         "dataSources": [
           "Yahoo Finance chart endpoint",
           "Naver Finance chart endpoint",
           "KOSPI/KOSDAQ price series",
           "USD/KRW, VIX, US 10Y proxy",
+          "FRED US 2Y, 10Y-2Y spread, high yield OAS, STLFSI, NFCI",
           "SOX, NVIDIA, TSMC ADR, Broadcom, AMD, Micron, ASML",
           "Apple, Microsoft, Alphabet, Meta Platforms, Amazon",
           "Samsung Electronics, SK hynix, Hanmi Semiconductor, DB HiTek, Leeno Industrial",
@@ -88,6 +89,14 @@
           {
             "label": "Naver Finance chart endpoint",
             "url": "https://api.finance.naver.com/siseJson.naver?symbol=005930&requestType=1&timeframe=day"
+          },
+          {
+            "label": "FRED high yield OAS",
+            "url": "https://fred.stlouisfed.org/series/BAMLH0A0HYM2"
+          },
+          {
+            "label": "FRED financial conditions and stress indices",
+            "url": "https://fred.stlouisfed.org/series/NFCI"
           }
         ],
         "normalization": {
@@ -131,13 +140,13 @@
           "name": "KOSPI 가격 스트레스",
           "category": "한국주식",
           "group": "crash",
-          "value": 95.6,
+          "value": 95.5,
           "unit": "score",
           "weight": 0.11,
           "trend": "up",
-          "detail": "KOSPI 6,787.09, 20일 수익률 -25.12%, 20일 변동성 +76.61%, 고점대비 -25.54%",
+          "detail": "KOSPI 6,820.60, 20일 수익률 -24.75%, 20일 변동성 +76.21%, 고점대비 -25.17%",
           "source": "Yahoo Finance chart: ^KS11",
-          "contribution": 10.52,
+          "contribution": 10.51,
           "contributionPct": 11.0
         },
         {
@@ -149,7 +158,7 @@
           "unit": "score",
           "weight": 0.07,
           "trend": "up",
-          "detail": "KOSDAQ 789.16, 20일 수익률 -21.16%, 20일 변동성 +65.87%",
+          "detail": "KOSDAQ 791.84, 20일 수익률 -20.89%, 20일 변동성 +65.64%",
           "source": "Yahoo Finance chart: ^KQ11",
           "contribution": 6.56,
           "contributionPct": 7.0
@@ -159,28 +168,28 @@
           "name": "원/달러 환율 압력",
           "category": "외환",
           "group": "macro",
-          "value": 57.2,
+          "value": 56.7,
           "unit": "score",
-          "weight": 0.1,
+          "weight": 0.07,
           "trend": "down",
-          "detail": "USD/KRW 1,480.48, 20일 변화율 -2.95%, 2년 분위 83.1",
+          "detail": "USD/KRW 1,478.08, 20일 변화율 -3.10%, 2년 분위 82.1",
           "source": "Yahoo Finance chart: KRW=X",
-          "contribution": 5.72,
-          "contributionPct": 10.0
+          "contribution": 3.97,
+          "contributionPct": 7.0
         },
         {
           "id": "global_volatility_pressure",
           "name": "글로벌 변동성 압력",
           "category": "변동성",
           "group": "macro",
-          "value": 32.1,
+          "value": 32.0,
           "unit": "score",
-          "weight": 0.08,
+          "weight": 0.06,
           "trend": "down",
-          "detail": "VIX 15.67, 20일 변화율 -3.27%, 2년 분위 23.1",
+          "detail": "VIX 15.67, 20일 변화율 -3.27%, 2년 분위 23.0",
           "source": "Yahoo Finance chart: ^VIX",
-          "contribution": 2.57,
-          "contributionPct": 8.0
+          "contribution": 1.92,
+          "contributionPct": 6.0
         },
         {
           "id": "rates_pressure",
@@ -189,12 +198,40 @@
           "group": "macro",
           "value": 82.7,
           "unit": "score",
-          "weight": 0.07,
+          "weight": 0.04,
           "trend": "up",
           "detail": "미 10년 금리 proxy 4.55, 20일 변화율 +1.70%, 2년 분위 91.4",
           "source": "Yahoo Finance chart: ^TNX",
-          "contribution": 5.79,
-          "contributionPct": 7.0
+          "contribution": 3.31,
+          "contributionPct": 4.0
+        },
+        {
+          "id": "us_credit_spread_stress",
+          "name": "미국 신용스프레드 스트레스",
+          "category": "신용/크레딧",
+          "group": "macro",
+          "value": 33.0,
+          "unit": "score",
+          "weight": 0.06,
+          "trend": "flat",
+          "detail": "미국 하이일드 OAS 2.72%, 최근 20개 관측치 변화 +0.01%p, 위험분위 19.1",
+          "source": "FRED: BAMLH0A0HYM2",
+          "contribution": 1.98,
+          "contributionPct": 6.0
+        },
+        {
+          "id": "us_financial_conditions_stress",
+          "name": "미국 금융여건 긴축 압력",
+          "category": "금융여건",
+          "group": "macro",
+          "value": 40.3,
+          "unit": "score",
+          "weight": 0.04,
+          "trend": "down",
+          "detail": "STLFSI -0.88, NFCI -0.54, 미 2년 4.18%, 10Y-2Y 0.42%p",
+          "source": "FRED: STLFSI4, NFCI, DGS2, T10Y2Y",
+          "contribution": 1.61,
+          "contributionPct": 4.0
         },
         {
           "id": "global_ai_semiconductor_stress",
@@ -229,13 +266,13 @@
           "name": "한국 AI 반도체 쏠림/스트레스",
           "category": "AI 반도체",
           "group": "ai_semi",
-          "value": 67.3,
+          "value": 67.4,
           "unit": "score",
           "weight": 0.1,
           "trend": "flat",
-          "detail": "5개 한국 반도체 basket, 삼성전자 254,250.00, SK하이닉스 1,834,000.00, 반도체 60일 상대성과 -3.77%, 쏠림점수 12.6",
+          "detail": "5개 한국 반도체 basket, 삼성전자 255,000.00, SK하이닉스 1,842,000.00, 반도체 60일 상대성과 -3.91%, 쏠림점수 13.0",
           "source": "Yahoo Finance chart: 005930.KS, 000660.KS, 042700.KS, 000990.KS, 058470.KQ, ^KS11",
-          "contribution": 6.73,
+          "contribution": 6.74,
           "contributionPct": 10.0
         },
         {
@@ -257,13 +294,13 @@
           "name": "거래량 과열/위축 압력",
           "category": "유동성",
           "group": "liquidity",
-          "value": 26.7,
+          "value": 26.6,
           "unit": "score",
           "weight": 0.07,
           "trend": "flat",
-          "detail": "주요 반도체·KODEX ETF 거래량의 60일 평균 대비 평균 괴리 -8.88%, 최대 괴리 +8.07%",
+          "detail": "주요 반도체·KODEX ETF 거래량의 60일 평균 대비 평균 괴리 -8.75%, 최대 괴리 +8.44%",
           "source": "Naver Finance chart: 005930, 000660, 042700, 069500, 122630",
-          "contribution": 1.87,
+          "contribution": 1.86,
           "contributionPct": 7.0
         },
         {
@@ -271,13 +308,13 @@
           "name": "삼성전자·하이닉스 단일종목 레버리지",
           "category": "단일종목/레버리지",
           "group": "overheating",
-          "value": 73.3,
+          "value": 73.4,
           "unit": "score",
           "weight": 0.04,
           "trend": "up",
-          "detail": "삼성전자 254,250.00, SK하이닉스 1,834,000.00, 20일 수익률 삼성 -29.86%·하이닉스 -31.69%, KOSPI 대비 변동성 배율 삼성 1.33x·하이닉스 1.65x",
+          "detail": "삼성전자 255,000.00, SK하이닉스 1,842,000.00, 20일 수익률 삼성 -29.66%·하이닉스 -31.40%, KOSPI 대비 변동성 배율 삼성 1.34x·하이닉스 1.66x",
           "source": "Yahoo Finance chart: 005930.KS, 000660.KS, ^KS11",
-          "contribution": 2.93,
+          "contribution": 2.94,
           "contributionPct": 4.0
         },
         {
@@ -287,12 +324,12 @@
           "group": "macro",
           "value": 33.3,
           "unit": "score",
-          "weight": 0.05,
+          "weight": 0.03,
           "trend": "up",
           "detail": "HYG/LQD 상대가격 기준, 20일 수익률 +1.02%, 고점대비 -0.21%",
           "source": "Yahoo Finance chart: HYG, LQD",
-          "contribution": 1.66,
-          "contributionPct": 5.0
+          "contribution": 1.0,
+          "contributionPct": 3.0
         },
         {
           "id": "emerging_market_stress",
@@ -318,33 +355,33 @@
         {
           "id": "ai_semi",
           "label": "AI Semi",
-          "score": 66.5,
+          "score": 66.6,
           "weight": 0.26,
-          "contribution": 17.3,
+          "contribution": 17.31,
           "indicatorCount": 3
         },
         {
           "id": "crash",
           "label": "Crash Stress",
-          "score": 94.9,
+          "score": 94.8,
           "weight": 0.18,
-          "contribution": 17.08,
+          "contribution": 17.07,
           "indicatorCount": 2
         },
         {
           "id": "macro",
           "label": "Macro",
-          "score": 52.5,
+          "score": 46.0,
           "weight": 0.3,
-          "contribution": 15.74,
-          "indicatorCount": 4
+          "contribution": 13.79,
+          "indicatorCount": 6
         },
         {
           "id": "overheating",
           "label": "Overheating",
-          "score": 83.0,
+          "score": 83.1,
           "weight": 0.09,
-          "contribution": 7.47,
+          "contribution": 7.48,
           "indicatorCount": 2
         },
         {
@@ -358,9 +395,9 @@
         {
           "id": "liquidity",
           "label": "Liquidity",
-          "score": 26.7,
+          "score": 26.6,
           "weight": 0.07,
-          "contribution": 1.87,
+          "contribution": 1.86,
           "indicatorCount": 1
         }
       ]
