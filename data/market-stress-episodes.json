@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-16 15:40:26 KST",
-  "source": "Yahoo Finance and Naver Finance chart endpoints",
+  "generatedAt": "2026-07-19 19:13:17 KST",
+  "source": "Yahoo Finance, Naver Finance, and FRED endpoints",
   "historyCache": "data/market-history-cache.json",
   "methodology": "2020년 이후 동일 시장리스크 모델 점수와 KOSPI 252일 고점대비 낙폭을 함께 평가해 모델 점수 75 이상 또는 KOSPI 낙폭 10% 이상인 거래일을 주요 스트레스 후보로 묶습니다.",
   "sampleStart": "2020-01-06",
@@ -21,8 +21,8 @@
       "endDate": "2026-03-25",
       "tradingDays": 2,
       "peakDate": "2026-03-25",
-      "peakScore": 74.3,
-      "averageScore": 71.6,
+      "peakScore": 72.6,
+      "averageScore": 70.3,
       "kospiStart": 5583.9,
       "kospiEnd": 5642.21,
       "kospiLow": 5583.9,
@@ -40,13 +40,6 @@
           "contribution": 10.09
         },
         {
-          "id": "usdkrw_fx_pressure",
-          "name": "원/달러 환율 압력",
-          "group": "macro",
-          "score": 99.0,
-          "contribution": 9.9
-        },
-        {
           "id": "korea_ai_semiconductor_concentration",
           "name": "한국 AI 반도체 쏠림/스트레스",
           "group": "ai_semi",
@@ -59,24 +52,31 @@
           "group": "flow",
           "score": 80.2,
           "contribution": 8.02
+        },
+        {
+          "id": "usdkrw_fx_pressure",
+          "name": "원/달러 환율 압력",
+          "group": "macro",
+          "score": 99.0,
+          "contribution": 6.93
         }
       ]
     },
     {
-      "id": "2024-08-02_2025-05-09",
+      "id": "2024-09-11_2025-05-09",
       "label": "AI 반도체 변동성",
-      "startDate": "2024-08-02",
+      "startDate": "2024-09-11",
       "endDate": "2025-05-09",
-      "tradingDays": 13,
+      "tradingDays": 12,
       "peakDate": "2025-04-09",
-      "peakScore": 78.0,
-      "averageScore": 66.9,
-      "kospiStart": 2676.19,
+      "peakScore": 78.1,
+      "averageScore": 64.3,
+      "kospiStart": 2513.37,
       "kospiEnd": 2577.27,
       "kospiLow": 2293.7,
-      "kospiEpisodeReturnPct": -3.7,
+      "kospiEpisodeReturnPct": 2.54,
       "kospiMaxDrawdownFromHighPct": 20.67,
-      "kospiLowFromStartPct": -14.29,
+      "kospiLowFromStartPct": -8.74,
       "forward20dMaxDrawdownFromPeakPct": 0.0,
       "trigger": "modelScore",
       "topContributors": [
@@ -95,18 +95,18 @@
           "contribution": 8.82
         },
         {
-          "id": "global_volatility_pressure",
-          "name": "글로벌 변동성 압력",
-          "group": "macro",
-          "score": 95.7,
-          "contribution": 7.66
-        },
-        {
           "id": "foreign_ownership_pressure",
           "name": "외국인 소진율 이탈 압력",
           "group": "flow",
           "score": 69.2,
           "contribution": 6.92
+        },
+        {
+          "id": "kosdaq_growth_stress",
+          "name": "KOSDAQ 성장주 스트레스",
+          "group": "crash",
+          "score": 92.5,
+          "contribution": 6.48
         }
       ]
     },
@@ -117,8 +117,8 @@
       "endDate": "2023-03-31",
       "tradingDays": 31,
       "peakDate": "2022-06-14",
-      "peakScore": 78.4,
-      "averageScore": 59.9,
+      "peakScore": 77.7,
+      "averageScore": 59.6,
       "kospiStart": 2959.46,
       "kospiEnd": 2476.86,
       "kospiLow": 2202.47,
@@ -133,28 +133,28 @@
           "name": "KOSPI 가격 스트레스",
           "group": "crash",
           "score": 90.8,
-          "contribution": 9.99
-        },
-        {
-          "id": "usdkrw_fx_pressure",
-          "name": "원/달러 환율 압력",
-          "group": "macro",
-          "score": 87.8,
-          "contribution": 8.78
+          "contribution": 10.63
         },
         {
           "id": "global_ai_semiconductor_stress",
           "name": "글로벌 AI 반도체 스트레스",
           "group": "ai_semi",
           "score": 87.2,
-          "contribution": 8.72
+          "contribution": 9.28
         },
         {
-          "id": "global_volatility_pressure",
-          "name": "글로벌 변동성 압력",
-          "group": "macro",
-          "score": 86.9,
-          "contribution": 6.95
+          "id": "korea_ai_semiconductor_concentration",
+          "name": "한국 AI 반도체 쏠림/스트레스",
+          "group": "ai_semi",
+          "score": 62.7,
+          "contribution": 6.67
+        },
+        {
+          "id": "foreign_ownership_pressure",
+          "name": "외국인 소진율 이탈 압력",
+          "group": "flow",
+          "score": 62.5,
+          "contribution": 6.65
         }
       ]
     },
@@ -165,8 +165,8 @@
       "endDate": "2020-05-15",
       "tradingDays": 5,
       "peakDate": "2020-03-16",
-      "peakScore": 86.0,
-      "averageScore": 76.6,
+      "peakScore": 86.6,
+      "averageScore": 77.2,
       "kospiStart": 2103.61,
       "kospiEnd": 1927.28,
       "kospiLow": 1686.24,
@@ -181,28 +181,28 @@
           "name": "KOSPI 가격 스트레스",
           "group": "crash",
           "score": 96.2,
-          "contribution": 12.75
+          "contribution": 13.74
         },
         {
           "id": "global_ai_semiconductor_stress",
           "name": "글로벌 AI 반도체 스트레스",
           "group": "ai_semi",
           "score": 96.2,
-          "contribution": 11.59
-        },
-        {
-          "id": "usdkrw_fx_pressure",
-          "name": "원/달러 환율 압력",
-          "group": "macro",
-          "score": 92.3,
-          "contribution": 11.12
+          "contribution": 12.49
         },
         {
           "id": "korea_ai_semiconductor_concentration",
           "name": "한국 AI 반도체 쏠림/스트레스",
           "group": "ai_semi",
           "score": 83.1,
-          "contribution": 10.01
+          "contribution": 10.79
+        },
+        {
+          "id": "kosdaq_growth_stress",
+          "name": "KOSDAQ 성장주 스트레스",
+          "group": "crash",
+          "score": 96.2,
+          "contribution": 8.75
         }
       ]
     }
