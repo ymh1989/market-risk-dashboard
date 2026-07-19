@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260716-3";
+const ASSET_VERSION = "20260719-1";
 
 const indicatorSortOptions = [
   { key: "score", label: "점수순", description: "현재 점수가 높은 지표부터 봅니다." },
@@ -35,6 +35,15 @@ const trendLabel = {
   flat: "보합"
 };
 
+const sentimentGroupDefinitions = [
+  { id: "crash", label: "가격 안정감", detail: "가격·변동성 스트레스의 반대 점수" },
+  { id: "macro", label: "매크로 안정감", detail: "환율·금리·원자재 부담의 반대 점수" },
+  { id: "ai_semi", label: "AI·반도체 심리", detail: "AI 수요와 반도체 집중 부담의 반대 점수" },
+  { id: "flow", label: "수급 신뢰", detail: "외국인·시장 수급 압력의 반대 점수" },
+  { id: "liquidity", label: "거래 안정감", detail: "거래량 과열·위축 부담의 반대 점수" },
+  { id: "overheating", label: "과열 부담 완화", detail: "밸류에이션·쏠림 부담의 반대 점수" }
+];
+
 const formatScore = (value) => `${clampScore(value).toFixed(1)} / 100`;
 const formatPct = (value) => `${Number(value).toFixed(2)}%`;
 const formatSignedPct = (value) => {
@@ -52,6 +61,7 @@ const formatShortDate = (value) => {
   const date = new Date(`${value}T00:00:00Z`);
   return `${date.getUTCMonth() + 1}.${String(date.getUTCDate()).padStart(2, "0")}`;
 };
+const inverseScore = (value) => clampScore(100 - clampScore(value));
 const categoryCountText = (indicators) => {
   const counts = indicators.reduce((acc, indicator) => {
     acc[indicator.category] = (acc[indicator.category] ?? 0) + 1;
@@ -211,6 +221,63 @@ function buildCompositeSeries(section, timeseries) {
     composite.push({ date: section.asOf ?? latest.date, value: currentScore });
   }
   return composite;
+}
+
+function dashboardTabsWithSentiment(tabs) {
+  if (tabs.some((tab) => tab.id === "sentiment")) return tabs;
+  const summaryIndex = tabs.findIndex((tab) => tab.id === "summary");
+  const insertAt = summaryIndex >= 0 ? summaryIndex + 1 : 0;
+  const sentimentTab = { id: "sentiment", label: "시장 센티멘트", enabled: true };
+  return [...tabs.slice(0, insertAt), sentimentTab, ...tabs.slice(insertAt)];
+}
+
+function buildSentimentSeries(section, timeseries) {
+  return buildCompositeSeries(section, timeseries).map((point) => ({
+    date: point.date,
+    value: inverseScore(point.value)
+  }));
+}
+
+function sentimentLevel(score) {
+  if (score >= 65) {
+    return {
+      label: "Risk-on",
+      tone: "good",
+      reading: "가격과 수급이 위험선호에 우호적입니다. 과열 여부는 별도로 확인해야 합니다."
+    };
+  }
+  if (score >= 50) {
+    return {
+      label: "중립 우위",
+      tone: "watch",
+      reading: "위험선호가 근소하게 우세하지만 방향성이 뚜렷하지 않은 구간입니다."
+    };
+  }
+  if (score >= 35) {
+    return {
+      label: "Risk-off 경계",
+      tone: "caution",
+      reading: "시장 부담이 우세합니다. 반등 국면에서도 변동성과 수급 악화를 함께 확인해야 합니다."
+    };
+  }
+  return {
+    label: "Risk-off",
+    tone: "danger",
+    reading: "안전자산 선호와 방어적 포지셔닝이 우세한 구간입니다."
+  };
+}
+
+function sentimentTone(score) {
+  return sentimentLevel(score).tone;
+}
+
+function indicatorWeeklyChange(indicator, timeseries) {
+  return valueChange(indicator.value, timeseries?.series?.[indicator.id] ?? [], 5);
+}
+
+function sentimentChangeTone(value) {
+  if (value === null || value === undefined || Math.abs(value) < 0.05) return "flat";
+  return value > 0 ? "up" : "down";
 }
 
 function trendChartPath(points, width = 760, height = 210, padding = 18) {
@@ -1266,6 +1333,183 @@ function renderIndicatorSortControls(sectionId) {
   `;
 }
 
+function renderSentimentMoverList(title, eyebrow, items, mode = "change") {
+  return `
+    <section class="sentiment-list">
+      <div>
+        <span class="eyebrow">${eyebrow}</span>
+        <h3>${title}</h3>
+      </div>
+      <ol>
+        ${
+          items.length
+            ? items
+                .map((item) => {
+                  const sentimentChange = -Number(item.change1w);
+                  const value = mode === "score" ? formatScore(item.value) : formatPointDelta(sentimentChange);
+                  const tone =
+                    mode === "score" ? sentimentTone(inverseScore(item.value)) : sentimentChangeTone(sentimentChange);
+                  return `
+                    <li>
+                      <span>${item.name}</span>
+                      <strong class="sentiment-value sentiment-value--${tone}">${value}</strong>
+                    </li>
+                  `;
+                })
+                .join("")
+            : `<li class="sentiment-list__empty">유의한 변화 없음</li>`
+        }
+      </ol>
+    </section>
+  `;
+}
+
+function renderSentimentPage(data, timeseries, mlRisk, elsRisk, hmmRegime) {
+  const market = data.sections.find((section) => section.id === "market");
+  if (!market) return "";
+
+  market.asOf = data.metadata.asOf;
+  const score = inverseScore(market.score);
+  const level = sentimentLevel(score);
+  const points = buildSentimentSeries(market, timeseries);
+  const latest = points[points.length - 1] ?? { date: data.metadata.asOf, value: score };
+  const path = trendChartPath(points);
+  const areaPath = path ? `${path} L 760 190 L 0 190 Z` : "";
+  const monthAxis = renderMonthAxis(points);
+  const changes = [
+    ["1D", valueChange(latest.value, points, 1)],
+    ["1W", valueChange(latest.value, points, 5)],
+    ["1M", valueChange(latest.value, points, 20)]
+  ];
+  const groupById = Object.fromEntries((market.groupScores ?? []).map((group) => [group.id, group]));
+  const components = sentimentGroupDefinitions
+    .map((definition) => ({ ...definition, group: groupById[definition.id] }))
+    .filter((item) => item.group);
+  const indicatorMoves = (market.indicators ?? [])
+    .map((indicator) => ({ ...indicator, change1w: indicatorWeeklyChange(indicator, timeseries) }))
+    .filter((indicator) => Number.isFinite(Number(indicator.change1w)));
+  const worsening = indicatorMoves
+    .filter((indicator) => indicator.change1w > 0.05)
+    .sort((a, b) => b.change1w - a.change1w)
+    .slice(0, 4);
+  const improving = indicatorMoves
+    .filter((indicator) => indicator.change1w < -0.05)
+    .sort((a, b) => a.change1w - b.change1w)
+    .slice(0, 4);
+  const pressure = [...(market.indicators ?? [])].sort((a, b) => clampScore(b.value) - clampScore(a.value)).slice(0, 4);
+  const mlRiskOff = Number(mlRisk?.latest?.riskOffProbabilityPct);
+  const mlSentiment = Number.isFinite(mlRiskOff) ? inverseScore(mlRiskOff) : null;
+  const elsScore = Number(elsRisk?.basket?.score);
+  const elsSentiment = Number.isFinite(elsScore) ? inverseScore(elsScore) : null;
+
+  return `
+    <section class="sentiment-page">
+      <header class="sentiment-hero">
+        <div>
+          <span class="eyebrow">Market Sentiment</span>
+          <h2>시장 센티멘트</h2>
+          <p>${level.reading}</p>
+        </div>
+        <div class="sentiment-state sentiment-state--${level.tone}">
+          <span>현재 심리</span>
+          <strong>${level.label}</strong>
+          <small>${formatScore(score)}</small>
+        </div>
+      </header>
+
+      <div class="sentiment-signal-grid">
+        ${createMetricCard({
+          label: "ML 향후심리",
+          value: mlSentiment === null ? "-" : formatScore(mlSentiment),
+          meta: mlSentiment === null ? "데이터 준비중" : `5일 risk-off 확률 ${mlRiskOff.toFixed(1)}%의 반대 점수`,
+          tone: mlSentiment === null ? "neutral" : sentimentTone(mlSentiment)
+        })}
+        ${createMetricCard({
+          label: "ELS 바스켓 심리",
+          value: elsSentiment === null ? "-" : formatScore(elsSentiment),
+          meta: elsSentiment === null ? "데이터 준비중" : `${elsRisk.basket.bucket} · 바스켓 리스크의 반대 점수`,
+          tone: elsSentiment === null ? "neutral" : sentimentTone(elsSentiment)
+        })}
+        ${createMetricCard({
+          label: "HMM 시장 레짐",
+          value: hmmRegime?.basket?.regime ?? "-",
+          meta: hmmRegime?.basket
+            ? `위험회피 ${hmmRegime.basket.riskOffCount} · 고변동성 활황 ${hmmRegime.basket.highVolBullCount} · 안정 ${hmmRegime.basket.stableCount}`
+            : "데이터 준비중",
+          tone: hmmRegime?.basket?.tone ?? "neutral"
+        })}
+      </div>
+
+      ${
+        points.length >= 2
+          ? `<section class="trend-panel sentiment-trend">
+              <div class="trend-panel__header">
+                <div>
+                  <span class="eyebrow">Sentiment Trend</span>
+                  <h2>시장 센티멘트 흐름</h2>
+                </div>
+                <div class="trend-score">
+                  <strong>${formatScore(latest.value)}</strong>
+                  <span>${latest.date}</span>
+                </div>
+              </div>
+              <div class="trend-kpis">
+                ${changes
+                  .map(
+                    ([label, value]) => `<span class="change-pill change-pill--${sentimentChangeTone(value)}"><small>${label}</small><strong>${formatPointDelta(value)}</strong></span>`
+                  )
+                  .join("")}
+                <span><small>기준</small><strong>50.0</strong></span>
+              </div>
+              <div class="trend-chart" aria-label="시장 센티멘트 시계열">
+                <svg viewBox="0 0 760 210" role="img">
+                  ${monthAxis.grid}
+                  <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
+                  <path class="trend-chart__area" d="${areaPath}"></path>
+                  <path class="trend-chart__line" d="${path}"></path>
+                  ${monthAxis.labels}
+                </svg>
+              </div>
+            </section>`
+          : ""
+      }
+
+      <section class="sentiment-components">
+        <div class="sentiment-section-heading">
+          <div>
+            <span class="eyebrow">Drivers</span>
+            <h2>심리 구성요소</h2>
+          </div>
+          <p>높을수록 해당 영역의 시장 부담이 낮다는 뜻입니다.</p>
+        </div>
+        <div class="sentiment-component-grid">
+          ${components
+            .map(({ label, detail, group }) => {
+              const componentScore = inverseScore(group.score);
+              return `
+                <article class="sentiment-component sentiment-component--${sentimentTone(componentScore)}">
+                  <div>
+                    <h3>${label}</h3>
+                    <p>${detail}</p>
+                  </div>
+                  <strong>${componentScore.toFixed(1)}</strong>
+                  <div class="sentiment-meter" aria-hidden="true"><span style="width:${componentScore}%"></span></div>
+                </article>
+              `;
+            })
+            .join("")}
+        </div>
+      </section>
+
+      <section class="sentiment-movers">
+        ${renderSentimentMoverList("심리를 끌어내린 지표", "1W Deterioration", worsening)}
+        ${renderSentimentMoverList("심리를 회복시킨 지표", "1W Improvement", improving)}
+        ${renderSentimentMoverList("현재 부담 상위 지표", "Current Pressure", pressure, "score")}
+      </section>
+    </section>
+  `;
+}
+
 function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime) {
   const market = data.sections.find((section) => section.id === "market");
   market.asOf = data.metadata.asOf;
@@ -1432,7 +1676,8 @@ function renderSection(section, timeseries, backtest, stressEpisodes) {
 
 function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime) {
   const data = evaluateDashboard(rawData);
-  const enabledTabs = data.tabs.filter((tab) => tab.enabled);
+  const dashboardTabs = dashboardTabsWithSentiment(data.tabs);
+  const enabledTabs = dashboardTabs.filter((tab) => tab.enabled);
   const indicatorSortStates = Object.fromEntries(
     data.sections.map((section) => [section.id, { key: "score", direction: "desc" }])
   );
@@ -1453,7 +1698,7 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
 
     <nav class="tabs" aria-label="리스크 대시보드 탭">
       <div class="tabs__items">
-        ${data.tabs
+        ${dashboardTabs
           .map(
             (tab) => `
               <button class="tab-button ${tab.id === "summary" ? "is-active" : ""}" data-tab="${tab.id}" ${
@@ -1473,6 +1718,9 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
     <div class="panel-stack">
       <section class="tab-panel is-active" data-panel="summary">
         ${renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime)}
+      </section>
+      <section class="tab-panel" data-panel="sentiment">
+        ${renderSentimentPage(data, timeseries, mlRisk, elsRisk, hmmRegime)}
       </section>
       ${data.sections.map((section) => renderSection(section, timeseries, backtest, stressEpisodes)).join("")}
     </div>
@@ -1525,29 +1773,26 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
   updateThemeButton();
 }
 
+async function loadJson(path, required = false) {
+  try {
+    const response = await fetch(versioned(path));
+    if (!response.ok) throw new Error(`${path} 응답 오류: ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    if (required) throw error;
+    console.warn(`선택 데이터 로드 실패: ${path}`, error);
+    return null;
+  }
+}
+
 Promise.all([
-  fetch(versioned("./data/risk-dashboard.json")).then((response) => {
-    if (!response.ok) throw new Error(`Dashboard data load failed: ${response.status}`);
-    return response.json();
-  }),
-  fetch(versioned("./data/market-risk-timeseries.json"))
-    .then((response) => (response.ok ? response.json() : null))
-    .catch(() => null),
-  fetch(versioned("./data/market-risk-backtest.json"))
-    .then((response) => (response.ok ? response.json() : null))
-    .catch(() => null),
-  fetch(versioned("./data/market-stress-episodes.json"))
-    .then((response) => (response.ok ? response.json() : null))
-    .catch(() => null),
-  fetch(versioned("./data/ml-risk-signal.json"))
-    .then((response) => (response.ok ? response.json() : null))
-    .catch(() => null),
-  fetch(versioned("./data/els-index-risk.json"))
-    .then((response) => (response.ok ? response.json() : null))
-    .catch(() => null),
-  fetch(versioned("./data/hmm-regime.json"))
-    .then((response) => (response.ok ? response.json() : null))
-    .catch(() => null)
+  loadJson("./data/risk-dashboard.json", true),
+  loadJson("./data/market-risk-timeseries.json"),
+  loadJson("./data/market-risk-backtest.json"),
+  loadJson("./data/market-stress-episodes.json"),
+  loadJson("./data/ml-risk-signal.json"),
+  loadJson("./data/els-index-risk.json"),
+  loadJson("./data/hmm-regime.json")
 ])
   .then(([dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime]) =>
     renderDashboard(dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime)

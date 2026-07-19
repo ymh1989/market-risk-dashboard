@@ -1969,6 +1969,266 @@ select {
   line-height: 1.35;
 }
 
+.sentiment-page {
+  display: grid;
+  gap: 16px;
+}
+
+.sentiment-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  align-items: center;
+  gap: 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 26px;
+}
+
+.sentiment-hero h2,
+.sentiment-section-heading h2 {
+  margin: 6px 0 0;
+  font-size: 1.45rem;
+}
+
+.sentiment-hero p {
+  max-width: 720px;
+  margin: 12px 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.sentiment-state {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+  min-height: 116px;
+  align-content: center;
+  border: 1px solid var(--line);
+  border-top-width: 4px;
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 16px;
+  text-align: right;
+}
+
+.sentiment-state span,
+.sentiment-state small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.sentiment-state strong {
+  font-size: 1.45rem;
+}
+
+.sentiment-state--good {
+  border-top-color: var(--green);
+}
+
+.sentiment-state--watch {
+  border-top-color: var(--blue);
+}
+
+.sentiment-state--caution {
+  border-top-color: var(--amber);
+}
+
+.sentiment-state--danger {
+  border-top-color: var(--red);
+}
+
+.sentiment-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.sentiment-signal-grid .metric-card {
+  min-height: 142px;
+}
+
+.sentiment-trend {
+  margin-top: 0;
+}
+
+.sentiment-page .change-pill--up {
+  border-color: color-mix(in srgb, var(--green) 45%, var(--line));
+}
+
+.sentiment-page .change-pill--up strong,
+.sentiment-value--up,
+.sentiment-value--good {
+  color: var(--green);
+}
+
+.sentiment-page .change-pill--down {
+  border-color: color-mix(in srgb, var(--red) 45%, var(--line));
+}
+
+.sentiment-page .change-pill--down strong,
+.sentiment-value--down,
+.sentiment-value--danger {
+  color: var(--red);
+}
+
+.sentiment-value--watch {
+  color: var(--blue);
+}
+
+.sentiment-value--caution {
+  color: var(--amber);
+}
+
+.sentiment-value--flat {
+  color: var(--muted);
+}
+
+.sentiment-components {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 24px;
+}
+
+.sentiment-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.sentiment-section-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.sentiment-component-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sentiment-component {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 16px;
+  min-height: 120px;
+  border: 1px solid var(--line);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 16px;
+}
+
+.sentiment-component h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.sentiment-component p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.sentiment-component > strong {
+  font-size: 1.55rem;
+}
+
+.sentiment-component--good {
+  border-left-color: var(--green);
+}
+
+.sentiment-component--watch {
+  border-left-color: var(--blue);
+}
+
+.sentiment-component--caution {
+  border-left-color: var(--amber);
+}
+
+.sentiment-component--danger {
+  border-left-color: var(--red);
+}
+
+.sentiment-meter {
+  grid-column: 1 / -1;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--line);
+}
+
+.sentiment-meter span {
+  display: block;
+  height: 100%;
+  background: var(--teal);
+}
+
+.sentiment-movers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.sentiment-list {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 20px;
+}
+
+.sentiment-list h3 {
+  margin: 5px 0 0;
+  font-size: 1rem;
+}
+
+.sentiment-list ol {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sentiment-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 42px;
+  border-top: 1px solid var(--line);
+  font-size: 0.83rem;
+}
+
+.sentiment-list li:first-child {
+  border-top: 0;
+}
+
+.sentiment-list li span {
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.sentiment-list .sentiment-list__empty {
+  color: var(--muted);
+}
+
+.sentiment-value {
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+}
+
 .action-panel {
   margin-top: 16px;
   padding: 20px;
@@ -2010,6 +2270,9 @@ select {
   }
 
   .summary-grid,
+  .sentiment-signal-grid,
+  .sentiment-component-grid,
+  .sentiment-movers,
   .ml-risk-grid,
   .els-index-cards,
   .hmm-regime-cards,
@@ -2018,6 +2281,14 @@ select {
   .group-panel,
   .indicator-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sentiment-hero {
+    grid-template-columns: minmax(0, 1fr) 200px;
+  }
+
+  .sentiment-movers .sentiment-list:last-child {
+    grid-column: 1 / -1;
   }
 
   .model-panel {
@@ -2122,6 +2393,9 @@ select {
   }
 
   .summary-grid,
+  .sentiment-signal-grid,
+  .sentiment-component-grid,
+  .sentiment-movers,
   .ml-risk-grid,
   .els-index-cards,
   .hmm-regime-cards,
@@ -2131,6 +2405,21 @@ select {
   .group-panel,
   .indicator-grid {
     grid-template-columns: 1fr;
+  }
+
+  .sentiment-hero,
+  .sentiment-section-heading {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .sentiment-state {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .sentiment-movers .sentiment-list:last-child {
+    grid-column: auto;
   }
 
   .metric-card {
