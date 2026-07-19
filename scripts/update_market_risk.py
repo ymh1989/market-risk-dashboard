@@ -5,6 +5,7 @@ import ast
 import csv
 import io
 import subprocess
+import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -19,6 +20,7 @@ YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?ra
 FRED_GRAPH_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-risk-dashboard/0.1)"
 KST = timezone(timedelta(hours=9))
+FRED_FETCH_ATTEMPTS = 3
 
 TICKERS = {
     "kospi": {"symbol": "^KS11", "label": "KOSPI"},
@@ -267,18 +269,29 @@ def fetch_fred_series_with_fallback(config):
     except Exception as exc:
         local_error = exc
 
-    try:
-        return fetch_fred_series(config["series_id"])
-    except Exception as exc:
-        if local_error is not None:
-            raise RuntimeError(
-                f"FRED 직접 조회와 로컬 fallback이 모두 실패했습니다: {config['series_id']} / {config['local_column']}"
-            ) from exc
-        print(
-            f"FRED 직접 조회 실패: {config['series_id']} ({exc}). "
-            f"data/raw/market_data.csv의 {config['local_column']} 컬럼을 사용합니다."
-        )
-        return load_local_fred_series(config["local_column"])
+    direct_error = None
+    for attempt in range(1, FRED_FETCH_ATTEMPTS + 1):
+        try:
+            return fetch_fred_series(config["series_id"])
+        except Exception as exc:
+            direct_error = exc
+            if attempt < FRED_FETCH_ATTEMPTS:
+                delay_seconds = 2 ** (attempt - 1)
+                print(
+                    f"FRED 조회 재시도 대기: {config['series_id']} "
+                    f"({attempt}/{FRED_FETCH_ATTEMPTS}, {delay_seconds}초)"
+                )
+                time.sleep(delay_seconds)
+
+    if local_error is not None:
+        raise RuntimeError(
+            f"FRED 직접 조회와 로컬 fallback이 모두 실패했습니다: {config['series_id']} / {config['local_column']}"
+        ) from direct_error
+    print(
+        f"FRED 직접 조회 실패: {config['series_id']} ({direct_error}). "
+        f"data/raw/market_data.csv의 {config['local_column']} 컬럼을 사용합니다."
+    )
+    return load_local_fred_series(config["local_column"])
 
 
 def closes(series):

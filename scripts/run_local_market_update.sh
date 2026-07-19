@@ -195,6 +195,31 @@ cd "$WORKTREE"
 export PYTHONUNBUFFERED=1
 export PYTHONPATH="$WORKTREE/src"
 
+seed_local_data_cache() {
+  local filename source_file
+  mkdir -p "$WORKTREE/data/raw"
+  for filename in market_data.csv market_data_sources.json; do
+    source_file="$ROOT/data/raw/$filename"
+    if [[ -f "$source_file" ]]; then
+      cp -p "$source_file" "$WORKTREE/data/raw/$filename"
+      echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 로컬 원시 데이터 캐시를 사용합니다: $filename"
+    fi
+  done
+}
+
+persist_local_data_cache() {
+  local filename source_file
+  mkdir -p "$ROOT/data/raw"
+  for filename in market_data.csv market_data_sources.json; do
+    source_file="$WORKTREE/data/raw/$filename"
+    if [[ -f "$source_file" ]]; then
+      cp -p "$source_file" "$ROOT/data/raw/$filename"
+    fi
+  done
+}
+
+seed_local_data_cache
+
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 갱신 모드: $UPDATE_MODE"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 시장리스크 데이터를 갱신합니다."
 make update-market-risk
@@ -209,6 +234,7 @@ python3 scripts/export_hmm_regime.py
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] ML risk-off 산출물을 갱신합니다."
 "$PYTHON_BIN" -m kospi_risk.cli fetch-market-data --source-config configs/data_sources.yaml --output data/raw/market_data.csv --metadata data/raw/market_data_sources.json --min-rows 1500
+persist_local_data_cache
 "$PYTHON_BIN" -m kospi_risk.cli build-features --input data/raw/market_data.csv --output data/processed/features.parquet --config configs/base.yaml
 "$PYTHON_BIN" -m kospi_risk.cli train --features data/processed/features.parquet --config configs/base.yaml
 if [[ "$UPDATE_MODE" == "full" ]]; then
