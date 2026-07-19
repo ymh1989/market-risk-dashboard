@@ -260,7 +260,7 @@ def _is_recent_fred_fallback(series, max_age_days=7):
     return (datetime.now(KST).date() - last_date).days <= max_age_days
 
 
-def fetch_fred_series_with_fallback(config):
+def fetch_fred_series_with_fallback(config, **fetch_kwargs):
     local_error = None
     try:
         local_series = load_local_fred_series(config["local_column"])
@@ -272,7 +272,7 @@ def fetch_fred_series_with_fallback(config):
     direct_error = None
     for attempt in range(1, FRED_FETCH_ATTEMPTS + 1):
         try:
-            return fetch_fred_series(config["series_id"])
+            return fetch_fred_series(config["series_id"], **fetch_kwargs)
         except Exception as exc:
             direct_error = exc
             if attempt < FRED_FETCH_ATTEMPTS:

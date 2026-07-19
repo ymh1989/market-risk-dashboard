@@ -1,20 +1,14 @@
 import json
-from pathlib import Path
 
 from update_market_risk import (
-    FRED_SERIES,
     ROOT,
     TICKERS,
     fetch_yahoo_chart,
-    build_timeseries,
-    fetch_fred_series_with_fallback,
-    fetch_naver_chart,
-    NAVER_SYMBOLS,
-    clamp,
 )
 
 
 BACKTEST_FILE = ROOT / "data" / "market-risk-backtest.json"
+TIMESERIES_FILE = ROOT / "data" / "market-risk-timeseries.json"
 
 
 def weighted_dashboard_timeseries(timeseries, indicators):
@@ -75,15 +69,10 @@ def main():
     dashboard = json.loads((ROOT / "data" / "risk-dashboard.json").read_text(encoding="utf-8"))
     market = next(section for section in dashboard["sections"] if section["id"] == "market")
 
-    series_map = {key: fetch_yahoo_chart(config["symbol"]) for key, config in TICKERS.items()}
-    naver_map = {key: fetch_naver_chart(config["symbol"]) for key, config in NAVER_SYMBOLS.items()}
-    fred_map = {key: fetch_fred_series_with_fallback(config) for key, config in FRED_SERIES.items()}
-    timeseries = {
-        "series": build_timeseries(series_map, naver_map, fred_map),
-    }
+    timeseries = json.loads(TIMESERIES_FILE.read_text(encoding="utf-8"))
     score_points = weighted_dashboard_timeseries(timeseries, market["indicators"])
 
-    kospi = series_map["kospi"]
+    kospi = fetch_yahoo_chart(TICKERS["kospi"]["symbol"])
     kospi_dates = {point["date"]: index for index, point in enumerate(kospi)}
     kospi_values = [point["close"] for point in kospi]
 

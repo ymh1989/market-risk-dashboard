@@ -2,15 +2,17 @@ import json
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from backtest_market_risk import forward_max_drawdown_pct, weighted_dashboard_timeseries
 from update_market_risk import (
+    FRED_SERIES,
     KST,
     NAVER_SYMBOLS,
     ROOT,
     TICKERS,
     build_timeseries,
+    fetch_fred_series_with_fallback,
     fetch_naver_chart,
     fetch_yahoo_chart,
 )
@@ -18,7 +20,7 @@ from update_market_risk import (
 
 STRESS_FILE = ROOT / "data" / "market-stress-episodes.json"
 HISTORY_CACHE_FILE = ROOT / "data" / "market-history-cache.json"
-CACHE_SCHEMA_VERSION = 1
+CACHE_SCHEMA_VERSION = 2
 START_DATE = "2020-01-01"
 MODEL_SCORE_THRESHOLD = 75
 KOSPI_DRAWDOWN_THRESHOLD = 10
@@ -160,19 +162,22 @@ def load_history_cache():
         return None
     if set(payload.get("naver", {}).keys()) != set(NAVER_SYMBOLS.keys()):
         return None
+    if set(payload.get("fred", {}).keys()) != set(FRED_SERIES.keys()):
+        return None
 
     print(f"Using cached history: {HISTORY_CACHE_FILE.relative_to(ROOT)}", flush=True)
-    return payload["yahoo"], payload["naver"]
+    return payload["yahoo"], payload["naver"], payload["fred"]
 
 
-def write_history_cache(series_map, naver_map):
+def write_history_cache(series_map, naver_map, fred_map):
     payload = {
         "schemaVersion": CACHE_SCHEMA_VERSION,
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "source": "Yahoo Finance and Naver Finance chart endpoints",
+        "source": "Yahoo Finance, Naver Finance, and FRED endpoints",
         "startDate": START_DATE,
         "yahoo": series_map,
         "naver": naver_map,
+        "fred": fred_map,
     }
     HISTORY_CACHE_FILE.write_text(json.dumps(payload, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"Wrote {HISTORY_CACHE_FILE.relative_to(ROOT)}", flush=True)
@@ -194,8 +199,17 @@ def load_or_fetch_history():
         lambda _key, config: fetch_naver_chart(config["symbol"], start_date="20200101"),
         max_workers=2,
     )
-    write_history_cache(series_map, naver_map)
-    return series_map, naver_map
+    fred_map = fetch_source_map(
+        "FRED",
+        FRED_SERIES,
+        lambda _key, config: fetch_fred_series_with_fallback(
+            config,
+            start_date=parse_date(START_DATE) - timedelta(days=400),
+        ),
+        max_workers=3,
+    )
+    write_history_cache(series_map, naver_map, fred_map)
+    return series_map, naver_map, fred_map
 
 
 def summarize_episode(rows, kospi, kospi_dates, kospi_values, timeseries, indicators):
@@ -233,10 +247,16 @@ def main():
     dashboard = json.loads((ROOT / "data" / "risk-dashboard.json").read_text(encoding="utf-8"))
     market = next(section for section in dashboard["sections"] if section["id"] == "market")
 
-    series_map, naver_map = load_or_fetch_history()
+    series_map, naver_map, fred_map = load_or_fetch_history()
     print("Building historical indicator scores", flush=True)
     timeseries = {
-        "series": build_timeseries(series_map, naver_map, limit=1800, step=HISTORICAL_SAMPLE_STEP),
+        "series": build_timeseries(
+            series_map,
+            naver_map,
+            fred_map,
+            limit=1800,
+            step=HISTORICAL_SAMPLE_STEP,
+        ),
     }
     score_points = [
         point
@@ -276,7 +296,7 @@ def main():
 
     result = {
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "source": "Yahoo Finance and Naver Finance chart endpoints",
+        "source": "Yahoo Finance, Naver Finance, and FRED endpoints",
         "historyCache": str(HISTORY_CACHE_FILE.relative_to(ROOT)),
         "methodology": (
             "2020년 이후 동일 시장리스크 모델 점수와 KOSPI 252일 고점대비 낙폭을 함께 평가해 "
