@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260720-4";
+const ASSET_VERSION = "20260720-5";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -230,6 +230,280 @@ function dashboardTabsWithSentiment(tabs) {
   const insertAt = summaryIndex >= 0 ? summaryIndex + 1 : 0;
   const sentimentTab = { id: "sentiment", label: "시장 센티멘트", enabled: true };
   return [...tabs.slice(0, insertAt), sentimentTab, ...tabs.slice(insertAt)];
+}
+
+function dashboardTabsWithOperations(tabs) {
+  const withSentiment = dashboardTabsWithSentiment(tabs);
+  if (withSentiment.some((tab) => tab.id === "operations")) return withSentiment;
+  const sentimentIndex = withSentiment.findIndex((tab) => tab.id === "sentiment");
+  const insertAt = sentimentIndex >= 0 ? sentimentIndex + 1 : 1;
+  const operationsTab = { id: "operations", label: "운영현황", enabled: true };
+  return [...withSentiment.slice(0, insertAt), operationsTab, ...withSentiment.slice(insertAt)];
+}
+
+function formatDurationSeconds(value) {
+  const seconds = Number(value);
+  if (!Number.isFinite(seconds) || seconds < 0) return "-";
+  if (seconds < 60) return `${Math.round(seconds)}초`;
+  const minutes = Math.floor(seconds / 60);
+  const remainder = Math.round(seconds % 60);
+  return remainder ? `${minutes}분 ${remainder}초` : `${minutes}분`;
+}
+
+function buildScheduleInstances(pipelineStatus) {
+  const schedule = pipelineStatus?.schedule;
+  if (!schedule?.times?.length) return [];
+  const dayMs = 24 * 60 * 60 * 1000;
+  const kstOffsetMs = 9 * 60 * 60 * 1000;
+  const nowKst = new Date(Date.now() + kstOffsetMs);
+  const baseDate = Date.UTC(nowKst.getUTCFullYear(), nowKst.getUTCMonth(), nowKst.getUTCDate());
+  const instances = [];
+
+  for (let offset = -8; offset <= 8; offset += 1) {
+    const day = new Date(baseDate + offset * dayMs);
+    const weekday = day.getUTCDay();
+    if (schedule.weekdaysOnly && (weekday === 0 || weekday === 6)) continue;
+    const year = day.getUTCFullYear();
+    const month = day.getUTCMonth();
+    const date = day.getUTCDate();
+    const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
+
+    schedule.times.forEach((item) => {
+      const [hour, minute] = String(item.time).split(":").map(Number);
+      if (!Number.isFinite(hour) || !Number.isFinite(minute)) return;
+      instances.push({
+        ...item,
+        dateKey,
+        timestamp: Date.UTC(year, month, date, hour - 9, minute),
+        label: `${String(month + 1).padStart(2, "0")}.${String(date).padStart(2, "0")} ${item.time}`
+      });
+    });
+  }
+
+  return instances.sort((left, right) => left.timestamp - right.timestamp);
+}
+
+function pipelineRuntimeState(pipelineStatus) {
+  if (!pipelineStatus?.current) {
+    return {
+      label: "확인 필요",
+      tone: "muted",
+      detail: "운영 상태 파일을 불러오지 못했습니다.",
+      latestSuccess: null,
+      nextRun: null
+    };
+  }
+
+  const now = Date.now();
+  const history = pipelineStatus.history ?? [];
+  const instances = buildScheduleInstances(pipelineStatus);
+  const latestDue = [...instances].reverse().find((item) => item.timestamp <= now);
+  const nextRun = instances.find((item) => item.timestamp > now) ?? null;
+  const matchingRun = latestDue
+    ? history.find(
+        (item) =>
+          item.status === "success" &&
+          item.scheduledTime === latestDue.time &&
+          String(item.startedAt ?? "").startsWith(latestDue.dateKey)
+      )
+    : null;
+  const latestSuccess = history.find((item) => item.status === "success") ?? pipelineStatus.current;
+  const sourceProblem = (pipelineStatus.sources ?? []).some((source) => source.status === "error");
+
+  if (latestDue && !matchingRun) {
+    const elapsedMinutes = Math.max(0, (now - latestDue.timestamp) / 60000);
+    const expectedMinutes = Number(pipelineStatus.schedule?.expectedDurationMinutes?.[latestDue.mode] ?? 10);
+    const graceMinutes = Number(pipelineStatus.schedule?.delayGraceMinutes ?? 5);
+    if (elapsedMinutes <= expectedMinutes + graceMinutes) {
+      return {
+        label: "갱신 중",
+        tone: "watch",
+        detail: `${latestDue.time} ${latestDue.mode} 예약 작업의 완료 기록을 기다리고 있습니다.`,
+        latestSuccess,
+        nextRun
+      };
+    }
+    return {
+      label: "지연",
+      tone: "caution",
+      detail: `${latestDue.label} 예약 작업이 예상 완료시간을 지났습니다. 로컬 로그 확인이 필요합니다.`,
+      latestSuccess,
+      nextRun
+    };
+  }
+
+  return {
+    label: sourceProblem ? "일부 확인" : "정상",
+    tone: sourceProblem ? "caution" : "good",
+    detail: sourceProblem ? "일부 데이터 소스에 오류가 기록되어 있습니다." : pipelineStatus.current.message,
+    latestSuccess,
+    nextRun
+  };
+}
+
+function renderOperationStatusStrip(pipelineStatus) {
+  const state = pipelineRuntimeState(pipelineStatus);
+  const latestSuccess = state.latestSuccess;
+  return `
+    <section class="operation-status-strip operation-status-strip--${state.tone}" aria-label="대시보드 운영 상태">
+      <div class="operation-status-strip__state">
+        <span class="operation-status-dot" aria-hidden="true"></span>
+        <div>
+          <small>운영 상태</small>
+          <strong>${state.label}</strong>
+        </div>
+      </div>
+      <div>
+        <small>마지막 성공</small>
+        <strong>${latestSuccess?.completedAt ?? "-"}</strong>
+      </div>
+      <div>
+        <small>다음 예약</small>
+        <strong>${state.nextRun ? `${state.nextRun.label} · ${state.nextRun.mode}` : "-"}</strong>
+      </div>
+      <div>
+        <small>데이터 기준일</small>
+        <strong>${latestSuccess?.dataAsOf ?? "-"}</strong>
+      </div>
+    </section>
+  `;
+}
+
+function operationStatusLabel(status) {
+  return {
+    success: "성공",
+    ok: "정상",
+    warning: "확인",
+    error: "오류"
+  }[status] ?? "확인";
+}
+
+function renderOperationsPage(pipelineStatus) {
+  const state = pipelineRuntimeState(pipelineStatus);
+  if (!pipelineStatus?.current) {
+    return `
+      <section class="operations-page">
+        <div class="empty-state">
+          <h2>운영 상태를 불러오지 못했습니다.</h2>
+          <p>pipeline-status.json 생성 여부를 확인하세요.</p>
+        </div>
+      </section>
+    `;
+  }
+
+  const current = pipelineStatus.current;
+  const scheduleText = (pipelineStatus.schedule?.times ?? [])
+    .map((item) => `${item.time} ${item.mode}`)
+    .join(" · ");
+
+  return `
+    <section class="operations-page">
+      <header class="operations-heading">
+        <div>
+          <span class="eyebrow">Pipeline Operations</span>
+          <h2>데이터·업데이트 운영현황</h2>
+          <p>${state.detail}</p>
+        </div>
+        <div class="operations-current operations-current--${state.tone}">
+          <small>현재 판정</small>
+          <strong>${state.label}</strong>
+          <span>${current.mode} · ${formatDurationSeconds(current.durationSeconds)}</span>
+        </div>
+      </header>
+
+      <section class="operations-facts" aria-label="운영 요약">
+        <div><small>마지막 성공</small><strong>${state.latestSuccess?.completedAt ?? "-"}</strong></div>
+        <div><small>다음 예약</small><strong>${state.nextRun ? `${state.nextRun.label} · ${state.nextRun.mode}` : "-"}</strong></div>
+        <div><small>평일 스케줄</small><strong>${scheduleText || "-"}</strong></div>
+        <div><small>데이터 기준일</small><strong>${current.dataAsOf ?? "-"}</strong></div>
+      </section>
+
+      <section class="operations-section">
+        <div class="operations-section__heading">
+          <div><span class="eyebrow">Latest Run</span><h3>최근 실행 단계</h3></div>
+          <span>${current.startedAt} → ${current.completedAt}</span>
+        </div>
+        <div class="pipeline-stage-list">
+          ${(pipelineStatus.stages ?? [])
+            .map(
+              (stage, index) => `
+                <article class="pipeline-stage pipeline-stage--${stage.status}">
+                  <span class="pipeline-stage__index">${index + 1}</span>
+                  <div><strong>${stage.label}</strong><p>${stage.detail}</p></div>
+                  <div class="pipeline-stage__result">
+                    <span>${operationStatusLabel(stage.status)}</span>
+                    <strong>${formatDurationSeconds(stage.durationSeconds)}</strong>
+                  </div>
+                </article>
+              `
+            )
+            .join("")}
+        </div>
+      </section>
+
+      <section class="operations-section">
+        <div class="operations-section__heading">
+          <div><span class="eyebrow">Data Freshness</span><h3>데이터 소스</h3></div>
+          <span>마지막 관측일 기준</span>
+        </div>
+        <div class="operations-table-wrap">
+          <table class="operations-table">
+            <thead><tr><th>소스</th><th>상태</th><th>최신일</th><th>시계열</th><th>범위</th></tr></thead>
+            <tbody>
+              ${(pipelineStatus.sources ?? [])
+                .map(
+                  (source) => `
+                    <tr>
+                      <td><strong>${source.label}</strong></td>
+                      <td><span class="operation-table-status operation-table-status--${source.status}">${operationStatusLabel(source.status)}</span></td>
+                      <td>${source.lastDate ?? "-"}</td>
+                      <td>${source.seriesCount ?? "-"}개</td>
+                      <td>${source.detail}</td>
+                    </tr>
+                  `
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="operations-section operations-section--split">
+        <div>
+          <div class="operations-section__heading">
+            <div><span class="eyebrow">Artifacts</span><h3>산출물</h3></div>
+          </div>
+          <div class="artifact-list">
+            ${(pipelineStatus.artifacts ?? [])
+              .map(
+                (artifact) => `
+                  <div><span>${artifact.label}</span><strong>${artifact.generatedAt ?? "-"}</strong></div>
+                `
+              )
+              .join("")}
+          </div>
+        </div>
+        <div>
+          <div class="operations-section__heading">
+            <div><span class="eyebrow">History</span><h3>최근 성공 이력</h3></div>
+          </div>
+          <div class="run-history-list">
+            ${(pipelineStatus.history ?? [])
+              .map(
+                (run) => `
+                  <div>
+                    <span>${run.scheduledTime ?? "수동"} · ${run.mode}</span>
+                    <strong>${run.completedAt}</strong>
+                    <small>${formatDurationSeconds(run.durationSeconds)}</small>
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+        </div>
+      </section>
+    </section>
+  `;
 }
 
 function buildSentimentSeries(section, timeseries) {
@@ -1680,9 +1954,9 @@ function renderSection(section, timeseries, backtest, stressEpisodes) {
   `;
 }
 
-function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime) {
+function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime, pipelineStatus) {
   const data = evaluateDashboard(rawData);
-  const dashboardTabs = dashboardTabsWithSentiment(data.tabs);
+  const dashboardTabs = dashboardTabsWithOperations(data.tabs);
   const enabledTabs = dashboardTabs.filter((tab) => tab.enabled);
   const indicatorSortStates = Object.fromEntries(
     data.sections.map((section) => [section.id, { key: "score", direction: "desc" }])
@@ -1701,6 +1975,8 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
         <small>${data.metadata.generatedAt}</small>
       </div>
     </header>
+
+    ${renderOperationStatusStrip(pipelineStatus)}
 
     <nav class="tabs" aria-label="리스크 대시보드 탭">
       <div class="tabs__items">
@@ -1727,6 +2003,9 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
       </section>
       <section class="tab-panel" data-panel="sentiment">
         ${renderSentimentPage(data, timeseries, mlRisk, elsRisk, hmmRegime)}
+      </section>
+      <section class="tab-panel" data-panel="operations">
+        ${renderOperationsPage(pipelineStatus)}
       </section>
       ${data.sections.map((section) => renderSection(section, timeseries, backtest, stressEpisodes)).join("")}
     </div>
@@ -1798,10 +2077,11 @@ Promise.all([
   loadJson("./data/market-stress-episodes.json"),
   loadJson("./data/ml-risk-signal.json"),
   loadJson("./data/els-index-risk.json"),
-  loadJson("./data/hmm-regime.json")
+  loadJson("./data/hmm-regime.json"),
+  loadJson("./data/pipeline-status.json")
 ])
-  .then(([dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime]) =>
-    renderDashboard(dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime)
+  .then(([dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime, pipelineStatus]) =>
+    renderDashboard(dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime, pipelineStatus)
   )
   .catch((error) => {
     app.innerHTML = `

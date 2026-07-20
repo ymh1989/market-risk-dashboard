@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-20 15:53:48 KST",
+  "current": {
+    "runId": "2026-07-20-15:35",
+    "status": "success",
+    "mode": "full",
+    "trigger": "scheduled",
+    "scheduledTime": "15:35",
+    "startedAt": "2026-07-20 15:35:00 KST",
+    "completedAt": "2026-07-20 15:53:48 KST",
+    "durationSeconds": 1128,
+    "dataAsOf": "2026-07-20",
+    "dashboardGeneratedAt": "2026-07-20 15:35 KST",
+    "mlGeneratedAt": "2026-07-20 15:53 KST",
+    "message": "데이터 생성, 품질검증, Git 푸시와 Pages 배포를 완료했습니다."
+  },
+  "schedule": {
+    "timezone": "Asia/Seoul",
+    "weekdaysOnly": true,
+    "times": [
+      {
+        "time": "08:30",
+        "mode": "full"
+      },
+      {
+        "time": "12:30",
+        "mode": "fast"
+      },
+      {
+        "time": "15:35",
+        "mode": "full"
+      }
+    ],
+    "expectedDurationMinutes": {
+      "fast": 5,
+      "full": 25
+    },
+    "delayGraceMinutes": 5
+  },
+  "stages": [
+    {
+      "id": "market",
+      "label": "시장데이터·지표",
+      "status": "success",
+      "durationSeconds": 121,
+      "detail": "시장 데이터 수집, 위험점수, ELS·HMM 산출"
+    },
+    {
+      "id": "ml",
+      "label": "ML 신호",
+      "status": "success",
+      "durationSeconds": 969,
+      "detail": "특성 생성, 모델 학습, 예측 및 OOS 검증"
+    },
+    {
+      "id": "validation",
+      "label": "품질검증",
+      "status": "success",
+      "durationSeconds": 3,
+      "detail": "대시보드 계약·정렬·가독성·캐시 검증"
+    },
+    {
+      "id": "deployment",
+      "label": "Git·Pages 배포",
+      "status": "success",
+      "durationSeconds": null,
+      "detail": "공개된 상태 파일은 Git 푸시와 Pages 배포가 완료된 실행입니다."
+    }
+  ],
+  "sources": [
+    {
+      "id": "yahoo",
+      "label": "Yahoo Finance",
+      "status": "ok",
+      "lastDate": "2026-07-20",
+      "seriesCount": 28,
+      "detail": "주가지수·환율·글로벌 자산 28개 시계열"
+    },
+    {
+      "id": "naver-equity",
+      "label": "Naver 국내주식",
+      "status": "ok",
+      "lastDate": "2026-07-20",
+      "seriesCount": 7,
+      "detail": "국내주식·ETF 7개 시계열"
+    },
+    {
+      "id": "naver-market-index",
+      "label": "Naver 시장지표",
+      "status": "ok",
+      "lastDate": "2026-07-17",
+      "seriesCount": 13,
+      "detail": "운임·원자재·금리·환율 13개 중 실시간 조회 13개"
+    },
+    {
+      "id": "fred",
+      "label": "FRED",
+      "status": "ok",
+      "lastDate": "2026-07-16",
+      "seriesCount": 5,
+      "detail": "금리·크레딧·금융여건 5개 시계열 · 저장값 대체 경로 포함"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "dashboard",
+      "label": "시장리스크",
+      "status": "ok",
+      "generatedAt": "2026-07-20 15:35 KST"
+    },
+    {
+      "id": "ml",
+      "label": "ML 위험신호",
+      "status": "ok",
+      "generatedAt": "2026-07-20 15:53 KST"
+    },
+    {
+      "id": "els",
+      "label": "ELS 지수위험",
+      "status": "ok",
+      "generatedAt": "2026-07-20 15:36 KST"
+    },
+    {
+      "id": "hmm",
+      "label": "HMM 레짐",
+      "status": "ok",
+      "generatedAt": "2026-07-20 15:37 KST"
+    },
+    {
+      "id": "backtest",
+      "label": "시장 백테스트",
+      "status": "ok",
+      "generatedAt": "2026-07-20 15:35 KST"
+    },
+    {
+      "id": "stress",
+      "label": "스트레스 이력",
+      "status": "ok",
+      "generatedAt": "2026-07-20 15:36:53 KST"
+    }
+  ],
+  "history": [
+    {
+      "runId": "2026-07-20-15:35",
+      "status": "success",
+      "mode": "full",
+      "trigger": "scheduled",
+      "scheduledTime": "15:35",
+      "startedAt": "2026-07-20 15:35:00 KST",
+      "completedAt": "2026-07-20 15:53:48 KST",
+      "durationSeconds": 1128,
+      "dataAsOf": "2026-07-20",
+      "dashboardGeneratedAt": "2026-07-20 15:35 KST",
+      "mlGeneratedAt": "2026-07-20 15:53 KST",
+      "message": "데이터 생성, 품질검증, Git 푸시와 Pages 배포를 완료했습니다."
+    }
+  ]
+}

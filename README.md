@@ -85,6 +85,14 @@ make run-local-market-update
 
 로그는 `logs/local-market-update.log`, 오류 로그는 `logs/local-market-update.err.log`에 저장됩니다. 맥이 잠자기 상태이거나 네트워크/SSH 인증이 불가능하면 해당 시각 갱신은 실패할 수 있으므로 운영 장비는 예약 시각에 깨어 있고 GitHub push 권한이 있어야 합니다.
 
+## 운영현황 콘솔
+
+홈페이지 상단 상태 바와 `운영현황` 탭은 `data/pipeline-status.json`을 읽습니다. 마지막 성공시각, 다음 예약, 데이터 기준일, 시장지표·ML·검증·배포 단계, Yahoo·Naver·FRED 최신 관측일과 최근 성공 이력을 한 화면에서 확인할 수 있습니다.
+
+예약시각이 됐지만 해당 실행의 새 완료 기록이 아직 없으면 예상 소요시간 동안 `갱신 중`으로 표시합니다. fast는 5분, full은 25분을 기본 예상시간으로 사용하며 여기에 5분의 유예시간을 더한 뒤에도 완료 기록이 없으면 `지연`으로 바뀝니다. GitHub Pages는 정적 홈페이지이므로 운영현황은 읽기 전용이며, 수동 재실행은 `make run-local-market-update` 또는 `bash scripts/run_local_market_update.sh --fast`로 수행합니다.
+
+`scripts/write_pipeline_status.py`는 성공한 예약 실행마다 기존 이력을 최대 12건까지 유지합니다. 실패한 작업은 새 상태 파일을 배포하지 못하더라도 브라우저가 마지막 성공 기록과 현재 예약시각을 비교해 지연으로 판정합니다.
+
 ## ELS 5개 기초지수 리스크
 
 `make export-els-index-risk`는 ELS에서 주로 사용하는 SPX, SX5E, NKY, HSCEI, KOSPI200을 각각 0~100점으로 평가합니다. 지수별 점수는 20일 실현변동성 분위수 35%, 252일 고점 대비 낙폭 22%, 20일 하락 모멘텀 18%, 고변동성 상승 과열 15%, 60일 낙폭 6%, 최근 일간 충격 4%로 합성합니다.
@@ -156,12 +164,14 @@ make run-news-bot
 - `data/naver-marketindex-history.json`: 네이버 운임·금속·에너지·채권·국제환율의 선별 원천 이력과 자산별 실시간/캐시 사용 상태를 저장합니다.
 - `data/els-index-risk.json`: ELS 5개 기초지수와 worst-of basket 리스크를 저장합니다.
 - `data/ml-risk-signal.json`: 최신 ML risk-off 신호, 성능지표와 최근 흐름을 저장합니다.
+- `data/pipeline-status.json`: 예약 스케줄, 최근 성공, 단계별 소요시간, 데이터 소스 신선도와 실행 이력을 저장합니다.
 - `src/risk-model.js`: 점수 계산과 등급 판정 로직입니다.
 - `src/app.js`: JSON 데이터를 읽어 화면을 렌더링합니다.
 - `src/styles.css`: 대시보드 레이아웃과 시각 스타일입니다.
 - `scripts/update_market_risk.py`: 외부 데이터를 가져와 시장리스크 지표를 재계산합니다.
 - `scripts/export_els_index_risk.py`: ELS 5개 기초지수 및 basket 리스크를 계산합니다.
 - `scripts/export_ml_risk_signal.py`: 연구용 ML 결과를 홈페이지용 JSON으로 변환합니다.
+- `scripts/write_pipeline_status.py`: 홈페이지 운영현황 상태 파일을 생성하고 최근 성공 이력을 누적합니다.
 - `scripts/backtest_market_risk.py`: 시장 종합점수의 선행 낙폭 진단을 생성합니다.
 - `scripts/analyze_stress_episodes.py`: 과거 스트레스 구간과 기여지표를 분석합니다.
 - `scripts/send_risk_news_digest.py`: 키워드별 최신 뉴스를 수집해 텔레그램 브리핑을 발송합니다.

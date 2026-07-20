@@ -10,6 +10,7 @@ BACKTEST_FILE = ROOT / "data" / "market-risk-backtest.json"
 STRESS_FILE = ROOT / "data" / "market-stress-episodes.json"
 STYLES_FILE = ROOT / "src" / "styles.css"
 APP_FILE = ROOT / "src" / "app.js"
+PIPELINE_STATUS_FILE = ROOT / "data" / "pipeline-status.json"
 
 
 def clamp_score(value):
@@ -132,9 +133,30 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert "DATA_REQUEST_VERSION = Date.now()" in app_source
     assert "request=${DATA_REQUEST_VERSION}" in app_source
     assert 'cache: "no-store"' in app_source
+    assert 'id: "operations", label: "운영현황"' in app_source
+    assert 'loadJson("./data/pipeline-status.json")' in app_source
+
+
+def test_pipeline_status_contract():
+    status = json.loads(PIPELINE_STATUS_FILE.read_text(encoding="utf-8"))
+    assert status["schemaVersion"] == 1
+    assert status["current"]["status"] == "success"
+    assert status["current"]["dataAsOf"]
+    assert {item["time"] for item in status["schedule"]["times"]} == {"08:30", "12:30", "15:35"}
+    assert {stage["id"] for stage in status["stages"]} == {"market", "ml", "validation", "deployment"}
+    assert all(stage["status"] == "success" for stage in status["stages"])
+    assert {source["id"] for source in status["sources"]} == {
+        "yahoo",
+        "naver-equity",
+        "naver-market-index",
+        "fred",
+    }
+    assert len(status["artifacts"]) >= 6
+    assert status["history"]
 
 
 if __name__ == "__main__":
     test_dashboard_contract()
     test_watch_badge_keeps_readable_contrast()
     test_dashboard_data_requests_bypass_stale_cache()
+    test_pipeline_status_contract()

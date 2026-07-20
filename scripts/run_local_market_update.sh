@@ -166,6 +166,8 @@ if (( ONLY_AT_SCHEDULED_KST )); then
 fi
 
 UPDATE_MODE="$(resolve_update_mode)"
+RUN_STARTED_EPOCH="$(date +%s)"
+RUN_STARTED_AT="$(kst_now '+%Y-%m-%d %H:%M:%S KST')"
 
 mkdir -p "$LOG_DIR"
 LOCK_DIR="$LOG_DIR/.local-market-update.lock"
@@ -222,6 +224,7 @@ seed_local_data_cache
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 갱신 모드: $UPDATE_MODE"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 시장리스크 데이터를 갱신합니다."
+MARKET_STAGE_STARTED_EPOCH="$(date +%s)"
 make update-market-risk
 make backtest-market-risk
 if [[ "$UPDATE_MODE" == "full" ]]; then
@@ -231,8 +234,10 @@ else
 fi
 python3 scripts/export_els_index_risk.py
 python3 scripts/export_hmm_regime.py
+MARKET_STAGE_COMPLETED_EPOCH="$(date +%s)"
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] ML risk-off 산출물을 갱신합니다."
+ML_STAGE_STARTED_EPOCH="$(date +%s)"
 "$PYTHON_BIN" -m kospi_risk.cli fetch-market-data --source-config configs/data_sources.yaml --output data/raw/market_data.csv --metadata data/raw/market_data_sources.json --min-rows 1500
 persist_local_data_cache
 "$PYTHON_BIN" -m kospi_risk.cli build-features --input data/raw/market_data.csv --output data/processed/features.parquet --config configs/base.yaml
@@ -244,9 +249,26 @@ else
 fi
 "$PYTHON_BIN" -m kospi_risk.cli predict-latest --features data/processed/features.parquet --config configs/base.yaml --output reports/latest_signal.csv
 "$PYTHON_BIN" scripts/export_ml_risk_signal.py
+ML_STAGE_COMPLETED_EPOCH="$(date +%s)"
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 대시보드 데이터를 검증합니다."
+VALIDATION_STAGE_STARTED_EPOCH="$(date +%s)"
 make test
+VALIDATION_STAGE_COMPLETED_EPOCH="$(date +%s)"
+RUN_COMPLETED_AT="$(kst_now '+%Y-%m-%d %H:%M:%S KST')"
+RUN_COMPLETED_EPOCH="$(date +%s)"
+
+"$PYTHON_BIN" scripts/write_pipeline_status.py \
+  --mode "$UPDATE_MODE" \
+  --times "$TIMES" \
+  --full-times "$FULL_TIMES" \
+  --scheduled-time "$SCHEDULED_TIME" \
+  --started-at "$RUN_STARTED_AT" \
+  --completed-at "$RUN_COMPLETED_AT" \
+  --total-duration "$((RUN_COMPLETED_EPOCH - RUN_STARTED_EPOCH))" \
+  --market-duration "$((MARKET_STAGE_COMPLETED_EPOCH - MARKET_STAGE_STARTED_EPOCH))" \
+  --ml-duration "$((ML_STAGE_COMPLETED_EPOCH - ML_STAGE_STARTED_EPOCH))" \
+  --validation-duration "$((VALIDATION_STAGE_COMPLETED_EPOCH - VALIDATION_STAGE_STARTED_EPOCH))"
 
 git config user.name "${LOCAL_MARKET_UPDATE_GIT_NAME:-local-market-risk-bot}"
 git config user.email "${LOCAL_MARKET_UPDATE_GIT_EMAIL:-local-market-risk-bot@users.noreply.github.com}"
@@ -261,7 +283,8 @@ git add \
   data/market-history-cache.json \
   data/els-index-risk.json \
   data/hmm-regime.json \
-  data/ml-risk-signal.json
+  data/ml-risk-signal.json \
+  data/pipeline-status.json
 
 if git diff --cached --quiet; then
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 변경된 데이터가 없어 커밋하지 않습니다."
