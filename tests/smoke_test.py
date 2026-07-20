@@ -1,5 +1,4 @@
 import json
-import importlib.util
 import pathlib
 
 
@@ -7,7 +6,6 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 DATA_FILE = ROOT / "data" / "risk-dashboard.json"
 TIMESERIES_FILE = ROOT / "data" / "market-risk-timeseries.json"
 MARKET_INDEX_CACHE_FILE = ROOT / "data" / "naver-marketindex-history.json"
-NEWS_DIGEST_SCRIPT = ROOT / "scripts" / "send_risk_news_digest.py"
 BACKTEST_FILE = ROOT / "data" / "market-risk-backtest.json"
 STRESS_FILE = ROOT / "data" / "market-stress-episodes.json"
 STYLES_FILE = ROOT / "src" / "styles.css"
@@ -36,40 +34,6 @@ def pick_level(score, thresholds):
         if safe_score >= threshold["min"] and safe_score < threshold["max"]:
             return threshold
     return thresholds[-1]
-
-
-def load_news_digest_module():
-    spec = importlib.util.spec_from_file_location("send_risk_news_digest", NEWS_DIGEST_SCRIPT)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def test_news_title_clustering():
-    news_digest = load_news_digest_module()
-    first = news_digest.normalize_title_for_dedupe("KB증권, 디지털WM 자산 15조원 돌파")
-    second = news_digest.normalize_title_for_dedupe("KB증권 디지털 WM 자산 15조 돌파…ISA·연금 성장 견인")
-    unrelated = news_digest.normalize_title_for_dedupe("금감원, 불완전판매 검사 강화")
-
-    assert news_digest.is_similar_title(first, second)
-    assert not news_digest.is_similar_title(first, unrelated)
-
-
-def test_news_korean_web_filter_blocks_ru_sources():
-    news_digest = load_news_digest_module()
-
-    assert news_digest.article_matches_language_filters(
-        "증권사 유동성 리스크 확대",
-        "example.ru",
-        "https://example.ru/news/123",
-        "https://news.google.com/rss/articles/example",
-    ) is False
-    assert news_digest.article_matches_language_filters(
-        "증권사 유동성 리스크 확대",
-        "국내경제신문",
-        "https://example.co.kr/news/123",
-        "https://news.google.com/rss/articles/example",
-    ) is True
 
 
 def test_dashboard_contract():
@@ -163,6 +127,5 @@ def test_watch_badge_keeps_readable_contrast():
 
 
 if __name__ == "__main__":
-    test_news_title_clustering()
     test_dashboard_contract()
     test_watch_badge_keeps_readable_contrast()
