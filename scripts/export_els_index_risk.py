@@ -188,6 +188,115 @@ def _correlation_score(return_frames: list[pd.DataFrame]) -> float:
     return _clamp((avg_corr - 0.2) / 0.6 * 100)
 
 
+def _issuance_stance(opportunity_score: float, hedge_burden_score: float) -> dict[str, str]:
+    if hedge_burden_score >= 80:
+        return {"label": "발행부담", "tone": "danger"}
+    if opportunity_score >= 65 and hedge_burden_score >= 45:
+        return {"label": "헤지주의", "tone": "caution"}
+    if opportunity_score >= 65:
+        return {"label": "발행기회", "tone": "good"}
+    return {"label": "선별발행", "tone": "watch"}
+
+
+def _issuance_hedge_item(index: dict, correlation_score: float) -> dict:
+    metrics = index["metrics"]
+    realized_vol_20d = float(metrics["realizedVol20dPct"])
+    realized_vol_60d = max(float(metrics["realizedVol60dPct"]), 1.0)
+    vol_percentile = float(metrics["volPercentile252d"])
+    vol_level_score = _clamp((realized_vol_20d - 8.0) / 42.0 * 100)
+    vol_shock_score = _clamp((realized_vol_20d / realized_vol_60d - 0.8) / 0.8 * 100)
+    downside_momentum_score = _clamp(-float(metrics["return20dPct"]) / 20.0 * 100)
+    drawdown_score = _clamp(-float(metrics["drawdown252dPct"]) / 30.0 * 100)
+    gap_shock_score = _clamp(float(metrics["maxAbsDailyMove20dPct"]) / 8.0 * 100)
+
+    opportunity_score = 0.55 * vol_percentile + 0.30 * vol_level_score + 0.15 * vol_shock_score
+    hedge_burden_score = (
+        0.25 * downside_momentum_score
+        + 0.25 * drawdown_score
+        + 0.25 * vol_level_score
+        + 0.15 * gap_shock_score
+        + 0.10 * correlation_score
+    )
+    stance = _issuance_stance(opportunity_score, hedge_burden_score)
+    balance_score = opportunity_score - 0.65 * hedge_burden_score
+
+    if stance["label"] == "발행기회":
+        interpretation = "상대적 쿠폰 여력이 높고 현재 낙폭·방향성 부담은 제한적입니다. 신규 발행 후보군으로 우선 검토할 수 있습니다."
+    elif stance["label"] == "헤지주의":
+        interpretation = "발행 조건 개선 여지는 크지만 변동성과 하락 경로가 헤지비용을 높입니다. 한도·만기·기초자산 집중을 함께 관리해야 합니다."
+    elif stance["label"] == "발행부담":
+        interpretation = "쿠폰 여력보다 기존 북의 순연, 감마·베가와 낙인 접근 부담이 더 큽니다. 신규 발행보다 익스포저 축소가 우선입니다."
+    else:
+        interpretation = "헤지부담은 통제 가능하지만 쿠폰 여력이 제한적일 수 있습니다. 구조와 만기를 선별해 상대가치를 확인해야 합니다."
+
+    return {
+        "id": index["id"],
+        "label": index["label"],
+        "name": index["name"],
+        "region": index["region"],
+        "lastDate": index["lastDate"],
+        "opportunityScore": _round(opportunity_score, 2),
+        "hedgeBurdenScore": _round(hedge_burden_score, 2),
+        "balanceScore": _round(balance_score, 2),
+        "stance": stance["label"],
+        "tone": stance["tone"],
+        "interpretation": interpretation,
+        "components": {
+            "volPercentileScore": _round(vol_percentile, 1),
+            "volLevelScore": _round(vol_level_score, 1),
+            "volShockScore": _round(vol_shock_score, 1),
+            "downsideMomentumScore": _round(downside_momentum_score, 1),
+            "drawdownScore": _round(drawdown_score, 1),
+            "gapShockScore": _round(gap_shock_score, 1),
+            "correlationScore": _round(correlation_score, 1),
+        },
+        "metrics": {
+            "return20dPct": metrics["return20dPct"],
+            "realizedVol20dPct": metrics["realizedVol20dPct"],
+            "drawdown252dPct": metrics["drawdown252dPct"],
+        },
+    }
+
+
+def _issuance_hedge_map(indices: list[dict], correlation_score: float) -> dict:
+    items = [_issuance_hedge_item(index, correlation_score) for index in indices]
+    opportunity_ranked = sorted(items, key=lambda item: item["opportunityScore"], reverse=True)
+    burden_ranked = sorted(items, key=lambda item: item["hedgeBurdenScore"], reverse=True)
+    average_opportunity = float(np.mean([item["opportunityScore"] for item in items]))
+    average_burden = float(np.mean([item["hedgeBurdenScore"] for item in items]))
+    basket_opportunity = (
+        0.40 * opportunity_ranked[0]["opportunityScore"]
+        + 0.25 * opportunity_ranked[1]["opportunityScore"]
+        + 0.35 * average_opportunity
+    )
+    basket_burden = (
+        0.50 * burden_ranked[0]["hedgeBurdenScore"]
+        + 0.20 * burden_ranked[1]["hedgeBurdenScore"]
+        + 0.15 * average_burden
+        + 0.15 * correlation_score
+    )
+    basket_stance = _issuance_stance(basket_opportunity, basket_burden)
+
+    return {
+        "methodology": {
+            "opportunity": "252일 변동성 분위수 55%, 20일 변동성 수준 30%, 20일/60일 변동성 충격 15%를 합성합니다.",
+            "hedgeBurden": "20일 하락모멘텀 25%, 252일 고점대비 낙폭 25%, 20일 변동성 수준 25%, 최근 일간 충격 15%, 지수 동조화 10%를 합성합니다.",
+            "classification": "헤지부담 80점 이상은 발행부담, 발행기회 65점 이상이면서 헤지부담 45점 이상은 헤지주의, 발행기회 65점 이상이면서 부담이 낮으면 발행기회, 나머지는 선별발행입니다.",
+        },
+        "basket": {
+            "opportunityScore": _round(basket_opportunity, 2),
+            "hedgeBurdenScore": _round(basket_burden, 2),
+            "stance": basket_stance["label"],
+            "tone": basket_stance["tone"],
+            "topOpportunityIndex": opportunity_ranked[0]["label"],
+            "topBurdenIndex": burden_ranked[0]["label"],
+            "interpretation": f"{opportunity_ranked[0]['label']}의 변동성에서 발행 조건 개선 여지가 가장 크고, {burden_ranked[0]['label']}가 기존 북의 헤지부담을 가장 크게 높입니다.",
+        },
+        "items": sorted(items, key=lambda item: item["balanceScore"], reverse=True),
+        "limitations": "공개 종가지수의 실현변동성·낙폭을 사용한 상대평가입니다. 실제 발행 판단에는 만기별 내재변동성, skew·상관 smile, 금리·배당·조달비용, 기발행 재고와 상품별 delta·gamma·vega를 추가해야 합니다.",
+    }
+
+
 def build_payload() -> dict:
     indices = []
     return_frames = []
@@ -201,6 +310,7 @@ def build_payload() -> dict:
     correlation_score = _correlation_score(return_frames)
     basket_score = 0.5 * ranked[0]["score"] + 0.2 * ranked[1]["score"] + 0.15 * average_score + 0.15 * correlation_score
     basket_bucket = _bucket(basket_score)
+    issuance_hedge_map = _issuance_hedge_map(indices, correlation_score)
 
     payload = {
         "generatedAt": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M KST"),
@@ -215,6 +325,7 @@ def build_payload() -> dict:
             "correlationScore": _round(correlation_score, 2),
             "interpretation": f"{ranked[0]['label']}가 basket 리스크를 가장 크게 끌어올리고, {ranked[1]['label']}가 두 번째 취약 지수입니다.",
         },
+        "issuanceHedgeMap": issuance_hedge_map,
         "indices": indices,
     }
     return payload

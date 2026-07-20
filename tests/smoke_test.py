@@ -8,6 +8,7 @@ TIMESERIES_FILE = ROOT / "data" / "market-risk-timeseries.json"
 MARKET_INDEX_CACHE_FILE = ROOT / "data" / "naver-marketindex-history.json"
 BACKTEST_FILE = ROOT / "data" / "market-risk-backtest.json"
 STRESS_FILE = ROOT / "data" / "market-stress-episodes.json"
+ELS_FILE = ROOT / "data" / "els-index-risk.json"
 STYLES_FILE = ROOT / "src" / "styles.css"
 APP_FILE = ROOT / "src" / "app.js"
 PIPELINE_STATUS_FILE = ROOT / "data" / "pipeline-status.json"
@@ -44,6 +45,7 @@ def test_dashboard_contract():
     market_index_cache = json.loads(MARKET_INDEX_CACHE_FILE.read_text(encoding="utf-8"))
     backtest = json.loads(BACKTEST_FILE.read_text(encoding="utf-8"))
     stress = json.loads(STRESS_FILE.read_text(encoding="utf-8"))
+    els_risk = json.loads(ELS_FILE.read_text(encoding="utf-8"))
     assert dashboard["metadata"]["title"] == "통합 리스크 모니터링 대시보드"
     assert any(section["id"] == "market" and section["status"] == "active" for section in dashboard["sections"])
     assert any(section["id"] == "credit" and section["status"] == "planned" for section in dashboard["sections"])
@@ -117,6 +119,24 @@ def test_dashboard_contract():
         assert episode["peakScore"] >= 0
         assert "topContributors" in episode
 
+    issuance_map = els_risk["issuanceHedgeMap"]
+    assert len(issuance_map["items"]) == 5
+    assert {item["id"] for item in issuance_map["items"]} == {
+        "spx",
+        "sx5e",
+        "nky",
+        "hscei",
+        "kospi200",
+    }
+    assert issuance_map["basket"]["stance"] in {"발행기회", "선별발행", "헤지주의", "발행부담"}
+    assert 0 <= issuance_map["basket"]["opportunityScore"] <= 100
+    assert 0 <= issuance_map["basket"]["hedgeBurdenScore"] <= 100
+    for item in issuance_map["items"]:
+        assert item["stance"] in {"발행기회", "선별발행", "헤지주의", "발행부담"}
+        assert 0 <= item["opportunityScore"] <= 100
+        assert 0 <= item["hedgeBurdenScore"] <= 100
+        assert item["interpretation"]
+
     print("Smoke tests passed")
 
 
@@ -134,6 +154,8 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert "request=${DATA_REQUEST_VERSION}" in app_source
     assert 'cache: "no-store"' in app_source
     assert 'id: "operations", label: "운영현황"' in app_source
+    assert 'id: "els-issuance", label: "ELS 발행·헤지"' in app_source
+    assert "renderElsIssuanceHedgePage" in app_source
     assert 'loadJson("./data/pipeline-status.json")' in app_source
 
 

@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260720-5";
+const ASSET_VERSION = "20260720-6";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -239,6 +239,15 @@ function dashboardTabsWithOperations(tabs) {
   const insertAt = sentimentIndex >= 0 ? sentimentIndex + 1 : 1;
   const operationsTab = { id: "operations", label: "운영현황", enabled: true };
   return [...withSentiment.slice(0, insertAt), operationsTab, ...withSentiment.slice(insertAt)];
+}
+
+function dashboardTabsWithElsTool(tabs) {
+  const withOperations = dashboardTabsWithOperations(tabs);
+  if (withOperations.some((tab) => tab.id === "els-issuance")) return withOperations;
+  const operationsIndex = withOperations.findIndex((tab) => tab.id === "operations");
+  const insertAt = operationsIndex >= 0 ? operationsIndex + 1 : 2;
+  const elsToolTab = { id: "els-issuance", label: "ELS 발행·헤지", enabled: true };
+  return [...withOperations.slice(0, insertAt), elsToolTab, ...withOperations.slice(insertAt)];
 }
 
 function formatDurationSeconds(value) {
@@ -920,6 +929,159 @@ function renderElsIndexRiskPanel(elsRisk) {
             .join("")}
         </div>
       </div>
+    </section>
+  `;
+}
+
+function renderElsIssuanceHedgePage(elsRisk) {
+  const map = elsRisk?.issuanceHedgeMap;
+  if (!map?.items?.length || !map?.basket) {
+    return `
+      <section class="els-issuance-page">
+        <div class="empty-state">
+          <h3>ELS 발행·헤지 데이터 준비중</h3>
+          <p>다음 데이터 갱신에서 기초지수별 상대 발행기회와 헤지부담을 계산합니다.</p>
+        </div>
+      </section>
+    `;
+  }
+
+  const plot = { left: 66, top: 24, width: 654, height: 310 };
+  const markerOffsets = {
+    spx: { dx: 10, dy: -10, anchor: "start" },
+    sx5e: { dx: 10, dy: -10, anchor: "start" },
+    nky: { dx: 10, dy: 20, anchor: "start" },
+    hscei: { dx: 10, dy: 20, anchor: "start" },
+    kospi200: { dx: -10, dy: 20, anchor: "end" }
+  };
+  const points = map.items
+    .map((item) => {
+      const opportunity = clampScore(item.opportunityScore);
+      const burden = clampScore(item.hedgeBurdenScore);
+      const x = plot.left + (opportunity / 100) * plot.width;
+      const y = plot.top + ((100 - burden) / 100) * plot.height;
+      const offset = markerOffsets[item.id] ?? { dx: 10, dy: -10, anchor: "start" };
+      return `
+        <g class="els-map-point els-map-point--${item.id}">
+          <title>${item.label}: 발행기회 ${opportunity.toFixed(1)}, 헤지부담 ${burden.toFixed(1)}</title>
+          <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="7"></circle>
+          <text x="${(x + offset.dx).toFixed(1)}" y="${(y + offset.dy).toFixed(1)}" text-anchor="${offset.anchor}">${item.label}</text>
+        </g>
+      `;
+    })
+    .join("");
+  const ticks = [0, 25, 50, 75, 100];
+  const gridLines = ticks
+    .map((tick) => {
+      const x = plot.left + (tick / 100) * plot.width;
+      const y = plot.top + ((100 - tick) / 100) * plot.height;
+      return `
+        <path d="M ${x.toFixed(1)} ${plot.top} V ${plot.top + plot.height}" class="els-map-grid"></path>
+        <path d="M ${plot.left} ${y.toFixed(1)} H ${plot.left + plot.width}" class="els-map-grid"></path>
+        <text x="${x.toFixed(1)}" y="356" text-anchor="middle" class="els-map-tick">${tick}</text>
+        <text x="52" y="${(y + 4).toFixed(1)}" text-anchor="end" class="els-map-tick">${tick}</text>
+      `;
+    })
+    .join("");
+
+  return `
+    <section class="els-issuance-page">
+      <header class="els-issuance-heading">
+        <div>
+          <span class="eyebrow">ELS Issuance Opportunity &amp; Hedge Burden</span>
+          <h2>ELS 발행기회·헤지부담 맵</h2>
+          <p>높아진 변동성이 제공하는 상대 발행기회와 기존 북의 순연·헤지비용 부담을 분리해 봅니다.</p>
+        </div>
+        <div class="els-basket-state els-basket-state--${map.basket.tone}">
+          <span>Basket 판단</span>
+          <strong>${map.basket.stance}</strong>
+          <small>기회 ${Number(map.basket.opportunityScore).toFixed(1)} · 부담 ${Number(map.basket.hedgeBurdenScore).toFixed(1)}</small>
+        </div>
+      </header>
+
+      <div class="els-issuance-facts">
+        <div><span>상대 발행기회</span><strong>${Number(map.basket.opportunityScore).toFixed(1)}</strong><small>실제 쿠폰 추정값 아님</small></div>
+        <div><span>헤지부담</span><strong>${Number(map.basket.hedgeBurdenScore).toFixed(1)}</strong><small>낙폭·변동성·동조화 합성</small></div>
+        <div><span>기회 상위</span><strong>${map.basket.topOpportunityIndex}</strong><small>변동성 상대가치 기준</small></div>
+        <div><span>부담 상위</span><strong>${map.basket.topBurdenIndex}</strong><small>기존 북 관리 우선</small></div>
+      </div>
+
+      <section class="els-opportunity-map">
+        <div class="els-opportunity-map__header">
+          <div>
+            <span class="eyebrow">Relative Positioning</span>
+            <h3>기초지수 포지셔닝</h3>
+          </div>
+          <p>${map.basket.interpretation}</p>
+        </div>
+        <div class="els-opportunity-map__scroll">
+          <svg viewBox="0 0 760 390" role="img" aria-label="기초지수별 상대 발행기회와 헤지부담 분포">
+            <rect x="${plot.left}" y="${plot.top}" width="${plot.width}" height="${plot.height}" class="els-map-zone els-map-zone--selective"></rect>
+            <rect x="${plot.left + plot.width * 0.65}" y="${plot.top + plot.height * 0.55}" width="${plot.width * 0.35}" height="${plot.height * 0.45}" class="els-map-zone els-map-zone--opportunity"></rect>
+            <rect x="${plot.left + plot.width * 0.65}" y="${plot.top + plot.height * 0.2}" width="${plot.width * 0.35}" height="${plot.height * 0.35}" class="els-map-zone els-map-zone--caution"></rect>
+            <rect x="${plot.left}" y="${plot.top}" width="${plot.width}" height="${plot.height * 0.2}" class="els-map-zone els-map-zone--burden"></rect>
+            ${gridLines}
+            <path d="M ${plot.left + plot.width * 0.65} ${plot.top} V ${plot.top + plot.height}" class="els-map-threshold"></path>
+            <path d="M ${plot.left} ${plot.top + plot.height * 0.55} H ${plot.left + plot.width}" class="els-map-threshold"></path>
+            <path d="M ${plot.left} ${plot.top + plot.height * 0.2} H ${plot.left + plot.width}" class="els-map-threshold els-map-threshold--danger"></path>
+            <text x="${plot.left + plot.width - 12}" y="${plot.top + 18}" text-anchor="end" class="els-map-zone-label">발행부담</text>
+            <text x="${plot.left + plot.width - 12}" y="${plot.top + plot.height * 0.2 + 20}" text-anchor="end" class="els-map-zone-label">헤지주의</text>
+            <text x="${plot.left + plot.width - 12}" y="${plot.top + plot.height - 12}" text-anchor="end" class="els-map-zone-label">발행기회</text>
+            <text x="${plot.left + 12}" y="${plot.top + plot.height - 12}" class="els-map-zone-label">선별발행</text>
+            ${points}
+            <text x="${plot.left + plot.width / 2}" y="383" text-anchor="middle" class="els-map-axis-label">상대 발행기회 →</text>
+            <text x="16" y="${plot.top + plot.height / 2}" text-anchor="middle" transform="rotate(-90 16 ${plot.top + plot.height / 2})" class="els-map-axis-label">헤지부담 →</text>
+          </svg>
+        </div>
+      </section>
+
+      <section class="els-comparison">
+        <div class="els-comparison__header">
+          <div>
+            <span class="eyebrow">Underlying Review</span>
+            <h3>지수별 발행·헤지 판독</h3>
+          </div>
+          <small>기회 대비 부담 균형점수 순</small>
+        </div>
+        <div class="els-comparison-list">
+          ${map.items
+            .map(
+              (item) => `
+                <article class="els-comparison-row els-comparison-row--${item.tone}">
+                  <div class="els-comparison-row__identity">
+                    <span>${item.region} · ${item.lastDate}</span>
+                    <strong>${item.label}</strong>
+                    <em>${item.stance}</em>
+                  </div>
+                  <div class="els-comparison-row__scores">
+                    <div>
+                      <span>발행기회 <strong>${Number(item.opportunityScore).toFixed(1)}</strong></span>
+                      <i><b class="els-score-bar--opportunity" style="width:${clampScore(item.opportunityScore)}%"></b></i>
+                    </div>
+                    <div>
+                      <span>헤지부담 <strong>${Number(item.hedgeBurdenScore).toFixed(1)}</strong></span>
+                      <i><b class="els-score-bar--burden" style="width:${clampScore(item.hedgeBurdenScore)}%"></b></i>
+                    </div>
+                  </div>
+                  <dl>
+                    <div><dt>20D 수익률</dt><dd>${formatSignedPct(item.metrics.return20dPct)}</dd></div>
+                    <div><dt>20D 변동성</dt><dd>${Number(item.metrics.realizedVol20dPct).toFixed(1)}%</dd></div>
+                    <div><dt>252D 낙폭</dt><dd>${formatSignedPct(item.metrics.drawdown252dPct)}</dd></div>
+                  </dl>
+                  <p>${item.interpretation}</p>
+                </article>
+              `
+            )
+            .join("")}
+        </div>
+      </section>
+
+      <section class="els-methodology">
+        <article><span>발행기회 산식</span><p>${map.methodology.opportunity}</p></article>
+        <article><span>헤지부담 산식</span><p>${map.methodology.hedgeBurden}</p></article>
+        <article><span>판단 기준</span><p>${map.methodology.classification}</p></article>
+      </section>
+      <aside class="els-limitations"><strong>운영 적용 전 확인</strong><p>${map.limitations}</p></aside>
     </section>
   `;
 }
@@ -1956,7 +2118,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes) {
 
 function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime, pipelineStatus) {
   const data = evaluateDashboard(rawData);
-  const dashboardTabs = dashboardTabsWithOperations(data.tabs);
+  const dashboardTabs = dashboardTabsWithElsTool(data.tabs);
   const enabledTabs = dashboardTabs.filter((tab) => tab.enabled);
   const indicatorSortStates = Object.fromEntries(
     data.sections.map((section) => [section.id, { key: "score", direction: "desc" }])
@@ -2006,6 +2168,9 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
       </section>
       <section class="tab-panel" data-panel="operations">
         ${renderOperationsPage(pipelineStatus)}
+      </section>
+      <section class="tab-panel" data-panel="els-issuance">
+        ${renderElsIssuanceHedgePage(elsRisk)}
       </section>
       ${data.sections.map((section) => renderSection(section, timeseries, backtest, stressEpisodes)).join("")}
     </div>

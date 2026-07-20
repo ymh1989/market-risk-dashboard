@@ -889,6 +889,387 @@ select {
   background: var(--green);
 }
 
+.els-issuance-page {
+  display: grid;
+  gap: 16px;
+}
+
+.els-issuance-heading,
+.els-opportunity-map,
+.els-comparison,
+.els-methodology,
+.els-limitations {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.els-issuance-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px;
+}
+
+.els-issuance-heading h2 {
+  margin: 6px 0 8px;
+  font-size: 1.45rem;
+}
+
+.els-issuance-heading p,
+.els-opportunity-map__header p,
+.els-methodology p,
+.els-limitations p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.65;
+}
+
+.els-issuance-heading .els-basket-state strong {
+  font-size: 1.25rem;
+}
+
+.els-issuance-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-raised);
+}
+
+.els-issuance-facts > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 16px 18px;
+  border-right: 1px solid var(--line);
+}
+
+.els-issuance-facts > div:last-child {
+  border-right: 0;
+}
+
+.els-issuance-facts span,
+.els-issuance-facts small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.els-issuance-facts strong {
+  overflow-wrap: anywhere;
+  font-size: 1.35rem;
+}
+
+.els-opportunity-map,
+.els-comparison {
+  overflow: hidden;
+}
+
+.els-opportunity-map__header,
+.els-comparison__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.els-opportunity-map__header h3,
+.els-comparison__header h3 {
+  margin: 5px 0 0;
+  font-size: 1.05rem;
+}
+
+.els-opportunity-map__header p {
+  max-width: 560px;
+  text-align: right;
+}
+
+.els-opportunity-map__scroll {
+  overflow-x: auto;
+  background: var(--surface-raised);
+}
+
+.els-opportunity-map svg {
+  display: block;
+  width: 100%;
+  min-width: 680px;
+  height: auto;
+}
+
+.els-map-zone--selective {
+  fill: color-mix(in srgb, var(--blue) 8%, var(--surface-raised));
+}
+
+.els-map-zone--opportunity {
+  fill: color-mix(in srgb, var(--green) 15%, var(--surface-raised));
+}
+
+.els-map-zone--caution {
+  fill: color-mix(in srgb, var(--amber) 16%, var(--surface-raised));
+}
+
+.els-map-zone--burden {
+  fill: color-mix(in srgb, var(--red) 16%, var(--surface-raised));
+}
+
+.els-map-grid {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.els-map-threshold {
+  fill: none;
+  stroke: var(--amber);
+  stroke-dasharray: 5 5;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.els-map-threshold--danger {
+  stroke: var(--red);
+}
+
+.els-map-tick,
+.els-map-zone-label,
+.els-map-axis-label,
+.els-map-point text {
+  fill: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.els-map-zone-label {
+  font-size: 12px;
+}
+
+.els-map-axis-label {
+  fill: var(--ink);
+  font-size: 12px;
+}
+
+.els-map-point circle {
+  fill: var(--blue);
+  stroke: var(--surface);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.els-map-point text {
+  fill: var(--ink);
+  font-size: 12px;
+}
+
+.els-map-point--sx5e circle {
+  fill: var(--teal);
+}
+
+.els-map-point--nky circle {
+  fill: var(--amber);
+}
+
+.els-map-point--hscei circle {
+  fill: var(--red);
+}
+
+.els-map-point--kospi200 circle {
+  fill: var(--green);
+}
+
+.els-comparison__header small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.els-comparison-list {
+  display: grid;
+}
+
+.els-comparison-row {
+  display: grid;
+  grid-template-columns: 130px 220px 190px minmax(210px, 1fr);
+  gap: 18px;
+  align-items: center;
+  min-width: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  background: var(--surface-raised);
+}
+
+.els-comparison-row:last-child {
+  border-bottom: 0;
+}
+
+.els-comparison-row--good {
+  border-left-color: var(--green);
+}
+
+.els-comparison-row--caution {
+  border-left-color: var(--amber);
+}
+
+.els-comparison-row--danger {
+  border-left-color: var(--red);
+}
+
+.els-comparison-row__identity {
+  display: grid;
+  gap: 4px;
+}
+
+.els-comparison-row__identity span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.els-comparison-row__identity strong {
+  font-size: 1.08rem;
+}
+
+.els-comparison-row__identity em {
+  width: fit-content;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  padding: 3px 7px;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.els-comparison-row--good .els-comparison-row__identity em {
+  color: var(--green);
+}
+
+.els-comparison-row--caution .els-comparison-row__identity em {
+  color: var(--amber);
+}
+
+.els-comparison-row--danger .els-comparison-row__identity em {
+  color: var(--red);
+}
+
+.els-comparison-row__scores {
+  display: grid;
+  gap: 10px;
+}
+
+.els-comparison-row__scores > div {
+  display: grid;
+  gap: 4px;
+}
+
+.els-comparison-row__scores span {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.els-comparison-row__scores span strong {
+  color: var(--ink);
+}
+
+.els-comparison-row__scores i {
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.els-comparison-row__scores b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.els-score-bar--opportunity {
+  background: var(--green);
+}
+
+.els-score-bar--burden {
+  background: var(--red);
+}
+
+.els-comparison-row dl {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.els-comparison-row dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.7rem;
+}
+
+.els-comparison-row dt,
+.els-comparison-row dd {
+  margin: 0;
+}
+
+.els-comparison-row dt {
+  color: var(--muted);
+}
+
+.els-comparison-row dd {
+  font-weight: 800;
+}
+
+.els-comparison-row p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.els-methodology {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.els-methodology article {
+  padding: 18px;
+  border-right: 1px solid var(--line);
+}
+
+.els-methodology article:last-child {
+  border-right: 0;
+}
+
+.els-methodology span,
+.els-limitations strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+}
+
+.els-limitations {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 18px;
+  padding: 18px 20px;
+  border-left: 4px solid var(--amber);
+  background: var(--surface-raised);
+}
+
+.els-limitations strong {
+  margin: 0;
+}
+
 .hmm-regime-panel {
   display: grid;
   gap: 18px;
@@ -2702,6 +3083,8 @@ select {
 
   .ml-risk-panel__header,
   .els-index-panel__header,
+  .els-issuance-heading,
+  .els-opportunity-map__header,
   .els-index-summary,
   .hmm-regime-panel__header,
   .hmm-regime-timeline__header,
@@ -2749,6 +3132,27 @@ select {
   .hmm-regime-row__stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .els-comparison-row {
+    grid-template-columns: 130px minmax(180px, 1fr) minmax(210px, 1fr);
+  }
+
+  .els-comparison-row p {
+    grid-column: 1 / -1;
+  }
+
+  .els-methodology {
+    grid-template-columns: 1fr;
+  }
+
+  .els-methodology article {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .els-methodology article:last-child {
+    border-bottom: 0;
+  }
 }
 
 @media (max-width: 640px) {
@@ -2788,6 +3192,18 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .els-issuance-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .els-issuance-facts > div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .els-issuance-facts > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+
   .operation-status-strip,
   .operations-facts,
   .pipeline-stage-list {
@@ -2810,6 +3226,15 @@ select {
   .operations-heading,
   .operations-section__heading {
     display: grid;
+  }
+
+  .els-comparison-row,
+  .els-limitations {
+    grid-template-columns: 1fr;
+  }
+
+  .els-comparison-row p {
+    grid-column: auto;
   }
 
   .operations-current {
