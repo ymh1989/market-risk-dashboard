@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import io
 import json
+import subprocess
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
@@ -15,7 +17,9 @@ from .data_schema import REQUIRED_COLUMNS, validate_market_columns
 from .data_loader import save_frame
 
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+FRED_GRAPH_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 DEFAULT_SOURCE_CONFIG = Path("configs/data_sources.yaml")
+FRED_HISTORY_CACHE = Path(__file__).resolve().parents[2] / "data" / "market-history-cache.json"
 
 
 @dataclass
@@ -110,6 +114,131 @@ def fetch_yahoo_series(
     )
 
 
+def fetch_fred_series(
+    column: str,
+    spec: dict[str, Any],
+    fetch_config: dict[str, Any],
+    range_value: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+) -> SourceFetchResult:
+    del range_value
+    symbol = str(spec["symbol"])
+    params = {"id": symbol}
+    if start:
+        params["cosd"] = start
+    if end:
+        params["coed"] = end
+    url = f"{FRED_GRAPH_CSV_URL}?{urllib.parse.urlencode(params)}"
+    timeout = int(fetch_config.get("timeout_seconds", 20))
+    direct_error = None
+    try:
+        response = subprocess.run(
+            ["curl", "-L", "--silent", "--show-error", "--max-time", str(timeout), url],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        text = response.stdout
+    except Exception as exc:
+        direct_error = exc
+        try:
+            request = urllib.request.Request(
+                url,
+                headers={
+                    "User-Agent": str(
+                        fetch_config.get("user_agent", "Mozilla/5.0 (compatible; kospi-risk-regime-lab/0.1)")
+                    ),
+                    "Accept": "text/csv,*/*",
+                    "Connection": "close",
+                },
+            )
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                text = response.read().decode("utf-8")
+        except Exception as urllib_error:
+            return load_cached_fred_result(column, spec, start, end, f"{direct_error}; {urllib_error}")
+
+    try:
+        raw = pd.read_csv(io.StringIO(text))
+        date_column = "observation_date" if "observation_date" in raw.columns else "DATE"
+        if date_column not in raw.columns or symbol not in raw.columns:
+            raise RuntimeError(f"{symbol}: FRED CSV 형식이 예상과 다릅니다.")
+        frame = raw.rename(columns={date_column: "date", symbol: column})[["date", column]]
+        frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+        frame[column] = pd.to_numeric(frame[column], errors="coerce")
+        frame = frame.dropna(subset=["date", column]).sort_values("date").drop_duplicates("date", keep="last")
+        if start:
+            frame = frame.loc[frame["date"] >= pd.Timestamp(start)]
+        if end:
+            frame = frame.loc[frame["date"] <= pd.Timestamp(end)]
+        frame = frame.reset_index(drop=True)
+        if frame.empty:
+            raise RuntimeError(f"{symbol}: 유효한 FRED 데이터가 없습니다.")
+    except Exception as parse_error:
+        return load_cached_fred_result(column, spec, start, end, str(parse_error))
+    return SourceFetchResult(
+        column=column,
+        provider="fred",
+        symbol=symbol,
+        label=str(spec.get("label", column)),
+        frame=frame,
+        status="ok",
+    )
+
+
+def load_cached_fred_result(
+    column: str,
+    spec: dict[str, Any],
+    start: str | None,
+    end: str | None,
+    direct_error: str,
+) -> SourceFetchResult:
+    cache_key = str(spec.get("cache_key", ""))
+    if not cache_key or not FRED_HISTORY_CACHE.exists():
+        raise RuntimeError(f"{spec['symbol']}: FRED 조회 실패 및 저장 캐시 없음 ({direct_error})")
+    payload = json.loads(FRED_HISTORY_CACHE.read_text(encoding="utf-8"))
+    rows = (payload.get("fred") or {}).get(cache_key, [])
+    frame = pd.DataFrame(rows)
+    if frame.empty or not {"date", "close"}.issubset(frame.columns):
+        raise RuntimeError(f"{spec['symbol']}: FRED 조회 실패 및 저장 캐시 데이터 없음 ({direct_error})")
+    frame = frame.rename(columns={"close": column})[["date", column]]
+    frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+    frame[column] = pd.to_numeric(frame[column], errors="coerce")
+    frame = frame.dropna(subset=["date", column]).sort_values("date").drop_duplicates("date", keep="last")
+    if start:
+        frame = frame.loc[frame["date"] >= pd.Timestamp(start)]
+    if end:
+        frame = frame.loc[frame["date"] <= pd.Timestamp(end)]
+    frame = frame.reset_index(drop=True)
+    if frame.empty:
+        raise RuntimeError(f"{spec['symbol']}: 지정 기간의 저장 캐시 데이터 없음 ({direct_error})")
+    return SourceFetchResult(
+        column=column,
+        provider="fred",
+        symbol=str(spec["symbol"]),
+        label=str(spec.get("label", column)),
+        frame=frame,
+        status="cached",
+        error=f"직접 조회 실패로 {FRED_HISTORY_CACHE.name} 사용: {direct_error}",
+    )
+
+
+def fetch_source_series(
+    column: str,
+    spec: dict[str, Any],
+    fetch_config: dict[str, Any],
+    range_value: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+) -> SourceFetchResult:
+    provider = str(spec.get("provider", fetch_config.get("provider", "yahoo")))
+    if provider == "yahoo":
+        return fetch_yahoo_series(column, spec, fetch_config, range_value, start, end)
+    if provider == "fred":
+        return fetch_fred_series(column, spec, fetch_config, range_value, start, end)
+    raise RuntimeError(f"지원하지 않는 provider입니다: {provider}")
+
+
 def _source_items(source_config: dict[str, Any]) -> list[tuple[str, dict[str, Any], bool]]:
     items: list[tuple[str, dict[str, Any], bool]] = []
     for column, spec in (source_config.get("required") or {}).items():
@@ -124,7 +253,7 @@ def fetch_market_data(
     range_value: str | None = None,
     start: str | None = None,
     end: str | None = None,
-    fetcher: Callable[[str, dict[str, Any], dict[str, Any], str | None, str | None, str | None], SourceFetchResult] = fetch_yahoo_series,
+    fetcher: Callable[[str, dict[str, Any], dict[str, Any], str | None, str | None, str | None], SourceFetchResult] = fetch_source_series,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     fetch_config = source_config.get("fetch") or {}
     if not range_value and not start and not end and fetch_config.get("start"):
@@ -136,19 +265,15 @@ def fetch_market_data(
 
     for column, spec, required in _source_items(source_config):
         provider = str(spec.get("provider", fetch_config.get("provider", "yahoo")))
-        if provider != "yahoo":
-            error = f"지원하지 않는 provider입니다: {provider}"
-            if required:
-                required_failures.append(f"{column}: {error}")
-            sources.append({"column": column, "provider": provider, "symbol": spec.get("symbol"), "required": required, "status": "failed", "error": error})
-            continue
         try:
             result = fetcher(column, spec, fetch_config, range_value, start, end)
             coverage_ratio = 1.0
             if frames and not required:
                 existing_dates = set(pd.concat([frame[["date"]] for frame in frames], ignore_index=True)["date"])
                 coverage_ratio = len(set(result.frame["date"]) & existing_dates) / max(len(existing_dates), 1)
-            min_optional_coverage = float(fetch_config.get("min_optional_coverage_ratio", 0.0))
+            min_optional_coverage = float(
+                spec.get("min_coverage_ratio", fetch_config.get("min_optional_coverage_ratio", 0.0))
+            )
             if not required and coverage_ratio < min_optional_coverage:
                 sources.append(
                     {
@@ -174,6 +299,7 @@ def fetch_market_data(
                     "label": result.label,
                     "required": required,
                     "status": result.status,
+                    "warning": result.error,
                     "rows": len(result.frame),
                     "coverageRatio": round(coverage_ratio, 4),
                     "firstDate": result.frame["date"].min().date().isoformat(),

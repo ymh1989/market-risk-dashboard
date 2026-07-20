@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DASHBOARD_FILE = ROOT / "data" / "risk-dashboard.json"
 SNAPSHOT_FILE = ROOT / "data" / "market-risk-snapshot.json"
 TIMESERIES_FILE = ROOT / "data" / "market-risk-timeseries.json"
+HISTORY_CACHE_FILE = ROOT / "data" / "market-history-cache.json"
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d"
 FRED_GRAPH_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-risk-dashboard/0.1)"
@@ -252,6 +253,55 @@ def load_local_fred_series(column):
     return series
 
 
+def load_history_fred_series(config):
+    if not HISTORY_CACHE_FILE.exists():
+        raise RuntimeError(
+            f"{HISTORY_CACHE_FILE.relative_to(ROOT)} 파일이 없어 장기 FRED fallback을 사용할 수 없습니다."
+        )
+    payload = json.loads(HISTORY_CACHE_FILE.read_text(encoding="utf-8"))
+    series_key = next(
+        (
+            key
+            for key, item in FRED_SERIES.items()
+            if item["series_id"] == config["series_id"]
+        ),
+        None,
+    )
+    points = (payload.get("fred") or {}).get(series_key, [])
+    series = []
+    for point in points:
+        try:
+            series.append(
+                {
+                    "date": str(point["date"]),
+                    "close": float(point["close"]),
+                    "volume": None,
+                }
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+    series.sort(key=lambda point: point["date"])
+    if len(series) < 80:
+        raise RuntimeError(f"{config['series_id']}: not enough history cache observations ({len(series)})")
+    return series
+
+
+def load_cached_fred_series(config):
+    candidates = []
+    errors = []
+    for source, loader in [
+        ("data/raw/market_data.csv", lambda: load_local_fred_series(config["local_column"])),
+        ("data/market-history-cache.json", lambda: load_history_fred_series(config)),
+    ]:
+        try:
+            candidates.append((loader(), source))
+        except Exception as exc:
+            errors.append(f"{source}: {exc}")
+    if not candidates:
+        raise RuntimeError("; ".join(errors))
+    return max(candidates, key=lambda item: item[0][-1]["date"])
+
+
 def _is_recent_fred_fallback(series, max_age_days=7):
     try:
         last_date = datetime.strptime(series[-1]["date"], "%Y-%m-%d").date()
@@ -261,13 +311,16 @@ def _is_recent_fred_fallback(series, max_age_days=7):
 
 
 def fetch_fred_series_with_fallback(config, **fetch_kwargs):
-    local_error = None
+    cached_series = None
+    cached_source = None
+    cache_error = None
     try:
-        local_series = load_local_fred_series(config["local_column"])
-        if _is_recent_fred_fallback(local_series):
-            return local_series
+        cached_series, cached_source = load_cached_fred_series(config)
+        if _is_recent_fred_fallback(cached_series):
+            print(f"FRED 저장값 사용: {config['series_id']} ({cached_source}, {cached_series[-1]['date']})")
+            return cached_series
     except Exception as exc:
-        local_error = exc
+        cache_error = exc
 
     direct_error = None
     for attempt in range(1, FRED_FETCH_ATTEMPTS + 1):
@@ -283,15 +336,18 @@ def fetch_fred_series_with_fallback(config, **fetch_kwargs):
                 )
                 time.sleep(delay_seconds)
 
-    if local_error is not None:
+    if cached_series is not None:
+        print(
+            f"FRED 직접 조회 실패: {config['series_id']} ({direct_error}). "
+            f"{cached_source}의 저장값({cached_series[-1]['date']})을 사용합니다."
+        )
+        return cached_series
+    if cache_error is not None:
         raise RuntimeError(
-            f"FRED 직접 조회와 로컬 fallback이 모두 실패했습니다: {config['series_id']} / {config['local_column']}"
+            f"FRED 직접 조회와 저장값 fallback이 모두 실패했습니다: "
+            f"{config['series_id']} / {config['local_column']} ({cache_error})"
         ) from direct_error
-    print(
-        f"FRED 직접 조회 실패: {config['series_id']} ({direct_error}). "
-        f"data/raw/market_data.csv의 {config['local_column']} 컬럼을 사용합니다."
-    )
-    return load_local_fred_series(config["local_column"])
+    raise RuntimeError(f"FRED 조회에 실패했습니다: {config['series_id']}") from direct_error
 
 
 def closes(series):

@@ -46,6 +46,34 @@ optional:
     provider: yahoo
     symbol: "^TNX"
     label: "US 10Y Treasury Yield"
+  US2Y:
+    provider: fred
+    symbol: "DGS2"
+    cache_key: us2y
+    label: "US 2Y Treasury Constant Maturity Rate"
+  US_YIELD_CURVE_10Y2Y:
+    provider: fred
+    symbol: "T10Y2Y"
+    cache_key: us_yield_curve_10y2y
+    label: "US 10Y minus 2Y Treasury Spread"
+  US_HIGH_YIELD_OAS:
+    provider: fred
+    symbol: "BAMLH0A0HYM2"
+    cache_key: us_high_yield_oas
+    label: "ICE BofA US High Yield OAS"
+    min_coverage_ratio: 0.05
+  US_FINANCIAL_STRESS_STLFSI:
+    provider: fred
+    symbol: "STLFSI4"
+    cache_key: us_financial_stress_stlfsi
+    label: "St. Louis Fed Financial Stress Index"
+    min_coverage_ratio: 0.05
+  US_FINANCIAL_CONDITIONS_NFCI:
+    provider: fred
+    symbol: "NFCI"
+    cache_key: us_financial_conditions_nfci
+    label: "Chicago Fed National Financial Conditions Index"
+    min_coverage_ratio: 0.05
   WTI:
     provider: yahoo
     symbol: "CL=F"

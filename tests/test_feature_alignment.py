@@ -64,6 +64,9 @@ def test_composite_features_use_current_information_only():
     raw["WTI"] = 70 * np.exp(np.linspace(0, 0.08, len(raw)))
     raw["COPPER"] = 4 * np.exp(np.linspace(0, 0.04, len(raw)))
     raw["GOLD"] = 2000 * np.exp(np.linspace(0, 0.02, len(raw)))
+    raw["US_HIGH_YIELD_OAS"] = 3 + np.linspace(0, 0.4, len(raw))
+    raw["US_FINANCIAL_STRESS_STLFSI"] = -0.5 + np.linspace(0, 0.3, len(raw))
+    raw["US_FINANCIAL_CONDITIONS_NFCI"] = -0.4 + np.linspace(0, 0.2, len(raw))
     features = build_features_from_market_data(raw)
 
     t = 80
@@ -79,3 +82,29 @@ def test_composite_features_use_current_information_only():
     assert np.isclose(features.loc[t, "kospi_minus_global_growth_ret_20d"], expected_kospi - expected_global)
     assert "vix_up_kospi_down_stress_20d" in features.columns
     assert "gold_minus_copper_ret_20d" in features.columns
+    expected_credit_tightening = max(
+        raw.loc[t, "US_HIGH_YIELD_OAS"] - raw.loc[t - 20, "US_HIGH_YIELD_OAS"], 0
+    )
+    expected_financial_tightening = np.mean(
+        [
+            max(
+                raw.loc[t, "US_FINANCIAL_STRESS_STLFSI"]
+                - raw.loc[t - 20, "US_FINANCIAL_STRESS_STLFSI"],
+                0,
+            ),
+            max(
+                raw.loc[t, "US_FINANCIAL_CONDITIONS_NFCI"]
+                - raw.loc[t - 20, "US_FINANCIAL_CONDITIONS_NFCI"],
+                0,
+            ),
+        ]
+    )
+    expected_kospi_down = max(-expected_kospi, 0)
+    assert np.isclose(
+        features.loc[t, "us_credit_tightening_kospi_down_stress_20d"],
+        expected_credit_tightening * expected_kospi_down,
+    )
+    assert np.isclose(
+        features.loc[t, "us_financial_tightening_kospi_down_stress_20d"],
+        expected_financial_tightening * expected_kospi_down,
+    )

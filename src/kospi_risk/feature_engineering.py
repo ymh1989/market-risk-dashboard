@@ -28,6 +28,11 @@ def _safe_ratio(numerator: pd.Series, denominator: pd.Series) -> pd.Series:
     return numerator / denominator.replace(0, np.nan)
 
 
+def _rolling_zscore(series: pd.Series, window: int = 252, min_periods: int = 60) -> pd.Series:
+    rolling = series.rolling(window=window, min_periods=min_periods)
+    return (series - rolling.mean()) / rolling.std().replace(0, np.nan)
+
+
 def build_features_from_market_data(df: pd.DataFrame, annualization: int = 252) -> pd.DataFrame:
     out = df.sort_values("date").drop_duplicates("date", keep="last").reset_index(drop=True).copy()
     log_returns: dict[str, pd.Series] = {}
@@ -85,10 +90,21 @@ def build_features_from_market_data(df: pd.DataFrame, annualization: int = 252) 
             out[f"{key}_sum_5d"] = out[column].rolling(5, min_periods=5).sum()
             out[f"{key}_sum_20d"] = out[column].rolling(20, min_periods=20).sum()
 
-    for column in ["US10Y", "US2Y", "KR10Y"]:
+    for column in ["US10Y", "US2Y", "KR10Y", "US_YIELD_CURVE_10Y2Y"]:
         if column in out.columns:
-            out[f"{column.lower()}_chg_5d"] = out[column] - out[column].shift(5)
-            out[f"{column.lower()}_chg_20d"] = out[column] - out[column].shift(20)
+            key = column.lower()
+            out[f"{key}_level"] = out[column]
+            out[f"{key}_chg_5d"] = out[column] - out[column].shift(5)
+            out[f"{key}_chg_20d"] = out[column] - out[column].shift(20)
+            out[f"{key}_z_252d"] = _rolling_zscore(out[column])
+
+    for column in ["US_HIGH_YIELD_OAS", "US_FINANCIAL_STRESS_STLFSI", "US_FINANCIAL_CONDITIONS_NFCI"]:
+        if column in out.columns:
+            key = column.lower()
+            out[f"{key}_level"] = out[column]
+            out[f"{key}_chg_5d"] = out[column] - out[column].shift(5)
+            out[f"{key}_chg_20d"] = out[column] - out[column].shift(20)
+            out[f"{key}_z_252d"] = _rolling_zscore(out[column])
 
     for column in OPTIONAL_RETURN_COLUMNS:
         if column in out.columns:
@@ -125,6 +141,18 @@ def build_features_from_market_data(df: pd.DataFrame, annualization: int = 252) 
         out["gold_minus_copper_ret_20d"] = out["gold_log_ret_20d"] - out["copper_log_ret_20d"]
     if "wti_log_ret_20d" in out.columns and "usdkrw_log_ret_20d" in out.columns:
         out["oil_up_usdkrw_up_stress_20d"] = _positive_part(out["wti_log_ret_20d"]) * usdkrw_up_20d
+    if "us_high_yield_oas_chg_20d" in out.columns:
+        out["us_credit_tightening_kospi_down_stress_20d"] = (
+            _positive_part(out["us_high_yield_oas_chg_20d"]) * kospi_down_20d
+        )
+    financial_tightening_columns = [
+        column
+        for column in ["us_financial_stress_stlfsi_chg_20d", "us_financial_conditions_nfci_chg_20d"]
+        if column in out.columns
+    ]
+    if financial_tightening_columns:
+        tightening = out[financial_tightening_columns].apply(_positive_part).mean(axis=1)
+        out["us_financial_tightening_kospi_down_stress_20d"] = tightening * kospi_down_20d
 
     return out
 
