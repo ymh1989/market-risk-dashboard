@@ -9,6 +9,7 @@ MARKET_INDEX_CACHE_FILE = ROOT / "data" / "naver-marketindex-history.json"
 BACKTEST_FILE = ROOT / "data" / "market-risk-backtest.json"
 STRESS_FILE = ROOT / "data" / "market-stress-episodes.json"
 STYLES_FILE = ROOT / "src" / "styles.css"
+APP_FILE = ROOT / "src" / "app.js"
 
 
 def clamp_score(value):
@@ -126,6 +127,14 @@ def test_watch_badge_keeps_readable_contrast():
     assert "color: #fff;" in watch_rule
 
 
+def test_dashboard_data_requests_bypass_stale_cache():
+    app_source = APP_FILE.read_text(encoding="utf-8")
+    assert "DATA_REQUEST_VERSION = Date.now()" in app_source
+    assert "request=${DATA_REQUEST_VERSION}" in app_source
+    assert 'cache: "no-store"' in app_source
+
+
 if __name__ == "__main__":
     test_dashboard_contract()
     test_watch_badge_keeps_readable_contrast()
+    test_dashboard_data_requests_bypass_stale_cache()

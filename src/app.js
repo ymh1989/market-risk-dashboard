@@ -2,7 +2,8 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260720-3";
+const ASSET_VERSION = "20260720-4";
+const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
   { key: "score", label: "점수순", description: "현재 점수가 높은 지표부터 봅니다." },
@@ -104,7 +105,7 @@ function updateThemeButton(theme = document.documentElement.dataset.theme) {
 }
 
 function versioned(path) {
-  return `${path}?v=${ASSET_VERSION}`;
+  return `${path}?v=${ASSET_VERSION}&request=${DATA_REQUEST_VERSION}`;
 }
 
 applyTheme(getStoredTheme());
@@ -1780,7 +1781,7 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
 
 async function loadJson(path, required = false) {
   try {
-    const response = await fetch(versioned(path));
+    const response = await fetch(versioned(path), { cache: "no-store" });
     if (!response.ok) throw new Error(`${path} 응답 오류: ${response.status}`);
     return await response.json();
   } catch (error) {
