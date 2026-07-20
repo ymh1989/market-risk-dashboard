@@ -1,12 +1,14 @@
 ---
-title: Integrated Risk Monitoring Dashboard
+title: 통합 리스크 모니터링 대시보드
 sdk: static
 app_file: index.html
 ---
 
-# Integrated Risk Monitoring Dashboard
+# 통합 리스크 모니터링 대시보드
 
-시장리스크를 먼저 운영하고, 이후 신용리스크와 유동성리스크를 같은 구조로 추가할 수 있게 만든 정적 대시보드입니다. 별도 빌드 도구 없이 `index.html`, `src/*`, `data/*.json`만으로 실행됩니다.
+시장리스크와 ELS 발행·헤지 환경을 함께 점검하는 정적 대시보드입니다. 시장 종합점수에 반영되는 18개 가중지표와 연구용 관찰지표 2개, 스트레스 사례, KOSPI ML risk-off 신호, SPX·SX5E·NKY·HSCEI·KOSPI200 ELS 리스크를 한 화면에서 확인할 수 있습니다. 별도 프런트엔드 빌드 도구 없이 `index.html`, `src/*`, `data/*.json`으로 실행되며, 신용리스크와 유동성리스크를 같은 구조로 확장할 수 있습니다.
+
+운영 페이지: [https://ymh1989.github.io/market-risk-dashboard/](https://ymh1989.github.io/market-risk-dashboard/)
 
 ## 실행
 
@@ -20,30 +22,80 @@ make serve
 
 ```bash
 make test
+pytest -q
 ```
 
-테스트는 대시보드 데이터 스키마, 시장리스크 점수 계산, 향후 확장 모듈 존재 여부를 확인합니다.
+`make test`는 대시보드 데이터 스키마, 시장리스크 점수 계산과 화면용 산출물 존재 여부를 확인합니다. `pytest -q`는 ML feature·target 정렬, 미래정보 누수 방지, walk-forward 분할, 전처리 학습 범위와 재현성을 검증합니다.
 
 ## 시장리스크 데이터 갱신
 
 ```bash
 make update-market-risk
 make backtest-market-risk
+make analyze-stress-episodes
+make export-els-index-risk
 ```
 
-이 명령은 Yahoo Finance와 Naver Finance chart 엔드포인트에서 2년 일별 데이터를 받아와 `data/risk-dashboard.json`의 시장리스크 지표와 `data/market-risk-snapshot.json` 감사용 스냅샷을 갱신합니다. 현재 모델은 한국 시장지표, 수급/거래량, 글로벌 크레딧/위험선호, AI 반도체 모니터링 지표를 함께 사용합니다.
+이 명령들은 Yahoo Finance, Naver Finance 주식·시장지표 엔드포인트, FRED에서 데이터를 받아 시장리스크 점수, 감사용 스냅샷, 최근 시계열, 백테스트, 과거 스트레스 사례와 ELS 기초지수별 리스크를 갱신합니다. 현재 모델은 한국 시장지표, 수급·거래량, 글로벌 크레딧·위험선호, 미국 신용스프레드·금융여건, 운임·원자재·국제환율, AI 반도체 및 빅테크 AI 수요 지표를 함께 사용합니다.
 
 - 한국 시장: KOSPI, KOSDAQ, USD/KRW
 - 글로벌 스트레스: VIX, 미국 10년 금리 proxy
-- 수급/거래량: 삼성전자, SK하이닉스, 한미반도체, KODEX 200, KODEX 레버리지의 거래량 및 외국인소진율
-- AI 반도체: SOX, NVIDIA, TSMC ADR, Broadcom, AMD, Micron, ASML, 삼성전자, SK하이닉스, 한미반도체, DB하이텍, 리노공업
+- 수급·거래량: 삼성전자, SK하이닉스, 한미반도체, KODEX 200의 거래량 및 외국인소진율
+- AI 반도체 공급망: SOX, NVIDIA, TSMC ADR, Broadcom, AMD, Micron, ASML, 삼성전자, SK하이닉스, 한미반도체, DB하이텍, 리노공업
+- 빅테크 AI 수요: Apple, Microsoft, Alphabet, Meta, Amazon의 가격 스트레스와 메모리 공급사 대비 수익률 격차
+- 단일종목 레버리지: 삼성전자·SK하이닉스의 KOSPI 대비 상대 변동성과 단기 가격 스트레스
 - 글로벌 proxy: HYG/LQD 신용스프레드 proxy, EEM 신흥국 위험선호 proxy
+- 교차자산 전이: SCFI·BDTI 비용압력과 BDI 실물수요의 괴리, 브렌트유의 원화 환산 비용, USD/CNY·철광석을 결합한 중국 경기 압력
+- 보조 원자재: 구리/금 상대가격을 중국 경기 카드의 상세값으로 제공하되 별도 점수는 부여하지 않습니다.
+- 연구 관찰카드: USD/JPY·VIX·SPX의 엔 캐리 청산 압력과 한국 3년-미국 2년 금리차·USD/KRW의 원화 압력을 0~100점으로 표시합니다. 두 카드는 가중치 0으로 종합점수·위험군 점수·고위험 지표 수에서 제외합니다.
 
-점수는 2년 히스토리 기준의 레벨, 20일 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 세 방식으로 표준화한 뒤 가중평균합니다. 첫째는 과거 분포 내 분위수 순위, 둘째는 `z = (현재값 - 평균) / 표준편차`를 정규분포 CDF로 0~100 변환한 값, 셋째는 median/MAD 기반 robust z-score 변환값입니다. 현재 모델은 분위수 40%, z-score 30%, robust z-score 30%로 섞습니다. 운영 환경에서는 동일한 스크립트 구조에서 Yahoo/Naver provider를 KRX, 한국은행 ECOS, 금융투자협회, 내부 외국인 수급/포지션 데이터 provider로 교체하면 됩니다.
+점수는 최대 2년 히스토리 기준의 레벨, 20개 관측치 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 세 방식으로 표준화한 뒤 가중평균합니다. 주간 SCFI는 4개 관측치 변화를 사용합니다. 첫째는 과거 분포 내 분위수 순위, 둘째는 `z = (현재값 - 평균) / 표준편차`를 정규분포 CDF로 0~100 변환한 값, 셋째는 median/MAD 기반 robust z-score 변환값입니다. 현재 모델은 분위수 40%, z-score 30%, robust z-score 30%로 섞습니다. 운영 환경에서는 동일한 스크립트 구조에서 Yahoo/Naver provider를 KRX, 한국은행 ECOS, 금융투자협회, 내부 외국인 수급/포지션 데이터 provider로 교체하면 됩니다.
 
-지표는 Crash Stress, Overheating, Liquidity, Flow, Macro, AI Semi 하위 리스크 그룹으로 나뉘며, 각 지표와 그룹의 최종 점수 기여도를 함께 저장합니다. `make backtest-market-risk`는 최근 점수 시계열을 KOSPI 향후 20거래일 최대낙폭과 비교해 간단한 진단 결과를 `data/market-risk-backtest.json`에 저장합니다.
+지표는 Crash Stress, Overheating, Liquidity, Flow, Macro, AI Semi 하위 리스크 그룹으로 나뉘며, 각 지표와 그룹의 최종 점수 기여도를 함께 저장합니다. Macro 그룹에는 VIX·환율·금리 proxy, FRED 하이일드 OAS 기반 미국 신용스프레드, 미국 금융여건 긴축 압력과 함께 해상운임 비용 충격, 중국 경기·위안화 압력, 원화 환산 에너지 수입비용을 포함합니다. 서로 다른 휴장일과 주기를 가진 시계열은 해당 날짜까지 공개된 직전 값만 사용해 결합합니다. `make backtest-market-risk`는 최근 점수 시계열을 KOSPI 향후 20거래일 최대낙폭과 비교해 진단 결과를 저장하고, `make analyze-stress-episodes`는 과거 고점수 구간의 실제 낙폭과 주요 기여지표를 정리합니다.
+
+관찰카드는 최소 한 번의 시계열 안전 OOS 비교에서 기존 점수의 하락 탐지력이나 오경보율을 개선한 경우에만 운영 가중치에 편입합니다. 편입 시에는 전체 가중치를 늘리지 않고 기존 Macro 그룹 안에서 중복되는 환율·변동성·금융여건 비중을 재배분합니다.
 
 갱신 시 `data/market-risk-timeseries.json`도 함께 생성됩니다. 이 파일은 각 시장리스크 지표의 최근 120개 관측치 기준 0~100 점수 흐름을 담고, 홈페이지의 지표 카드 안에서 작은 시계열 차트로 표시됩니다.
+
+## 로컬 예약 갱신
+
+GitHub Actions의 `schedule` 트리거는 트래픽과 큐 상태에 따라 정해진 시각보다 늦게 실행될 수 있습니다. 정시성이 중요한 운영 갱신은 macOS `launchd`로 로컬 맥에서 실행하고, 결과 JSON만 `main`으로 push하는 방식을 기본으로 사용합니다.
+
+먼저 `.env.example`을 `.env`로 복사하고 아래 값을 확인합니다.
+
+```bash
+LOCAL_MARKET_UPDATE_TIMES=08:30,12:30,15:35
+LOCAL_MARKET_UPDATE_REMOTE=origin
+LOCAL_MARKET_UPDATE_BRANCH=main
+```
+
+설치 명령은 아래와 같습니다.
+
+```bash
+make install-local-market-update
+```
+
+설치 후 LaunchAgent는 지정된 분마다 스크립트를 깨우고, 스크립트가 KST 기준 평일 `08:30`, `12:30`, `15:35`일 때만 실제 갱신을 수행합니다. 현재 작업 폴더에 README나 설정 파일 변경이 남아 있어도 예약 작업이 막히지 않도록, 스크립트는 `origin/main` 기준의 깨끗한 임시 worktree에서 데이터 갱신, ML 재학습, 테스트, JSON 커밋·푸시를 처리합니다.
+
+수동으로 같은 갱신을 실행하려면 아래 명령을 사용합니다.
+
+```bash
+make run-local-market-update
+```
+
+로그는 `logs/local-market-update.log`, 오류 로그는 `logs/local-market-update.err.log`에 저장됩니다. 맥이 잠자기 상태이거나 네트워크/SSH 인증이 불가능하면 해당 시각 갱신은 실패할 수 있으므로 운영 장비는 예약 시각에 깨어 있고 GitHub push 권한이 있어야 합니다.
+
+## ELS 5개 기초지수 리스크
+
+`make export-els-index-risk`는 ELS에서 주로 사용하는 SPX, SX5E, NKY, HSCEI, KOSPI200을 각각 0~100점으로 평가합니다. 지수별 점수는 20일 실현변동성 분위수 35%, 252일 고점 대비 낙폭 22%, 20일 하락 모멘텀 18%, 고변동성 상승 과열 15%, 60일 낙폭 6%, 최근 일간 충격 4%로 합성합니다.
+
+Basket 점수는 worst-of 구조를 고려해 가장 위험한 지수 50%, 두 번째 지수 20%, 5개 지수 평균 15%, 지수 간 상관도 15%를 반영합니다. 높은 점수는 투자자에게 낙인 접근 위험이 커졌다는 뜻인 동시에, 증권사 관점에서는 발행 조건 개선 가능성과 기존 북의 순연·헤지 비용 증가 우려가 함께 커졌다는 의미입니다.
+
+## ML Risk-off 패널
+
+ML 패널은 최근 10년 시장 데이터를 다시 수집해 leakage-safe feature, expanding walk-forward 검증, 모델 학습과 최신 예측을 순서대로 수행한 결과입니다. Risk-off 확률은 단순한 약세 확률이 아니라 향후 20영업일의 하락, 낙폭과 고변동성 위험을 함께 반영합니다. 따라서 지수가 상승 중이어도 실현변동성이 높으면 `고변동성 활황`으로 표시되며 확률이 높게 나올 수 있습니다.
+
+모델 아티팩트는 로컬 예약 갱신 또는 수동 GitHub Actions 실행 때마다 다시 생성되고 `data/ml-risk-signal.json`으로 내보냅니다. 대시보드는 ML과 기준모델의 macro F1, risk-off 재현율·정밀도·AUC·Brier score를 함께 표시해 성능 차이를 확인할 수 있게 합니다.
 
 모델링 방식은 한국은행의 FSI/FVI처럼 여러 금융안정 관련 지표를 표준화해 종합지수로 합성하는 접근을 참고했습니다. 자세한 배경은 한국은행의 [FSI와 FVI 설명](https://www.bok.or.kr/portal/bbs/B0000347/view.do?menuNo=201106&nttId=10077975&pageIndex=1)을 참고하면 됩니다.
 
@@ -81,7 +133,17 @@ make send-news-digest
 make install-news-digest
 ```
 
-발송 시간은 `.env` 또는 실행 환경에서 `NEWS_DIGEST_HOUR`, `NEWS_DIGEST_MINUTE`로 바꿀 수 있습니다. 키워드는 `config/news_digest_keywords.json`에서 조정합니다.
+발송 시간은 `.env` 또는 실행 환경에서 `NEWS_DIGEST_TIMES=08:30,12:30,15:30`처럼 쉼표로 구분해 바꿀 수 있습니다. 예약 실행은 launchd가 매시 지정 분에 스크립트를 깨우고, 스크립트가 KST 기준 목표 시각일 때만 발송하도록 보호합니다. 키워드는 `config/news_digest_keywords.json`에서 조정합니다. 팀 단체방과 개인방처럼 여러 곳에 동시에 보내려면 `TELEGRAM_CHAT_IDS`에 쉼표로 구분해 추가합니다.
+
+기본값으로 `NEWS_DIGEST_KOREAN_WEB_ONLY=true`가 적용되어 한글 제목 기사만 남기고, 러시아권 도메인이나 키릴 문자가 포함된 원천 매체는 제외합니다.
+
+텔레그램에서 사용자가 직접 호출하려면 polling 봇을 실행합니다.
+
+```bash
+make run-news-bot
+```
+
+봇 대화창이나 팀 단체방에서 `/news`, `/latest`, `/risk`를 보내면 즉시 최신 브리핑을 답장합니다. 기본적으로 `.env`의 `TELEGRAM_CHAT_ID`, `TELEGRAM_CHAT_IDS`와 일치하는 채팅에서만 반응합니다. 팀 단체방에 봇을 초대하고 그 방에서 `/chatid`를 보내 chat id를 확인한 뒤 `TELEGRAM_CHAT_ID` 또는 `TELEGRAM_CHAT_IDS`에 추가하면, 정시 공지와 사용자 호출을 같은 방에서 함께 쓸 수 있습니다.
 
 ## 유지보수 구조
 
@@ -89,10 +151,19 @@ make install-news-digest
 - `data/market-risk-snapshot.json`: 외부 데이터 갱신 시점의 원천 티커와 산출 지표 스냅샷입니다.
 - `data/market-risk-timeseries.json`: 지표별 최근 점수 시계열입니다.
 - `data/market-risk-backtest.json`: 최근 점수 구간별 KOSPI 향후 최대낙폭 진단 결과입니다.
+- `data/market-stress-episodes.json`: 과거 고위험 구간의 낙폭과 주요 기여지표를 저장합니다.
+- `data/market-history-cache.json`: 스트레스 사례 재현에 필요한 시장 히스토리 캐시입니다.
+- `data/naver-marketindex-history.json`: 네이버 운임·금속·에너지·채권·국제환율의 선별 원천 이력과 자산별 실시간/캐시 사용 상태를 저장합니다.
+- `data/els-index-risk.json`: ELS 5개 기초지수와 worst-of basket 리스크를 저장합니다.
+- `data/ml-risk-signal.json`: 최신 ML risk-off 신호, 성능지표와 최근 흐름을 저장합니다.
 - `src/risk-model.js`: 점수 계산과 등급 판정 로직입니다.
 - `src/app.js`: JSON 데이터를 읽어 화면을 렌더링합니다.
 - `src/styles.css`: 대시보드 레이아웃과 시각 스타일입니다.
 - `scripts/update_market_risk.py`: 외부 데이터를 가져와 시장리스크 지표를 재계산합니다.
+- `scripts/export_els_index_risk.py`: ELS 5개 기초지수 및 basket 리스크를 계산합니다.
+- `scripts/export_ml_risk_signal.py`: 연구용 ML 결과를 홈페이지용 JSON으로 변환합니다.
+- `scripts/backtest_market_risk.py`: 시장 종합점수의 선행 낙폭 진단을 생성합니다.
+- `scripts/analyze_stress_episodes.py`: 과거 스트레스 구간과 기여지표를 분석합니다.
 - `scripts/send_risk_news_digest.py`: 키워드별 최신 뉴스를 수집해 텔레그램 브리핑을 발송합니다.
 
 ## 신용/유동성 리스크 추가 방법
@@ -123,7 +194,61 @@ make install-news-digest
 - GitHub Pages: 저장소에 push한 뒤 Pages source를 root로 지정합니다.
 - Netlify/Vercel: 빌드 명령 없이 publish directory를 프로젝트 루트로 지정합니다.
 
-실제 운영에서는 데이터 생성 파이프라인이 `data/risk-dashboard.json`만 갱신하도록 만들면 화면 코드 수정 없이 매일 최신 대시보드를 발행할 수 있습니다.
+실제 운영에서는 로컬 예약 갱신기가 화면에서 읽는 `data/*.json`을 갱신하고 commit·push하면, 화면 코드 수정 없이 최신 대시보드를 발행할 수 있습니다. GitHub Actions는 예약 실행이 아니라 수동 백업 실행용으로 남겨 둡니다.
+
+## KOSPI 리스크 Regime Lab
+
+이 저장소에는 `kospi-risk-regime-lab` Python 패키지도 포함되어 있습니다. 한국 주가지수 리스크 관리와 ELS 발행/헤지 환경 점검을 위한 연구용 ML 파이프라인이며, 임의 매매 신호가 아니라 의사결정 보조 지표 생성을 목표로 합니다.
+
+### 설치
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m pip install -e .
+```
+
+### 입력 데이터
+
+기본 입력 파일은 `data/raw/market_data.csv`입니다. 필수 컬럼은 `date`, `KOSPI`, `SPX`, `SOX`, `USDKRW`입니다. `VIX`, `VKOSPI`, `NASDAQ`, 수급, basis, skew, 금리, 원자재 등 선택 컬럼은 존재할 때만 feature로 사용하며, 없어도 파이프라인은 실패하지 않습니다.
+
+실제 시장 데이터 소스는 `configs/data_sources.yaml`에서 관리합니다. 현재 기본 구현은 Yahoo Finance chart API를 사용해 KOSPI, S&P 500, SOX, USD/KRW와 일부 글로벌 optional 지표를 수집합니다. 수집 감사 정보는 `data/raw/market_data_sources.json`에 저장됩니다.
+
+Backtest는 기본적으로 최근 12개 walk-forward fold를 사용합니다. 더 긴 검증을 원하면 `configs/base.yaml`의 `validation.max_backtest_folds`를 늘리고, 전체 기간 fold를 모두 돌리고 싶으면 `0`으로 바꿉니다.
+
+### 실행 순서
+
+```bash
+python -m kospi_risk.cli fetch-market-data --source-config configs/data_sources.yaml --output data/raw/market_data.csv --metadata data/raw/market_data_sources.json --min-rows 1500
+python -m kospi_risk.cli build-features --input data/raw/market_data.csv --output data/processed/features.parquet --config configs/base.yaml
+python -m kospi_risk.cli train --features data/processed/features.parquet --config configs/base.yaml
+python -m kospi_risk.cli backtest --features data/processed/features.parquet --config configs/base.yaml --output reports/backtest_report.md
+python -m kospi_risk.cli predict-latest --features data/processed/features.parquet --config configs/base.yaml --output reports/latest_signal.csv
+python scripts/export_ml_risk_signal.py
+```
+
+샘플 데이터로 빠르게 구조만 확인하려면 아래 명령을 대신 사용합니다.
+
+```bash
+python -m kospi_risk.cli make-sample-data
+```
+
+산출물은 `reports/backtest_report.md`, `reports/latest_signal.csv`, `reports/score_bucket_analysis.csv`, `reports/model_metrics.csv`, `models/model_bundle.joblib`입니다.
+
+### 출력 해석
+
+`latest_signal.csv`는 20영업일 KOSPI 실현변동성 예측치, `risk-on / neutral / risk-off` regime 확률, KOSPI의 S&P 500 및 SOX 대비 20영업일 초과성과 확률, ELS 리스크 점수와 구간을 제공합니다. ELS 점수는 0~30 낮음, 30~60 정상 모니터링, 60~80 상승 리스크, 80~100 스트레스 구간으로 해석합니다. 시각화 파일은 `reports/figures/`에 PNG로 저장됩니다.
+
+### 누수 방지와 한계
+
+Feature는 각 날짜 `t`까지 관측 가능한 rolling return, volatility, correlation, drawdown, optional market 변수만 사용합니다. Target은 `t+1`부터 `t+20`까지의 미래 구간만 사용하며 마지막 20행 target은 학습에서 제외됩니다. 검증은 random split 없이 expanding walk-forward 방식으로 수행합니다. 첫 버전은 해석 가능성과 재현성을 우선한 baseline/Ridge/RandomForest 중심 구현이며, 운영 전에는 KRX, ECOS, KOFIA, 내부 수급/파생 포지션 데이터로 원천을 교체하고 모델 모니터링, feature drift, 휴장일 캘린더, 모델 승인 절차를 추가해야 합니다.
+
+### 테스트
+
+```bash
+pytest -q
+```
 
 ### GitHub Pages 배포
 
@@ -149,4 +274,4 @@ git push -u origin main
 https://<username>.github.io/<repo>/
 ```
 
-`.github/workflows/update-market-risk.yml`은 평일 16:10 KST에 시장리스크 데이터를 자동 갱신하고, 변경된 `data/*.json`을 다시 commit합니다. GitHub Actions 탭에서 수동 실행도 가능합니다.
+정시 갱신은 `make install-local-market-update`로 설치한 로컬 LaunchAgent가 담당합니다. `.github/workflows/update-market-risk.yml`은 `workflow_dispatch`만 남겨 두었으므로, GitHub Actions 탭에서 필요할 때 수동으로 같은 갱신을 실행하는 백업 경로로 사용할 수 있습니다.

@@ -8,6 +8,7 @@ import subprocess
 import time
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -17,8 +18,10 @@ DASHBOARD_FILE = ROOT / "data" / "risk-dashboard.json"
 SNAPSHOT_FILE = ROOT / "data" / "market-risk-snapshot.json"
 TIMESERIES_FILE = ROOT / "data" / "market-risk-timeseries.json"
 HISTORY_CACHE_FILE = ROOT / "data" / "market-history-cache.json"
+NAVER_MARKET_INDEX_CACHE_FILE = ROOT / "data" / "naver-marketindex-history.json"
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d"
 FRED_GRAPH_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
+NAVER_MARKET_INDEX_URL = "https://stock.naver.com/api/securityService/marketindex/{category}/{symbol}/prices"
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-risk-dashboard/0.1)"
 KST = timezone(timedelta(hours=9))
 FRED_FETCH_ATTEMPTS = 3
@@ -26,6 +29,7 @@ FRED_FETCH_ATTEMPTS = 3
 TICKERS = {
     "kospi": {"symbol": "^KS11", "label": "KOSPI"},
     "kosdaq": {"symbol": "^KQ11", "label": "KOSDAQ"},
+    "spx": {"symbol": "^GSPC", "label": "S&P 500"},
     "usdkrw": {"symbol": "KRW=X", "label": "USD/KRW"},
     "vix": {"symbol": "^VIX", "label": "VIX"},
     "us10y": {"symbol": "^TNX", "label": "US 10Y"},
@@ -79,11 +83,133 @@ FRED_SERIES = {
         "series_id": "STLFSI4",
         "local_column": "US_FINANCIAL_STRESS_STLFSI",
         "label": "St. Louis Fed Financial Stress Index",
+        "max_local_age_days": 14,
     },
     "us_financial_conditions_nfci": {
         "series_id": "NFCI",
         "local_column": "US_FINANCIAL_CONDITIONS_NFCI",
         "label": "Chicago Fed National Financial Conditions Index",
+        "max_local_age_days": 14,
+    },
+}
+
+NAVER_MARKET_INDEXES = {
+    "scfi": {
+        "category": "transport",
+        "symbol": ".SCFIDXSSE",
+        "label": "상하이컨테이너 운임지수",
+        "frequency": "weekly",
+        "target_observations": 120,
+        "min_observations": 60,
+        "max_cache_age_days": 14,
+    },
+    "bdti": {
+        "category": "transport",
+        "symbol": ".BAID",
+        "label": "BDTI 원유유조선지수",
+        "frequency": "daily",
+        "target_observations": 504,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
+    "bdi": {
+        "category": "transport",
+        "symbol": ".BADI",
+        "label": "BDI 건화물선지수",
+        "frequency": "daily",
+        "target_observations": 504,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
+    "iron_ore": {
+        "category": "metals",
+        "symbol": "TIOc1",
+        "label": "철광석 선물",
+        "frequency": "daily",
+        "target_observations": 504,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
+    "copper": {
+        "category": "metals",
+        "symbol": "HGcv1",
+        "label": "구리 선물",
+        "frequency": "daily",
+        "target_observations": 504,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
+    "gold": {
+        "category": "metals",
+        "symbol": "GCcv1",
+        "label": "국제 금 선물",
+        "frequency": "daily",
+        "target_observations": 504,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
+    "brent": {
+        "category": "energy",
+        "symbol": "LCOcv1",
+        "label": "브렌트유 선물",
+        "frequency": "daily",
+        "target_observations": 504,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
+    "usdcny": {
+        "category": "exchangeWorld",
+        "symbol": "USDCNY",
+        "label": "달러/중국 위안",
+        "frequency": "daily",
+        "target_observations": 504,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
+    "usdjpy": {
+        "category": "exchangeWorld",
+        "symbol": "USDJPY",
+        "label": "달러/일본 엔",
+        "frequency": "daily",
+        "target_observations": 504,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
+    "us2y_naver": {
+        "category": "bond",
+        "symbol": "US2YT=RR",
+        "label": "미국 국채 2년",
+        "frequency": "daily",
+        "target_observations": 504,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
+    "us10y_naver": {
+        "category": "bond",
+        "symbol": "US10YT=RR",
+        "label": "미국 국채 10년",
+        "frequency": "daily",
+        "target_observations": 504,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
+    "kr3y": {
+        "category": "bond",
+        "symbol": "KR3YT=RR",
+        "label": "한국 국채 3년",
+        "frequency": "daily",
+        "target_observations": 504,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
+    "kr10y": {
+        "category": "bond",
+        "symbol": "KR10YT=RR",
+        "label": "한국 국채 10년",
+        "frequency": "daily",
+        "target_observations": 504,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
     },
 }
 
@@ -180,6 +306,151 @@ def fetch_naver_chart(symbol, lookback_days=760, start_date=None, end_date=None)
     if len(series) < 80:
         raise RuntimeError(f"{symbol}: not enough Naver observations ({len(series)})")
     return series
+
+
+def parse_naver_number(value):
+    if value in (None, "", "-"):
+        return None
+    try:
+        return float(str(value).replace(",", ""))
+    except ValueError:
+        return None
+
+
+def fetch_naver_market_index_series(config, page_size=60):
+    category = config["category"]
+    symbol = config["symbol"]
+    target_observations = int(config.get("target_observations", 504))
+    max_pages = max(1, math.ceil(target_observations / page_size))
+    encoded_symbol = urllib.parse.quote(symbol, safe="")
+    observations = {}
+
+    for page in range(1, max_pages + 1):
+        params = urllib.parse.urlencode({"page": page, "pageSize": page_size})
+        url = NAVER_MARKET_INDEX_URL.format(category=category, symbol=encoded_symbol)
+        request = urllib.request.Request(
+            f"{url}?{params}",
+            headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+        )
+        with urllib.request.urlopen(request, timeout=20) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+
+        if not isinstance(payload, list):
+            raise RuntimeError(f"{symbol}: Naver market index 응답 형식이 예상과 다릅니다.")
+        if not payload:
+            break
+
+        for row in payload:
+            traded_at = str(row.get("localTradedAt") or "")
+            close = parse_naver_number(row.get("closePrice"))
+            if len(traded_at) < 10 or close is None:
+                continue
+            date = traded_at[:10]
+            observations[date] = {
+                "date": date,
+                "close": close,
+                "open": parse_naver_number(row.get("openPrice")),
+                "high": parse_naver_number(row.get("highPrice")),
+                "low": parse_naver_number(row.get("lowPrice")),
+                "volume": None,
+            }
+
+        if len(payload) < page_size:
+            break
+
+    series = [observations[date] for date in sorted(observations)]
+    if len(series) < int(config.get("min_observations", 80)):
+        raise RuntimeError(f"{symbol}: not enough Naver market index observations ({len(series)})")
+    return series[-target_observations:]
+
+
+def load_naver_market_index_cache():
+    if not NAVER_MARKET_INDEX_CACHE_FILE.exists():
+        return {}
+    try:
+        payload = json.loads(NAVER_MARKET_INDEX_CACHE_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if payload.get("schemaVersion") != 1:
+        return {}
+    return payload.get("series") or {}
+
+
+def _is_recent_market_index_cache(series, max_age_days):
+    try:
+        last_date = datetime.strptime(series[-1]["date"], "%Y-%m-%d").date()
+    except (IndexError, KeyError, TypeError, ValueError):
+        return False
+    return (datetime.now(KST).date() - last_date).days <= max_age_days
+
+
+def write_naver_market_index_cache(series_map, fetch_statuses):
+    payload = {
+        "schemaVersion": 1,
+        "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
+        "source": "Naver Pay Securities market-index endpoints",
+        "sourcePages": {
+            "transport": "https://stock.naver.com/market/marketindex/transport",
+            "metals": "https://stock.naver.com/market/marketindex/metals",
+            "energy": "https://stock.naver.com/market/marketindex/energy",
+            "bond": "https://stock.naver.com/market/marketindex/bondAndInterest/bond",
+            "exchangeWorld": "https://stock.naver.com/market/marketindex/exchangeRate/exchangeWorld",
+        },
+        "metadata": {
+            key: {
+                **config,
+                "fetchStatus": fetch_statuses[key],
+                "observations": len(series_map[key]),
+                "firstDate": series_map[key][0]["date"],
+                "lastDate": series_map[key][-1]["date"],
+            }
+            for key, config in NAVER_MARKET_INDEXES.items()
+        },
+        "series": series_map,
+    }
+    NAVER_MARKET_INDEX_CACHE_FILE.write_text(json.dumps(payload, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def fetch_naver_market_indexes(max_workers=5):
+    cached = load_naver_market_index_cache()
+    results = {}
+    fetch_statuses = {}
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(fetch_naver_market_index_series, config): key
+            for key, config in NAVER_MARKET_INDEXES.items()
+        }
+        for future in as_completed(futures):
+            key = futures[future]
+            config = NAVER_MARKET_INDEXES[key]
+            try:
+                results[key] = future.result()
+                fetch_statuses[key] = "live"
+            except Exception as exc:
+                cached_series = cached.get(key) or []
+                if not _is_recent_market_index_cache(cached_series, config["max_cache_age_days"]):
+                    raise RuntimeError(f"{config['symbol']}: Naver 조회와 최근 캐시 사용이 모두 실패했습니다.") from exc
+                results[key] = cached_series
+                fetch_statuses[key] = f"cache_fallback: {exc}"
+
+    ordered_results = {key: results[key] for key in NAVER_MARKET_INDEXES}
+    ordered_statuses = {key: fetch_statuses[key] for key in NAVER_MARKET_INDEXES}
+    write_naver_market_index_cache(ordered_results, ordered_statuses)
+    return ordered_results, ordered_statuses
+
+
+def fetch_configured_series(configs, fetcher, max_workers=6):
+    results = {}
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(fetcher, config): key for key, config in configs.items()}
+        for future in as_completed(futures):
+            key = futures[future]
+            try:
+                results[key] = future.result()
+            except Exception as exc:
+                raise RuntimeError(f"{key}: 데이터 조회에 실패했습니다.") from exc
+    return {key: results[key] for key in configs}
 
 
 def fetch_fred_series(series_id, lookback_days=1100, start_date=None, end_date=None):
@@ -316,7 +587,9 @@ def fetch_fred_series_with_fallback(config, **fetch_kwargs):
     cache_error = None
     try:
         cached_series, cached_source = load_cached_fred_series(config)
-        if _is_recent_fred_fallback(cached_series):
+        if _is_recent_fred_fallback(
+            cached_series, max_age_days=config.get("max_local_age_days", 7)
+        ):
             print(f"FRED 저장값 사용: {config['series_id']} ({cached_source}, {cached_series[-1]['date']})")
             return cached_series
     except Exception as exc:
@@ -579,6 +852,19 @@ def equity_stress_score_from_components(drawdowns, vols, negative_changes, end_i
     )
 
 
+def equity_stress_component_points(series):
+    values = closes(series)
+    drawdowns = rolling_drawdowns(values)
+    vols = rolling_realized_vol(values)
+    negative_changes = rolling_negative_changes(values)
+    points = []
+    for index, point in enumerate(series):
+        score = equity_stress_score_from_components(drawdowns, vols, negative_changes, index)
+        if score is not None:
+            points.append({"date": point["date"], "value": score})
+    return points
+
+
 def level_and_change_score(series, change_periods=20):
     values = closes(series)
     positive_changes = rolling_positive_changes(values, change_periods)
@@ -632,6 +918,38 @@ def level_and_change_score_at(series, end_index, change_periods=20):
             ),
         ]
     )
+
+
+def level_and_change_component_points(series, change_periods=20):
+    values = closes(series)
+    positive_changes = rolling_positive_changes(values, change_periods)
+    points = []
+    for index, point in enumerate(series):
+        if index < 60 or positive_changes[index] is None:
+            continue
+        level_start = max(0, index - 503)
+        change_start = max(0, index - 251)
+        score = score_from_metrics(
+            [
+                (
+                    hybrid_standard_score(values[level_start : index + 1], values[index]),
+                    0.55,
+                ),
+                (
+                    hybrid_standard_score(
+                        [
+                            value
+                            for value in positive_changes[change_start : index + 1]
+                            if value is not None
+                        ],
+                        positive_changes[index],
+                    ),
+                    0.45,
+                ),
+            ]
+        )
+        points.append({"date": point["date"], "value": score})
+    return points
 
 
 def level_and_point_change_score(series, change_periods=20, direction="up"):
@@ -707,6 +1025,84 @@ def level_and_point_change_score_at(series, end_index, change_periods=20, direct
     )
 
 
+def level_and_point_change_component_points(series, change_periods=20, direction="up"):
+    if direction not in ("up", "down"):
+        raise ValueError(f"지원하지 않는 direction입니다: {direction}")
+
+    values = closes(series)
+    risk_levels = values if direction == "up" else [-value for value in values]
+    point_changes = (
+        rolling_positive_point_changes(values, change_periods)
+        if direction == "up"
+        else rolling_negative_point_changes(values, change_periods)
+    )
+    points = []
+    for index, point in enumerate(series):
+        if index < max(60, change_periods) or point_changes[index] is None:
+            continue
+        level_start = max(0, index - 503)
+        change_start = max(0, index - 251)
+        score = score_from_metrics(
+            [
+                (
+                    hybrid_standard_score(
+                        risk_levels[level_start : index + 1], risk_levels[index]
+                    ),
+                    0.55,
+                ),
+                (
+                    hybrid_standard_score(
+                        [
+                            value
+                            for value in point_changes[change_start : index + 1]
+                            if value is not None
+                        ],
+                        point_changes[index],
+                    ),
+                    0.45,
+                ),
+            ]
+        )
+        points.append({"date": point["date"], "value": score})
+    return points
+
+
+def change_pressure_component_points(
+    series, change_periods=20, direction="up", point_change=False
+):
+    if direction not in ("up", "down"):
+        raise ValueError(f"지원하지 않는 direction입니다: {direction}")
+
+    values = closes(series)
+    if point_change:
+        changes = (
+            rolling_positive_point_changes(values, change_periods)
+            if direction == "up"
+            else rolling_negative_point_changes(values, change_periods)
+        )
+    else:
+        changes = (
+            rolling_positive_changes(values, change_periods)
+            if direction == "up"
+            else rolling_negative_changes(values, change_periods)
+        )
+
+    points = []
+    for index, point in enumerate(series):
+        if index < max(60, change_periods) or changes[index] is None:
+            continue
+        start = max(0, index - 251)
+        sample = [value for value in changes[start : index + 1] if value is not None]
+        score = 0.0 if changes[index] <= 0 else hybrid_standard_score(sample, changes[index])
+        points.append(
+            {
+                "date": point["date"],
+                "value": score,
+            }
+        )
+    return points
+
+
 def make_ratio_series(numerator_series, denominator_series):
     numerator_by_date = {point["date"]: point["close"] for point in numerator_series}
     denominator_by_date = {point["date"]: point["close"] for point in denominator_series}
@@ -720,6 +1116,102 @@ def make_ratio_series(numerator_series, denominator_series):
         for date in dates
         if denominator_by_date[date] != 0
     ]
+
+
+def make_product_series(first_series, second_series):
+    first_by_date = {point["date"]: point["close"] for point in first_series}
+    second_by_date = {point["date"]: point["close"] for point in second_series}
+    dates = sorted(set(first_by_date).union(second_by_date))
+    first_value = None
+    second_value = None
+    products = []
+    for date in dates:
+        first_value = first_by_date.get(date, first_value)
+        second_value = second_by_date.get(date, second_value)
+        if first_value is None or second_value is None:
+            continue
+        products.append(
+            {
+                "date": date,
+                "close": first_value * second_value,
+                "volume": None,
+            }
+        )
+    return products
+
+
+def make_difference_series(first_series, second_series):
+    first_by_date = {point["date"]: point["close"] for point in first_series}
+    second_by_date = {point["date"]: point["close"] for point in second_series}
+    dates = sorted(set(first_by_date).union(second_by_date))
+    first_value = None
+    second_value = None
+    differences = []
+    for date in dates:
+        first_value = first_by_date.get(date, first_value)
+        second_value = second_by_date.get(date, second_value)
+        if first_value is None or second_value is None:
+            continue
+        differences.append(
+            {
+                "date": date,
+                "close": first_value - second_value,
+                "volume": None,
+            }
+        )
+    return differences
+
+
+def close_asof(series, date):
+    for point in reversed(series):
+        if point["date"] <= date:
+            return point["close"]
+    return None
+
+
+def pearson_correlation(first_values, second_values):
+    if len(first_values) != len(second_values) or len(first_values) < 2:
+        return None
+
+    first_mean = statistics.fmean(first_values)
+    second_mean = statistics.fmean(second_values)
+    first_centered = [value - first_mean for value in first_values]
+    second_centered = [value - second_mean for value in second_values]
+    denominator = math.sqrt(
+        sum(value**2 for value in first_centered) * sum(value**2 for value in second_centered)
+    )
+    if denominator == 0:
+        return None
+    return sum(first * second for first, second in zip(first_centered, second_centered)) / denominator
+
+
+def compare_series_quality(reference_series, candidate_series, limit=252):
+    reference_by_date = {point["date"]: point["close"] for point in reference_series}
+    candidate_by_date = {point["date"]: point["close"] for point in candidate_series}
+    dates = sorted(set(reference_by_date).intersection(candidate_by_date))[-limit:]
+    if not dates:
+        return {"overlapCount": 0}
+
+    differences = [candidate_by_date[date] - reference_by_date[date] for date in dates]
+    absolute_differences = [abs(value) for value in differences]
+    reference_values = [reference_by_date[date] for date in dates]
+    candidate_values = [candidate_by_date[date] for date in dates]
+    reference_changes = [current - prior for prior, current in zip(reference_values, reference_values[1:])]
+    candidate_changes = [current - prior for prior, current in zip(candidate_values, candidate_values[1:])]
+    level_correlation = pearson_correlation(reference_values, candidate_values)
+    change_correlation = pearson_correlation(reference_changes, candidate_changes)
+    return {
+        "overlapCount": len(dates),
+        "firstDate": dates[0],
+        "lastDate": dates[-1],
+        "levelCorrelation": round(level_correlation, 4) if level_correlation is not None else None,
+        "dailyChangeCorrelation": round(change_correlation, 4) if change_correlation is not None else None,
+        "meanDifferenceBp": round(statistics.fmean(differences) * 100, 3),
+        "meanAbsoluteDifferenceBp": round(statistics.fmean(absolute_differences) * 100, 3),
+        "maxAbsoluteDifferenceBp": round(max(absolute_differences) * 100, 3),
+        "referenceLast": round(reference_by_date[dates[-1]], 4),
+        "candidateLast": round(candidate_by_date[dates[-1]], 4),
+    }
 
 
 def rolling_average(values, window):
@@ -1133,6 +1625,219 @@ def _weighted_asof_score_points(component_points, limit=120, step=1):
     return points
 
 
+def _latest_composite_score(points, error_message, prior_observations=20):
+    if not points:
+        raise RuntimeError(error_message)
+    latest = points[-1]
+    prior = points[max(0, len(points) - prior_observations - 1)]
+    return latest, trend_from_scores(latest["value"], prior["value"])
+
+
+def shipping_cost_pressure_component_points(market_index_map, limit=120, step=1):
+    cost_components = {
+        "scfi": {
+            "weight": 0.65,
+            "points": level_and_change_component_points(
+                market_index_map["scfi"], change_periods=4
+            ),
+        },
+        "bdti": {
+            "weight": 0.35,
+            "points": level_and_change_component_points(
+                market_index_map["bdti"], change_periods=20
+            ),
+        },
+    }
+    cost_points = _weighted_asof_score_points(cost_components, limit=10000, step=1)
+    demand_points = level_and_change_component_points(
+        market_index_map["bdi"], change_periods=20
+    )
+    dates = sorted({point["date"] for point in [*cost_points, *demand_points]})
+    points = []
+    for date in sampled_recent(dates, limit, step):
+        cost_score = _asof_score(cost_points, date)
+        demand_score = _asof_score(demand_points, date)
+        if cost_score is None or demand_score is None:
+            continue
+        divergence = max(0.0, cost_score - demand_score)
+        points.append(
+            {
+                "date": date,
+                "value": score_from_metrics([(cost_score, 0.3), (divergence, 0.7)]),
+            }
+        )
+    return points
+
+
+def shipping_cost_pressure_score(market_index_map):
+    points = shipping_cost_pressure_component_points(market_index_map, limit=504)
+    latest, trend = _latest_composite_score(points, "운임 비용-수요 괴리 점수를 계산할 데이터가 없습니다.")
+    scfi = level_and_change_score(market_index_map["scfi"], change_periods=4)
+    bdti = level_and_change_score(market_index_map["bdti"], change_periods=20)
+    bdi = level_and_change_score(market_index_map["bdi"], change_periods=20)
+    cost_score = score_from_metrics([(scfi["score"], 0.65), (bdti["score"], 0.35)])
+    divergence = max(0.0, cost_score - bdi["score"])
+    return {
+        "score": latest["value"],
+        "trend": trend,
+        "metrics": {
+            "scfiLast": scfi["metrics"]["last"],
+            "scfiChange4ObsPct": scfi["metrics"]["return20dPct"],
+            "bdtiLast": bdti["metrics"]["last"],
+            "bdtiChange20ObsPct": bdti["metrics"]["return20dPct"],
+            "bdiLast": bdi["metrics"]["last"],
+            "bdiChange20ObsPct": bdi["metrics"]["return20dPct"],
+            "costPressureScore": cost_score,
+            "bdiDemandScore": bdi["score"],
+            "costDemandDivergence": round_score(divergence),
+        },
+    }
+
+
+def china_demand_fx_component_points(market_index_map, limit=120, step=1):
+    component_points = {
+        "usdcny": {
+            "weight": 0.55,
+            "points": level_and_change_component_points(
+                market_index_map["usdcny"], change_periods=20
+            ),
+        },
+        "iron_ore": {
+            "weight": 0.45,
+            "points": equity_stress_component_points(market_index_map["iron_ore"]),
+        },
+    }
+    return _weighted_asof_score_points(component_points, limit=limit, step=step)
+
+
+def china_demand_fx_score(market_index_map):
+    points = china_demand_fx_component_points(market_index_map, limit=504)
+    latest, trend = _latest_composite_score(points, "중국 경기·위안화 압력 점수를 계산할 데이터가 없습니다.")
+    usdcny = level_and_change_score(market_index_map["usdcny"], change_periods=20)
+    iron_ore = equity_stress_score(market_index_map["iron_ore"])
+    copper_gold = make_ratio_series(market_index_map["copper"], market_index_map["gold"])
+    copper_gold_values = closes(copper_gold)
+    return {
+        "score": latest["value"],
+        "trend": trend,
+        "metrics": {
+            "usdcnyLast": usdcny["metrics"]["last"],
+            "usdcnyChange20ObsPct": usdcny["metrics"]["return20dPct"],
+            "ironOreLast": iron_ore["metrics"]["last"],
+            "ironOreReturn20ObsPct": iron_ore["metrics"]["return20dPct"],
+            "copperGoldRatioScaled": round(copper_gold_values[-1] * 1000, 4),
+            "copperGoldReturn20ObsPct": round(pct_change(copper_gold_values, 20) * 100, 2),
+        },
+    }
+
+
+def yen_carry_unwind_component_points(series_map, market_index_map, limit=120, step=1):
+    yen_points = change_pressure_component_points(
+        market_index_map["usdjpy"], change_periods=5, direction="down"
+    )
+    vix_points = change_pressure_component_points(
+        series_map["vix"], change_periods=5, direction="up"
+    )
+    spx_points = change_pressure_component_points(
+        series_map["spx"], change_periods=5, direction="down"
+    )
+    dates = sorted({point["date"] for point in [*yen_points, *vix_points, *spx_points]})
+    points = []
+    for date in sampled_recent(dates, limit, step):
+        yen_score = _asof_score(yen_points, date)
+        vix_score = _asof_score(vix_points, date)
+        spx_score = _asof_score(spx_points, date)
+        if yen_score is None or vix_score is None or spx_score is None:
+            continue
+        confirmation = 0.45 + 0.35 * vix_score / 100 + 0.2 * spx_score / 100
+        points.append({"date": date, "value": round_score(yen_score * confirmation)})
+    return points
+
+
+def yen_carry_unwind_score(series_map, market_index_map):
+    points = yen_carry_unwind_component_points(series_map, market_index_map, limit=504)
+    latest, trend = _latest_composite_score(points, "엔 캐리 청산 관찰점수를 계산할 데이터가 없습니다.", 5)
+    as_of = latest["date"]
+    usdjpy_values = closes(market_index_map["usdjpy"])
+    vix_values = closes(series_map["vix"])
+    spx_values = closes(series_map["spx"])
+    return {
+        "score": latest["value"],
+        "trend": trend,
+        "metrics": {
+            "asOf": as_of,
+            "usdjpyLast": close_asof(market_index_map["usdjpy"], as_of),
+            "usdjpyReturn5ObsPct": round(pct_change(usdjpy_values, 5) * 100, 2),
+            "vixLast": close_asof(series_map["vix"], as_of),
+            "vixReturn5ObsPct": round(pct_change(vix_values, 5) * 100, 2),
+            "spxLast": close_asof(series_map["spx"], as_of),
+            "spxReturn5ObsPct": round(pct_change(spx_values, 5) * 100, 2),
+        },
+    }
+
+
+def korea_us_rate_fx_component_points(series_map, market_index_map, limit=120, step=1):
+    rate_spread = make_difference_series(market_index_map["kr3y"], market_index_map["us2y_naver"])
+    component_points = {
+        "spread_narrowing": {
+            "weight": 0.55,
+            "points": change_pressure_component_points(
+                rate_spread, change_periods=20, direction="down", point_change=True
+            ),
+        },
+        "krw_weakness": {
+            "weight": 0.45,
+            "points": change_pressure_component_points(
+                series_map["usdkrw"], change_periods=20, direction="up"
+            ),
+        },
+    }
+    return _weighted_asof_score_points(component_points, limit=limit, step=step)
+
+
+def korea_us_rate_fx_score(series_map, market_index_map):
+    rate_spread = make_difference_series(market_index_map["kr3y"], market_index_map["us2y_naver"])
+    points = korea_us_rate_fx_component_points(series_map, market_index_map, limit=504)
+    latest, trend = _latest_composite_score(points, "한미 금리차·원화 관찰점수를 계산할 데이터가 없습니다.")
+    as_of = latest["date"]
+    spread_values = closes(rate_spread)
+    usdkrw_values = closes(series_map["usdkrw"])
+    return {
+        "score": latest["value"],
+        "trend": trend,
+        "metrics": {
+            "asOf": as_of,
+            "kr3yLast": close_asof(market_index_map["kr3y"], as_of),
+            "us2yLast": close_asof(market_index_map["us2y_naver"], as_of),
+            "rateSpreadLastPctp": close_asof(rate_spread, as_of),
+            "rateSpreadChange20ObsPctp": round(spread_values[-1] - spread_values[-21], 3),
+            "usdkrwLast": close_asof(series_map["usdkrw"], as_of),
+            "usdkrwReturn20ObsPct": round(pct_change(usdkrw_values, 20) * 100, 2),
+        },
+    }
+
+
+def energy_import_cost_series(series_map, market_index_map):
+    return make_product_series(market_index_map["brent"], series_map["usdkrw"])
+
+
+def energy_import_cost_score(series_map, market_index_map):
+    series = energy_import_cost_series(series_map, market_index_map)
+    score = level_and_change_score(series, change_periods=20)
+    as_of = series[-1]["date"]
+    return {
+        "score": score["score"],
+        "trend": score["trend"],
+        "metrics": {
+            "asOf": as_of,
+            "krwPerBarrel": score["metrics"]["last"],
+            "krwPerBarrelChange20ObsPct": score["metrics"]["return20dPct"],
+            "brentLast": close_asof(market_index_map["brent"], as_of),
+            "usdkrwLast": close_asof(series_map["usdkrw"], as_of),
+        },
+    }
+
+
 def us_credit_spread_score(fred_map):
     score = level_and_point_change_score(fred_map["us_high_yield_oas"], change_periods=20, direction="up")
     return {
@@ -1160,11 +1865,12 @@ def us_credit_spread_score_at(fred_map, date):
 
 
 def us_credit_spread_timeseries(fred_map, limit=120, step=1):
-    return single_indicator_timeseries(
-        fred_map["us_high_yield_oas"],
-        lambda series, index: level_and_point_change_score_at(series, index, change_periods=20, direction="up"),
-        limit=limit,
-        step=step,
+    return score_points_timeseries(
+        level_and_point_change_component_points(
+            fred_map["us_high_yield_oas"], change_periods=20, direction="up"
+        ),
+        limit,
+        step,
     )
 
 
@@ -1172,30 +1878,26 @@ def us_financial_conditions_component_points(fred_map, limit=120, step=1):
     component_points = {
         "stlfsi": {
             "weight": 0.3,
-            "points": _component_score_points(
-                fred_map["us_financial_stress_stlfsi"],
-                lambda series, index: level_and_point_change_score_at(series, index, change_periods=4, direction="up"),
+            "points": level_and_point_change_component_points(
+                fred_map["us_financial_stress_stlfsi"], change_periods=4, direction="up"
             ),
         },
         "nfci": {
             "weight": 0.3,
-            "points": _component_score_points(
-                fred_map["us_financial_conditions_nfci"],
-                lambda series, index: level_and_point_change_score_at(series, index, change_periods=4, direction="up"),
+            "points": level_and_point_change_component_points(
+                fred_map["us_financial_conditions_nfci"], change_periods=4, direction="up"
             ),
         },
         "us2y": {
             "weight": 0.2,
-            "points": _component_score_points(
-                fred_map["us2y"],
-                lambda series, index: level_and_point_change_score_at(series, index, change_periods=20, direction="up"),
+            "points": level_and_point_change_component_points(
+                fred_map["us2y"], change_periods=20, direction="up"
             ),
         },
         "curve": {
             "weight": 0.2,
-            "points": _component_score_points(
-                fred_map["us_yield_curve_10y2y"],
-                lambda series, index: level_and_point_change_score_at(series, index, change_periods=20, direction="down"),
+            "points": level_and_point_change_component_points(
+                fred_map["us_yield_curve_10y2y"], change_periods=20, direction="down"
             ),
         },
     }
@@ -1258,6 +1960,11 @@ def sampled_recent(values, limit, step=1):
     return sampled
 
 
+def score_points_timeseries(points, limit=120, step=1):
+    sampled_dates = set(sampled_recent([point["date"] for point in points], limit, step))
+    return [point for point in points if point["date"] in sampled_dates]
+
+
 def single_indicator_timeseries(series, score_fn, limit=120, step=1):
     points = []
     start_index = max(0, len(series) - limit)
@@ -1284,10 +1991,13 @@ def single_indicator_timeseries(series, score_fn, limit=120, step=1):
 
 def global_ai_timeseries(series_map, limit=120, step=1):
     keys = ("sox", "nvda", "tsm", "avgo", "amd", "mu", "asml")
-    indexes = {key: index_by_date(series_map[key]) for key in keys}
+    score_maps = {
+        key: {point["date"]: point["value"] for point in equity_stress_component_points(series_map[key])}
+        for key in keys
+    }
     points = []
     for date in sampled_recent(common_dates(series_map, keys), limit, step):
-        scores = [equity_stress_score_at(series_map[key], indexes[key][date]) for key in keys]
+        scores = [score_maps[key].get(date) for key in keys]
         if any(score is None for score in scores):
             continue
         points.append({"date": date, "value": round_score(sum(scores) / len(scores))})
@@ -1297,6 +2007,11 @@ def global_ai_timeseries(series_map, limit=120, step=1):
 def korea_ai_timeseries(series_map, limit=120, step=1):
     keys = ("kospi", "samsung", "hynix", "hanmi", "dbhitek", "leeno")
     indexes = {key: index_by_date(series_map[key]) for key in keys}
+    score_maps = {
+        key: {point["date"]: point["value"] for point in equity_stress_component_points(series_map[key])}
+        for key in keys
+        if key != "kospi"
+    }
     points = []
 
     for date in sampled_recent(common_dates(series_map, keys), limit, step):
@@ -1305,7 +2020,7 @@ def korea_ai_timeseries(series_map, limit=120, step=1):
         if min([kospi_index, *asset_indexes]) < 60:
             continue
 
-        asset_scores = [equity_stress_score_at(series_map[key], indexes[key][date]) for key in keys if key != "kospi"]
+        asset_scores = [score_maps[key].get(date) for key in keys if key != "kospi"]
         if any(score is None for score in asset_scores):
             continue
 
@@ -1327,22 +2042,22 @@ def korea_ai_timeseries(series_map, limit=120, step=1):
     return points
 
 
-def build_timeseries(series_map, naver_map, fred_map, limit=120, step=1):
-    return {
-        "kospi_price_stress": single_indicator_timeseries(
-            series_map["kospi"], equity_stress_score_at, limit=limit, step=step
+def build_timeseries(series_map, naver_map, fred_map, market_index_map=None, limit=120, step=1):
+    timeseries = {
+        "kospi_price_stress": score_points_timeseries(
+            equity_stress_component_points(series_map["kospi"]), limit=limit, step=step
         ),
-        "kosdaq_growth_stress": single_indicator_timeseries(
-            series_map["kosdaq"], equity_stress_score_at, limit=limit, step=step
+        "kosdaq_growth_stress": score_points_timeseries(
+            equity_stress_component_points(series_map["kosdaq"]), limit=limit, step=step
         ),
-        "usdkrw_fx_pressure": single_indicator_timeseries(
-            series_map["usdkrw"], level_and_change_score_at, limit=limit, step=step
+        "usdkrw_fx_pressure": score_points_timeseries(
+            level_and_change_component_points(series_map["usdkrw"]), limit=limit, step=step
         ),
-        "global_volatility_pressure": single_indicator_timeseries(
-            series_map["vix"], level_and_change_score_at, limit=limit, step=step
+        "global_volatility_pressure": score_points_timeseries(
+            level_and_change_component_points(series_map["vix"]), limit=limit, step=step
         ),
-        "rates_pressure": single_indicator_timeseries(
-            series_map["us10y"], level_and_change_score_at, limit=limit, step=step
+        "rates_pressure": score_points_timeseries(
+            level_and_change_component_points(series_map["us10y"]), limit=limit, step=step
         ),
         "us_credit_spread_stress": us_credit_spread_timeseries(fred_map, limit=limit, step=step),
         "us_financial_conditions_stress": us_financial_conditions_component_points(
@@ -1365,16 +2080,42 @@ def build_timeseries(series_map, naver_map, fred_map, limit=120, step=1):
         "single_name_semiconductor_leverage": single_name_semiconductor_leverage_timeseries(
             series_map, limit=limit, step=step
         ),
-        "global_credit_proxy_stress": single_indicator_timeseries(
-            make_ratio_series(series_map["hyg"], series_map["lqd"]),
-            equity_stress_score_at,
+        "global_credit_proxy_stress": score_points_timeseries(
+            equity_stress_component_points(
+                make_ratio_series(series_map["hyg"], series_map["lqd"])
+            ),
             limit=limit,
             step=step,
         ),
-        "emerging_market_stress": single_indicator_timeseries(
-            series_map["eem"], equity_stress_score_at, limit=limit, step=step
+        "emerging_market_stress": score_points_timeseries(
+            equity_stress_component_points(series_map["eem"]), limit=limit, step=step
         ),
     }
+    if market_index_map:
+        timeseries.update(
+            {
+                "shipping_cost_pressure": shipping_cost_pressure_component_points(
+                    market_index_map, limit=limit, step=step
+                ),
+                "china_demand_fx_stress": china_demand_fx_component_points(
+                    market_index_map, limit=limit, step=step
+                ),
+                "energy_import_cost_pressure": score_points_timeseries(
+                    level_and_change_component_points(
+                        energy_import_cost_series(series_map, market_index_map)
+                    ),
+                    limit=limit,
+                    step=step,
+                ),
+                "yen_carry_unwind_watch": yen_carry_unwind_component_points(
+                    series_map, market_index_map, limit=limit, step=step
+                ),
+                "korea_us_rate_fx_watch": korea_us_rate_fx_component_points(
+                    series_map, market_index_map, limit=limit, step=step
+                ),
+            }
+        )
+    return timeseries
 
 
 def korean_ai_semiconductor_score(series_map):
@@ -1444,11 +2185,15 @@ def enrich_indicators(indicators):
     group_scores = []
     for group_id, config in RISK_GROUPS.items():
         members = [indicator for indicator in enriched if indicator["group"] == group_id]
-        if not members:
+        scored_members = [indicator for indicator in members if indicator["weight"] > 0]
+        if not scored_members:
             continue
-        group_weight = sum(indicator["weight"] for indicator in members)
-        group_score = sum(indicator["value"] * indicator["weight"] for indicator in members) / group_weight
-        group_contribution = sum(indicator["contribution"] for indicator in members)
+        group_weight = sum(indicator["weight"] for indicator in scored_members)
+        group_score = (
+            sum(indicator["value"] * indicator["weight"] for indicator in scored_members)
+            / group_weight
+        )
+        group_contribution = sum(indicator["contribution"] for indicator in scored_members)
         group_scores.append(
             {
                 "id": group_id,
@@ -1456,14 +2201,15 @@ def enrich_indicators(indicators):
                 "score": round_score(group_score),
                 "weight": round(group_weight / total_weight, 3),
                 "contribution": round(group_contribution, 2),
-                "indicatorCount": len(members),
+                "indicatorCount": len(scored_members),
+                "observationCount": len(members) - len(scored_members),
             }
         )
 
     return enriched, sorted(group_scores, key=lambda group: group["contribution"], reverse=True)
 
 
-def build_indicators(series_map, naver_map, fred_map):
+def build_indicators(series_map, naver_map, fred_map, market_index_map):
     kospi = equity_stress_score(series_map["kospi"])
     kosdaq = equity_stress_score(series_map["kosdaq"])
     usdkrw = level_and_change_score(series_map["usdkrw"])
@@ -1471,6 +2217,11 @@ def build_indicators(series_map, naver_map, fred_map):
     us10y = level_and_change_score(series_map["us10y"])
     us_credit_spread = us_credit_spread_score(fred_map)
     us_financial_conditions = us_financial_conditions_score(fred_map)
+    shipping_cost = shipping_cost_pressure_score(market_index_map)
+    china_demand_fx = china_demand_fx_score(market_index_map)
+    energy_import_cost = energy_import_cost_score(series_map, market_index_map)
+    yen_carry_unwind = yen_carry_unwind_score(series_map, market_index_map)
+    korea_us_rate_fx = korea_us_rate_fx_score(series_map, market_index_map)
     global_ai = semiconductor_global_score(series_map)
     bigtech_demand = bigtech_ai_demand_pressure_score(series_map)
     korea_ai = korean_ai_semiconductor_score(series_map)
@@ -1521,7 +2272,7 @@ def build_indicators(series_map, naver_map, fred_map):
             "group": "macro",
             "value": usdkrw["score"],
             "unit": "score",
-            "weight": 0.07,
+            "weight": 0.06,
             "trend": usdkrw["trend"],
             "detail": (
                 f"USD/KRW {fmt_number(usdkrw['metrics']['last'])}, 20일 변화율 {fmt_pct(usdkrw['metrics']['return20dPct'])}, "
@@ -1536,7 +2287,7 @@ def build_indicators(series_map, naver_map, fred_map):
             "group": "macro",
             "value": vix["score"],
             "unit": "score",
-            "weight": 0.06,
+            "weight": 0.05,
             "trend": vix["trend"],
             "detail": (
                 f"VIX {fmt_number(vix['metrics']['last'])}, 20일 변화율 {fmt_pct(vix['metrics']['return20dPct'])}, "
@@ -1551,7 +2302,7 @@ def build_indicators(series_map, naver_map, fred_map):
             "group": "macro",
             "value": us10y["score"],
             "unit": "score",
-            "weight": 0.04,
+            "weight": 0.03,
             "trend": us10y["trend"],
             "detail": (
                 f"미 10년 금리 proxy {fmt_number(us10y['metrics']['last'])}, 20일 변화율 "
@@ -1566,7 +2317,7 @@ def build_indicators(series_map, naver_map, fred_map):
             "group": "macro",
             "value": us_credit_spread["score"],
             "unit": "score",
-            "weight": 0.06,
+            "weight": 0.05,
             "trend": us_credit_spread["trend"],
             "detail": (
                 f"미국 하이일드 OAS {us_credit_spread['metrics']['highYieldOasLast']:.2f}%, "
@@ -1582,7 +2333,7 @@ def build_indicators(series_map, naver_map, fred_map):
             "group": "macro",
             "value": us_financial_conditions["score"],
             "unit": "score",
-            "weight": 0.04,
+            "weight": 0.03,
             "trend": us_financial_conditions["trend"],
             "detail": (
                 f"STLFSI {us_financial_conditions['metrics']['stlfsiLast']:.2f}, "
@@ -1591,6 +2342,107 @@ def build_indicators(series_map, naver_map, fred_map):
                 f"10Y-2Y {us_financial_conditions['metrics']['curveLast']:.2f}%p"
             ),
             "source": "FRED: STLFSI4, NFCI, DGS2, T10Y2Y",
+        },
+        {
+            "id": "shipping_cost_pressure",
+            "name": "운임 비용-수요 괴리",
+            "category": "운임/공급망",
+            "group": "macro",
+            "value": shipping_cost["score"],
+            "unit": "score",
+            "weight": 0.02,
+            "trend": shipping_cost["trend"],
+            "detail": (
+                f"SCFI {fmt_number(shipping_cost['metrics']['scfiLast'])}, 최근 4개 주간 관측치 변화 "
+                f"{fmt_pct(shipping_cost['metrics']['scfiChange4ObsPct'])}, BDTI "
+                f"{fmt_number(shipping_cost['metrics']['bdtiLast'])}, 최근 20개 관측치 변화 "
+                f"{fmt_pct(shipping_cost['metrics']['bdtiChange20ObsPct'])}, BDI "
+                f"{fmt_number(shipping_cost['metrics']['bdiLast'])}, 최근 20개 관측치 변화 "
+                f"{fmt_pct(shipping_cost['metrics']['bdiChange20ObsPct'])}. 비용압력 "
+                f"{shipping_cost['metrics']['costPressureScore']:.1f}에서 BDI 수요점수 "
+                f"{shipping_cost['metrics']['bdiDemandScore']:.1f}을 비교한 괴리는 "
+                f"{shipping_cost['metrics']['costDemandDivergence']:.1f}입니다."
+            ),
+            "source": "Naver market index: .SCFIDXSSE, .BAID, .BADI",
+        },
+        {
+            "id": "china_demand_fx_stress",
+            "name": "중국 경기·위안화 압력",
+            "category": "중국/원자재",
+            "group": "macro",
+            "value": china_demand_fx["score"],
+            "unit": "score",
+            "weight": 0.03,
+            "trend": china_demand_fx["trend"],
+            "detail": (
+                f"USD/CNY {china_demand_fx['metrics']['usdcnyLast']:.4f}, 최근 20개 관측치 변화 "
+                f"{fmt_pct(china_demand_fx['metrics']['usdcnyChange20ObsPct'])}, 철광석 "
+                f"{fmt_number(china_demand_fx['metrics']['ironOreLast'])}, 최근 20개 관측치 수익률 "
+                f"{fmt_pct(china_demand_fx['metrics']['ironOreReturn20ObsPct'])}, 구리/금 상대비율(×1000) "
+                f"{china_demand_fx['metrics']['copperGoldRatioScaled']:.4f}, 20개 관측치 변화 "
+                f"{fmt_pct(china_demand_fx['metrics']['copperGoldReturn20ObsPct'])}. "
+                "위안화 약세와 중국 수요 민감 원자재 하락이 함께 나타날 때 한국 수출주 부담을 높게 봅니다."
+            ),
+            "source": "Naver market index: USDCNY, TIOc1, HGcv1, GCcv1",
+        },
+        {
+            "id": "energy_import_cost_pressure",
+            "name": "원화 환산 에너지 수입비용",
+            "category": "에너지/환율",
+            "group": "macro",
+            "value": energy_import_cost["score"],
+            "unit": "score",
+            "weight": 0.02,
+            "trend": energy_import_cost["trend"],
+            "detail": (
+                f"브렌트유 ${energy_import_cost['metrics']['brentLast']:.2f}, USD/KRW "
+                f"{fmt_number(energy_import_cost['metrics']['usdkrwLast'])}, 원화 환산 배럴당 비용 "
+                f"{fmt_number(energy_import_cost['metrics']['krwPerBarrel'])}원, 최근 20개 관측치 변화 "
+                f"{fmt_pct(energy_import_cost['metrics']['krwPerBarrelChange20ObsPct'])}. "
+                "유가와 원화 약세가 동시에 기업 마진·물가·금리 부담으로 전이되는 경로를 측정합니다."
+            ),
+            "source": "Naver market index: LCOcv1; Yahoo Finance: KRW=X",
+        },
+        {
+            "id": "yen_carry_unwind_watch",
+            "name": "엔 캐리 청산 압력",
+            "category": "관찰/글로벌 수급",
+            "group": "macro",
+            "role": "observation",
+            "value": yen_carry_unwind["score"],
+            "unit": "score",
+            "weight": 0.0,
+            "trend": yen_carry_unwind["trend"],
+            "detail": (
+                f"USD/JPY {yen_carry_unwind['metrics']['usdjpyLast']:.2f}, 5개 관측치 변화 "
+                f"{fmt_pct(yen_carry_unwind['metrics']['usdjpyReturn5ObsPct'])}, VIX "
+                f"{yen_carry_unwind['metrics']['vixLast']:.2f}·5개 관측치 "
+                f"{fmt_pct(yen_carry_unwind['metrics']['vixReturn5ObsPct'])}, SPX 5개 관측치 "
+                f"{fmt_pct(yen_carry_unwind['metrics']['spxReturn5ObsPct'])}. 엔화 급강세·VIX 상승·"
+                "SPX 하락의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다."
+            ),
+            "source": "Naver market index: USDJPY; Yahoo Finance: ^VIX, ^GSPC",
+        },
+        {
+            "id": "korea_us_rate_fx_watch",
+            "name": "한미 금리차·원화 압력",
+            "category": "관찰/금리·외환",
+            "group": "macro",
+            "role": "observation",
+            "value": korea_us_rate_fx["score"],
+            "unit": "score",
+            "weight": 0.0,
+            "trend": korea_us_rate_fx["trend"],
+            "detail": (
+                f"한국 3년 {korea_us_rate_fx['metrics']['kr3yLast']:.3f}%, 미국 2년 "
+                f"{korea_us_rate_fx['metrics']['us2yLast']:.3f}%, 금리차 "
+                f"{korea_us_rate_fx['metrics']['rateSpreadLastPctp']:+.3f}%p·20개 관측치 변화 "
+                f"{korea_us_rate_fx['metrics']['rateSpreadChange20ObsPctp']:+.3f}%p, USD/KRW "
+                f"{fmt_number(korea_us_rate_fx['metrics']['usdkrwLast'])}·20개 관측치 "
+                f"{fmt_pct(korea_us_rate_fx['metrics']['usdkrwReturn20ObsPct'])}. 금리차 축소와 원화 약세의 "
+                "동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다."
+            ),
+            "source": "Naver market index: KR3YT=RR, US2YT=RR; Yahoo Finance: KRW=X",
         },
         {
             "id": "global_ai_semiconductor_stress",
@@ -1700,7 +2552,7 @@ def build_indicators(series_map, naver_map, fred_map):
             "group": "macro",
             "value": global_credit["score"],
             "unit": "score",
-            "weight": 0.03,
+            "weight": 0.01,
             "trend": global_credit["trend"],
             "detail": (
                 f"HYG/LQD 상대가격 기준, 20일 수익률 {fmt_pct(global_credit['metrics']['return20dPct'])}, "
@@ -1727,31 +2579,38 @@ def build_indicators(series_map, naver_map, fred_map):
     ]
 
 
-def update_dashboard(series_map, fred_map, indicators):
+def update_dashboard(series_map, fred_map, market_index_map, indicators):
     dashboard = json.loads(DASHBOARD_FILE.read_text(encoding="utf-8"))
     generated_at = datetime.now(KST).strftime("%Y-%m-%d %H:%M KST")
     as_of = max(
         [point["date"] for series in series_map.values() for point in series[-1:]]
         + [point["date"] for series in fred_map.values() for point in series[-1:]]
+        + [point["date"] for series in market_index_map.values() for point in series[-1:]]
     )
     enriched_indicators, group_scores = enrich_indicators(indicators)
 
     dashboard["metadata"]["asOf"] = as_of
     dashboard["metadata"]["generatedAt"] = generated_at
-    dashboard["metadata"]["source"] = "Yahoo Finance, Naver Finance, and FRED endpoints via scripts/update_market_risk.py"
+    dashboard["metadata"]["source"] = (
+        "Yahoo Finance, Naver Finance equity/market-index, and FRED endpoints via scripts/update_market_risk.py"
+    )
 
     market = next(section for section in dashboard["sections"] if section["id"] == "market")
     market["description"] = (
         "KOSPI/KOSDAQ, 원달러 환율, 글로벌 변동성·금리·크레딧, 미국 신용스프레드·금융여건, "
+        "운임 비용-수요 괴리·중국 경기/위안화·원화 환산 에너지 수입비용, "
         "외국인 보유비중, 거래량, "
         "대형 반도체 단일종목 레버리지성 스트레스, 빅테크 AI 수요 우려, "
-        "AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다."
+        "AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다. 엔 캐리 청산과 "
+        "한미 금리차·원화 압력은 종합점수와 분리한 연구 관찰카드로 제공합니다."
     )
-    market["model"]["version"] = "market-risk-v4-fred-credit-financial-conditions"
+    market["model"]["version"] = "market-risk-v6-observation-harness"
     market["model"]["methodology"] = (
-        "각 시계열의 2년 히스토리에서 레벨, 20일 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 "
+        "각 시계열의 최대 2년 히스토리에서 레벨, 20개 관측치 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 "
         "분위수 점수, z-score 정규분포 변환 점수, median/MAD 기반 robust z-score 변환 점수로 "
-        "각각 0~100 표준화하고, 하위 리스크 그룹별 기여도를 함께 산출합니다."
+        "각각 0~100 표준화합니다. 주간 SCFI는 4개 관측치 변화를 사용하며, 자산군 간 복합지표는 "
+        "관측일이 다른 시계열을 미래값 없이 직전 가용값으로 결합합니다. weight 0의 연구 관찰카드는 "
+        "점수 흐름만 제공하고 종합점수·위험군 점수·상위 위험지표 집계에서는 제외합니다."
     )
     market["model"]["normalization"] = {
         "percentileWeight": 0.4,
@@ -1765,6 +2624,7 @@ def update_dashboard(series_map, fred_map, indicators):
     market["model"]["dataSources"] = [
         "Yahoo Finance chart endpoint",
         "Naver Finance chart endpoint",
+        "Naver market-index transport, metals, energy, bond, exchangeWorld endpoints",
         "KOSPI/KOSDAQ price series",
         "USD/KRW, VIX, US 10Y proxy",
         "FRED US 2Y, 10Y-2Y spread, high yield OAS, STLFSI, NFCI",
@@ -1773,6 +2633,7 @@ def update_dashboard(series_map, fred_map, indicators):
         "Samsung Electronics, SK hynix, Hanmi Semiconductor, DB HiTek, Leeno Industrial",
         "Naver foreign ownership ratio and trading volume",
         "HYG/LQD credit proxy, EEM emerging market proxy",
+        "SCFI, BDTI, BDI, Brent, iron ore, copper, gold, USD/CNY, USD/JPY, US/KR Treasury yields",
     ]
     market["model"]["references"] = [
         {
@@ -1788,6 +2649,26 @@ def update_dashboard(series_map, fred_map, indicators):
             "url": "https://api.finance.naver.com/siseJson.naver?symbol=005930&requestType=1&timeframe=day",
         },
         {
+            "label": "Naver transport market indexes",
+            "url": "https://stock.naver.com/market/marketindex/transport",
+        },
+        {
+            "label": "Naver metals market indexes",
+            "url": "https://stock.naver.com/market/marketindex/metals",
+        },
+        {
+            "label": "Naver energy market indexes",
+            "url": "https://stock.naver.com/market/marketindex/energy",
+        },
+        {
+            "label": "Naver bond market indexes",
+            "url": "https://stock.naver.com/market/marketindex/bondAndInterest/bond",
+        },
+        {
+            "label": "Naver international FX market indexes",
+            "url": "https://stock.naver.com/market/marketindex/exchangeRate/exchangeWorld",
+        },
+        {
             "label": "FRED high yield OAS",
             "url": "https://fred.stlouisfed.org/series/BAMLH0A0HYM2",
         },
@@ -1801,17 +2682,18 @@ def update_dashboard(series_map, fred_map, indicators):
     market["actions"] = [
         "scripts/update_market_risk.py를 일 단위로 실행해 data/risk-dashboard.json과 market-risk-snapshot.json을 갱신합니다.",
         "점수 75 이상 또는 핵심 지표 2개 이상 경고 시 투자위원회 보고 대상을 자동 지정합니다.",
+        "연구 관찰카드는 OOS 개선이 확인되기 전까지 종합점수와 고위험 지표 수에 포함하지 않습니다.",
         "운영 배포에서는 Yahoo/Naver proxy를 KRX, 한국은행 ECOS, 금융투자협회, 내부 포지션/외국인 수급 데이터로 교체할 수 있습니다.",
     ]
 
     DASHBOARD_FILE.write_text(json.dumps(dashboard, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def write_snapshot(series_map, naver_map, fred_map, indicators):
+def write_snapshot(series_map, naver_map, fred_map, market_index_map, market_index_statuses, indicators):
     enriched_indicators, group_scores = enrich_indicators(indicators)
     snapshot = {
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "source": "Yahoo Finance, Naver Finance, and FRED endpoints",
+        "source": "Yahoo Finance, Naver Finance equity/market-index, and FRED endpoints",
         "yahooSymbols": {
             key: {
                 "symbol": config["symbol"],
@@ -1844,31 +2726,60 @@ def write_snapshot(series_map, naver_map, fred_map, indicators):
             }
             for key, config in FRED_SERIES.items()
         },
+        "naverMarketIndexes": {
+            key: {
+                "category": config["category"],
+                "symbol": config["symbol"],
+                "label": config["label"],
+                "frequency": config["frequency"],
+                "fetchStatus": market_index_statuses[key],
+                "firstDate": market_index_map[key][0]["date"],
+                "lastDate": market_index_map[key][-1]["date"],
+                "lastClose": round(market_index_map[key][-1]["close"], 4),
+                "observations": len(market_index_map[key]),
+            }
+            for key, config in NAVER_MARKET_INDEXES.items()
+        },
+        "qualityChecks": {
+            "naverUs2yVsFredDgs2": compare_series_quality(
+                fred_map["us2y"], market_index_map["us2y_naver"]
+            )
+        },
         "groupScores": group_scores,
         "indicators": enriched_indicators,
     }
     SNAPSHOT_FILE.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def write_timeseries(series_map, naver_map, fred_map):
+def write_timeseries(series_map, naver_map, fred_map, market_index_map):
     timeseries = {
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "source": "Yahoo Finance, Naver Finance, and FRED endpoints",
+        "source": "Yahoo Finance, Naver Finance equity/market-index, and FRED endpoints",
         "window": "recent 120 observations per indicator",
         "unit": "risk score",
-        "series": build_timeseries(series_map, naver_map, fred_map),
+        "series": build_timeseries(series_map, naver_map, fred_map, market_index_map),
     }
     TIMESERIES_FILE.write_text(json.dumps(timeseries, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def main():
-    series_map = {key: fetch_yahoo_chart(config["symbol"]) for key, config in TICKERS.items()}
-    naver_map = {key: fetch_naver_chart(config["symbol"]) for key, config in NAVER_SYMBOLS.items()}
-    fred_map = {key: fetch_fred_series_with_fallback(config) for key, config in FRED_SERIES.items()}
-    indicators = build_indicators(series_map, naver_map, fred_map)
-    update_dashboard(series_map, fred_map, indicators)
-    write_snapshot(series_map, naver_map, fred_map, indicators)
-    write_timeseries(series_map, naver_map, fred_map)
+    print("Yahoo Finance 시계열을 조회합니다.", flush=True)
+    series_map = fetch_configured_series(
+        TICKERS, lambda config: fetch_yahoo_chart(config["symbol"]), max_workers=6
+    )
+    print("Naver 주식·시장지표 시계열을 조회합니다.", flush=True)
+    naver_map = fetch_configured_series(
+        NAVER_SYMBOLS, lambda config: fetch_naver_chart(config["symbol"]), max_workers=4
+    )
+    market_index_map, market_index_statuses = fetch_naver_market_indexes()
+    print("FRED 금융여건 시계열을 조회합니다.", flush=True)
+    fred_map = fetch_configured_series(
+        FRED_SERIES, fetch_fred_series_with_fallback, max_workers=3
+    )
+    indicators = build_indicators(series_map, naver_map, fred_map, market_index_map)
+    update_dashboard(series_map, fred_map, market_index_map, indicators)
+    write_snapshot(series_map, naver_map, fred_map, market_index_map, market_index_statuses, indicators)
+    write_timeseries(series_map, naver_map, fred_map, market_index_map)
 
     total_weight = sum(indicator["weight"] for indicator in indicators)
     weighted_score = sum(indicator["value"] * indicator["weight"] for indicator in indicators) / total_weight

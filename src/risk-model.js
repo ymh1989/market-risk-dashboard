@@ -27,17 +27,22 @@ export function weightedScore(indicators) {
   return Math.round((weightedTotal / weightTotal) * 10) / 10;
 }
 
+export function isScoredIndicator(indicator) {
+  return Number(indicator?.weight) > 0 && indicator?.role !== "observation";
+}
+
 export function evaluateSection(section) {
   const score = weightedScore(section.indicators ?? []);
   const level = pickLevel(score, section.model.thresholds);
-  const highRiskIndicators = (section.indicators ?? []).filter((indicator) => clampScore(indicator.value) >= 75);
+  const scoredIndicators = (section.indicators ?? []).filter(isScoredIndicator);
+  const highRiskIndicators = scoredIndicators.filter((indicator) => clampScore(indicator.value) >= 75);
 
   return {
     ...section,
     score,
     level,
     highRiskCount: highRiskIndicators.length,
-    topIndicators: [...(section.indicators ?? [])]
+    topIndicators: [...scoredIndicators]
       .sort((a, b) => clampScore(b.value) - clampScore(a.value))
       .slice(0, 3)
   };

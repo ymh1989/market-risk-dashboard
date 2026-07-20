@@ -255,6 +255,7 @@ git add \
   data/risk-dashboard.json \
   data/market-risk-snapshot.json \
   data/market-risk-timeseries.json \
+  data/naver-marketindex-history.json \
   data/market-risk-backtest.json \
   data/market-stress-episodes.json \
   data/market-history-cache.json \

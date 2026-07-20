@@ -3,8 +3,8 @@
     "title": "통합 리스크 모니터링 대시보드",
     "subtitle": "시장 조기경보 · 신용리스크 확장 준비 · 유동성리스크 확장 준비",
     "asOf": "2026-07-20",
-    "generatedAt": "2026-07-20 09:14 KST",
-    "source": "Yahoo Finance, Naver Finance, and FRED endpoints via scripts/update_market_risk.py"
+    "generatedAt": "2026-07-20 11:00 KST",
+    "source": "Yahoo Finance, Naver Finance equity/market-index, and FRED endpoints via scripts/update_market_risk.py"
   },
   "tabs": [
     {
@@ -34,7 +34,7 @@
       "label": "시장리스크",
       "status": "active",
       "owner": "Risk Monitoring",
-      "description": "KOSPI/KOSDAQ, 원달러 환율, 글로벌 변동성·금리·크레딧, 미국 신용스프레드·금융여건, 외국인 보유비중, 거래량, 대형 반도체 단일종목 레버리지성 스트레스, 빅테크 AI 수요 우려, AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다.",
+      "description": "KOSPI/KOSDAQ, 원달러 환율, 글로벌 변동성·금리·크레딧, 미국 신용스프레드·금융여건, 운임 비용-수요 괴리·중국 경기/위안화·원화 환산 에너지 수입비용, 외국인 보유비중, 거래량, 대형 반도체 단일종목 레버리지성 스트레스, 빅테크 AI 수요 우려, AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다. 엔 캐리 청산과 한미 금리차·원화 압력은 종합점수와 분리한 연구 관찰카드로 제공합니다.",
       "model": {
         "aggregation": "weightedAverage",
         "thresholds": [
@@ -63,11 +63,12 @@
             "tone": "danger"
           }
         ],
-        "version": "market-risk-v4-fred-credit-financial-conditions",
-        "methodology": "각 시계열의 2년 히스토리에서 레벨, 20일 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 분위수 점수, z-score 정규분포 변환 점수, median/MAD 기반 robust z-score 변환 점수로 각각 0~100 표준화하고, 하위 리스크 그룹별 기여도를 함께 산출합니다.",
+        "version": "market-risk-v6-observation-harness",
+        "methodology": "각 시계열의 최대 2년 히스토리에서 레벨, 20개 관측치 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 분위수 점수, z-score 정규분포 변환 점수, median/MAD 기반 robust z-score 변환 점수로 각각 0~100 표준화합니다. 주간 SCFI는 4개 관측치 변화를 사용하며, 자산군 간 복합지표는 관측일이 다른 시계열을 미래값 없이 직전 가용값으로 결합합니다. weight 0의 연구 관찰카드는 점수 흐름만 제공하고 종합점수·위험군 점수·상위 위험지표 집계에서는 제외합니다.",
         "dataSources": [
           "Yahoo Finance chart endpoint",
           "Naver Finance chart endpoint",
+          "Naver market-index transport, metals, energy, bond, exchangeWorld endpoints",
           "KOSPI/KOSDAQ price series",
           "USD/KRW, VIX, US 10Y proxy",
           "FRED US 2Y, 10Y-2Y spread, high yield OAS, STLFSI, NFCI",
@@ -75,7 +76,8 @@
           "Apple, Microsoft, Alphabet, Meta Platforms, Amazon",
           "Samsung Electronics, SK hynix, Hanmi Semiconductor, DB HiTek, Leeno Industrial",
           "Naver foreign ownership ratio and trading volume",
-          "HYG/LQD credit proxy, EEM emerging market proxy"
+          "HYG/LQD credit proxy, EEM emerging market proxy",
+          "SCFI, BDTI, BDI, Brent, iron ore, copper, gold, USD/CNY, USD/JPY, US/KR Treasury yields"
         ],
         "references": [
           {
@@ -89,6 +91,26 @@
           {
             "label": "Naver Finance chart endpoint",
             "url": "https://api.finance.naver.com/siseJson.naver?symbol=005930&requestType=1&timeframe=day"
+          },
+          {
+            "label": "Naver transport market indexes",
+            "url": "https://stock.naver.com/market/marketindex/transport"
+          },
+          {
+            "label": "Naver metals market indexes",
+            "url": "https://stock.naver.com/market/marketindex/metals"
+          },
+          {
+            "label": "Naver energy market indexes",
+            "url": "https://stock.naver.com/market/marketindex/energy"
+          },
+          {
+            "label": "Naver bond market indexes",
+            "url": "https://stock.naver.com/market/marketindex/bondAndInterest/bond"
+          },
+          {
+            "label": "Naver international FX market indexes",
+            "url": "https://stock.naver.com/market/marketindex/exchangeRate/exchangeWorld"
           },
           {
             "label": "FRED high yield OAS",
@@ -144,7 +166,7 @@
           "unit": "score",
           "weight": 0.11,
           "trend": "up",
-          "detail": "KOSPI 6,820.60, 20일 수익률 -24.75%, 20일 변동성 +76.21%, 고점대비 -25.17%",
+          "detail": "KOSPI 6,631.89, 20일 수익률 -26.74%, 20일 변동성 +76.24%, 고점대비 -27.24%",
           "source": "Yahoo Finance chart: ^KS11",
           "contribution": 10.51,
           "contributionPct": 11.0
@@ -154,13 +176,13 @@
           "name": "KOSDAQ 성장주 스트레스",
           "category": "한국주식",
           "group": "crash",
-          "value": 93.7,
+          "value": 93.9,
           "unit": "score",
           "weight": 0.07,
           "trend": "up",
-          "detail": "KOSDAQ 791.84, 20일 수익률 -20.89%, 20일 변동성 +65.64%",
+          "detail": "KOSDAQ 758.76, 20일 수익률 -21.50%, 20일 변동성 +66.03%",
           "source": "Yahoo Finance chart: ^KQ11",
-          "contribution": 6.56,
+          "contribution": 6.57,
           "contributionPct": 7.0
         },
         {
@@ -168,14 +190,14 @@
           "name": "원/달러 환율 압력",
           "category": "외환",
           "group": "macro",
-          "value": 58.9,
+          "value": 57.6,
           "unit": "score",
-          "weight": 0.07,
+          "weight": 0.06,
           "trend": "down",
-          "detail": "USD/KRW 1,488.05, 20일 변화율 -2.83%, 2년 분위 85.7",
+          "detail": "USD/KRW 1,482.18, 20일 변화율 -3.21%, 2년 분위 83.4",
           "source": "Yahoo Finance chart: KRW=X",
-          "contribution": 4.12,
-          "contributionPct": 7.0
+          "contribution": 3.46,
+          "contributionPct": 6.0
         },
         {
           "id": "global_volatility_pressure",
@@ -184,12 +206,12 @@
           "group": "macro",
           "value": 61.9,
           "unit": "score",
-          "weight": 0.06,
+          "weight": 0.05,
           "trend": "flat",
           "detail": "VIX 18.77, 20일 변화율 +1.79%, 2년 분위 62.4",
           "source": "Yahoo Finance chart: ^VIX",
-          "contribution": 3.71,
-          "contributionPct": 6.0
+          "contribution": 3.1,
+          "contributionPct": 5.0
         },
         {
           "id": "rates_pressure",
@@ -198,40 +220,112 @@
           "group": "macro",
           "value": 82.3,
           "unit": "score",
-          "weight": 0.04,
+          "weight": 0.03,
           "trend": "up",
           "detail": "미 10년 금리 proxy 4.54, 20일 변화율 +1.75%, 2년 분위 90.6",
           "source": "Yahoo Finance chart: ^TNX",
-          "contribution": 3.29,
-          "contributionPct": 4.0
+          "contribution": 2.47,
+          "contributionPct": 3.0
         },
         {
           "id": "us_credit_spread_stress",
           "name": "미국 신용스프레드 스트레스",
           "category": "신용/크레딧",
           "group": "macro",
-          "value": 33.0,
+          "value": 34.8,
           "unit": "score",
-          "weight": 0.06,
-          "trend": "flat",
-          "detail": "미국 하이일드 OAS 2.72%, 최근 20개 관측치 변화 +0.01%p, 위험분위 19.1",
+          "weight": 0.05,
+          "trend": "up",
+          "detail": "미국 하이일드 OAS 2.71%, 최근 20개 관측치 변화 +0.05%p, 위험분위 18.1",
           "source": "FRED: BAMLH0A0HYM2",
-          "contribution": 1.98,
-          "contributionPct": 6.0
+          "contribution": 1.74,
+          "contributionPct": 5.0
         },
         {
           "id": "us_financial_conditions_stress",
           "name": "미국 금융여건 긴축 압력",
           "category": "금융여건",
           "group": "macro",
-          "value": 40.3,
+          "value": 40.8,
           "unit": "score",
-          "weight": 0.04,
+          "weight": 0.03,
           "trend": "down",
-          "detail": "STLFSI -0.88, NFCI -0.54, 미 2년 4.18%, 10Y-2Y 0.42%p",
+          "detail": "STLFSI -0.88, NFCI -0.54, 미 2년 4.16%, 10Y-2Y 0.41%p",
           "source": "FRED: STLFSI4, NFCI, DGS2, T10Y2Y",
-          "contribution": 1.61,
-          "contributionPct": 4.0
+          "contribution": 1.22,
+          "contributionPct": 3.0
+        },
+        {
+          "id": "shipping_cost_pressure",
+          "name": "운임 비용-수요 괴리",
+          "category": "운임/공급망",
+          "group": "macro",
+          "value": 24.8,
+          "unit": "score",
+          "weight": 0.02,
+          "trend": "down",
+          "detail": "SCFI 3,080.31, 최근 4개 주간 관측치 변화 -1.33%, BDTI 2,283.00, 최근 20개 관측치 변화 +9.13%, BDI 2,752.00, 최근 20개 관측치 변화 +1.10%. 비용압력 71.6에서 BDI 수요점수 66.9을 비교한 괴리는 4.7입니다.",
+          "source": "Naver market index: .SCFIDXSSE, .BAID, .BADI",
+          "contribution": 0.5,
+          "contributionPct": 2.0
+        },
+        {
+          "id": "china_demand_fx_stress",
+          "name": "중국 경기·위안화 압력",
+          "category": "중국/원자재",
+          "group": "macro",
+          "value": 50.1,
+          "unit": "score",
+          "weight": 0.03,
+          "trend": "down",
+          "detail": "USD/CNY 6.7760, 최근 20개 관측치 변화 +0.11%, 철광석 98.88, 최근 20개 관측치 수익률 -2.37%, 구리/금 상대비율(×1000) 1.5589, 20개 관측치 변화 +5.19%. 위안화 약세와 중국 수요 민감 원자재 하락이 함께 나타날 때 한국 수출주 부담을 높게 봅니다.",
+          "source": "Naver market index: USDCNY, TIOc1, HGcv1, GCcv1",
+          "contribution": 1.5,
+          "contributionPct": 3.0
+        },
+        {
+          "id": "energy_import_cost_pressure",
+          "name": "원화 환산 에너지 수입비용",
+          "category": "에너지/환율",
+          "group": "macro",
+          "value": 87.2,
+          "unit": "score",
+          "weight": 0.02,
+          "trend": "up",
+          "detail": "브렌트유 $88.10, USD/KRW 1,482.18, 원화 환산 배럴당 비용 130,580.06원, 최근 20개 관측치 변화 +12.19%. 유가와 원화 약세가 동시에 기업 마진·물가·금리 부담으로 전이되는 경로를 측정합니다.",
+          "source": "Naver market index: LCOcv1; Yahoo Finance: KRW=X",
+          "contribution": 1.74,
+          "contributionPct": 2.0
+        },
+        {
+          "id": "yen_carry_unwind_watch",
+          "name": "엔 캐리 청산 압력",
+          "category": "관찰/글로벌 수급",
+          "group": "macro",
+          "role": "observation",
+          "value": 0.0,
+          "unit": "score",
+          "weight": 0.0,
+          "trend": "flat",
+          "detail": "USD/JPY 162.39, 5개 관측치 변화 +0.43%, VIX 18.77·5개 관측치 +24.88%, SPX 5개 관측치 -1.55%. 엔화 급강세·VIX 상승·SPX 하락의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
+          "source": "Naver market index: USDJPY; Yahoo Finance: ^VIX, ^GSPC",
+          "contribution": 0.0,
+          "contributionPct": 0.0
+        },
+        {
+          "id": "korea_us_rate_fx_watch",
+          "name": "한미 금리차·원화 압력",
+          "category": "관찰/금리·외환",
+          "group": "macro",
+          "role": "observation",
+          "value": 0.0,
+          "unit": "score",
+          "weight": 0.0,
+          "trend": "down",
+          "detail": "한국 3년 3.852%, 미국 2년 4.172%, 금리차 -0.320%p·20개 관측치 변화 +0.073%p, USD/KRW 1,482.18·20개 관측치 -3.21%. 금리차 축소와 원화 약세의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
+          "source": "Naver market index: KR3YT=RR, US2YT=RR; Yahoo Finance: KRW=X",
+          "contribution": 0.0,
+          "contributionPct": 0.0
         },
         {
           "id": "global_ai_semiconductor_stress",
@@ -266,13 +360,13 @@
           "name": "한국 AI 반도체 쏠림/스트레스",
           "category": "AI 반도체",
           "group": "ai_semi",
-          "value": 67.6,
+          "value": 72.7,
           "unit": "score",
           "weight": 0.1,
           "trend": "flat",
-          "detail": "5개 한국 반도체 basket, 삼성전자 255,000.00, SK하이닉스 1,842,000.00, 반도체 60일 상대성과 -3.91%, 쏠림점수 13.0",
+          "detail": "5개 한국 반도체 basket, 삼성전자 248,000.00, SK하이닉스 1,802,000.00, 반도체 60일 상대성과 -8.72%, 쏠림점수 29.1",
           "source": "Yahoo Finance chart: 005930.KS, 000660.KS, 042700.KS, 000990.KS, 058470.KQ, ^KS11",
-          "contribution": 6.76,
+          "contribution": 7.27,
           "contributionPct": 10.0
         },
         {
@@ -294,13 +388,13 @@
           "name": "거래량 과열/위축 압력",
           "category": "유동성",
           "group": "liquidity",
-          "value": 95.2,
+          "value": 86.2,
           "unit": "score",
           "weight": 0.07,
           "trend": "flat",
-          "detail": "주요 반도체·KODEX ETF 거래량의 60일 평균 대비 평균 괴리 -88.70%, 최대 괴리 -82.26%",
+          "detail": "주요 반도체·KODEX ETF 거래량의 60일 평균 대비 평균 괴리 -58.96%, 최대 괴리 -47.02%",
           "source": "Naver Finance chart: 005930, 000660, 042700, 069500, 122630",
-          "contribution": 6.66,
+          "contribution": 6.03,
           "contributionPct": 7.0
         },
         {
@@ -308,13 +402,13 @@
           "name": "삼성전자·하이닉스 단일종목 레버리지",
           "category": "단일종목/레버리지",
           "group": "overheating",
-          "value": 73.5,
+          "value": 73.3,
           "unit": "score",
           "weight": 0.04,
           "trend": "up",
-          "detail": "삼성전자 255,000.00, SK하이닉스 1,842,000.00, 20일 수익률 삼성 -29.66%·하이닉스 -31.40%, KOSPI 대비 변동성 배율 삼성 1.34x·하이닉스 1.66x",
+          "detail": "삼성전자 248,000.00, SK하이닉스 1,802,000.00, 20일 수익률 삼성 -29.94%·하이닉스 -34.80%, KOSPI 대비 변동성 배율 삼성 1.34x·하이닉스 1.64x",
           "source": "Yahoo Finance chart: 005930.KS, 000660.KS, ^KS11",
-          "contribution": 2.94,
+          "contribution": 2.93,
           "contributionPct": 4.0
         },
         {
@@ -324,12 +418,12 @@
           "group": "macro",
           "value": 35.0,
           "unit": "score",
-          "weight": 0.03,
+          "weight": 0.01,
           "trend": "up",
           "detail": "HYG/LQD 상대가격 기준, 20일 수익률 +1.02%, 고점대비 -0.40%",
           "source": "Yahoo Finance chart: HYG, LQD",
-          "contribution": 1.05,
-          "contributionPct": 3.0
+          "contribution": 0.35,
+          "contributionPct": 1.0
         },
         {
           "id": "emerging_market_stress",
@@ -349,48 +443,54 @@
       "actions": [
         "scripts/update_market_risk.py를 일 단위로 실행해 data/risk-dashboard.json과 market-risk-snapshot.json을 갱신합니다.",
         "점수 75 이상 또는 핵심 지표 2개 이상 경고 시 투자위원회 보고 대상을 자동 지정합니다.",
+        "연구 관찰카드는 OOS 개선이 확인되기 전까지 종합점수와 고위험 지표 수에 포함하지 않습니다.",
         "운영 배포에서는 Yahoo/Naver proxy를 KRX, 한국은행 ECOS, 금융투자협회, 내부 포지션/외국인 수급 데이터로 교체할 수 있습니다."
       ],
       "groupScores": [
         {
           "id": "ai_semi",
           "label": "AI Semi",
-          "score": 69.3,
+          "score": 71.2,
           "weight": 0.26,
-          "contribution": 18.01,
-          "indicatorCount": 3
+          "contribution": 18.52,
+          "indicatorCount": 3,
+          "observationCount": 0
         },
         {
           "id": "crash",
           "label": "Crash Stress",
-          "score": 94.8,
+          "score": 94.9,
           "weight": 0.18,
-          "contribution": 17.07,
-          "indicatorCount": 2
+          "contribution": 17.08,
+          "indicatorCount": 2,
+          "observationCount": 0
         },
         {
           "id": "macro",
           "label": "Macro",
-          "score": 52.6,
+          "score": 53.6,
           "weight": 0.3,
-          "contribution": 15.76,
-          "indicatorCount": 6
+          "contribution": 16.08,
+          "indicatorCount": 9,
+          "observationCount": 2
         },
         {
           "id": "overheating",
           "label": "Overheating",
-          "score": 84.1,
+          "score": 84.0,
           "weight": 0.09,
-          "contribution": 7.57,
-          "indicatorCount": 2
+          "contribution": 7.56,
+          "indicatorCount": 2,
+          "observationCount": 0
         },
         {
           "id": "liquidity",
           "label": "Liquidity",
-          "score": 95.2,
+          "score": 86.2,
           "weight": 0.07,
-          "contribution": 6.66,
-          "indicatorCount": 1
+          "contribution": 6.03,
+          "indicatorCount": 1,
+          "observationCount": 0
         },
         {
           "id": "flow",
@@ -398,7 +498,8 @@
           "score": 48.0,
           "weight": 0.1,
           "contribution": 4.8,
-          "indicatorCount": 1
+          "indicatorCount": 1,
+          "observationCount": 0
         }
       ]
     },

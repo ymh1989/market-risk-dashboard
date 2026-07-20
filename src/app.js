@@ -1,8 +1,8 @@
-import { clampScore, evaluateDashboard } from "./risk-model.js";
+import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.js";
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260719-1";
+const ASSET_VERSION = "20260720-2";
 
 const indicatorSortOptions = [
   { key: "score", label: "점수순", description: "현재 점수가 높은 지표부터 봅니다." },
@@ -1273,20 +1273,21 @@ function renderIndicator(indicator, thresholds, timeseries) {
   const level = thresholds.find((threshold) => indicator.value >= threshold.min && indicator.value < threshold.max);
   const tone = level?.tone ?? "muted";
   const indicatorPoints = timeseries?.series?.[indicator.id] ?? [];
+  const isObservation = indicator.role === "observation";
 
   return `
-    <article class="indicator-card">
+    <article class="indicator-card ${isObservation ? "indicator-card--observation" : ""}">
       <div>
         <span class="eyebrow">${indicator.category}</span>
         <h3>${indicator.name}</h3>
       </div>
       <div class="indicator-card__score">
         <strong>${formatScore(indicator.value)}</strong>
-        <span class="status-pill status-pill--${tone}">${level?.label ?? "N/A"}</span>
+        <span class="status-pill status-pill--${isObservation ? "watch" : tone}">${isObservation ? `관찰 · ${level?.label ?? "N/A"}` : level?.label ?? "N/A"}</span>
       </div>
       <div class="contribution-line">
         <span>${indicator.group ?? "risk"}</span>
-        <strong>기여도 +${Number(indicator.contribution ?? 0).toFixed(2)}점</strong>
+        <strong>${isObservation ? "종합점수 미반영" : `기여도 +${Number(indicator.contribution ?? 0).toFixed(2)}점`}</strong>
       </div>
       ${renderChangePills(indicator.value, indicatorPoints)}
       <div class="mini-bar" aria-hidden="true">
@@ -1385,7 +1386,8 @@ function renderSentimentPage(data, timeseries, mlRisk, elsRisk, hmmRegime) {
   const components = sentimentGroupDefinitions
     .map((definition) => ({ ...definition, group: groupById[definition.id] }))
     .filter((item) => item.group);
-  const indicatorMoves = (market.indicators ?? [])
+  const scoredIndicators = (market.indicators ?? []).filter(isScoredIndicator);
+  const indicatorMoves = scoredIndicators
     .map((indicator) => ({ ...indicator, change1w: indicatorWeeklyChange(indicator, timeseries) }))
     .filter((indicator) => Number.isFinite(Number(indicator.change1w)));
   const worsening = indicatorMoves
@@ -1396,7 +1398,7 @@ function renderSentimentPage(data, timeseries, mlRisk, elsRisk, hmmRegime) {
     .filter((indicator) => indicator.change1w < -0.05)
     .sort((a, b) => a.change1w - b.change1w)
     .slice(0, 4);
-  const pressure = [...(market.indicators ?? [])].sort((a, b) => clampScore(b.value) - clampScore(a.value)).slice(0, 4);
+  const pressure = [...scoredIndicators].sort((a, b) => clampScore(b.value) - clampScore(a.value)).slice(0, 4);
   const mlRiskOff = Number(mlRisk?.latest?.riskOffProbabilityPct);
   const mlSentiment = Number.isFinite(mlRiskOff) ? inverseScore(mlRiskOff) : null;
   const elsScore = Number(elsRisk?.basket?.score);
@@ -1512,6 +1514,8 @@ function renderSentimentPage(data, timeseries, mlRisk, elsRisk, hmmRegime) {
 
 function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime) {
   const market = data.sections.find((section) => section.id === "market");
+  const scoredIndicatorCount = (market.indicators ?? []).filter(isScoredIndicator).length;
+  const observationCount = (market.indicators ?? []).filter((indicator) => indicator.role === "observation").length;
   market.asOf = data.metadata.asOf;
   const plannedLabels = data.sections
     .filter((section) => section.status !== "active")
@@ -1535,7 +1539,7 @@ function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRi
       ${createMetricCard({
         label: "고위험 시장지표",
         value: `${market.highRiskCount}개`,
-        meta: `총 ${market.indicators.length}개 지표 모니터링`,
+        meta: `가중 ${scoredIndicatorCount}개 · 관찰 ${observationCount}개`,
         tone: market.highRiskCount > 0 ? "danger" : "good"
       })}
       ${createMetricCard({
@@ -1552,7 +1556,8 @@ function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRi
         <h2>${data.metadata.asOf} 현재 시장리스크는 ${market.level.label} 단계입니다.</h2>
       </div>
       <p>
-        시장리스크 종합점수는 ${formatScore(market.score)}입니다. 현재 ${market.indicators.length}개 지표를
+        시장리스크 종합점수는 ${formatScore(market.score)}입니다. 현재 가중지표 ${scoredIndicatorCount}개와
+        종합점수 미반영 관찰지표 ${observationCount}개를
         ${categoryCountText(market.indicators)} 범주로 모니터링하며, 상위 리스크 지표는
         ${market.topIndicators.map((indicator) => indicator.name).join(", ")}입니다.
       </p>
@@ -1605,7 +1610,7 @@ function renderGroupScores(section) {
           (group) => `
             <article class="group-card">
               <div>
-                <span class="eyebrow">${group.indicatorCount} indicators</span>
+                <span class="eyebrow">가중 ${group.indicatorCount}${group.observationCount ? ` · 관찰 ${group.observationCount}` : ""}</span>
                 <h3>${group.label}</h3>
               </div>
               <strong>${formatScore(group.score)}</strong>

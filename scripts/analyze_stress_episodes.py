@@ -15,6 +15,7 @@ from update_market_risk import (
     fetch_fred_series_with_fallback,
     fetch_naver_chart,
     fetch_yahoo_chart,
+    load_naver_market_index_cache,
 )
 
 
@@ -173,7 +174,7 @@ def write_history_cache(series_map, naver_map, fred_map):
     payload = {
         "schemaVersion": CACHE_SCHEMA_VERSION,
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "source": "Yahoo Finance, Naver Finance, and FRED endpoints",
+        "source": "Yahoo Finance, Naver Finance equity/market-index, and FRED endpoints",
         "startDate": START_DATE,
         "yahoo": series_map,
         "naver": naver_map,
@@ -248,12 +249,14 @@ def main():
     market = next(section for section in dashboard["sections"] if section["id"] == "market")
 
     series_map, naver_map, fred_map = load_or_fetch_history()
+    market_index_map = load_naver_market_index_cache()
     print("Building historical indicator scores", flush=True)
     timeseries = {
         "series": build_timeseries(
             series_map,
             naver_map,
             fred_map,
+            market_index_map,
             limit=1800,
             step=HISTORICAL_SAMPLE_STEP,
         ),
@@ -296,7 +299,7 @@ def main():
 
     result = {
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "source": "Yahoo Finance, Naver Finance, and FRED endpoints",
+        "source": "Yahoo Finance, Naver Finance equity/market-index, and FRED endpoints",
         "historyCache": str(HISTORY_CACHE_FILE.relative_to(ROOT)),
         "methodology": (
             "2020년 이후 동일 시장리스크 모델 점수와 KOSPI 252일 고점대비 낙폭을 함께 평가해 "
