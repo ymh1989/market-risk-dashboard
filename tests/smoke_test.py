@@ -10,6 +10,7 @@ MARKET_INDEX_CACHE_FILE = ROOT / "data" / "naver-marketindex-history.json"
 NEWS_DIGEST_SCRIPT = ROOT / "scripts" / "send_risk_news_digest.py"
 BACKTEST_FILE = ROOT / "data" / "market-risk-backtest.json"
 STRESS_FILE = ROOT / "data" / "market-stress-episodes.json"
+STYLES_FILE = ROOT / "src" / "styles.css"
 
 
 def clamp_score(value):
@@ -153,6 +154,15 @@ def test_dashboard_contract():
     print("Smoke tests passed")
 
 
+def test_watch_badge_keeps_readable_contrast():
+    styles = STYLES_FILE.read_text(encoding="utf-8")
+    assert styles.count(".status-pill--watch") == 1
+    watch_rule = styles.split(".status-pill--watch", 1)[1].split("}", 1)[0]
+    assert "background: var(--blue);" in watch_rule
+    assert "color: #fff;" in watch_rule
+
+
 if __name__ == "__main__":
     test_news_title_clustering()
     test_dashboard_contract()
+    test_watch_badge_keeps_readable_contrast()

@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260720-2";
+const ASSET_VERSION = "20260720-3";
 
 const indicatorSortOptions = [
   { key: "score", label: "점수순", description: "현재 점수가 높은 지표부터 봅니다." },
