@@ -164,6 +164,7 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert "renderElsIssuanceHedgePage" in app_source
     assert 'data-els-window="${window.id}"' in app_source
     assert 'data-els-trajectory="${window.id}"' in app_source
+    assert "curvedTrajectoryPath(coordinates)" in app_source
     assert 'loadJson("./data/pipeline-status.json")' in app_source
 
 

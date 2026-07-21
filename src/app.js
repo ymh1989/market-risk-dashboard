@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260721-1";
+const ASSET_VERSION = "20260721-2";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -699,6 +699,55 @@ function scorePath(points, valueKey = "score", width = 760, height = 210, paddin
     .join(" ");
 }
 
+function smoothTrajectoryPoints(points) {
+  if (points.length < 3) return points;
+
+  return points.map((point, index) => {
+    if (index === 0 || index === points.length - 1) return point;
+    const start = Math.max(0, index - 2);
+    const end = Math.min(points.length - 1, index + 2);
+    let weightTotal = 0;
+    let xTotal = 0;
+    let yTotal = 0;
+
+    for (let neighborIndex = start; neighborIndex <= end; neighborIndex += 1) {
+      const weight = 3 - Math.abs(neighborIndex - index);
+      weightTotal += weight;
+      xTotal += points[neighborIndex].x * weight;
+      yTotal += points[neighborIndex].y * weight;
+    }
+
+    return { ...point, x: xTotal / weightTotal, y: yTotal / weightTotal };
+  });
+}
+
+function curvedTrajectoryPath(points) {
+  const smoothed = smoothTrajectoryPoints(points);
+  if (smoothed.length < 2) return "";
+  if (smoothed.length === 2) {
+    return `M ${smoothed[0].x.toFixed(1)} ${smoothed[0].y.toFixed(1)} L ${smoothed[1].x.toFixed(1)} ${smoothed[1].y.toFixed(1)}`;
+  }
+
+  const tension = 0.65;
+  return smoothed
+    .map((point, index) => {
+      if (index === 0) return `M ${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
+      const previous = smoothed[index - 1];
+      const beforePrevious = smoothed[index - 2] ?? previous;
+      const next = smoothed[index + 1] ?? point;
+      const control1 = {
+        x: previous.x + ((point.x - beforePrevious.x) * tension) / 6,
+        y: previous.y + ((point.y - beforePrevious.y) * tension) / 6
+      };
+      const control2 = {
+        x: point.x - ((next.x - previous.x) * tension) / 6,
+        y: point.y - ((next.y - previous.y) * tension) / 6
+      };
+      return `C ${control1.x.toFixed(1)} ${control1.y.toFixed(1)} ${control2.x.toFixed(1)} ${control2.y.toFixed(1)} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
 function dateMs(date) {
   return Date.parse(`${date}T00:00:00Z`);
 }
@@ -991,27 +1040,15 @@ function renderElsIssuanceHedgePage(elsRisk) {
             x: plot.left + (clampScore(point.opportunityScore) / 100) * plot.width,
             y: plot.top + ((100 - clampScore(point.hedgeBurdenScore)) / 100) * plot.height
           }));
-          const path = coordinates
-            .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
-            .join(" ");
+          const path = curvedTrajectoryPath(coordinates);
           const start = coordinates[0];
           const end = coordinates[coordinates.length - 1];
-          const sampleStep = Math.max(2, Math.floor(coordinates.length / 6));
-          const sampledDots = coordinates
-            .slice(1, -1)
-            .filter((_, index) => (index + 1) % sampleStep === 0)
-            .map(
-              (point) =>
-                `<circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="2" class="els-map-trajectory-dot"></circle>`
-            )
-            .join("");
 
           return `
             <g class="els-map-trajectory-series els-map-trajectory-series--${item.id}">
               <path d="${path}" class="els-map-trajectory">
                 <title>${item.label} ${start.date}~${end.date}: 발행기회 ${Number(start.opportunityScore).toFixed(1)}→${Number(end.opportunityScore).toFixed(1)}, 헤지부담 ${Number(start.hedgeBurdenScore).toFixed(1)}→${Number(end.hedgeBurdenScore).toFixed(1)}</title>
               </path>
-              ${sampledDots}
               <circle cx="${start.x.toFixed(1)}" cy="${start.y.toFixed(1)}" r="4" class="els-map-trajectory-start">
                 <title>${item.label} 시작 ${start.date}: 기회 ${Number(start.opportunityScore).toFixed(1)}, 부담 ${Number(start.hedgeBurdenScore).toFixed(1)}</title>
               </circle>
