@@ -175,17 +175,33 @@ def _index_payload(spec: dict[str, str]) -> tuple[dict, pd.DataFrame]:
             ],
             "series": series,
         },
-        frame[["date", "ret_1d"]].assign(index_id=spec["id"]),
+        frame.assign(index_id=spec["id"]),
     )
 
 
-def _correlation_score(return_frames: list[pd.DataFrame]) -> float:
-    pivot = pd.concat(return_frames).pivot(index="date", columns="index_id", values="ret_1d").tail(80)
+def _correlation_score_from_pivot(pivot: pd.DataFrame) -> float:
     corr = pivot.corr().where(~np.eye(len(pivot.columns), dtype=bool)).stack()
     if corr.empty:
         return 50.0
     avg_corr = float(corr.mean())
     return _clamp((avg_corr - 0.2) / 0.6 * 100)
+
+
+def _returns_pivot(feature_frames: list[pd.DataFrame]) -> pd.DataFrame:
+    returns = [frame[["date", "ret_1d", "index_id"]] for frame in feature_frames]
+    return pd.concat(returns).pivot(index="date", columns="index_id", values="ret_1d").sort_index()
+
+
+def _correlation_score(feature_frames: list[pd.DataFrame]) -> float:
+    return _correlation_score_from_pivot(_returns_pivot(feature_frames).tail(80))
+
+
+def _correlation_score_series(feature_frames: list[pd.DataFrame], window: int = 80) -> dict[str, float]:
+    pivot = _returns_pivot(feature_frames)
+    return {
+        str(date): _correlation_score_from_pivot(pivot.loc[:date].tail(window))
+        for date in pivot.index
+    }
 
 
 def _issuance_stance(opportunity_score: float, hedge_burden_score: float) -> dict[str, str]:
@@ -198,8 +214,7 @@ def _issuance_stance(opportunity_score: float, hedge_burden_score: float) -> dic
     return {"label": "선별발행", "tone": "watch"}
 
 
-def _issuance_hedge_item(index: dict, correlation_score: float) -> dict:
-    metrics = index["metrics"]
+def _issuance_scores(metrics: dict, correlation_score: float) -> dict:
     realized_vol_20d = float(metrics["realizedVol20dPct"])
     realized_vol_60d = max(float(metrics["realizedVol60dPct"]), 1.0)
     vol_percentile = float(metrics["volPercentile252d"])
@@ -220,11 +235,33 @@ def _issuance_hedge_item(index: dict, correlation_score: float) -> dict:
     stance = _issuance_stance(opportunity_score, hedge_burden_score)
     balance_score = opportunity_score - 0.65 * hedge_burden_score
 
-    if stance["label"] == "발행기회":
+    return {
+        "opportunityScore": _round(opportunity_score, 2),
+        "hedgeBurdenScore": _round(hedge_burden_score, 2),
+        "balanceScore": _round(balance_score, 2),
+        "stance": stance["label"],
+        "tone": stance["tone"],
+        "components": {
+            "volPercentileScore": _round(vol_percentile, 1),
+            "volLevelScore": _round(vol_level_score, 1),
+            "volShockScore": _round(vol_shock_score, 1),
+            "downsideMomentumScore": _round(downside_momentum_score, 1),
+            "drawdownScore": _round(drawdown_score, 1),
+            "gapShockScore": _round(gap_shock_score, 1),
+            "correlationScore": _round(correlation_score, 1),
+        },
+    }
+
+
+def _issuance_hedge_item(index: dict, correlation_score: float) -> dict:
+    metrics = index["metrics"]
+    scores = _issuance_scores(metrics, correlation_score)
+
+    if scores["stance"] == "발행기회":
         interpretation = "상대적 쿠폰 여력이 높고 현재 낙폭·방향성 부담은 제한적입니다. 신규 발행 후보군으로 우선 검토할 수 있습니다."
-    elif stance["label"] == "헤지주의":
+    elif scores["stance"] == "헤지주의":
         interpretation = "발행 조건 개선 여지는 크지만 변동성과 하락 경로가 헤지비용을 높입니다. 한도·만기·기초자산 집중을 함께 관리해야 합니다."
-    elif stance["label"] == "발행부담":
+    elif scores["stance"] == "발행부담":
         interpretation = "쿠폰 여력보다 기존 북의 순연, 감마·베가와 낙인 접근 부담이 더 큽니다. 신규 발행보다 익스포저 축소가 우선입니다."
     else:
         interpretation = "헤지부담은 통제 가능하지만 쿠폰 여력이 제한적일 수 있습니다. 구조와 만기를 선별해 상대가치를 확인해야 합니다."
@@ -235,21 +272,8 @@ def _issuance_hedge_item(index: dict, correlation_score: float) -> dict:
         "name": index["name"],
         "region": index["region"],
         "lastDate": index["lastDate"],
-        "opportunityScore": _round(opportunity_score, 2),
-        "hedgeBurdenScore": _round(hedge_burden_score, 2),
-        "balanceScore": _round(balance_score, 2),
-        "stance": stance["label"],
-        "tone": stance["tone"],
+        **scores,
         "interpretation": interpretation,
-        "components": {
-            "volPercentileScore": _round(vol_percentile, 1),
-            "volLevelScore": _round(vol_level_score, 1),
-            "volShockScore": _round(vol_shock_score, 1),
-            "downsideMomentumScore": _round(downside_momentum_score, 1),
-            "drawdownScore": _round(drawdown_score, 1),
-            "gapShockScore": _round(gap_shock_score, 1),
-            "correlationScore": _round(correlation_score, 1),
-        },
         "metrics": {
             "return20dPct": metrics["return20dPct"],
             "realizedVol20dPct": metrics["realizedVol20dPct"],
@@ -258,8 +282,77 @@ def _issuance_hedge_item(index: dict, correlation_score: float) -> dict:
     }
 
 
-def _issuance_hedge_map(indices: list[dict], correlation_score: float) -> dict:
-    items = [_issuance_hedge_item(index, correlation_score) for index in indices]
+def _metrics_from_feature_row(row: pd.Series) -> dict:
+    return {
+        "return20dPct": _round(row["ret_20d"] * 100, 2),
+        "realizedVol20dPct": _round(row["realized_vol_20d"] * 100, 2),
+        "realizedVol60dPct": _round(row["realized_vol_60d"] * 100, 2),
+        "volPercentile252d": _round(row["vol_percentile_252d"], 1),
+        "drawdown252dPct": _round(row["drawdown_252d"] * 100, 2),
+        "maxAbsDailyMove20dPct": _round(row["max_abs_daily_move_20d"] * 100, 2),
+    }
+
+
+def _correlation_score_at(correlation_scores: dict[str, float], date: str, fallback: float) -> float:
+    eligible_dates = [candidate for candidate in correlation_scores if candidate <= date]
+    if not eligible_dates:
+        return fallback
+    return correlation_scores[max(eligible_dates)]
+
+
+def _issuance_trajectory(
+    frame: pd.DataFrame,
+    correlation_scores: dict[str, float],
+    fallback_correlation_score: float,
+    max_points: int = 66,
+) -> list[dict]:
+    required = [
+        "ret_20d",
+        "realized_vol_20d",
+        "realized_vol_60d",
+        "vol_percentile_252d",
+        "drawdown_252d",
+        "max_abs_daily_move_20d",
+    ]
+    valid = frame.dropna(subset=required).tail(max_points)
+    trajectory = []
+    for _, row in valid.iterrows():
+        date = str(row["date"])
+        correlation_score = _correlation_score_at(correlation_scores, date, fallback_correlation_score)
+        scores = _issuance_scores(_metrics_from_feature_row(row), correlation_score)
+        trajectory.append(
+            {
+                "date": date,
+                "opportunityScore": scores["opportunityScore"],
+                "hedgeBurdenScore": scores["hedgeBurdenScore"],
+                "balanceScore": scores["balanceScore"],
+                "stance": scores["stance"],
+                "tone": scores["tone"],
+            }
+        )
+    return trajectory
+
+
+def _issuance_hedge_map(
+    indices: list[dict],
+    correlation_score: float,
+    feature_frames: dict[str, pd.DataFrame] | None = None,
+    correlation_scores: dict[str, float] | None = None,
+) -> dict:
+    feature_frames = feature_frames or {}
+    correlation_scores = correlation_scores or {}
+    items = []
+    for index in indices:
+        item_correlation = _correlation_score_at(correlation_scores, index["lastDate"], correlation_score)
+        item = _issuance_hedge_item(index, item_correlation)
+        frame = feature_frames.get(index["id"])
+        if frame is not None:
+            item["trajectory"] = _issuance_trajectory(
+                frame,
+                correlation_scores,
+                fallback_correlation_score=correlation_score,
+            )
+        items.append(item)
     opportunity_ranked = sorted(items, key=lambda item: item["opportunityScore"], reverse=True)
     burden_ranked = sorted(items, key=lambda item: item["hedgeBurdenScore"], reverse=True)
     average_opportunity = float(np.mean([item["opportunityScore"] for item in items]))
@@ -283,6 +376,7 @@ def _issuance_hedge_map(indices: list[dict], correlation_score: float) -> dict:
             "hedgeBurden": "20일 하락모멘텀 25%, 252일 고점대비 낙폭 25%, 20일 변동성 수준 25%, 최근 일간 충격 15%, 지수 동조화 10%를 합성합니다.",
             "classification": "헤지부담 80점 이상은 발행부담, 발행기회 65점 이상이면서 헤지부담 45점 이상은 헤지주의, 발행기회 65점 이상이면서 부담이 낮으면 발행기회, 나머지는 선별발행입니다.",
         },
+        "trajectoryWindows": {"oneMonthPoints": 22, "threeMonthPoints": 66},
         "basket": {
             "opportunityScore": _round(basket_opportunity, 2),
             "hedgeBurdenScore": _round(basket_burden, 2),
@@ -299,18 +393,26 @@ def _issuance_hedge_map(indices: list[dict], correlation_score: float) -> dict:
 
 def build_payload() -> dict:
     indices = []
-    return_frames = []
+    feature_frames = []
+    feature_frames_by_id = {}
     for spec in INDICES:
-        index_payload, returns = _index_payload(spec)
+        index_payload, features = _index_payload(spec)
         indices.append(index_payload)
-        return_frames.append(returns)
+        feature_frames.append(features)
+        feature_frames_by_id[spec["id"]] = features
 
     ranked = sorted(indices, key=lambda item: item["score"], reverse=True)
     average_score = float(np.mean([item["score"] for item in indices]))
-    correlation_score = _correlation_score(return_frames)
+    correlation_score = _correlation_score(feature_frames)
+    correlation_scores = _correlation_score_series(feature_frames)
     basket_score = 0.5 * ranked[0]["score"] + 0.2 * ranked[1]["score"] + 0.15 * average_score + 0.15 * correlation_score
     basket_bucket = _bucket(basket_score)
-    issuance_hedge_map = _issuance_hedge_map(indices, correlation_score)
+    issuance_hedge_map = _issuance_hedge_map(
+        indices,
+        correlation_score,
+        feature_frames=feature_frames_by_id,
+        correlation_scores=correlation_scores,
+    )
 
     payload = {
         "generatedAt": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M KST"),

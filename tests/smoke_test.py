@@ -136,6 +136,12 @@ def test_dashboard_contract():
         assert 0 <= item["opportunityScore"] <= 100
         assert 0 <= item["hedgeBurdenScore"] <= 100
         assert item["interpretation"]
+        assert 22 <= len(item["trajectory"]) <= 66
+        assert [point["date"] for point in item["trajectory"]] == sorted(
+            point["date"] for point in item["trajectory"]
+        )
+        assert item["trajectory"][-1]["opportunityScore"] == item["opportunityScore"]
+        assert item["trajectory"][-1]["hedgeBurdenScore"] == item["hedgeBurdenScore"]
 
     print("Smoke tests passed")
 
@@ -156,6 +162,8 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert 'id: "operations", label: "운영현황"' in app_source
     assert 'id: "els-issuance", label: "ELS 발행·헤지"' in app_source
     assert "renderElsIssuanceHedgePage" in app_source
+    assert 'data-els-window="${window.id}"' in app_source
+    assert 'data-els-trajectory="${window.id}"' in app_source
     assert 'loadJson("./data/pipeline-status.json")' in app_source
 
 

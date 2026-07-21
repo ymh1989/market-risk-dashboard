@@ -989,6 +989,84 @@ select {
   text-align: right;
 }
 
+.els-opportunity-map__aside {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+.els-opportunity-map__tools,
+.els-trajectory-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.els-trajectory-toggle {
+  display: inline-grid;
+  grid-template-columns: repeat(2, 64px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-raised);
+}
+
+.els-trajectory-toggle button {
+  min-height: 30px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.els-trajectory-toggle button:last-child {
+  border-right: 0;
+}
+
+.els-trajectory-toggle button:hover,
+.els-trajectory-toggle button:focus-visible {
+  color: var(--ink);
+  background: var(--surface-soft);
+}
+
+.els-trajectory-toggle button.is-active {
+  color: var(--surface);
+  background: var(--ink);
+}
+
+.els-trajectory-legend {
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.els-trajectory-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.els-trajectory-legend i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--muted);
+  border-radius: 50%;
+}
+
+.els-trajectory-legend__start {
+  background: var(--surface-raised);
+}
+
+.els-trajectory-legend__current {
+  background: var(--muted);
+}
+
 .els-opportunity-map__scroll {
   overflow-x: auto;
   background: var(--surface-raised);
@@ -1081,6 +1159,56 @@ select {
 
 .els-map-point--kospi200 circle {
   fill: var(--green);
+}
+
+.els-map-trajectories {
+  display: none;
+}
+
+.els-map-trajectories.is-visible {
+  display: inline;
+}
+
+.els-map-trajectory-series {
+  color: var(--blue);
+}
+
+.els-map-trajectory-series--sx5e {
+  color: var(--teal);
+}
+
+.els-map-trajectory-series--nky {
+  color: var(--amber);
+}
+
+.els-map-trajectory-series--hscei {
+  color: var(--red);
+}
+
+.els-map-trajectory-series--kospi200 {
+  color: var(--green);
+}
+
+.els-map-trajectory {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  opacity: 0.72;
+  vector-effect: non-scaling-stroke;
+}
+
+.els-map-trajectory-dot {
+  fill: currentColor;
+  opacity: 0.55;
+}
+
+.els-map-trajectory-start {
+  fill: var(--surface-raised);
+  stroke: currentColor;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
 }
 
 .els-comparison__header small {
@@ -3119,6 +3247,15 @@ select {
     justify-content: flex-start;
   }
 
+  .els-opportunity-map__aside {
+    justify-items: start;
+  }
+
+  .els-opportunity-map__header p {
+    max-width: none;
+    text-align: left;
+  }
+
   .hmm-regime-month-rail {
     margin-left: 0;
     margin-right: 0;
@@ -3235,6 +3372,12 @@ select {
 
   .els-comparison-row p {
     grid-column: auto;
+  }
+
+  .els-opportunity-map__tools {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
   }
 
   .operations-current {

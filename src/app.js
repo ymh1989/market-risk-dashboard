@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260720-6";
+const ASSET_VERSION = "20260721-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -970,6 +970,58 @@ function renderElsIssuanceHedgePage(elsRisk) {
       `;
     })
     .join("");
+  const trajectoryWindows = [
+    { id: "1m", label: "1개월", points: Number(map.trajectoryWindows?.oneMonthPoints ?? 22) },
+    { id: "3m", label: "3개월", points: Number(map.trajectoryWindows?.threeMonthPoints ?? 66) }
+  ];
+  const trajectoryLayers = trajectoryWindows
+    .map((window) => {
+      const tracks = map.items
+        .map((item) => {
+          const history = (item.trajectory ?? [])
+            .filter(
+              (point) =>
+                Number.isFinite(Number(point.opportunityScore)) && Number.isFinite(Number(point.hedgeBurdenScore))
+            )
+            .slice(-window.points);
+          if (history.length < 2) return "";
+
+          const coordinates = history.map((point) => ({
+            ...point,
+            x: plot.left + (clampScore(point.opportunityScore) / 100) * plot.width,
+            y: plot.top + ((100 - clampScore(point.hedgeBurdenScore)) / 100) * plot.height
+          }));
+          const path = coordinates
+            .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
+            .join(" ");
+          const start = coordinates[0];
+          const end = coordinates[coordinates.length - 1];
+          const sampleStep = Math.max(2, Math.floor(coordinates.length / 6));
+          const sampledDots = coordinates
+            .slice(1, -1)
+            .filter((_, index) => (index + 1) % sampleStep === 0)
+            .map(
+              (point) =>
+                `<circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="2" class="els-map-trajectory-dot"></circle>`
+            )
+            .join("");
+
+          return `
+            <g class="els-map-trajectory-series els-map-trajectory-series--${item.id}">
+              <path d="${path}" class="els-map-trajectory">
+                <title>${item.label} ${start.date}~${end.date}: 발행기회 ${Number(start.opportunityScore).toFixed(1)}→${Number(end.opportunityScore).toFixed(1)}, 헤지부담 ${Number(start.hedgeBurdenScore).toFixed(1)}→${Number(end.hedgeBurdenScore).toFixed(1)}</title>
+              </path>
+              ${sampledDots}
+              <circle cx="${start.x.toFixed(1)}" cy="${start.y.toFixed(1)}" r="4" class="els-map-trajectory-start">
+                <title>${item.label} 시작 ${start.date}: 기회 ${Number(start.opportunityScore).toFixed(1)}, 부담 ${Number(start.hedgeBurdenScore).toFixed(1)}</title>
+              </circle>
+            </g>
+          `;
+        })
+        .join("");
+      return `<g class="els-map-trajectories ${window.id === "3m" ? "is-visible" : ""}" data-els-trajectory="${window.id}">${tracks}</g>`;
+    })
+    .join("");
   const ticks = [0, 25, 50, 75, 100];
   const gridLines = ticks
     .map((tick) => {
@@ -1006,13 +1058,30 @@ function renderElsIssuanceHedgePage(elsRisk) {
         <div><span>부담 상위</span><strong>${map.basket.topBurdenIndex}</strong><small>기존 북 관리 우선</small></div>
       </div>
 
-      <section class="els-opportunity-map">
+      <section class="els-opportunity-map" data-els-map>
         <div class="els-opportunity-map__header">
           <div>
             <span class="eyebrow">Relative Positioning</span>
             <h3>기초지수 포지셔닝</h3>
           </div>
-          <p>${map.basket.interpretation}</p>
+          <div class="els-opportunity-map__aside">
+            <p>${map.basket.interpretation}</p>
+            <div class="els-opportunity-map__tools">
+              <div class="els-trajectory-toggle" role="group" aria-label="궤적 조회 기간">
+                ${trajectoryWindows
+                  .map(
+                    (window) => `
+                      <button type="button" class="${window.id === "3m" ? "is-active" : ""}" data-els-window="${window.id}" aria-pressed="${window.id === "3m" ? "true" : "false"}">${window.label}</button>
+                    `
+                  )
+                  .join("")}
+              </div>
+              <div class="els-trajectory-legend" aria-label="궤적 범례">
+                <span><i class="els-trajectory-legend__start"></i>시작</span>
+                <span><i class="els-trajectory-legend__current"></i>현재</span>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="els-opportunity-map__scroll">
           <svg viewBox="0 0 760 390" role="img" aria-label="기초지수별 상대 발행기회와 헤지부담 분포">
@@ -1024,6 +1093,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
             <path d="M ${plot.left + plot.width * 0.65} ${plot.top} V ${plot.top + plot.height}" class="els-map-threshold"></path>
             <path d="M ${plot.left} ${plot.top + plot.height * 0.55} H ${plot.left + plot.width}" class="els-map-threshold"></path>
             <path d="M ${plot.left} ${plot.top + plot.height * 0.2} H ${plot.left + plot.width}" class="els-map-threshold els-map-threshold--danger"></path>
+            ${trajectoryLayers}
             <text x="${plot.left + plot.width - 12}" y="${plot.top + 18}" text-anchor="end" class="els-map-zone-label">발행부담</text>
             <text x="${plot.left + plot.width - 12}" y="${plot.top + plot.height * 0.2 + 20}" text-anchor="end" class="els-map-zone-label">헤지주의</text>
             <text x="${plot.left + plot.width - 12}" y="${plot.top + plot.height - 12}" text-anchor="end" class="els-map-zone-label">발행기회</text>
@@ -2215,6 +2285,22 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
       grid.innerHTML = sortedIndicators(section, timeseries, sortKey, nextDirection)
         .map((indicator) => renderIndicator(indicator, section.model.thresholds, timeseries))
         .join("");
+    });
+  });
+
+  app.querySelectorAll("[data-els-map]").forEach((mapElement) => {
+    mapElement.querySelectorAll("[data-els-window]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const target = button.dataset.elsWindow;
+        mapElement.querySelectorAll("[data-els-window]").forEach((option) => {
+          const active = option === button;
+          option.classList.toggle("is-active", active);
+          option.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+        mapElement.querySelectorAll("[data-els-trajectory]").forEach((layer) => {
+          layer.classList.toggle("is-visible", layer.dataset.elsTrajectory === target);
+        });
+      });
     });
   });
 
