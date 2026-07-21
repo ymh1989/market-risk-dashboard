@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-07-21 15:36 KST",
+  "generatedAt": "2026-07-22 07:31 KST",
   "methodology": "각 지수별 20일 실현변동성, 252일 변동성 분위수, 20/60/252일 낙폭, 단기 하락 모멘텀, 고변동성 급등 신호를 0~100점으로 합성합니다. Basket 점수는 worst-of ELS 구조를 반영해 가장 높은 리스크 지수에 50% 가중합니다.",
   "basket": {
-    "score": 63.97,
+    "score": 64.38,
     "bucket": "주의",
     "tone": "caution",
     "worstIndex": "KOSPI200",
-    "secondWorstIndex": "HSCEI",
-    "averageIndexScore": 47.71,
-    "correlationScore": 28.23,
-    "interpretation": "KOSPI200가 basket 리스크를 가장 크게 끌어올리고, HSCEI가 두 번째 취약 지수입니다."
+    "secondWorstIndex": "NKY",
+    "averageIndexScore": 48.61,
+    "correlationScore": 28.5,
+    "interpretation": "KOSPI200가 basket 리스크를 가장 크게 끌어올리고, NKY가 두 번째 취약 지수입니다."
   },
   "issuanceHedgeMap": {
     "methodology": {
@@ -22,8 +22,8 @@
       "threeMonthPoints": 66
     },
     "basket": {
-      "opportunityScore": 77.73,
-      "hedgeBurdenScore": 64.75,
+      "opportunityScore": 77.78,
+      "hedgeBurdenScore": 65.0,
       "stance": "헤지주의",
       "tone": "caution",
       "topOpportunityIndex": "KOSPI200",
@@ -36,28 +36,36 @@
         "label": "HSCEI",
         "name": "Hang Seng China Enterprises",
         "region": "중국/HK",
-        "lastDate": "2026-07-21",
-        "opportunityScore": 76.37,
-        "hedgeBurdenScore": 33.27,
-        "balanceScore": 54.74,
+        "lastDate": "2026-07-20",
+        "opportunityScore": 76.67,
+        "hedgeBurdenScore": 32.89,
+        "balanceScore": 55.29,
         "stance": "발행기회",
         "tone": "good",
         "components": {
-          "volPercentileScore": 99.6,
-          "volLevelScore": 44.7,
-          "volShockScore": 54.5,
+          "volPercentileScore": 100.0,
+          "volLevelScore": 45.2,
+          "volShockScore": 54.1,
           "downsideMomentumScore": 0.0,
-          "drawdownScore": 46.8,
+          "drawdownScore": 46.0,
           "gapShockScore": 50.5,
-          "correlationScore": 28.2
+          "correlationScore": 25.1
         },
         "interpretation": "상대적 쿠폰 여력이 높고 현재 낙폭·방향성 부담은 제한적입니다. 신규 발행 후보군으로 우선 검토할 수 있습니다.",
         "metrics": {
-          "return20dPct": 5.62,
-          "realizedVol20dPct": 26.78,
-          "drawdown252dPct": -14.03
+          "return20dPct": 5.09,
+          "realizedVol20dPct": 26.98,
+          "drawdown252dPct": -13.81
         },
         "trajectory": [
+          {
+            "date": "2026-04-14",
+            "opportunityScore": 64.57,
+            "hedgeBurdenScore": 26.93,
+            "balanceScore": 47.07,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
           {
             "date": "2026-04-15",
             "opportunityScore": 64.83,
@@ -577,14 +585,6 @@
             "balanceScore": 55.29,
             "stance": "발행기회",
             "tone": "good"
-          },
-          {
-            "date": "2026-07-21",
-            "opportunityScore": 76.37,
-            "hedgeBurdenScore": 33.27,
-            "balanceScore": 54.74,
-            "stance": "발행기회",
-            "tone": "good"
           }
         ]
       },
@@ -593,28 +593,36 @@
         "label": "NKY",
         "name": "Nikkei 225",
         "region": "일본",
-        "lastDate": "2026-07-21",
-        "opportunityScore": 77.98,
-        "hedgeBurdenScore": 47.61,
-        "balanceScore": 47.03,
+        "lastDate": "2026-07-17",
+        "opportunityScore": 74.84,
+        "hedgeBurdenScore": 50.22,
+        "balanceScore": 42.2,
         "stance": "헤지주의",
         "tone": "caution",
         "components": {
-          "volPercentileScore": 91.3,
-          "volLevelScore": 71.4,
-          "volShockScore": 42.4,
-          "downsideMomentumScore": 43.9,
-          "drawdownScore": 29.3,
+          "volPercentileScore": 88.1,
+          "volLevelScore": 68.3,
+          "volShockScore": 39.4,
+          "downsideMomentumScore": 49.9,
+          "drawdownScore": 37.9,
           "gapShockScore": 57.6,
-          "correlationScore": 28.2
+          "correlationScore": 25.6
         },
         "interpretation": "발행 조건 개선 여지는 크지만 변동성과 하락 경로가 헤지비용을 높입니다. 한도·만기·기초자산 집중을 함께 관리해야 합니다.",
         "metrics": {
-          "return20dPct": -8.78,
-          "realizedVol20dPct": 37.97,
-          "drawdown252dPct": -8.8
+          "return20dPct": -9.98,
+          "realizedVol20dPct": 36.68,
+          "drawdown252dPct": -11.37
         },
         "trajectory": [
+          {
+            "date": "2026-04-13",
+            "opportunityScore": 80.04,
+            "hedgeBurdenScore": 34.82,
+            "balanceScore": 57.41,
+            "stance": "발행기회",
+            "tone": "good"
+          },
           {
             "date": "2026-04-14",
             "opportunityScore": 81.13,
@@ -1132,14 +1140,6 @@
             "opportunityScore": 74.84,
             "hedgeBurdenScore": 50.22,
             "balanceScore": 42.2,
-            "stance": "헤지주의",
-            "tone": "caution"
-          },
-          {
-            "date": "2026-07-21",
-            "opportunityScore": 77.98,
-            "hedgeBurdenScore": 47.61,
-            "balanceScore": 47.03,
             "stance": "헤지주의",
             "tone": "caution"
           }
@@ -1707,28 +1707,36 @@
         "label": "KOSPI200",
         "name": "KOSPI 200",
         "region": "한국",
-        "lastDate": "2026-07-21",
-        "opportunityScore": 91.57,
-        "hedgeBurdenScore": 90.33,
-        "balanceScore": 32.85,
+        "lastDate": "2026-07-16",
+        "opportunityScore": 91.8,
+        "hedgeBurdenScore": 89.68,
+        "balanceScore": 33.5,
         "stance": "발행부담",
         "tone": "danger",
         "components": {
-          "volPercentileScore": 98.8,
+          "volPercentileScore": 99.2,
           "volLevelScore": 100.0,
-          "volShockScore": 48.2,
+          "volShockScore": 48.3,
           "downsideMomentumScore": 100.0,
-          "drawdownScore": 90.0,
+          "drawdownScore": 89.6,
           "gapShockScore": 100.0,
-          "correlationScore": 28.2
+          "correlationScore": 22.9
         },
         "interpretation": "쿠폰 여력보다 기존 북의 순연, 감마·베가와 낙인 접근 부담이 더 큽니다. 신규 발행보다 익스포저 축소가 우선입니다.",
         "metrics": {
-          "return20dPct": -26.12,
-          "realizedVol20dPct": 85.19,
-          "drawdown252dPct": -27.01
+          "return20dPct": -25.96,
+          "realizedVol20dPct": 85.23,
+          "drawdown252dPct": -26.87
         },
         "trajectory": [
+          {
+            "date": "2026-04-10",
+            "opportunityScore": 84.48,
+            "hedgeBurdenScore": 48.27,
+            "balanceScore": 53.11,
+            "stance": "헤지주의",
+            "tone": "caution"
+          },
           {
             "date": "2026-04-13",
             "opportunityScore": 84.47,
@@ -2248,14 +2256,6 @@
             "balanceScore": 33.5,
             "stance": "발행부담",
             "tone": "danger"
-          },
-          {
-            "date": "2026-07-21",
-            "opportunityScore": 91.57,
-            "hedgeBurdenScore": 90.33,
-            "balanceScore": 32.85,
-            "stance": "발행부담",
-            "tone": "danger"
           }
         ]
       },
@@ -2264,36 +2264,28 @@
         "label": "SPX",
         "name": "S&P 500",
         "region": "미국",
-        "lastDate": "2026-07-20",
-        "opportunityScore": 17.53,
-        "hedgeBurdenScore": 9.39,
-        "balanceScore": 11.43,
+        "lastDate": "2026-07-21",
+        "opportunityScore": 24.21,
+        "hedgeBurdenScore": 8.31,
+        "balanceScore": 18.8,
         "stance": "선별발행",
         "tone": "watch",
         "components": {
-          "volPercentileScore": 28.5,
-          "volLevelScore": 5.6,
-          "volShockScore": 1.1,
-          "downsideMomentumScore": 3.8,
-          "drawdownScore": 7.3,
+          "volPercentileScore": 39.1,
+          "volLevelScore": 6.6,
+          "volShockScore": 4.7,
+          "downsideMomentumScore": 0.0,
+          "drawdownScore": 4.4,
           "gapShockScore": 18.0,
-          "correlationScore": 25.1
+          "correlationScore": 28.5
         },
         "interpretation": "헤지부담은 통제 가능하지만 쿠폰 여력이 제한적일 수 있습니다. 구조와 만기를 선별해 상대가치를 확인해야 합니다.",
         "metrics": {
-          "return20dPct": -0.76,
-          "realizedVol20dPct": 10.37,
-          "drawdown252dPct": -2.19
+          "return20dPct": 0.49,
+          "realizedVol20dPct": 10.79,
+          "drawdown252dPct": -1.32
         },
         "trajectory": [
-          {
-            "date": "2026-04-15",
-            "opportunityScore": 66.62,
-            "hedgeBurdenScore": 15.1,
-            "balanceScore": 56.81,
-            "stance": "발행기회",
-            "tone": "good"
-          },
           {
             "date": "2026-04-16",
             "opportunityScore": 64.7,
@@ -2813,6 +2805,14 @@
             "balanceScore": 11.43,
             "stance": "선별발행",
             "tone": "watch"
+          },
+          {
+            "date": "2026-07-21",
+            "opportunityScore": 24.21,
+            "hedgeBurdenScore": 8.31,
+            "balanceScore": 18.8,
+            "stance": "선별발행",
+            "tone": "watch"
           }
         ]
       }
@@ -2826,20 +2826,20 @@
       "label": "SPX",
       "name": "S&P 500",
       "region": "미국",
-      "lastDate": "2026-07-20",
-      "lastClose": 7443.28,
-      "score": 14.17,
+      "lastDate": "2026-07-21",
+      "lastClose": 7509.2,
+      "score": 16.3,
       "bucket": "낮음",
       "tone": "good",
       "reading": "현재 점수는 중립권이며, 변동성 확대 여부를 중심으로 보면 됩니다.",
       "metrics": {
-        "return20dPct": -0.76,
-        "return60dPct": 4.28,
-        "realizedVol20dPct": 10.37,
-        "realizedVol60dPct": 12.82,
-        "volPercentile252d": 28.5,
-        "drawdown60dPct": -2.19,
-        "drawdown252dPct": -2.19,
+        "return20dPct": 0.49,
+        "return60dPct": 5.64,
+        "realizedVol20dPct": 10.79,
+        "realizedVol60dPct": 12.88,
+        "volPercentile252d": 39.1,
+        "drawdown60dPct": -1.32,
+        "drawdown252dPct": -1.32,
         "maxAbsDailyMove20dPct": 1.44
       },
       "ytdPriceSeries": [
@@ -3386,17 +3386,13 @@
         {
           "date": "2026-07-20",
           "close": 7443.28
+        },
+        {
+          "date": "2026-07-21",
+          "close": 7509.2
         }
       ],
       "series": [
-        {
-          "date": "2026-03-25",
-          "close": 6591.9,
-          "score": 34.76,
-          "return20dPct": -5.1,
-          "realizedVol20dPct": 13.23,
-          "drawdown252dPct": -5.54
-        },
         {
           "date": "2026-03-26",
           "close": 6477.16,
@@ -4028,6 +4024,14 @@
           "return20dPct": -0.76,
           "realizedVol20dPct": 10.37,
           "drawdown252dPct": -2.19
+        },
+        {
+          "date": "2026-07-21",
+          "close": 7509.2,
+          "score": 16.3,
+          "return20dPct": 0.49,
+          "realizedVol20dPct": 10.79,
+          "drawdown252dPct": -1.32
         }
       ]
     },
@@ -5248,20 +5252,20 @@
       "label": "NKY",
       "name": "Nikkei 225",
       "region": "일본",
-      "lastDate": "2026-07-21",
-      "lastClose": 66001.06,
-      "score": 54.95,
+      "lastDate": "2026-07-17",
+      "lastClose": 64141.12,
+      "score": 58.02,
       "bucket": "주의",
       "tone": "caution",
       "reading": "단기 하락 모멘텀이 점수 상승을 주도합니다. 신규 발행 여지는 생기지만 기존 북의 순연·헤지 부담을 함께 봐야 합니다.",
       "metrics": {
-        "return20dPct": -8.78,
-        "return60dPct": 11.21,
-        "realizedVol20dPct": 37.97,
-        "realizedVol60dPct": 33.34,
-        "volPercentile252d": 91.3,
-        "drawdown60dPct": -8.8,
-        "drawdown252dPct": -8.8,
+        "return20dPct": -9.98,
+        "return60dPct": 9.04,
+        "realizedVol20dPct": 36.68,
+        "realizedVol60dPct": 32.9,
+        "volPercentile252d": 88.1,
+        "drawdown60dPct": -11.37,
+        "drawdown252dPct": -11.37,
         "maxAbsDailyMove20dPct": 4.61
       },
       "ytdPriceSeries": [
@@ -5792,13 +5796,17 @@
         {
           "date": "2026-07-17",
           "close": 64141.12
-        },
-        {
-          "date": "2026-07-21",
-          "close": 66001.06
         }
       ],
       "series": [
+        {
+          "date": "2026-03-24",
+          "close": 52252.28,
+          "score": 57.18,
+          "return20dPct": -8.05,
+          "realizedVol20dPct": 37.24,
+          "drawdown252dPct": -11.21
+        },
         {
           "date": "2026-03-25",
           "close": 53749.62,
@@ -6430,14 +6438,6 @@
           "return20dPct": -9.98,
           "realizedVol20dPct": 36.68,
           "drawdown252dPct": -11.37
-        },
-        {
-          "date": "2026-07-21",
-          "close": 66001.06,
-          "score": 54.95,
-          "return20dPct": -8.78,
-          "realizedVol20dPct": 37.97,
-          "drawdown252dPct": -8.8
         }
       ]
     },
@@ -6447,20 +6447,20 @@
       "label": "HSCEI",
       "name": "Hang Seng China Enterprises",
       "region": "중국/HK",
-      "lastDate": "2026-07-21",
-      "lastClose": 8359.69,
-      "score": 56.94,
+      "lastDate": "2026-07-20",
+      "lastClose": 8381.9,
+      "score": 56.19,
       "bucket": "주의",
       "tone": "caution",
       "reading": "현재 점수는 중립권이며, 변동성 확대 여부를 중심으로 보면 됩니다.",
       "metrics": {
-        "return20dPct": 5.62,
-        "return60dPct": -5.02,
-        "realizedVol20dPct": 26.78,
-        "realizedVol60dPct": 21.67,
-        "volPercentile252d": 99.6,
-        "drawdown60dPct": -6.28,
-        "drawdown252dPct": -14.03,
+        "return20dPct": 5.09,
+        "return60dPct": -6.28,
+        "realizedVol20dPct": 26.98,
+        "realizedVol60dPct": 21.89,
+        "volPercentile252d": 100.0,
+        "drawdown60dPct": -6.03,
+        "drawdown252dPct": -13.81,
         "maxAbsDailyMove20dPct": 4.04
       },
       "ytdPriceSeries": [
@@ -6991,13 +6991,17 @@
         {
           "date": "2026-07-20",
           "close": 8381.9
-        },
-        {
-          "date": "2026-07-21",
-          "close": 8359.69
         }
       ],
       "series": [
+        {
+          "date": "2026-03-20",
+          "close": 8574.07,
+          "score": 45.58,
+          "return20dPct": -4.3,
+          "realizedVol20dPct": 22.32,
+          "drawdown252dPct": -11.83
+        },
         {
           "date": "2026-03-23",
           "close": 8307.82,
@@ -7629,14 +7633,6 @@
           "return20dPct": 5.09,
           "realizedVol20dPct": 26.98,
           "drawdown252dPct": -13.81
-        },
-        {
-          "date": "2026-07-21",
-          "close": 8359.69,
-          "score": 56.94,
-          "return20dPct": 5.62,
-          "realizedVol20dPct": 26.78,
-          "drawdown252dPct": -14.03
         }
       ]
     },
@@ -7646,20 +7642,20 @@
       "label": "KOSPI200",
       "name": "KOSPI 200",
       "region": "한국",
-      "lastDate": "2026-07-21",
-      "lastClose": 1078.22,
-      "score": 82.39,
+      "lastDate": "2026-07-16",
+      "lastClose": 1080.36,
+      "score": 82.42,
       "bucket": "경고",
       "tone": "danger",
       "reading": "고점 대비 낙폭이 커져 쿠폰 매력도는 높아질 수 있지만, 순연 가능성과 헤지 비용 증가를 우선 점검해야 합니다.",
       "metrics": {
-        "return20dPct": -26.12,
-        "return60dPct": 15.23,
-        "realizedVol20dPct": 85.19,
-        "realizedVol60dPct": 71.87,
-        "volPercentile252d": 98.8,
-        "drawdown60dPct": -27.01,
-        "drawdown252dPct": -27.01,
+        "return20dPct": -25.96,
+        "return60dPct": 15.99,
+        "realizedVol20dPct": 85.23,
+        "realizedVol60dPct": 71.86,
+        "volPercentile252d": 99.2,
+        "drawdown60dPct": -26.87,
+        "drawdown252dPct": -26.87,
         "maxAbsDailyMove20dPct": 10.53
       },
       "ytdPriceSeries": [
@@ -8190,13 +8186,17 @@
         {
           "date": "2026-07-16",
           "close": 1080.36
-        },
-        {
-          "date": "2026-07-21",
-          "close": 1078.22
         }
       ],
       "series": [
+        {
+          "date": "2026-03-23",
+          "close": 804.86,
+          "score": 62.36,
+          "return20dPct": -6.37,
+          "realizedVol20dPct": 82.17,
+          "drawdown252dPct": -14.74
+        },
         {
           "date": "2026-03-24",
           "close": 827.64,
@@ -8828,14 +8828,6 @@
           "return20dPct": -25.96,
           "realizedVol20dPct": 85.23,
           "drawdown252dPct": -26.87
-        },
-        {
-          "date": "2026-07-21",
-          "close": 1078.22,
-          "score": 82.39,
-          "return20dPct": -26.12,
-          "realizedVol20dPct": 85.19,
-          "drawdown252dPct": -27.01
         }
       ]
     }
