@@ -175,7 +175,7 @@ def test_pipeline_status_contract():
     assert status["schemaVersion"] == 1
     assert status["current"]["status"] == "success"
     assert status["current"]["dataAsOf"]
-    assert {item["time"] for item in status["schedule"]["times"]} == {"08:30", "12:30", "15:35"}
+    assert {item["time"] for item in status["schedule"]["times"]} == {"07:30", "12:30", "15:35"}
     assert {stage["id"] for stage in status["stages"]} == {"market", "ml", "validation", "deployment"}
     assert all(stage["status"] == "success" for stage in status["stages"])
     assert {source["id"] for source in status["sources"]} == {

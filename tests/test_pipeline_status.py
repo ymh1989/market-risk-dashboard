@@ -32,8 +32,8 @@ def test_pipeline_status_keeps_previous_run_history(tmp_path):
     args = SimpleNamespace(
         output=str(output),
         mode="full",
-        times="08:30,12:30,15:35",
-        full_times="08:30,15:35",
+        times="07:30,12:30,15:35",
+        full_times="07:30,15:35",
         scheduled_time="15:35",
         run_id="2026-07-20-15:35",
         started_at="2026-07-20 15:35:00 KST",
