@@ -1004,7 +1004,7 @@ select {
 
 .els-trajectory-toggle {
   display: inline-grid;
-  grid-template-columns: repeat(2, 64px);
+  grid-template-columns: repeat(3, 58px);
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -1065,6 +1065,27 @@ select {
 
 .els-trajectory-legend__current {
   background: var(--muted);
+}
+
+.els-trajectory-legend .els-trajectory-legend__momentum {
+  position: relative;
+  width: 18px;
+  height: 0;
+  border: 0;
+  border-top: 2px solid var(--muted);
+  border-radius: 0;
+}
+
+.els-trajectory-legend__momentum::after {
+  position: absolute;
+  top: -4px;
+  right: -1px;
+  width: 6px;
+  height: 6px;
+  border-top: 2px solid var(--muted);
+  border-right: 2px solid var(--muted);
+  content: "";
+  transform: rotate(45deg);
 }
 
 .els-opportunity-map__scroll {
@@ -1203,6 +1224,31 @@ select {
   stroke-width: 2;
   opacity: 0.72;
   vector-effect: non-scaling-stroke;
+}
+
+.els-map-trajectories--momentum .els-map-trajectory {
+  stroke-width: 3;
+  opacity: 0.92;
+}
+
+.els-map-arrowhead {
+  fill: var(--blue);
+}
+
+.els-map-arrowhead--sx5e {
+  fill: var(--teal);
+}
+
+.els-map-arrowhead--nky {
+  fill: var(--amber);
+}
+
+.els-map-arrowhead--hscei {
+  fill: var(--red);
+}
+
+.els-map-arrowhead--kospi200 {
+  fill: var(--green);
 }
 
 .els-map-trajectory-start {

@@ -22,6 +22,16 @@ def test_issuance_stance_covers_four_operating_zones():
     assert module._issuance_stance(45, 20)["label"] == "선별발행"
 
 
+def test_trajectory_windows_include_one_week_momentum_period():
+    module = load_els_module()
+
+    assert module.TRAJECTORY_WINDOWS == {
+        "oneWeekPoints": 5,
+        "oneMonthPoints": 22,
+        "threeMonthPoints": 66,
+    }
+
+
 def test_issuance_hedge_item_is_bounded_and_explainable():
     module = load_els_module()
     item = module._issuance_hedge_item(

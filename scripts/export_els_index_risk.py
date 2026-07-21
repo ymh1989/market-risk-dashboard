@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_FILE = ROOT / "data" / "els-index-risk.json"
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d"
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-els-index-risk/0.1)"
+TRAJECTORY_WINDOWS = {"oneWeekPoints": 5, "oneMonthPoints": 22, "threeMonthPoints": 66}
 
 INDICES = [
     {"id": "spx", "symbol": "^GSPC", "label": "SPX", "name": "S&P 500", "region": "미국"},
@@ -376,7 +377,7 @@ def _issuance_hedge_map(
             "hedgeBurden": "20일 하락모멘텀 25%, 252일 고점대비 낙폭 25%, 20일 변동성 수준 25%, 최근 일간 충격 15%, 지수 동조화 10%를 합성합니다.",
             "classification": "헤지부담 80점 이상은 발행부담, 발행기회 65점 이상이면서 헤지부담 45점 이상은 헤지주의, 발행기회 65점 이상이면서 부담이 낮으면 발행기회, 나머지는 선별발행입니다.",
         },
-        "trajectoryWindows": {"oneMonthPoints": 22, "threeMonthPoints": 66},
+        "trajectoryWindows": TRAJECTORY_WINDOWS,
         "basket": {
             "opportunityScore": _round(basket_opportunity, 2),
             "hedgeBurdenScore": _round(basket_burden, 2),

@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260721-3";
+const ASSET_VERSION = "20260722-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -1020,8 +1020,14 @@ function renderElsIssuanceHedgePage(elsRisk) {
     })
     .join("");
   const trajectoryWindows = [
-    { id: "1m", label: "1개월", points: Number(map.trajectoryWindows?.oneMonthPoints ?? 22) },
-    { id: "3m", label: "3개월", points: Number(map.trajectoryWindows?.threeMonthPoints ?? 66) }
+    {
+      id: "1w",
+      label: "1주",
+      points: Number(map.trajectoryWindows?.oneWeekPoints ?? 5),
+      momentum: true
+    },
+    { id: "1m", label: "1개월", points: Number(map.trajectoryWindows?.oneMonthPoints ?? 22), momentum: false },
+    { id: "3m", label: "3개월", points: Number(map.trajectoryWindows?.threeMonthPoints ?? 66), momentum: false }
   ];
   const trajectoryLayers = trajectoryWindows
     .map((window) => {
@@ -1046,8 +1052,8 @@ function renderElsIssuanceHedgePage(elsRisk) {
 
           return `
             <g class="els-map-trajectory-series els-map-trajectory-series--${item.id}">
-              <path d="${path}" class="els-map-trajectory">
-                <title>${item.label} ${start.date}~${end.date}: 발행기회 ${Number(start.opportunityScore).toFixed(1)}→${Number(end.opportunityScore).toFixed(1)}, 헤지부담 ${Number(start.hedgeBurdenScore).toFixed(1)}→${Number(end.hedgeBurdenScore).toFixed(1)}</title>
+              <path d="${path}" class="els-map-trajectory"${window.momentum ? ` marker-end="url(#els-map-arrow-${item.id})"` : ""}>
+                <title>${item.label} ${start.date}~${end.date}: 발행기회 ${Number(start.opportunityScore).toFixed(1)}→${Number(end.opportunityScore).toFixed(1)} (${formatPointDelta(Number(end.opportunityScore) - Number(start.opportunityScore))}), 헤지부담 ${Number(start.hedgeBurdenScore).toFixed(1)}→${Number(end.hedgeBurdenScore).toFixed(1)} (${formatPointDelta(Number(end.hedgeBurdenScore) - Number(start.hedgeBurdenScore))})</title>
               </path>
               <circle cx="${start.x.toFixed(1)}" cy="${start.y.toFixed(1)}" r="4" class="els-map-trajectory-start">
                 <title>${item.label} 시작 ${start.date}: 기회 ${Number(start.opportunityScore).toFixed(1)}, 부담 ${Number(start.hedgeBurdenScore).toFixed(1)}</title>
@@ -1056,8 +1062,17 @@ function renderElsIssuanceHedgePage(elsRisk) {
           `;
         })
         .join("");
-      return `<g class="els-map-trajectories ${window.id === "3m" ? "is-visible" : ""}" data-els-trajectory="${window.id}">${tracks}</g>`;
+      return `<g class="els-map-trajectories ${window.momentum ? "els-map-trajectories--momentum is-visible" : ""}" data-els-trajectory="${window.id}">${tracks}</g>`;
     })
+    .join("");
+  const trajectoryArrowMarkers = map.items
+    .map(
+      (item) => `
+        <marker id="els-map-arrow-${item.id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" class="els-map-arrowhead els-map-arrowhead--${item.id}"></path>
+        </marker>
+      `
+    )
     .join("");
   const ticks = [0, 25, 50, 75, 100];
   const gridLines = ticks
@@ -1108,7 +1123,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
                 ${trajectoryWindows
                   .map(
                     (window) => `
-                      <button type="button" class="${window.id === "3m" ? "is-active" : ""}" data-els-window="${window.id}" aria-pressed="${window.id === "3m" ? "true" : "false"}">${window.label}</button>
+                      <button type="button" class="${window.momentum ? "is-active" : ""}" data-els-window="${window.id}" aria-pressed="${window.momentum ? "true" : "false"}">${window.label}</button>
                     `
                   )
                   .join("")}
@@ -1116,12 +1131,14 @@ function renderElsIssuanceHedgePage(elsRisk) {
               <div class="els-trajectory-legend" aria-label="궤적 범례">
                 <span><i class="els-trajectory-legend__start"></i>시작</span>
                 <span><i class="els-trajectory-legend__current"></i>현재</span>
+                <span data-els-momentum-legend><i class="els-trajectory-legend__momentum"></i>1주 방향</span>
               </div>
             </div>
           </div>
         </div>
         <div class="els-opportunity-map__scroll">
           <svg viewBox="0 0 760 410" role="img" aria-label="기초지수별 상대 발행기회와 헤지부담 분포">
+            <defs>${trajectoryArrowMarkers}</defs>
             <rect x="${plot.left}" y="${plot.top}" width="${plot.width}" height="${plot.height}" class="els-map-zone els-map-zone--selective"></rect>
             <rect x="${plot.left + plot.width * 0.65}" y="${plot.top + plot.height * 0.55}" width="${plot.width * 0.35}" height="${plot.height * 0.45}" class="els-map-zone els-map-zone--opportunity"></rect>
             <rect x="${plot.left + plot.width * 0.65}" y="${plot.top + plot.height * 0.2}" width="${plot.width * 0.35}" height="${plot.height * 0.35}" class="els-map-zone els-map-zone--caution"></rect>
@@ -2338,6 +2355,9 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
         });
         mapElement.querySelectorAll("[data-els-trajectory]").forEach((layer) => {
           layer.classList.toggle("is-visible", layer.dataset.elsTrajectory === target);
+        });
+        mapElement.querySelectorAll("[data-els-momentum-legend]").forEach((legend) => {
+          legend.hidden = target !== "1w";
         });
       });
     });
