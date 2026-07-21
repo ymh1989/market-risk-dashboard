@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260721-2";
+const ASSET_VERSION = "20260721-3";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -1121,7 +1121,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
           </div>
         </div>
         <div class="els-opportunity-map__scroll">
-          <svg viewBox="0 0 760 390" role="img" aria-label="기초지수별 상대 발행기회와 헤지부담 분포">
+          <svg viewBox="0 0 760 410" role="img" aria-label="기초지수별 상대 발행기회와 헤지부담 분포">
             <rect x="${plot.left}" y="${plot.top}" width="${plot.width}" height="${plot.height}" class="els-map-zone els-map-zone--selective"></rect>
             <rect x="${plot.left + plot.width * 0.65}" y="${plot.top + plot.height * 0.55}" width="${plot.width * 0.35}" height="${plot.height * 0.45}" class="els-map-zone els-map-zone--opportunity"></rect>
             <rect x="${plot.left + plot.width * 0.65}" y="${plot.top + plot.height * 0.2}" width="${plot.width * 0.35}" height="${plot.height * 0.35}" class="els-map-zone els-map-zone--caution"></rect>
@@ -1136,8 +1136,10 @@ function renderElsIssuanceHedgePage(elsRisk) {
             <text x="${plot.left + plot.width - 12}" y="${plot.top + plot.height - 12}" text-anchor="end" class="els-map-zone-label">발행기회</text>
             <text x="${plot.left + 12}" y="${plot.top + plot.height - 12}" class="els-map-zone-label">선별발행</text>
             ${points}
-            <text x="${plot.left + plot.width / 2}" y="383" text-anchor="middle" class="els-map-axis-label">상대 발행기회 →</text>
+            <text x="${plot.left + plot.width / 2}" y="380" text-anchor="middle" class="els-map-axis-label">상대 발행기회 →</text>
+            <text x="${plot.left + plot.width / 2}" y="398" text-anchor="middle" class="els-map-axis-note">변동성↑ 쿠폰↑</text>
             <text x="16" y="${plot.top + plot.height / 2}" text-anchor="middle" transform="rotate(-90 16 ${plot.top + plot.height / 2})" class="els-map-axis-label">헤지부담 →</text>
+            <text x="34" y="${plot.top + plot.height / 2}" text-anchor="middle" transform="rotate(-90 34 ${plot.top + plot.height / 2})" class="els-map-axis-note">하락위험↑ 부담↑</text>
           </svg>
         </div>
       </section>

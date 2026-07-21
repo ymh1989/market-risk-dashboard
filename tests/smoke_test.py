@@ -165,6 +165,8 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert 'data-els-window="${window.id}"' in app_source
     assert 'data-els-trajectory="${window.id}"' in app_source
     assert "curvedTrajectoryPath(coordinates)" in app_source
+    assert "변동성↑ 쿠폰↑" in app_source
+    assert "하락위험↑ 부담↑" in app_source
     assert 'loadJson("./data/pipeline-status.json")' in app_source
 
 
