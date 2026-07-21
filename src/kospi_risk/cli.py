@@ -7,6 +7,7 @@ import pandas as pd
 
 from .config import load_config
 from .data_loader import load_frame, make_sample_market_data, save_frame
+from .ensemble_lab import EnsembleLabConfig, run_ensemble_lab, write_ensemble_lab_outputs
 from .feature_engineering import build_features
 from .market_data_fetcher import fetch_and_save_market_data
 from .models import load_bundle, predict_bundle, save_bundle, train_bundle
@@ -195,6 +196,22 @@ def cmd_transformer_lab(args: argparse.Namespace) -> None:
         dropout=args.dropout,
         learning_rate=args.learning_rate,
         random_state=args.seed,
+        device=args.device,
+        pooling=args.pooling,
+        loss=args.loss,
+        focal_alpha=args.focal_alpha,
+        focal_gamma=args.focal_gamma,
+        pos_weight_cap=args.pos_weight_cap,
+        feature_selection=args.feature_selection,
+        max_features=args.max_features,
+        purge_days=args.purge_days,
+        positional_encoding=args.positional_encoding,
+        gradient_clip_norm=args.gradient_clip_norm,
+        weight_decay=args.weight_decay,
+        seed_count=args.seed_count,
+        prior_oos_calibration=args.prior_oos_calibration,
+        min_calibration_folds=args.min_calibration_folds,
+        min_calibration_events=args.min_calibration_events,
     )
     try:
         predictions, metrics = run_transformer_lab(df, lab_config)
@@ -232,6 +249,23 @@ def cmd_transformer_lab_optimize(args: argparse.Namespace) -> None:
         dropout=args.dropout,
         learning_rate=args.learning_rate,
         random_state=args.seed,
+        device=args.device,
+        pooling_values=_csv_strings(args.pooling_values),
+        loss_values=_csv_strings(args.loss_values),
+        max_features_values=_csv_ints(args.max_features_values),
+        feature_selection=args.feature_selection,
+        focal_alpha=args.focal_alpha,
+        focal_gamma=args.focal_gamma,
+        pos_weight_cap=args.pos_weight_cap,
+        progress_output=args.output,
+        purge_days=args.purge_days,
+        positional_encoding=args.positional_encoding,
+        gradient_clip_norm=args.gradient_clip_norm,
+        weight_decay=args.weight_decay,
+        seed_count=args.seed_count,
+        prior_oos_calibration=args.prior_oos_calibration,
+        min_calibration_folds=args.min_calibration_folds,
+        min_calibration_events=args.min_calibration_events,
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -241,6 +275,74 @@ def cmd_transformer_lab_optimize(args: argparse.Namespace) -> None:
     if not ok.empty and "averagePrecision" in ok.columns:
         best = ok.sort_values(["target", "averagePrecision", "brier"], ascending=[True, False, True]).groupby("target").head(1)
         print(best[["target", "sequenceLength", "dModel", "numLayers", "epochs", "averagePrecision", "auc", "brier"]].to_string(index=False))
+
+
+def cmd_ensemble_lab(args: argparse.Namespace) -> None:
+    df = load_frame(args.features)
+    config = load_config(args.config)
+    lab_config = EnsembleLabConfig(
+        targets=tuple(_csv_strings(args.targets)),
+        max_folds=args.max_folds,
+        sequence_length=args.sequence_length,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        d_model=args.d_model,
+        nhead=args.nhead,
+        num_layers=args.num_layers,
+        dropout=args.dropout,
+        learning_rate=args.learning_rate,
+        random_state=args.seed,
+        device=args.device,
+        pooling=args.pooling,
+        loss=args.loss,
+        focal_alpha=args.focal_alpha,
+        focal_gamma=args.focal_gamma,
+        pos_weight_cap=args.pos_weight_cap,
+        feature_selection=args.feature_selection,
+        max_features=args.max_features,
+        fixed_rf_weight=args.rf_weight,
+        fixed_transformer_weight=args.transformer_weight,
+        fixed_rule_weight=args.rule_weight,
+        adaptive_weights=not args.fixed_only,
+        min_weight_selection_folds=args.min_weight_selection_folds,
+        min_weight_selection_events=args.min_weight_selection_events,
+        weight_lookback_folds=args.weight_lookback_folds,
+        max_brier_degradation=args.max_brier_degradation,
+        adaptive_weight_shrinkage=args.adaptive_weight_shrinkage,
+        purge_days=args.purge_days,
+        positional_encoding=args.positional_encoding,
+        gradient_clip_norm=args.gradient_clip_norm,
+        weight_decay=args.weight_decay,
+        seed_count=args.seed_count,
+        prior_oos_calibration=args.prior_oos_calibration,
+        min_calibration_folds=args.min_calibration_folds,
+        min_calibration_events=args.min_calibration_events,
+        moderate_pooling=args.moderate_pooling,
+        severe_pooling=args.severe_pooling,
+        moderate_loss=args.moderate_loss,
+        severe_loss=args.severe_loss,
+    )
+    try:
+        predictions, metrics, weights = run_ensemble_lab(df, config, lab_config)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from None
+    write_ensemble_lab_outputs(
+        predictions,
+        metrics,
+        weights,
+        args.output,
+        args.metrics_output,
+        args.weights_output,
+        report_output=args.report_output,
+        lab_config=lab_config,
+    )
+    print(f"Wrote ensemble lab predictions: {args.output}")
+    print(f"Wrote ensemble lab metrics: {args.metrics_output}")
+    print(f"Wrote ensemble lab weights: {args.weights_output}")
+    print(f"Wrote ensemble lab report: {args.report_output}")
+    summary = metrics.loc[metrics["model"].str.startswith("ensemble")].copy()
+    if not summary.empty:
+        print(summary[["task", "model", "observations", "event_count", "average_precision", "auc", "brier", "top_decile_lift"]].to_string(index=False))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -303,6 +405,22 @@ def build_parser() -> argparse.ArgumentParser:
     transformer.add_argument("--dropout", type=float, default=0.1)
     transformer.add_argument("--learning-rate", type=float, default=0.001)
     transformer.add_argument("--seed", type=int, default=42)
+    transformer.add_argument("--device", choices=["auto", "mps", "cpu", "cuda"], default="auto")
+    transformer.add_argument("--pooling", choices=["last", "mean", "attention"], default="last")
+    transformer.add_argument("--loss", choices=["bce", "focal"], default="bce")
+    transformer.add_argument("--focal-alpha", type=float, default=0.75)
+    transformer.add_argument("--focal-gamma", type=float, default=2.0)
+    transformer.add_argument("--pos-weight-cap", type=float, default=0.0)
+    transformer.add_argument("--feature-selection", choices=["all", "spearman"], default="all")
+    transformer.add_argument("--max-features", type=int, default=0)
+    transformer.add_argument("--purge-days", type=int, default=5)
+    transformer.add_argument("--positional-encoding", choices=["sinusoidal", "none"], default="none")
+    transformer.add_argument("--gradient-clip-norm", type=float, default=1.0)
+    transformer.add_argument("--weight-decay", type=float, default=0.0001)
+    transformer.add_argument("--seed-count", type=int, default=1)
+    transformer.add_argument("--prior-oos-calibration", action="store_true")
+    transformer.add_argument("--min-calibration-folds", type=int, default=4)
+    transformer.add_argument("--min-calibration-events", type=int, default=8)
     transformer.set_defaults(func=cmd_transformer_lab)
 
     transformer_opt = subparsers.add_parser("transformer-lab-optimize")
@@ -319,7 +437,72 @@ def build_parser() -> argparse.ArgumentParser:
     transformer_opt.add_argument("--dropout", type=float, default=0.1)
     transformer_opt.add_argument("--learning-rate", type=float, default=0.001)
     transformer_opt.add_argument("--seed", type=int, default=42)
+    transformer_opt.add_argument("--device", choices=["auto", "mps", "cpu", "cuda"], default="auto")
+    transformer_opt.add_argument("--pooling-values", default="last")
+    transformer_opt.add_argument("--loss-values", default="bce")
+    transformer_opt.add_argument("--max-features-values", default="0")
+    transformer_opt.add_argument("--feature-selection", choices=["all", "spearman"], default="all")
+    transformer_opt.add_argument("--focal-alpha", type=float, default=0.75)
+    transformer_opt.add_argument("--focal-gamma", type=float, default=2.0)
+    transformer_opt.add_argument("--pos-weight-cap", type=float, default=0.0)
+    transformer_opt.add_argument("--purge-days", type=int, default=5)
+    transformer_opt.add_argument("--positional-encoding", choices=["sinusoidal", "none"], default="none")
+    transformer_opt.add_argument("--gradient-clip-norm", type=float, default=1.0)
+    transformer_opt.add_argument("--weight-decay", type=float, default=0.0001)
+    transformer_opt.add_argument("--seed-count", type=int, default=1)
+    transformer_opt.add_argument("--prior-oos-calibration", action="store_true")
+    transformer_opt.add_argument("--min-calibration-folds", type=int, default=4)
+    transformer_opt.add_argument("--min-calibration-events", type=int, default=8)
     transformer_opt.set_defaults(func=cmd_transformer_lab_optimize)
+
+    ensemble = subparsers.add_parser("ensemble-lab")
+    ensemble.add_argument("--features", default="data/processed/features.parquet")
+    ensemble.add_argument("--config", default="configs/base.yaml")
+    ensemble.add_argument("--targets", default="crash_5d_5pct,crash_5d_10pct")
+    ensemble.add_argument("--output", default="reports/ensemble_lab_predictions.csv")
+    ensemble.add_argument("--metrics-output", default="reports/ensemble_lab_metrics.csv")
+    ensemble.add_argument("--weights-output", default="reports/ensemble_lab_weights.csv")
+    ensemble.add_argument("--report-output", default="reports/research/transformer_ensemble_lab_report.md")
+    ensemble.add_argument("--max-folds", type=int, default=12)
+    ensemble.add_argument("--sequence-length", type=int, default=40)
+    ensemble.add_argument("--epochs", type=int, default=4)
+    ensemble.add_argument("--batch-size", type=int, default=64)
+    ensemble.add_argument("--d-model", type=int, default=32)
+    ensemble.add_argument("--nhead", type=int, default=4)
+    ensemble.add_argument("--num-layers", type=int, default=2)
+    ensemble.add_argument("--dropout", type=float, default=0.1)
+    ensemble.add_argument("--learning-rate", type=float, default=0.001)
+    ensemble.add_argument("--seed", type=int, default=42)
+    ensemble.add_argument("--device", choices=["auto", "mps", "cpu", "cuda"], default="auto")
+    ensemble.add_argument("--pooling", choices=["last", "mean", "attention"], default="last")
+    ensemble.add_argument("--loss", choices=["bce", "focal"], default="bce")
+    ensemble.add_argument("--focal-alpha", type=float, default=0.75)
+    ensemble.add_argument("--focal-gamma", type=float, default=2.0)
+    ensemble.add_argument("--pos-weight-cap", type=float, default=0.0)
+    ensemble.add_argument("--feature-selection", choices=["all", "spearman"], default="all")
+    ensemble.add_argument("--max-features", type=int, default=0)
+    ensemble.add_argument("--rf-weight", type=float, default=0.5)
+    ensemble.add_argument("--transformer-weight", type=float, default=0.3)
+    ensemble.add_argument("--rule-weight", type=float, default=0.2)
+    ensemble.add_argument("--fixed-only", action="store_true")
+    ensemble.add_argument("--min-weight-selection-folds", type=int, default=6)
+    ensemble.add_argument("--min-weight-selection-events", type=int, default=12)
+    ensemble.add_argument("--weight-lookback-folds", type=int, default=24)
+    ensemble.add_argument("--max-brier-degradation", type=float, default=0.05)
+    ensemble.add_argument("--adaptive-weight-shrinkage", type=float, default=0.6)
+    ensemble.add_argument("--purge-days", type=int, default=5)
+    ensemble.add_argument("--positional-encoding", choices=["sinusoidal", "none"], default="none")
+    ensemble.add_argument("--gradient-clip-norm", type=float, default=1.0)
+    ensemble.add_argument("--weight-decay", type=float, default=0.0001)
+    ensemble.add_argument("--seed-count", type=int, default=2)
+    ensemble.add_argument("--prior-oos-calibration", action="store_true")
+    ensemble.add_argument("--min-calibration-folds", type=int, default=4)
+    ensemble.add_argument("--min-calibration-events", type=int, default=8)
+    ensemble.add_argument("--moderate-pooling", choices=["last", "mean", "attention"], default=None)
+    ensemble.add_argument("--severe-pooling", choices=["last", "mean", "attention"], default=None)
+    ensemble.add_argument("--moderate-loss", choices=["bce", "focal"], default=None)
+    ensemble.add_argument("--severe-loss", choices=["bce", "focal"], default=None)
+    ensemble.set_defaults(func=cmd_ensemble_lab)
     return parser
 
 

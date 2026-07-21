@@ -115,6 +115,24 @@ ML 패널은 최근 10년 시장 데이터를 다시 수집해 leakage-safe feat
 
 모델링 방식은 한국은행의 FSI/FVI처럼 여러 금융안정 관련 지표를 표준화해 종합지수로 합성하는 접근을 참고했습니다. 자세한 배경은 한국은행의 [FSI와 FVI 설명](https://www.bok.or.kr/portal/bbs/B0000347/view.do?menuNo=201106&nttId=10077975&pageIndex=1)을 참고하면 됩니다.
 
+## Transformer·앙상블 실험실
+
+`ensemble-lab`은 운영 모델과 분리된 challenger 실험입니다. 향후 5거래일 안의 -5%, -10% 급락을 대상으로 RF, Transformer Encoder, 현재 모멘텀 rule과 두 가지 앙상블을 같은 expanding walk-forward 구간에서 비교합니다. 타깃의 미래 5일과 테스트 구간이 겹치지 않도록 각 학습 fold 말단 5일을 제거하며, imputer·scaler·Spearman 피처 선택은 fold의 학습 데이터에만 적합합니다.
+
+Transformer는 MPS·CUDA·CPU를 지원하고 여러 random seed의 확률을 평균할 수 있습니다. `attention`, `last`, `mean` pooling과 BCE·focal loss, 사인 위치 인코딩을 비교할 수 있지만 기본값은 재현 실험에서 더 안정적이었던 위치 인코딩 미사용입니다. 적응 앙상블 가중치는 충분한 이전 OOS fold와 이벤트가 쌓이기 전에는 고정값을 유지합니다.
+
+```bash
+PYTHONPATH=src python3 -m kospi_risk.cli ensemble-lab \
+  --features data/processed/features.parquet \
+  --config configs/base.yaml \
+  --max-folds 24 --device mps --seed-count 2 \
+  --feature-selection spearman --max-features 40 \
+  --moderate-pooling attention --severe-pooling last \
+  --report-output reports/research/transformer_ensemble_lab_v2.md
+```
+
+결과 보고서는 AP, AUC, Brier, 상위 10% 적중률·이벤트 포착률과 RF 대비 fold 승률을 함께 보여줍니다. 같은 OOS 구간에서 여러 구조를 비교한 선택 편향이 있으므로 운영 대시보드에는 자동 반영하지 않으며, 신규 forward 데이터로 별도 승격 기준을 통과해야 합니다.
+
 ## 운영 데이터 소스 전환 후보
 
 현재 구현은 키 없이 테스트 가능한 Yahoo/Naver proxy 중심입니다. 운영 정확도를 높일 때는 아래 공식 데이터로 provider를 교체하는 것이 좋습니다.
