@@ -186,6 +186,11 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert "renderElsStressEpisodeReview" in app_source
     assert 'data-els-episode="${episode.id}"' in app_source
     assert "스트레스 에피소드 리플레이" in app_source
+    assert "keyTrajectoryPath(keyCoordinates)" in app_source
+    assert "현재 기초지수 포지셔닝" in app_source
+    assert app_source.index('<aside class="els-limitations">') < app_source.index(
+        "${renderElsStressEpisodeReview(map.stressEpisodes, plot)}"
+    )
     assert "변동성↑ 쿠폰↑" in app_source
     assert "하락위험↑ 부담↑" in app_source
     assert 'loadJson("./data/pipeline-status.json")' in app_source

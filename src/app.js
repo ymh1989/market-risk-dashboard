@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260722-2";
+const ASSET_VERSION = "20260722-3";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -748,6 +748,12 @@ function curvedTrajectoryPath(points) {
     .join(" ");
 }
 
+function keyTrajectoryPath(points) {
+  return points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
+    .join(" ");
+}
+
 function dateMs(date) {
   return Date.parse(`${date}T00:00:00Z`);
 }
@@ -1032,17 +1038,26 @@ function renderElsStressEpisodeReview(stressEpisodes, plot) {
         .join("");
       const tracks = episode.items
         .map((item) => {
-          const coordinates = (item.trajectory ?? []).map(coordinate);
-          if (coordinates.length < 2) return "";
           const start = coordinate(item.start);
           const peak = coordinate(item.peak);
           const end = coordinate(item.end);
-          const path = curvedTrajectoryPath(coordinates);
+          const keyCoordinates = [start, peak, end].filter(
+            (point, index, points) => index === 0 || point.date !== points[index - 1].date
+          );
+          if (keyCoordinates.length < 2) return "";
+          const path = keyTrajectoryPath(keyCoordinates);
           const offset = markerOffsets[item.id] ?? { dx: 10, dy: -10, anchor: "start" };
+          const endMarker = end.date === peak.date
+            ? ""
+            : `
+              <circle cx="${end.x.toFixed(1)}" cy="${end.y.toFixed(1)}" r="5" class="els-episode-marker els-episode-marker--end">
+                <title>${item.label} 종료 ${end.date}</title>
+              </circle>
+            `;
           return `
-            <g class="els-episode-track els-map-trajectory-series els-map-trajectory-series--${item.id}">
+            <g class="els-episode-track els-episode-track--key-path els-map-trajectory-series els-map-trajectory-series--${item.id}">
               <path d="${path}" marker-end="url(#els-episode-arrow-${episodeIndex}-${item.id})">
-                <title>${item.label} ${start.date}~${end.date}: 최대 발행기회 ${Number(item.maxOpportunityScore).toFixed(1)}, 최대 헤지부담 ${Number(item.maxHedgeBurdenScore).toFixed(1)}</title>
+                <title>${item.label} 핵심 경로 ${start.date}→${peak.date}→${end.date}: 최대 발행기회 ${Number(item.maxOpportunityScore).toFixed(1)}, 최대 헤지부담 ${Number(item.maxHedgeBurdenScore).toFixed(1)}</title>
               </path>
               <circle cx="${start.x.toFixed(1)}" cy="${start.y.toFixed(1)}" r="4" class="els-episode-marker els-episode-marker--start">
                 <title>${item.label} 시작 ${start.date}</title>
@@ -1050,9 +1065,7 @@ function renderElsStressEpisodeReview(stressEpisodes, plot) {
               <rect x="${(peak.x - 4).toFixed(1)}" y="${(peak.y - 4).toFixed(1)}" width="8" height="8" transform="rotate(45 ${peak.x.toFixed(1)} ${peak.y.toFixed(1)})" class="els-episode-marker els-episode-marker--peak">
                 <title>${item.label} 시장 정점 ${peak.date}: 기회 ${Number(peak.opportunityScore).toFixed(1)}, 부담 ${Number(peak.hedgeBurdenScore).toFixed(1)}</title>
               </rect>
-              <circle cx="${end.x.toFixed(1)}" cy="${end.y.toFixed(1)}" r="5" class="els-episode-marker els-episode-marker--end">
-                <title>${item.label} 종료 ${end.date}</title>
-              </circle>
+              ${endMarker}
               <text x="${(end.x + offset.dx).toFixed(1)}" y="${(end.y + offset.dy).toFixed(1)}" text-anchor="${offset.anchor}">${item.label}</text>
             </g>
           `;
@@ -1261,11 +1274,11 @@ function renderElsIssuanceHedgePage(elsRisk) {
         <div><span>부담 상위</span><strong>${map.basket.topBurdenIndex}</strong><small>기존 북 관리 우선</small></div>
       </div>
 
-      <section class="els-opportunity-map" data-els-map>
+      <section class="els-opportunity-map els-opportunity-map--current" data-els-map>
         <div class="els-opportunity-map__header">
           <div>
-            <span class="eyebrow">Relative Positioning</span>
-            <h3>기초지수 포지셔닝</h3>
+            <span class="eyebrow">Current Positioning</span>
+            <h3>현재 기초지수 포지셔닝</h3>
           </div>
           <div class="els-opportunity-map__aside">
             <p>${map.basket.interpretation}</p>
@@ -1311,8 +1324,6 @@ function renderElsIssuanceHedgePage(elsRisk) {
           </svg>
         </div>
       </section>
-
-      ${renderElsStressEpisodeReview(map.stressEpisodes, plot)}
 
       <section class="els-comparison">
         <div class="els-comparison__header">
@@ -1361,6 +1372,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
         <article><span>판단 기준</span><p>${map.methodology.classification}</p></article>
       </section>
       <aside class="els-limitations"><strong>운영 적용 전 확인</strong><p>${map.limitations}</p></aside>
+      ${renderElsStressEpisodeReview(map.stressEpisodes, plot)}
     </section>
   `;
 }
