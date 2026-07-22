@@ -896,6 +896,7 @@ select {
 
 .els-issuance-heading,
 .els-opportunity-map,
+.els-episode-review,
 .els-comparison,
 .els-methodology,
 .els-limitations {
@@ -964,6 +965,7 @@ select {
 }
 
 .els-opportunity-map,
+.els-episode-review,
 .els-comparison {
   overflow: hidden;
 }
@@ -1256,6 +1258,224 @@ select {
   stroke: currentColor;
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
+}
+
+.els-episode-review__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.els-episode-review__header h3 {
+  margin: 5px 0 0;
+  font-size: 1.05rem;
+}
+
+.els-episode-review__header p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.65;
+  text-align: right;
+}
+
+.els-episode-switcher {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-raised);
+  scrollbar-width: thin;
+}
+
+.els-episode-switcher button {
+  flex: 1 0 180px;
+  min-height: 48px;
+  padding: 8px 14px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.els-episode-switcher button:last-child {
+  border-right: 0;
+}
+
+.els-episode-switcher button:hover,
+.els-episode-switcher button:focus-visible {
+  color: var(--ink);
+  background: var(--surface-soft);
+}
+
+.els-episode-switcher button.is-active {
+  color: var(--surface);
+  background: var(--ink);
+}
+
+.els-episode-panel {
+  display: none;
+}
+
+.els-episode-panel.is-active {
+  display: grid;
+}
+
+.els-episode-summary {
+  display: grid;
+  grid-template-columns: 1.35fr repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid var(--line);
+}
+
+.els-episode-summary > div {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  padding: 14px 16px;
+  border-right: 1px solid var(--line);
+}
+
+.els-episode-summary > div:last-child {
+  border-right: 0;
+}
+
+.els-episode-summary span,
+.els-episode-summary small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.els-episode-summary strong {
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+}
+
+.els-episode-interpretation {
+  margin: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.els-episode-map-scroll {
+  overflow-x: auto;
+  background: var(--surface-raised);
+}
+
+.els-episode-map-scroll svg {
+  display: block;
+  width: 100%;
+  min-width: 680px;
+  height: auto;
+}
+
+.els-episode-track > path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+  opacity: 0.84;
+  vector-effect: non-scaling-stroke;
+}
+
+.els-episode-track text {
+  fill: currentColor;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: var(--surface-raised);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.els-episode-marker {
+  stroke: currentColor;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.els-episode-marker--start,
+.els-episode-marker--peak {
+  fill: var(--surface-raised);
+}
+
+.els-episode-marker--end {
+  fill: currentColor;
+  stroke: var(--surface-raised);
+  stroke-width: 2.5;
+}
+
+.els-episode-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.els-episode-stage-legend,
+.els-episode-index-legend,
+.els-episode-stage-legend span,
+.els-episode-index-legend span {
+  display: flex;
+  align-items: center;
+}
+
+.els-episode-stage-legend,
+.els-episode-index-legend {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.els-episode-stage-legend span,
+.els-episode-index-legend span {
+  gap: 5px;
+}
+
+.els-episode-stage-legend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--muted);
+}
+
+.els-episode-legend-start {
+  border-radius: 50%;
+  background: var(--surface-raised);
+}
+
+.els-episode-legend-peak {
+  background: var(--surface-raised);
+  transform: rotate(45deg);
+}
+
+.els-episode-legend-end {
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.els-episode-index-legend i {
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+  background: currentColor;
 }
 
 .els-comparison__header small {
@@ -3260,6 +3480,7 @@ select {
   .els-index-panel__header,
   .els-issuance-heading,
   .els-opportunity-map__header,
+  .els-episode-review__header,
   .els-index-summary,
   .hmm-regime-panel__header,
   .hmm-regime-timeline__header,
@@ -3301,6 +3522,28 @@ select {
   .els-opportunity-map__header p {
     max-width: none;
     text-align: left;
+  }
+
+  .els-episode-review__header p {
+    max-width: none;
+    text-align: left;
+  }
+
+  .els-episode-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .els-episode-summary > div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .els-episode-summary > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .els-episode-legend {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .hmm-regime-month-rail {

@@ -143,6 +143,21 @@ def test_dashboard_contract():
         assert item["trajectory"][-1]["opportunityScore"] == item["opportunityScore"]
         assert item["trajectory"][-1]["hedgeBurdenScore"] == item["hedgeBurdenScore"]
 
+    stress_replay = issuance_map["stressEpisodes"]
+    assert stress_replay["defaultEpisodeId"]
+    assert len(stress_replay["items"]) >= 4
+    for episode in stress_replay["items"]:
+        assert episode["startDate"] <= episode["peakDate"] <= episode["endDate"]
+        assert len(episode["items"]) == 5
+        for item in episode["items"]:
+            assert len(item["trajectory"]) >= 2
+            assert item["trajectory"][0]["date"] >= episode["startDate"]
+            assert item["trajectory"][-1]["date"] <= episode["endDate"]
+            assert all(
+                0 <= point["opportunityScore"] <= 100 and 0 <= point["hedgeBurdenScore"] <= 100
+                for point in item["trajectory"]
+            )
+
     print("Smoke tests passed")
 
 
@@ -168,6 +183,9 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert 'id: "1w"' in app_source
     assert 'marker-end="url(#els-map-arrow-${item.id})"' in app_source
     assert "1주 방향" in app_source
+    assert "renderElsStressEpisodeReview" in app_source
+    assert 'data-els-episode="${episode.id}"' in app_source
+    assert "스트레스 에피소드 리플레이" in app_source
     assert "변동성↑ 쿠폰↑" in app_source
     assert "하락위험↑ 부담↑" in app_source
     assert 'loadJson("./data/pipeline-status.json")' in app_source

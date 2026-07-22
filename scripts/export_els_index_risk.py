@@ -14,9 +14,11 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_FILE = ROOT / "data" / "els-index-risk.json"
+STRESS_EPISODES_FILE = ROOT / "data" / "market-stress-episodes.json"
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d"
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-els-index-risk/0.1)"
 TRAJECTORY_WINDOWS = {"oneWeekPoints": 5, "oneMonthPoints": 22, "threeMonthPoints": 66}
+EPISODE_MAX_POINTS = 48
 
 INDICES = [
     {"id": "spx", "symbol": "^GSPC", "label": "SPX", "name": "S&P 500", "region": "미국"},
@@ -49,7 +51,7 @@ def _round(value: float | int | None, digits: int = 2) -> float | None:
     return round(float(value), digits)
 
 
-def _fetch_yahoo(symbol: str, range_value: str = "2y") -> pd.DataFrame:
+def _fetch_yahoo(symbol: str, range_value: str = "10y") -> pd.DataFrame:
     encoded_symbol = urllib.parse.quote(symbol, safe="")
     request = urllib.request.Request(
         YAHOO_CHART_URL.format(symbol=encoded_symbol, range_value=range_value),
@@ -74,6 +76,42 @@ def _fetch_yahoo(symbol: str, range_value: str = "2y") -> pd.DataFrame:
     if len(frame) < 260:
         raise RuntimeError(f"{symbol}: ELS index risk needs at least 260 observations, got {len(frame)}")
     return frame
+
+
+def _fetch_price_history(symbol: str, cached_prices: pd.DataFrame | None = None) -> pd.DataFrame:
+    historical = _fetch_yahoo(symbol, "10y")
+    recent = _fetch_yahoo(symbol, "2y")
+    frames = [historical]
+    if cached_prices is not None and not cached_prices.empty:
+        frames.append(cached_prices[["date", "close"]])
+    frames.append(recent)
+    return (
+        pd.concat(frames, ignore_index=True)
+        .drop_duplicates("date", keep="last")
+        .sort_values("date")
+        .reset_index(drop=True)
+    )
+
+
+def _load_cached_price_history(path: Path = OUTPUT_FILE) -> dict[str, pd.DataFrame]:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+    cached = {}
+    for index in payload.get("indices", []):
+        rows = index.get("ytdPriceSeries") or index.get("series") or []
+        valid_rows = [
+            {"date": row.get("date"), "close": row.get("close")}
+            for row in rows
+            if row.get("date") and row.get("close") is not None
+        ]
+        if valid_rows and index.get("id"):
+            cached[index["id"]] = pd.DataFrame(valid_rows)
+    return cached
 
 
 def _percentile_rank(values: pd.Series, value: float) -> float:
@@ -132,8 +170,8 @@ def _reading(latest: pd.Series, score: float) -> str:
     return "현재 점수는 중립권이며, 변동성 확대 여부를 중심으로 보면 됩니다."
 
 
-def _index_payload(spec: dict[str, str]) -> tuple[dict, pd.DataFrame]:
-    frame = _features(_fetch_yahoo(spec["symbol"]))
+def _index_payload(spec: dict[str, str], cached_prices: pd.DataFrame | None = None) -> tuple[dict, pd.DataFrame]:
+    frame = _features(_fetch_price_history(spec["symbol"], cached_prices))
     latest = frame.dropna(subset=["els_risk_score"]).iloc[-1]
     latest_year = int(str(latest["date"])[:4])
     ytd_prices = frame.loc[pd.to_datetime(frame["date"]).dt.year == latest_year, ["date", "close"]]
@@ -316,8 +354,16 @@ def _issuance_trajectory(
         "max_abs_daily_move_20d",
     ]
     valid = frame.dropna(subset=required).tail(max_points)
+    return _score_trajectory(valid, correlation_scores, fallback_correlation_score)
+
+
+def _score_trajectory(
+    rows: pd.DataFrame,
+    correlation_scores: dict[str, float],
+    fallback_correlation_score: float,
+) -> list[dict]:
     trajectory = []
-    for _, row in valid.iterrows():
+    for _, row in rows.iterrows():
         date = str(row["date"])
         correlation_score = _correlation_score_at(correlation_scores, date, fallback_correlation_score)
         scores = _issuance_scores(_metrics_from_feature_row(row), correlation_score)
@@ -334,14 +380,140 @@ def _issuance_trajectory(
     return trajectory
 
 
+def _episode_trajectory(
+    frame: pd.DataFrame,
+    correlation_scores: dict[str, float],
+    fallback_correlation_score: float,
+    start_date: str,
+    peak_date: str,
+    end_date: str,
+    max_points: int = EPISODE_MAX_POINTS,
+) -> list[dict]:
+    required = [
+        "ret_20d",
+        "realized_vol_20d",
+        "realized_vol_60d",
+        "vol_percentile_252d",
+        "drawdown_252d",
+        "max_abs_daily_move_20d",
+    ]
+    valid = frame.dropna(subset=required)
+    valid = valid.loc[(valid["date"] >= start_date) & (valid["date"] <= end_date)].reset_index(drop=True)
+    if len(valid) < 2:
+        return []
+
+    if len(valid) > max_points:
+        stride = max(1, math.ceil((len(valid) - 1) / (max_points - 1)))
+        selected = set(range(0, len(valid), stride))
+        selected.update({0, len(valid) - 1})
+        peak_position = int((pd.to_datetime(valid["date"]) - pd.Timestamp(peak_date)).abs().argmin())
+        selected.add(peak_position)
+        valid = valid.iloc[sorted(selected)].reset_index(drop=True)
+
+    scored = _score_trajectory(valid, correlation_scores, fallback_correlation_score)
+    return [
+        {
+            "date": point["date"],
+            "opportunityScore": point["opportunityScore"],
+            "hedgeBurdenScore": point["hedgeBurdenScore"],
+        }
+        for point in scored
+    ]
+
+
+def _closest_trajectory_point(trajectory: list[dict], target_date: str) -> dict:
+    target = pd.Timestamp(target_date)
+    return min(trajectory, key=lambda point: abs(pd.Timestamp(point["date"]) - target))
+
+
+def _load_stress_episodes(path: Path = STRESS_EPISODES_FILE) -> list[dict]:
+    if not path.exists():
+        return []
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return [
+        episode
+        for episode in payload.get("episodes", [])
+        if all(episode.get(key) for key in ("id", "label", "startDate", "peakDate", "endDate"))
+    ]
+
+
+def _stress_episode_history(
+    episodes: list[dict],
+    feature_frames: dict[str, pd.DataFrame],
+    correlation_scores: dict[str, float],
+    fallback_correlation_score: float,
+) -> dict:
+    history = []
+    labels = {spec["id"]: spec["label"] for spec in INDICES}
+
+    for episode in episodes:
+        items = []
+        for spec in INDICES:
+            frame = feature_frames.get(spec["id"])
+            if frame is None:
+                continue
+            trajectory = _episode_trajectory(
+                frame,
+                correlation_scores,
+                fallback_correlation_score,
+                episode["startDate"],
+                episode["peakDate"],
+                episode["endDate"],
+            )
+            if len(trajectory) < 2:
+                continue
+            items.append(
+                {
+                    "id": spec["id"],
+                    "label": spec["label"],
+                    "start": trajectory[0],
+                    "peak": _closest_trajectory_point(trajectory, episode["peakDate"]),
+                    "end": trajectory[-1],
+                    "maxOpportunityScore": max(point["opportunityScore"] for point in trajectory),
+                    "maxHedgeBurdenScore": max(point["hedgeBurdenScore"] for point in trajectory),
+                    "trajectory": trajectory,
+                }
+            )
+        if not items:
+            continue
+
+        top_burden = max(items, key=lambda item: item["peak"]["hedgeBurdenScore"])
+        top_opportunity = max(items, key=lambda item: item["peak"]["opportunityScore"])
+        history.append(
+            {
+                "id": episode["id"],
+                "label": episode["label"],
+                "startDate": episode["startDate"],
+                "peakDate": episode["peakDate"],
+                "endDate": episode["endDate"],
+                "marketPeakScore": episode.get("peakScore"),
+                "peakBurdenIndex": labels[top_burden["id"]],
+                "peakBurdenScore": top_burden["peak"]["hedgeBurdenScore"],
+                "peakOpportunityIndex": labels[top_opportunity["id"]],
+                "peakOpportunityScore": top_opportunity["peak"]["opportunityScore"],
+                "interpretation": f"시장 스트레스 정점에는 {labels[top_burden['id']]}의 헤지부담이 가장 높았고, {labels[top_opportunity['id']]}의 상대 발행기회가 가장 컸습니다.",
+                "items": items,
+            }
+        )
+
+    default_episode = max(history, key=lambda item: float(item.get("marketPeakScore") or 0), default=None)
+    return {
+        "methodology": "각 스트레스 구간의 당시 종가까지로 20일 수익률·실현변동성·낙폭·지수 동조화를 다시 계산한 사후 리플레이입니다.",
+        "defaultEpisodeId": default_episode["id"] if default_episode else None,
+        "items": history,
+    }
+
+
 def _issuance_hedge_map(
     indices: list[dict],
     correlation_score: float,
     feature_frames: dict[str, pd.DataFrame] | None = None,
     correlation_scores: dict[str, float] | None = None,
+    stress_episodes: list[dict] | None = None,
 ) -> dict:
     feature_frames = feature_frames or {}
     correlation_scores = correlation_scores or {}
+    stress_episodes = stress_episodes or []
     items = []
     for index in indices:
         item_correlation = _correlation_score_at(correlation_scores, index["lastDate"], correlation_score)
@@ -388,6 +560,12 @@ def _issuance_hedge_map(
             "interpretation": f"{opportunity_ranked[0]['label']}의 변동성에서 발행 조건 개선 여지가 가장 크고, {burden_ranked[0]['label']}가 기존 북의 헤지부담을 가장 크게 높입니다.",
         },
         "items": sorted(items, key=lambda item: item["balanceScore"], reverse=True),
+        "stressEpisodes": _stress_episode_history(
+            stress_episodes,
+            feature_frames,
+            correlation_scores,
+            correlation_score,
+        ),
         "limitations": "공개 종가지수의 실현변동성·낙폭을 사용한 상대평가입니다. 실제 발행 판단에는 만기별 내재변동성, skew·상관 smile, 금리·배당·조달비용, 기발행 재고와 상품별 delta·gamma·vega를 추가해야 합니다.",
     }
 
@@ -396,8 +574,9 @@ def build_payload() -> dict:
     indices = []
     feature_frames = []
     feature_frames_by_id = {}
+    cached_price_history = _load_cached_price_history()
     for spec in INDICES:
-        index_payload, features = _index_payload(spec)
+        index_payload, features = _index_payload(spec, cached_price_history.get(spec["id"]))
         indices.append(index_payload)
         feature_frames.append(features)
         feature_frames_by_id[spec["id"]] = features
@@ -413,6 +592,7 @@ def build_payload() -> dict:
         correlation_score,
         feature_frames=feature_frames_by_id,
         correlation_scores=correlation_scores,
+        stress_episodes=_load_stress_episodes(),
     )
 
     payload = {

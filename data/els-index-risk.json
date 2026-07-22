@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-07-22 07:31 KST",
+  "generatedAt": "2026-07-22 09:12 KST",
   "methodology": "각 지수별 20일 실현변동성, 252일 변동성 분위수, 20/60/252일 낙폭, 단기 하락 모멘텀, 고변동성 급등 신호를 0~100점으로 합성합니다. Basket 점수는 worst-of ELS 구조를 반영해 가장 높은 리스크 지수에 50% 가중합니다.",
   "basket": {
-    "score": 64.38,
+    "score": 64.04,
     "bucket": "주의",
     "tone": "caution",
     "worstIndex": "KOSPI200",
-    "secondWorstIndex": "NKY",
-    "averageIndexScore": 48.61,
-    "correlationScore": 28.5,
-    "interpretation": "KOSPI200가 basket 리스크를 가장 크게 끌어올리고, NKY가 두 번째 취약 지수입니다."
+    "secondWorstIndex": "HSCEI",
+    "averageIndexScore": 48.14,
+    "correlationScore": 28.26,
+    "interpretation": "KOSPI200가 basket 리스크를 가장 크게 끌어올리고, HSCEI가 두 번째 취약 지수입니다."
   },
   "issuanceHedgeMap": {
     "methodology": {
@@ -18,12 +18,13 @@
       "classification": "헤지부담 80점 이상은 발행부담, 발행기회 65점 이상이면서 헤지부담 45점 이상은 헤지주의, 발행기회 65점 이상이면서 부담이 낮으면 발행기회, 나머지는 선별발행입니다."
     },
     "trajectoryWindows": {
+      "oneWeekPoints": 5,
       "oneMonthPoints": 22,
       "threeMonthPoints": 66
     },
     "basket": {
-      "opportunityScore": 77.78,
-      "hedgeBurdenScore": 65.0,
+      "opportunityScore": 78.2,
+      "hedgeBurdenScore": 64.73,
       "stance": "헤지주의",
       "tone": "caution",
       "topOpportunityIndex": "KOSPI200",
@@ -36,36 +37,28 @@
         "label": "HSCEI",
         "name": "Hang Seng China Enterprises",
         "region": "중국/HK",
-        "lastDate": "2026-07-20",
-        "opportunityScore": 76.67,
-        "hedgeBurdenScore": 32.89,
-        "balanceScore": 55.29,
+        "lastDate": "2026-07-21",
+        "opportunityScore": 76.37,
+        "hedgeBurdenScore": 33.27,
+        "balanceScore": 54.74,
         "stance": "발행기회",
         "tone": "good",
         "components": {
-          "volPercentileScore": 100.0,
-          "volLevelScore": 45.2,
-          "volShockScore": 54.1,
+          "volPercentileScore": 99.6,
+          "volLevelScore": 44.7,
+          "volShockScore": 54.5,
           "downsideMomentumScore": 0.0,
-          "drawdownScore": 46.0,
+          "drawdownScore": 46.8,
           "gapShockScore": 50.5,
-          "correlationScore": 25.1
+          "correlationScore": 28.3
         },
         "interpretation": "상대적 쿠폰 여력이 높고 현재 낙폭·방향성 부담은 제한적입니다. 신규 발행 후보군으로 우선 검토할 수 있습니다.",
         "metrics": {
-          "return20dPct": 5.09,
-          "realizedVol20dPct": 26.98,
-          "drawdown252dPct": -13.81
+          "return20dPct": 5.62,
+          "realizedVol20dPct": 26.78,
+          "drawdown252dPct": -14.03
         },
         "trajectory": [
-          {
-            "date": "2026-04-14",
-            "opportunityScore": 64.57,
-            "hedgeBurdenScore": 26.93,
-            "balanceScore": 47.07,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
           {
             "date": "2026-04-15",
             "opportunityScore": 64.83,
@@ -585,6 +578,14 @@
             "balanceScore": 55.29,
             "stance": "발행기회",
             "tone": "good"
+          },
+          {
+            "date": "2026-07-21",
+            "opportunityScore": 76.37,
+            "hedgeBurdenScore": 33.27,
+            "balanceScore": 54.74,
+            "stance": "발행기회",
+            "tone": "good"
           }
         ]
       },
@@ -593,36 +594,28 @@
         "label": "NKY",
         "name": "Nikkei 225",
         "region": "일본",
-        "lastDate": "2026-07-17",
-        "opportunityScore": 74.84,
-        "hedgeBurdenScore": 50.22,
-        "balanceScore": 42.2,
+        "lastDate": "2026-07-21",
+        "opportunityScore": 77.98,
+        "hedgeBurdenScore": 47.62,
+        "balanceScore": 47.02,
         "stance": "헤지주의",
         "tone": "caution",
         "components": {
-          "volPercentileScore": 88.1,
-          "volLevelScore": 68.3,
-          "volShockScore": 39.4,
-          "downsideMomentumScore": 49.9,
-          "drawdownScore": 37.9,
+          "volPercentileScore": 91.3,
+          "volLevelScore": 71.4,
+          "volShockScore": 42.4,
+          "downsideMomentumScore": 43.9,
+          "drawdownScore": 29.3,
           "gapShockScore": 57.6,
-          "correlationScore": 25.6
+          "correlationScore": 28.3
         },
         "interpretation": "발행 조건 개선 여지는 크지만 변동성과 하락 경로가 헤지비용을 높입니다. 한도·만기·기초자산 집중을 함께 관리해야 합니다.",
         "metrics": {
-          "return20dPct": -9.98,
-          "realizedVol20dPct": 36.68,
-          "drawdown252dPct": -11.37
+          "return20dPct": -8.78,
+          "realizedVol20dPct": 37.97,
+          "drawdown252dPct": -8.8
         },
         "trajectory": [
-          {
-            "date": "2026-04-13",
-            "opportunityScore": 80.04,
-            "hedgeBurdenScore": 34.82,
-            "balanceScore": 57.41,
-            "stance": "발행기회",
-            "tone": "good"
-          },
           {
             "date": "2026-04-14",
             "opportunityScore": 81.13,
@@ -1140,6 +1133,14 @@
             "opportunityScore": 74.84,
             "hedgeBurdenScore": 50.22,
             "balanceScore": 42.2,
+            "stance": "헤지주의",
+            "tone": "caution"
+          },
+          {
+            "date": "2026-07-21",
+            "opportunityScore": 77.98,
+            "hedgeBurdenScore": 47.62,
+            "balanceScore": 47.02,
             "stance": "헤지주의",
             "tone": "caution"
           }
@@ -1707,36 +1708,28 @@
         "label": "KOSPI200",
         "name": "KOSPI 200",
         "region": "한국",
-        "lastDate": "2026-07-16",
-        "opportunityScore": 91.8,
-        "hedgeBurdenScore": 89.68,
-        "balanceScore": 33.5,
+        "lastDate": "2026-07-21",
+        "opportunityScore": 91.57,
+        "hedgeBurdenScore": 90.33,
+        "balanceScore": 32.85,
         "stance": "발행부담",
         "tone": "danger",
         "components": {
-          "volPercentileScore": 99.2,
+          "volPercentileScore": 98.8,
           "volLevelScore": 100.0,
-          "volShockScore": 48.3,
+          "volShockScore": 48.2,
           "downsideMomentumScore": 100.0,
-          "drawdownScore": 89.6,
+          "drawdownScore": 90.0,
           "gapShockScore": 100.0,
-          "correlationScore": 22.9
+          "correlationScore": 28.3
         },
         "interpretation": "쿠폰 여력보다 기존 북의 순연, 감마·베가와 낙인 접근 부담이 더 큽니다. 신규 발행보다 익스포저 축소가 우선입니다.",
         "metrics": {
-          "return20dPct": -25.96,
-          "realizedVol20dPct": 85.23,
-          "drawdown252dPct": -26.87
+          "return20dPct": -26.12,
+          "realizedVol20dPct": 85.19,
+          "drawdown252dPct": -27.01
         },
         "trajectory": [
-          {
-            "date": "2026-04-10",
-            "opportunityScore": 84.48,
-            "hedgeBurdenScore": 48.27,
-            "balanceScore": 53.11,
-            "stance": "헤지주의",
-            "tone": "caution"
-          },
           {
             "date": "2026-04-13",
             "opportunityScore": 84.47,
@@ -2256,6 +2249,14 @@
             "balanceScore": 33.5,
             "stance": "발행부담",
             "tone": "danger"
+          },
+          {
+            "date": "2026-07-21",
+            "opportunityScore": 91.57,
+            "hedgeBurdenScore": 90.33,
+            "balanceScore": 32.85,
+            "stance": "발행부담",
+            "tone": "danger"
           }
         ]
       },
@@ -2266,8 +2267,8 @@
         "region": "미국",
         "lastDate": "2026-07-21",
         "opportunityScore": 24.21,
-        "hedgeBurdenScore": 8.31,
-        "balanceScore": 18.8,
+        "hedgeBurdenScore": 8.29,
+        "balanceScore": 18.82,
         "stance": "선별발행",
         "tone": "watch",
         "components": {
@@ -2277,7 +2278,7 @@
           "downsideMomentumScore": 0.0,
           "drawdownScore": 4.4,
           "gapShockScore": 18.0,
-          "correlationScore": 28.5
+          "correlationScore": 28.3
         },
         "interpretation": "헤지부담은 통제 가능하지만 쿠폰 여력이 제한적일 수 있습니다. 구조와 만기를 선별해 상대가치를 확인해야 합니다.",
         "metrics": {
@@ -2809,14 +2810,3850 @@
           {
             "date": "2026-07-21",
             "opportunityScore": 24.21,
-            "hedgeBurdenScore": 8.31,
-            "balanceScore": 18.8,
+            "hedgeBurdenScore": 8.29,
+            "balanceScore": 18.82,
             "stance": "선별발행",
             "tone": "watch"
           }
         ]
       }
     ],
+    "stressEpisodes": {
+      "methodology": "각 스트레스 구간의 당시 종가까지로 20일 수익률·실현변동성·낙폭·지수 동조화를 다시 계산한 사후 리플레이입니다.",
+      "defaultEpisodeId": "2020-02-25_2020-05-15",
+      "items": [
+        {
+          "id": "2026-03-05_2026-03-25",
+          "label": "최근 AI 쏠림·금리/환율 스트레스",
+          "startDate": "2026-03-05",
+          "peakDate": "2026-03-25",
+          "endDate": "2026-03-25",
+          "marketPeakScore": 71.5,
+          "peakBurdenIndex": "KOSPI200",
+          "peakBurdenScore": 56.56,
+          "peakOpportunityIndex": "KOSPI200",
+          "peakOpportunityScore": 97.79,
+          "interpretation": "시장 스트레스 정점에는 KOSPI200의 헤지부담이 가장 높았고, KOSPI200의 상대 발행기회가 가장 컸습니다.",
+          "items": [
+            {
+              "id": "spx",
+              "label": "SPX",
+              "start": {
+                "date": "2026-03-05",
+                "opportunityScore": 44.97,
+                "hedgeBurdenScore": 10.39
+              },
+              "peak": {
+                "date": "2026-03-25",
+                "opportunityScore": 42.96,
+                "hedgeBurdenScore": 17.43
+              },
+              "end": {
+                "date": "2026-03-25",
+                "opportunityScore": 42.96,
+                "hedgeBurdenScore": 17.43
+              },
+              "maxOpportunityScore": 48.55,
+              "maxHedgeBurdenScore": 19.52,
+              "trajectory": [
+                {
+                  "date": "2026-03-05",
+                  "opportunityScore": 44.97,
+                  "hedgeBurdenScore": 10.39
+                },
+                {
+                  "date": "2026-03-06",
+                  "opportunityScore": 46.14,
+                  "hedgeBurdenScore": 11.57
+                },
+                {
+                  "date": "2026-03-09",
+                  "opportunityScore": 30.33,
+                  "hedgeBurdenScore": 10.21
+                },
+                {
+                  "date": "2026-03-10",
+                  "opportunityScore": 29.13,
+                  "hedgeBurdenScore": 11.35
+                },
+                {
+                  "date": "2026-03-11",
+                  "opportunityScore": 29.1,
+                  "hedgeBurdenScore": 10.67
+                },
+                {
+                  "date": "2026-03-12",
+                  "opportunityScore": 37.21,
+                  "hedgeBurdenScore": 14.46
+                },
+                {
+                  "date": "2026-03-13",
+                  "opportunityScore": 29.24,
+                  "hedgeBurdenScore": 13.33
+                },
+                {
+                  "date": "2026-03-16",
+                  "opportunityScore": 35.75,
+                  "hedgeBurdenScore": 11.79
+                },
+                {
+                  "date": "2026-03-17",
+                  "opportunityScore": 36.42,
+                  "hedgeBurdenScore": 11.4
+                },
+                {
+                  "date": "2026-03-18",
+                  "opportunityScore": 39.66,
+                  "hedgeBurdenScore": 14.91
+                },
+                {
+                  "date": "2026-03-19",
+                  "opportunityScore": 39.9,
+                  "hedgeBurdenScore": 15.29
+                },
+                {
+                  "date": "2026-03-20",
+                  "opportunityScore": 43.97,
+                  "hedgeBurdenScore": 19.52
+                },
+                {
+                  "date": "2026-03-23",
+                  "opportunityScore": 48.55,
+                  "hedgeBurdenScore": 16.16
+                },
+                {
+                  "date": "2026-03-24",
+                  "opportunityScore": 45.56,
+                  "hedgeBurdenScore": 17.56
+                },
+                {
+                  "date": "2026-03-25",
+                  "opportunityScore": 42.96,
+                  "hedgeBurdenScore": 17.43
+                }
+              ]
+            },
+            {
+              "id": "sx5e",
+              "label": "SX5E",
+              "start": {
+                "date": "2026-03-05",
+                "opportunityScore": 69.31,
+                "hedgeBurdenScore": 23.3
+              },
+              "peak": {
+                "date": "2026-03-25",
+                "opportunityScore": 71.82,
+                "hedgeBurdenScore": 34.43
+              },
+              "end": {
+                "date": "2026-03-25",
+                "opportunityScore": 71.82,
+                "hedgeBurdenScore": 34.43
+              },
+              "maxOpportunityScore": 71.82,
+              "maxHedgeBurdenScore": 38.06,
+              "trajectory": [
+                {
+                  "date": "2026-03-05",
+                  "opportunityScore": 69.31,
+                  "hedgeBurdenScore": 23.3
+                },
+                {
+                  "date": "2026-03-06",
+                  "opportunityScore": 68.15,
+                  "hedgeBurdenScore": 26.63
+                },
+                {
+                  "date": "2026-03-09",
+                  "opportunityScore": 66.65,
+                  "hedgeBurdenScore": 28.42
+                },
+                {
+                  "date": "2026-03-10",
+                  "opportunityScore": 71.07,
+                  "hedgeBurdenScore": 24.83
+                },
+                {
+                  "date": "2026-03-11",
+                  "opportunityScore": 71.13,
+                  "hedgeBurdenScore": 25.67
+                },
+                {
+                  "date": "2026-03-12",
+                  "opportunityScore": 71.17,
+                  "hedgeBurdenScore": 26.93
+                },
+                {
+                  "date": "2026-03-13",
+                  "opportunityScore": 71.27,
+                  "hedgeBurdenScore": 27.74
+                },
+                {
+                  "date": "2026-03-16",
+                  "opportunityScore": 71.5,
+                  "hedgeBurdenScore": 26.92
+                },
+                {
+                  "date": "2026-03-17",
+                  "opportunityScore": 71.12,
+                  "hedgeBurdenScore": 26.65
+                },
+                {
+                  "date": "2026-03-18",
+                  "opportunityScore": 68.66,
+                  "hedgeBurdenScore": 28.68
+                },
+                {
+                  "date": "2026-03-19",
+                  "opportunityScore": 70.86,
+                  "hedgeBurdenScore": 32.76
+                },
+                {
+                  "date": "2026-03-20",
+                  "opportunityScore": 70.03,
+                  "hedgeBurdenScore": 38.06
+                },
+                {
+                  "date": "2026-03-23",
+                  "opportunityScore": 71.6,
+                  "hedgeBurdenScore": 35.55
+                },
+                {
+                  "date": "2026-03-24",
+                  "opportunityScore": 71.65,
+                  "hedgeBurdenScore": 35.4
+                },
+                {
+                  "date": "2026-03-25",
+                  "opportunityScore": 71.82,
+                  "hedgeBurdenScore": 34.43
+                }
+              ]
+            },
+            {
+              "id": "nky",
+              "label": "NKY",
+              "start": {
+                "date": "2026-03-05",
+                "opportunityScore": 70.16,
+                "hedgeBurdenScore": 25.14
+              },
+              "peak": {
+                "date": "2026-03-25",
+                "opportunityScore": 82.48,
+                "hedgeBurdenScore": 43.56
+              },
+              "end": {
+                "date": "2026-03-25",
+                "opportunityScore": 82.48,
+                "hedgeBurdenScore": 43.56
+              },
+              "maxOpportunityScore": 82.48,
+              "maxHedgeBurdenScore": 50.49,
+              "trajectory": [
+                {
+                  "date": "2026-03-05",
+                  "opportunityScore": 70.16,
+                  "hedgeBurdenScore": 25.14
+                },
+                {
+                  "date": "2026-03-06",
+                  "opportunityScore": 70.16,
+                  "hedgeBurdenScore": 24.49
+                },
+                {
+                  "date": "2026-03-09",
+                  "opportunityScore": 78.05,
+                  "hedgeBurdenScore": 36.65
+                },
+                {
+                  "date": "2026-03-10",
+                  "opportunityScore": 79.81,
+                  "hedgeBurdenScore": 33.13
+                },
+                {
+                  "date": "2026-03-11",
+                  "opportunityScore": 75.35,
+                  "hedgeBurdenScore": 33.0
+                },
+                {
+                  "date": "2026-03-12",
+                  "opportunityScore": 73.46,
+                  "hedgeBurdenScore": 37.24
+                },
+                {
+                  "date": "2026-03-13",
+                  "opportunityScore": 73.63,
+                  "hedgeBurdenScore": 39.79
+                },
+                {
+                  "date": "2026-03-16",
+                  "opportunityScore": 73.05,
+                  "hedgeBurdenScore": 38.52
+                },
+                {
+                  "date": "2026-03-17",
+                  "opportunityScore": 73.19,
+                  "hedgeBurdenScore": 38.39
+                },
+                {
+                  "date": "2026-03-18",
+                  "opportunityScore": 76.22,
+                  "hedgeBurdenScore": 33.2
+                },
+                {
+                  "date": "2026-03-19",
+                  "opportunityScore": 78.14,
+                  "hedgeBurdenScore": 42.32
+                },
+                {
+                  "date": "2026-03-23",
+                  "opportunityScore": 79.96,
+                  "hedgeBurdenScore": 50.49
+                },
+                {
+                  "date": "2026-03-24",
+                  "opportunityScore": 80.68,
+                  "hedgeBurdenScore": 46.92
+                },
+                {
+                  "date": "2026-03-25",
+                  "opportunityScore": 82.48,
+                  "hedgeBurdenScore": 43.56
+                }
+              ]
+            },
+            {
+              "id": "hscei",
+              "label": "HSCEI",
+              "start": {
+                "date": "2026-03-05",
+                "opportunityScore": 44.3,
+                "hedgeBurdenScore": 32.49
+              },
+              "peak": {
+                "date": "2026-03-25",
+                "opportunityScore": 63.65,
+                "hedgeBurdenScore": 31.59
+              },
+              "end": {
+                "date": "2026-03-25",
+                "opportunityScore": 63.65,
+                "hedgeBurdenScore": 31.59
+              },
+              "maxOpportunityScore": 63.65,
+              "maxHedgeBurdenScore": 38.65,
+              "trajectory": [
+                {
+                  "date": "2026-03-05",
+                  "opportunityScore": 44.3,
+                  "hedgeBurdenScore": 32.49
+                },
+                {
+                  "date": "2026-03-06",
+                  "opportunityScore": 53.84,
+                  "hedgeBurdenScore": 29.15
+                },
+                {
+                  "date": "2026-03-09",
+                  "opportunityScore": 54.19,
+                  "hedgeBurdenScore": 29.86
+                },
+                {
+                  "date": "2026-03-10",
+                  "opportunityScore": 59.19,
+                  "hedgeBurdenScore": 28.27
+                },
+                {
+                  "date": "2026-03-11",
+                  "opportunityScore": 58.69,
+                  "hedgeBurdenScore": 27.1
+                },
+                {
+                  "date": "2026-03-12",
+                  "opportunityScore": 53.75,
+                  "hedgeBurdenScore": 28.58
+                },
+                {
+                  "date": "2026-03-13",
+                  "opportunityScore": 52.05,
+                  "hedgeBurdenScore": 30.16
+                },
+                {
+                  "date": "2026-03-16",
+                  "opportunityScore": 58.12,
+                  "hedgeBurdenScore": 27.95
+                },
+                {
+                  "date": "2026-03-17",
+                  "opportunityScore": 57.12,
+                  "hedgeBurdenScore": 26.38
+                },
+                {
+                  "date": "2026-03-18",
+                  "opportunityScore": 54.39,
+                  "hedgeBurdenScore": 23.69
+                },
+                {
+                  "date": "2026-03-19",
+                  "opportunityScore": 57.23,
+                  "hedgeBurdenScore": 27.82
+                },
+                {
+                  "date": "2026-03-20",
+                  "opportunityScore": 58.28,
+                  "hedgeBurdenScore": 29.31
+                },
+                {
+                  "date": "2026-03-23",
+                  "opportunityScore": 53.98,
+                  "hedgeBurdenScore": 38.65
+                },
+                {
+                  "date": "2026-03-24",
+                  "opportunityScore": 62.98,
+                  "hedgeBurdenScore": 32.79
+                },
+                {
+                  "date": "2026-03-25",
+                  "opportunityScore": 63.65,
+                  "hedgeBurdenScore": 31.59
+                }
+              ]
+            },
+            {
+              "id": "kospi200",
+              "label": "KOSPI200",
+              "start": {
+                "date": "2026-03-05",
+                "opportunityScore": 100.0,
+                "hedgeBurdenScore": 50.69
+              },
+              "peak": {
+                "date": "2026-03-25",
+                "opportunityScore": 97.79,
+                "hedgeBurdenScore": 56.56
+              },
+              "end": {
+                "date": "2026-03-25",
+                "opportunityScore": 97.79,
+                "hedgeBurdenScore": 56.56
+              },
+              "maxOpportunityScore": 100.0,
+              "maxHedgeBurdenScore": 60.58,
+              "trajectory": [
+                {
+                  "date": "2026-03-05",
+                  "opportunityScore": 100.0,
+                  "hedgeBurdenScore": 50.69
+                },
+                {
+                  "date": "2026-03-06",
+                  "opportunityScore": 99.31,
+                  "hedgeBurdenScore": 50.8
+                },
+                {
+                  "date": "2026-03-09",
+                  "opportunityScore": 97.81,
+                  "hedgeBurdenScore": 55.91
+                },
+                {
+                  "date": "2026-03-10",
+                  "opportunityScore": 98.41,
+                  "hedgeBurdenScore": 51.28
+                },
+                {
+                  "date": "2026-03-11",
+                  "opportunityScore": 97.55,
+                  "hedgeBurdenScore": 49.87
+                },
+                {
+                  "date": "2026-03-12",
+                  "opportunityScore": 97.28,
+                  "hedgeBurdenScore": 50.56
+                },
+                {
+                  "date": "2026-03-13",
+                  "opportunityScore": 96.41,
+                  "hedgeBurdenScore": 52.06
+                },
+                {
+                  "date": "2026-03-16",
+                  "opportunityScore": 96.7,
+                  "hedgeBurdenScore": 50.85
+                },
+                {
+                  "date": "2026-03-17",
+                  "opportunityScore": 96.73,
+                  "hedgeBurdenScore": 49.57
+                },
+                {
+                  "date": "2026-03-18",
+                  "opportunityScore": 97.38,
+                  "hedgeBurdenScore": 45.13
+                },
+                {
+                  "date": "2026-03-19",
+                  "opportunityScore": 97.61,
+                  "hedgeBurdenScore": 47.63
+                },
+                {
+                  "date": "2026-03-20",
+                  "opportunityScore": 97.19,
+                  "hedgeBurdenScore": 47.78
+                },
+                {
+                  "date": "2026-03-23",
+                  "opportunityScore": 97.95,
+                  "hedgeBurdenScore": 60.58
+                },
+                {
+                  "date": "2026-03-24",
+                  "opportunityScore": 98.08,
+                  "hedgeBurdenScore": 56.1
+                },
+                {
+                  "date": "2026-03-25",
+                  "opportunityScore": 97.79,
+                  "hedgeBurdenScore": 56.56
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "2024-09-11_2025-05-09",
+          "label": "AI 반도체 변동성",
+          "startDate": "2024-09-11",
+          "peakDate": "2025-04-09",
+          "endDate": "2025-05-09",
+          "marketPeakScore": 76.9,
+          "peakBurdenIndex": "NKY",
+          "peakBurdenScore": 76.51,
+          "peakOpportunityIndex": "SPX",
+          "peakOpportunityScore": 98.04,
+          "interpretation": "시장 스트레스 정점에는 NKY의 헤지부담이 가장 높았고, SPX의 상대 발행기회가 가장 컸습니다.",
+          "items": [
+            {
+              "id": "spx",
+              "label": "SPX",
+              "start": {
+                "date": "2024-09-11",
+                "opportunityScore": 54.5,
+                "hedgeBurdenScore": 13.58
+              },
+              "peak": {
+                "date": "2025-04-09",
+                "opportunityScore": 98.04,
+                "hedgeBurdenScore": 53.81
+              },
+              "end": {
+                "date": "2025-05-09",
+                "opportunityScore": 52.21,
+                "hedgeBurdenScore": 21.34
+              },
+              "maxOpportunityScore": 99.58,
+              "maxHedgeBurdenScore": 64.6,
+              "trajectory": [
+                {
+                  "date": "2024-09-11",
+                  "opportunityScore": 54.5,
+                  "hedgeBurdenScore": 13.58
+                },
+                {
+                  "date": "2024-09-17",
+                  "opportunityScore": 49.63,
+                  "hedgeBurdenScore": 11.85
+                },
+                {
+                  "date": "2024-09-23",
+                  "opportunityScore": 49.62,
+                  "hedgeBurdenScore": 11.49
+                },
+                {
+                  "date": "2024-09-27",
+                  "opportunityScore": 48.47,
+                  "hedgeBurdenScore": 11.75
+                },
+                {
+                  "date": "2024-10-03",
+                  "opportunityScore": 29.59,
+                  "hedgeBurdenScore": 9.86
+                },
+                {
+                  "date": "2024-10-09",
+                  "opportunityScore": 17.95,
+                  "hedgeBurdenScore": 7.67
+                },
+                {
+                  "date": "2024-10-15",
+                  "opportunityScore": 23.68,
+                  "hedgeBurdenScore": 8.72
+                },
+                {
+                  "date": "2024-10-21",
+                  "opportunityScore": 9.69,
+                  "hedgeBurdenScore": 5.85
+                },
+                {
+                  "date": "2024-10-25",
+                  "opportunityScore": 15.77,
+                  "hedgeBurdenScore": 6.8
+                },
+                {
+                  "date": "2024-10-31",
+                  "opportunityScore": 32.25,
+                  "hedgeBurdenScore": 11.1
+                },
+                {
+                  "date": "2024-11-06",
+                  "opportunityScore": 49.07,
+                  "hedgeBurdenScore": 11.35
+                },
+                {
+                  "date": "2024-11-12",
+                  "opportunityScore": 48.03,
+                  "hedgeBurdenScore": 11.36
+                },
+                {
+                  "date": "2024-11-18",
+                  "opportunityScore": 57.06,
+                  "hedgeBurdenScore": 12.87
+                },
+                {
+                  "date": "2024-11-22",
+                  "opportunityScore": 55.56,
+                  "hedgeBurdenScore": 10.77
+                },
+                {
+                  "date": "2024-11-29",
+                  "opportunityScore": 42.37,
+                  "hedgeBurdenScore": 7.76
+                },
+                {
+                  "date": "2024-12-05",
+                  "opportunityScore": 4.79,
+                  "hedgeBurdenScore": 3.02
+                },
+                {
+                  "date": "2024-12-11",
+                  "opportunityScore": 6.99,
+                  "hedgeBurdenScore": 2.84
+                },
+                {
+                  "date": "2024-12-17",
+                  "opportunityScore": 2.2,
+                  "hedgeBurdenScore": 2.19
+                },
+                {
+                  "date": "2024-12-23",
+                  "opportunityScore": 48.11,
+                  "hedgeBurdenScore": 10.35
+                },
+                {
+                  "date": "2024-12-30",
+                  "opportunityScore": 58.93,
+                  "hedgeBurdenScore": 14.56
+                },
+                {
+                  "date": "2025-01-06",
+                  "opportunityScore": 61.72,
+                  "hedgeBurdenScore": 13.54
+                },
+                {
+                  "date": "2025-01-13",
+                  "opportunityScore": 63.76,
+                  "hedgeBurdenScore": 18.93
+                },
+                {
+                  "date": "2025-01-17",
+                  "opportunityScore": 67.33,
+                  "hedgeBurdenScore": 13.82
+                },
+                {
+                  "date": "2025-01-24",
+                  "opportunityScore": 49.83,
+                  "hedgeBurdenScore": 7.32
+                },
+                {
+                  "date": "2025-01-30",
+                  "opportunityScore": 46.85,
+                  "hedgeBurdenScore": 7.65
+                },
+                {
+                  "date": "2025-02-05",
+                  "opportunityScore": 44.92,
+                  "hedgeBurdenScore": 7.69
+                },
+                {
+                  "date": "2025-02-11",
+                  "opportunityScore": 35.53,
+                  "hedgeBurdenScore": 6.73
+                },
+                {
+                  "date": "2025-02-18",
+                  "opportunityScore": 22.49,
+                  "hedgeBurdenScore": 4.46
+                },
+                {
+                  "date": "2025-02-24",
+                  "opportunityScore": 32.1,
+                  "hedgeBurdenScore": 10.2
+                },
+                {
+                  "date": "2025-02-28",
+                  "opportunityScore": 37.75,
+                  "hedgeBurdenScore": 11.14
+                },
+                {
+                  "date": "2025-03-06",
+                  "opportunityScore": 58.7,
+                  "hedgeBurdenScore": 20.17
+                },
+                {
+                  "date": "2025-03-12",
+                  "opportunityScore": 63.43,
+                  "hedgeBurdenScore": 28.01
+                },
+                {
+                  "date": "2025-03-18",
+                  "opportunityScore": 67.68,
+                  "hedgeBurdenScore": 30.26
+                },
+                {
+                  "date": "2025-03-24",
+                  "opportunityScore": 72.31,
+                  "hedgeBurdenScore": 23.05
+                },
+                {
+                  "date": "2025-03-28",
+                  "opportunityScore": 70.43,
+                  "hedgeBurdenScore": 28.88
+                },
+                {
+                  "date": "2025-04-03",
+                  "opportunityScore": 77.61,
+                  "hedgeBurdenScore": 38.96
+                },
+                {
+                  "date": "2025-04-09",
+                  "opportunityScore": 98.04,
+                  "hedgeBurdenScore": 53.81
+                },
+                {
+                  "date": "2025-04-15",
+                  "opportunityScore": 98.06,
+                  "hedgeBurdenScore": 56.65
+                },
+                {
+                  "date": "2025-04-22",
+                  "opportunityScore": 99.58,
+                  "hedgeBurdenScore": 64.6
+                },
+                {
+                  "date": "2025-04-28",
+                  "opportunityScore": 99.21,
+                  "hedgeBurdenScore": 52.38
+                },
+                {
+                  "date": "2025-05-02",
+                  "opportunityScore": 92.44,
+                  "hedgeBurdenScore": 47.65
+                },
+                {
+                  "date": "2025-05-08",
+                  "opportunityScore": 61.3,
+                  "hedgeBurdenScore": 25.56
+                },
+                {
+                  "date": "2025-05-09",
+                  "opportunityScore": 52.21,
+                  "hedgeBurdenScore": 21.34
+                }
+              ]
+            },
+            {
+              "id": "sx5e",
+              "label": "SX5E",
+              "start": {
+                "date": "2024-09-11",
+                "opportunityScore": 40.96,
+                "hedgeBurdenScore": 15.46
+              },
+              "peak": {
+                "date": "2025-04-09",
+                "opportunityScore": 82.25,
+                "hedgeBurdenScore": 56.28
+              },
+              "end": {
+                "date": "2025-05-09",
+                "opportunityScore": 66.01,
+                "hedgeBurdenScore": 24.64
+              },
+              "maxOpportunityScore": 90.09,
+              "maxHedgeBurdenScore": 56.28,
+              "trajectory": [
+                {
+                  "date": "2024-09-11",
+                  "opportunityScore": 40.96,
+                  "hedgeBurdenScore": 15.46
+                },
+                {
+                  "date": "2024-09-17",
+                  "opportunityScore": 35.11,
+                  "hedgeBurdenScore": 13.33
+                },
+                {
+                  "date": "2024-09-23",
+                  "opportunityScore": 53.93,
+                  "hedgeBurdenScore": 16.27
+                },
+                {
+                  "date": "2024-09-27",
+                  "opportunityScore": 61.4,
+                  "hedgeBurdenScore": 14.9
+                },
+                {
+                  "date": "2024-10-03",
+                  "opportunityScore": 60.22,
+                  "hedgeBurdenScore": 16.71
+                },
+                {
+                  "date": "2024-10-09",
+                  "opportunityScore": 56.06,
+                  "hedgeBurdenScore": 14.69
+                },
+                {
+                  "date": "2024-10-15",
+                  "opportunityScore": 60.24,
+                  "hedgeBurdenScore": 16.03
+                },
+                {
+                  "date": "2024-10-21",
+                  "opportunityScore": 51.65,
+                  "hedgeBurdenScore": 14.99
+                },
+                {
+                  "date": "2024-10-25",
+                  "opportunityScore": 33.73,
+                  "hedgeBurdenScore": 14.98
+                },
+                {
+                  "date": "2024-10-31",
+                  "opportunityScore": 35.27,
+                  "hedgeBurdenScore": 16.45
+                },
+                {
+                  "date": "2024-11-06",
+                  "opportunityScore": 44.07,
+                  "hedgeBurdenScore": 19.42
+                },
+                {
+                  "date": "2024-11-12",
+                  "opportunityScore": 50.08,
+                  "hedgeBurdenScore": 22.62
+                },
+                {
+                  "date": "2024-11-18",
+                  "opportunityScore": 54.71,
+                  "hedgeBurdenScore": 20.77
+                },
+                {
+                  "date": "2024-11-22",
+                  "opportunityScore": 59.29,
+                  "hedgeBurdenScore": 20.37
+                },
+                {
+                  "date": "2024-11-28",
+                  "opportunityScore": 52.58,
+                  "hedgeBurdenScore": 17.05
+                },
+                {
+                  "date": "2024-12-04",
+                  "opportunityScore": 49.16,
+                  "hedgeBurdenScore": 12.2
+                },
+                {
+                  "date": "2024-12-10",
+                  "opportunityScore": 25.36,
+                  "hedgeBurdenScore": 8.51
+                },
+                {
+                  "date": "2024-12-16",
+                  "opportunityScore": 12.96,
+                  "hedgeBurdenScore": 5.25
+                },
+                {
+                  "date": "2024-12-20",
+                  "opportunityScore": 16.73,
+                  "hedgeBurdenScore": 8.29
+                },
+                {
+                  "date": "2025-01-03",
+                  "opportunityScore": 15.76,
+                  "hedgeBurdenScore": 8.07
+                },
+                {
+                  "date": "2025-01-09",
+                  "opportunityScore": 29.27,
+                  "hedgeBurdenScore": 8.32
+                },
+                {
+                  "date": "2025-01-15",
+                  "opportunityScore": 34.19,
+                  "hedgeBurdenScore": 8.43
+                },
+                {
+                  "date": "2025-01-21",
+                  "opportunityScore": 42.3,
+                  "hedgeBurdenScore": 7.88
+                },
+                {
+                  "date": "2025-01-27",
+                  "opportunityScore": 27.95,
+                  "hedgeBurdenScore": 7.49
+                },
+                {
+                  "date": "2025-01-31",
+                  "opportunityScore": 22.51,
+                  "hedgeBurdenScore": 6.64
+                },
+                {
+                  "date": "2025-02-06",
+                  "opportunityScore": 25.03,
+                  "hedgeBurdenScore": 5.34
+                },
+                {
+                  "date": "2025-02-12",
+                  "opportunityScore": 19.99,
+                  "hedgeBurdenScore": 4.82
+                },
+                {
+                  "date": "2025-02-18",
+                  "opportunityScore": 23.92,
+                  "hedgeBurdenScore": 5.29
+                },
+                {
+                  "date": "2025-02-24",
+                  "opportunityScore": 33.69,
+                  "hedgeBurdenScore": 7.18
+                },
+                {
+                  "date": "2025-02-28",
+                  "opportunityScore": 43.71,
+                  "hedgeBurdenScore": 7.77
+                },
+                {
+                  "date": "2025-03-06",
+                  "opportunityScore": 63.8,
+                  "hedgeBurdenScore": 11.08
+                },
+                {
+                  "date": "2025-03-12",
+                  "opportunityScore": 68.18,
+                  "hedgeBurdenScore": 15.72
+                },
+                {
+                  "date": "2025-03-18",
+                  "opportunityScore": 67.66,
+                  "hedgeBurdenScore": 14.2
+                },
+                {
+                  "date": "2025-03-24",
+                  "opportunityScore": 67.02,
+                  "hedgeBurdenScore": 15.03
+                },
+                {
+                  "date": "2025-03-28",
+                  "opportunityScore": 66.52,
+                  "hedgeBurdenScore": 18.71
+                },
+                {
+                  "date": "2025-04-03",
+                  "opportunityScore": 65.65,
+                  "hedgeBurdenScore": 31.27
+                },
+                {
+                  "date": "2025-04-09",
+                  "opportunityScore": 82.25,
+                  "hedgeBurdenScore": 56.28
+                },
+                {
+                  "date": "2025-04-15",
+                  "opportunityScore": 88.31,
+                  "hedgeBurdenScore": 48.66
+                },
+                {
+                  "date": "2025-04-23",
+                  "opportunityScore": 90.09,
+                  "hedgeBurdenScore": 43.6
+                },
+                {
+                  "date": "2025-04-29",
+                  "opportunityScore": 88.83,
+                  "hedgeBurdenScore": 39.29
+                },
+                {
+                  "date": "2025-05-06",
+                  "opportunityScore": 83.87,
+                  "hedgeBurdenScore": 32.63
+                },
+                {
+                  "date": "2025-05-09",
+                  "opportunityScore": 66.01,
+                  "hedgeBurdenScore": 24.64
+                }
+              ]
+            },
+            {
+              "id": "nky",
+              "label": "NKY",
+              "start": {
+                "date": "2024-09-11",
+                "opportunityScore": 60.89,
+                "hedgeBurdenScore": 37.06
+              },
+              "peak": {
+                "date": "2025-04-09",
+                "opportunityScore": 89.44,
+                "hedgeBurdenScore": 76.51
+              },
+              "end": {
+                "date": "2025-05-09",
+                "opportunityScore": 75.19,
+                "hedgeBurdenScore": 46.17
+              },
+              "maxOpportunityScore": 95.88,
+              "maxHedgeBurdenScore": 76.51,
+              "trajectory": [
+                {
+                  "date": "2024-09-11",
+                  "opportunityScore": 60.89,
+                  "hedgeBurdenScore": 37.06
+                },
+                {
+                  "date": "2024-09-18",
+                  "opportunityScore": 55.43,
+                  "hedgeBurdenScore": 37.0
+                },
+                {
+                  "date": "2024-09-25",
+                  "opportunityScore": 59.91,
+                  "hedgeBurdenScore": 30.59
+                },
+                {
+                  "date": "2024-10-01",
+                  "opportunityScore": 68.36,
+                  "hedgeBurdenScore": 34.72
+                },
+                {
+                  "date": "2024-10-07",
+                  "opportunityScore": 66.02,
+                  "hedgeBurdenScore": 32.01
+                },
+                {
+                  "date": "2024-10-11",
+                  "opportunityScore": 64.06,
+                  "hedgeBurdenScore": 30.61
+                },
+                {
+                  "date": "2024-10-18",
+                  "opportunityScore": 62.79,
+                  "hedgeBurdenScore": 31.09
+                },
+                {
+                  "date": "2024-10-24",
+                  "opportunityScore": 61.79,
+                  "hedgeBurdenScore": 32.36
+                },
+                {
+                  "date": "2024-10-30",
+                  "opportunityScore": 38.46,
+                  "hedgeBurdenScore": 19.51
+                },
+                {
+                  "date": "2024-11-06",
+                  "opportunityScore": 42.38,
+                  "hedgeBurdenScore": 20.52
+                },
+                {
+                  "date": "2024-11-12",
+                  "opportunityScore": 40.17,
+                  "hedgeBurdenScore": 21.11
+                },
+                {
+                  "date": "2024-11-18",
+                  "opportunityScore": 40.67,
+                  "hedgeBurdenScore": 24.65
+                },
+                {
+                  "date": "2024-11-22",
+                  "opportunityScore": 40.29,
+                  "hedgeBurdenScore": 21.04
+                },
+                {
+                  "date": "2024-11-28",
+                  "opportunityScore": 34.31,
+                  "hedgeBurdenScore": 22.16
+                },
+                {
+                  "date": "2024-12-04",
+                  "opportunityScore": 8.98,
+                  "hedgeBurdenScore": 13.82
+                },
+                {
+                  "date": "2024-12-10",
+                  "opportunityScore": 11.36,
+                  "hedgeBurdenScore": 12.83
+                },
+                {
+                  "date": "2024-12-16",
+                  "opportunityScore": 5.32,
+                  "hedgeBurdenScore": 11.91
+                },
+                {
+                  "date": "2024-12-20",
+                  "opportunityScore": 5.76,
+                  "hedgeBurdenScore": 13.36
+                },
+                {
+                  "date": "2024-12-26",
+                  "opportunityScore": 3.67,
+                  "hedgeBurdenScore": 11.33
+                },
+                {
+                  "date": "2025-01-07",
+                  "opportunityScore": 21.42,
+                  "hedgeBurdenScore": 12.18
+                },
+                {
+                  "date": "2025-01-14",
+                  "opportunityScore": 34.76,
+                  "hedgeBurdenScore": 19.26
+                },
+                {
+                  "date": "2025-01-20",
+                  "opportunityScore": 33.19,
+                  "hedgeBurdenScore": 17.21
+                },
+                {
+                  "date": "2025-01-24",
+                  "opportunityScore": 37.17,
+                  "hedgeBurdenScore": 13.8
+                },
+                {
+                  "date": "2025-01-30",
+                  "opportunityScore": 40.42,
+                  "hedgeBurdenScore": 15.15
+                },
+                {
+                  "date": "2025-02-05",
+                  "opportunityScore": 34.11,
+                  "hedgeBurdenScore": 20.81
+                },
+                {
+                  "date": "2025-02-12",
+                  "opportunityScore": 22.07,
+                  "hedgeBurdenScore": 15.67
+                },
+                {
+                  "date": "2025-02-18",
+                  "opportunityScore": 24.44,
+                  "hedgeBurdenScore": 15.27
+                },
+                {
+                  "date": "2025-02-25",
+                  "opportunityScore": 22.72,
+                  "hedgeBurdenScore": 22.48
+                },
+                {
+                  "date": "2025-03-03",
+                  "opportunityScore": 42.19,
+                  "hedgeBurdenScore": 25.69
+                },
+                {
+                  "date": "2025-03-07",
+                  "opportunityScore": 38.26,
+                  "hedgeBurdenScore": 28.02
+                },
+                {
+                  "date": "2025-03-13",
+                  "opportunityScore": 35.41,
+                  "hedgeBurdenScore": 28.74
+                },
+                {
+                  "date": "2025-03-19",
+                  "opportunityScore": 39.25,
+                  "hedgeBurdenScore": 25.35
+                },
+                {
+                  "date": "2025-03-26",
+                  "opportunityScore": 32.09,
+                  "hedgeBurdenScore": 19.96
+                },
+                {
+                  "date": "2025-04-01",
+                  "opportunityScore": 50.37,
+                  "hedgeBurdenScore": 35.81
+                },
+                {
+                  "date": "2025-04-07",
+                  "opportunityScore": 80.11,
+                  "hedgeBurdenScore": 75.71
+                },
+                {
+                  "date": "2025-04-09",
+                  "opportunityScore": 89.44,
+                  "hedgeBurdenScore": 76.51
+                },
+                {
+                  "date": "2025-04-11",
+                  "opportunityScore": 95.88,
+                  "hedgeBurdenScore": 70.34
+                },
+                {
+                  "date": "2025-04-17",
+                  "opportunityScore": 95.88,
+                  "hedgeBurdenScore": 69.2
+                },
+                {
+                  "date": "2025-04-23",
+                  "opportunityScore": 95.88,
+                  "hedgeBurdenScore": 67.66
+                },
+                {
+                  "date": "2025-04-30",
+                  "opportunityScore": 93.15,
+                  "hedgeBurdenScore": 55.12
+                },
+                {
+                  "date": "2025-05-08",
+                  "opportunityScore": 81.25,
+                  "hedgeBurdenScore": 49.84
+                },
+                {
+                  "date": "2025-05-09",
+                  "opportunityScore": 75.19,
+                  "hedgeBurdenScore": 46.17
+                }
+              ]
+            },
+            {
+              "id": "hscei",
+              "label": "HSCEI",
+              "start": {
+                "date": "2024-09-11",
+                "opportunityScore": 9.33,
+                "hedgeBurdenScore": 26.02
+              },
+              "peak": {
+                "date": "2025-04-09",
+                "opportunityScore": 92.38,
+                "hedgeBurdenScore": 75.09
+              },
+              "end": {
+                "date": "2025-05-09",
+                "opportunityScore": 15.25,
+                "hedgeBurdenScore": 22.18
+              },
+              "maxOpportunityScore": 99.74,
+              "maxHedgeBurdenScore": 75.09,
+              "trajectory": [
+                {
+                  "date": "2024-09-11",
+                  "opportunityScore": 9.33,
+                  "hedgeBurdenScore": 26.02
+                },
+                {
+                  "date": "2024-09-17",
+                  "opportunityScore": 7.86,
+                  "hedgeBurdenScore": 22.51
+                },
+                {
+                  "date": "2024-09-24",
+                  "opportunityScore": 54.74,
+                  "hedgeBurdenScore": 26.05
+                },
+                {
+                  "date": "2024-09-30",
+                  "opportunityScore": 74.12,
+                  "hedgeBurdenScore": 26.42
+                },
+                {
+                  "date": "2024-10-07",
+                  "opportunityScore": 81.78,
+                  "hedgeBurdenScore": 33.41
+                },
+                {
+                  "date": "2024-10-14",
+                  "opportunityScore": 98.36,
+                  "hedgeBurdenScore": 50.79
+                },
+                {
+                  "date": "2024-10-18",
+                  "opportunityScore": 99.74,
+                  "hedgeBurdenScore": 51.83
+                },
+                {
+                  "date": "2024-10-24",
+                  "opportunityScore": 98.38,
+                  "hedgeBurdenScore": 52.86
+                },
+                {
+                  "date": "2024-10-30",
+                  "opportunityScore": 95.19,
+                  "hedgeBurdenScore": 57.44
+                },
+                {
+                  "date": "2024-11-05",
+                  "opportunityScore": 87.78,
+                  "hedgeBurdenScore": 61.12
+                },
+                {
+                  "date": "2024-11-11",
+                  "opportunityScore": 60.91,
+                  "hedgeBurdenScore": 37.42
+                },
+                {
+                  "date": "2024-11-15",
+                  "opportunityScore": 47.28,
+                  "hedgeBurdenScore": 40.61
+                },
+                {
+                  "date": "2024-11-21",
+                  "opportunityScore": 40.93,
+                  "hedgeBurdenScore": 36.42
+                },
+                {
+                  "date": "2024-11-27",
+                  "opportunityScore": 49.85,
+                  "hedgeBurdenScore": 34.64
+                },
+                {
+                  "date": "2024-12-03",
+                  "opportunityScore": 44.02,
+                  "hedgeBurdenScore": 36.83
+                },
+                {
+                  "date": "2024-12-09",
+                  "opportunityScore": 44.66,
+                  "hedgeBurdenScore": 25.61
+                },
+                {
+                  "date": "2024-12-13",
+                  "opportunityScore": 35.66,
+                  "hedgeBurdenScore": 26.29
+                },
+                {
+                  "date": "2024-12-19",
+                  "opportunityScore": 37.21,
+                  "hedgeBurdenScore": 26.62
+                },
+                {
+                  "date": "2024-12-27",
+                  "opportunityScore": 18.01,
+                  "hedgeBurdenScore": 23.37
+                },
+                {
+                  "date": "2025-01-03",
+                  "opportunityScore": 27.49,
+                  "hedgeBurdenScore": 25.84
+                },
+                {
+                  "date": "2025-01-09",
+                  "opportunityScore": 10.46,
+                  "hedgeBurdenScore": 30.77
+                },
+                {
+                  "date": "2025-01-15",
+                  "opportunityScore": 8.95,
+                  "hedgeBurdenScore": 26.66
+                },
+                {
+                  "date": "2025-01-21",
+                  "opportunityScore": 14.99,
+                  "hedgeBurdenScore": 21.44
+                },
+                {
+                  "date": "2025-01-27",
+                  "opportunityScore": 25.75,
+                  "hedgeBurdenScore": 22.19
+                },
+                {
+                  "date": "2025-02-05",
+                  "opportunityScore": 32.81,
+                  "hedgeBurdenScore": 22.43
+                },
+                {
+                  "date": "2025-02-11",
+                  "opportunityScore": 40.77,
+                  "hedgeBurdenScore": 20.11
+                },
+                {
+                  "date": "2025-02-17",
+                  "opportunityScore": 59.04,
+                  "hedgeBurdenScore": 18.11
+                },
+                {
+                  "date": "2025-02-21",
+                  "opportunityScore": 69.69,
+                  "hedgeBurdenScore": 20.6
+                },
+                {
+                  "date": "2025-02-27",
+                  "opportunityScore": 72.97,
+                  "hedgeBurdenScore": 21.88
+                },
+                {
+                  "date": "2025-03-05",
+                  "opportunityScore": 77.08,
+                  "hedgeBurdenScore": 24.77
+                },
+                {
+                  "date": "2025-03-11",
+                  "opportunityScore": 79.78,
+                  "hedgeBurdenScore": 26.04
+                },
+                {
+                  "date": "2025-03-17",
+                  "opportunityScore": 74.55,
+                  "hedgeBurdenScore": 23.41
+                },
+                {
+                  "date": "2025-03-21",
+                  "opportunityScore": 71.75,
+                  "hedgeBurdenScore": 26.12
+                },
+                {
+                  "date": "2025-03-27",
+                  "opportunityScore": 68.58,
+                  "hedgeBurdenScore": 26.67
+                },
+                {
+                  "date": "2025-04-02",
+                  "opportunityScore": 58.34,
+                  "hedgeBurdenScore": 26.54
+                },
+                {
+                  "date": "2025-04-09",
+                  "opportunityScore": 92.38,
+                  "hedgeBurdenScore": 75.09
+                },
+                {
+                  "date": "2025-04-15",
+                  "opportunityScore": 92.89,
+                  "hedgeBurdenScore": 66.57
+                },
+                {
+                  "date": "2025-04-23",
+                  "opportunityScore": 92.06,
+                  "hedgeBurdenScore": 61.35
+                },
+                {
+                  "date": "2025-04-29",
+                  "opportunityScore": 88.78,
+                  "hedgeBurdenScore": 61.77
+                },
+                {
+                  "date": "2025-05-07",
+                  "opportunityScore": 90.61,
+                  "hedgeBurdenScore": 55.68
+                },
+                {
+                  "date": "2025-05-09",
+                  "opportunityScore": 15.25,
+                  "hedgeBurdenScore": 22.18
+                }
+              ]
+            },
+            {
+              "id": "kospi200",
+              "label": "KOSPI200",
+              "start": {
+                "date": "2024-09-11",
+                "opportunityScore": 37.98,
+                "hedgeBurdenScore": 36.53
+              },
+              "peak": {
+                "date": "2025-04-09",
+                "opportunityScore": 73.88,
+                "hedgeBurdenScore": 58.75
+              },
+              "end": {
+                "date": "2025-05-09",
+                "opportunityScore": 64.45,
+                "hedgeBurdenScore": 38.66
+              },
+              "maxOpportunityScore": 83.97,
+              "maxHedgeBurdenScore": 58.75,
+              "trajectory": [
+                {
+                  "date": "2024-09-11",
+                  "opportunityScore": 37.98,
+                  "hedgeBurdenScore": 36.53
+                },
+                {
+                  "date": "2024-09-20",
+                  "opportunityScore": 27.19,
+                  "hedgeBurdenScore": 34.86
+                },
+                {
+                  "date": "2024-09-26",
+                  "opportunityScore": 56.7,
+                  "hedgeBurdenScore": 31.31
+                },
+                {
+                  "date": "2024-10-04",
+                  "opportunityScore": 59.56,
+                  "hedgeBurdenScore": 38.32
+                },
+                {
+                  "date": "2024-10-11",
+                  "opportunityScore": 54.46,
+                  "hedgeBurdenScore": 29.26
+                },
+                {
+                  "date": "2024-10-17",
+                  "opportunityScore": 53.76,
+                  "hedgeBurdenScore": 28.56
+                },
+                {
+                  "date": "2024-10-23",
+                  "opportunityScore": 51.68,
+                  "hedgeBurdenScore": 28.46
+                },
+                {
+                  "date": "2024-10-29",
+                  "opportunityScore": 21.66,
+                  "hedgeBurdenScore": 26.66
+                },
+                {
+                  "date": "2024-11-04",
+                  "opportunityScore": 20.19,
+                  "hedgeBurdenScore": 23.14
+                },
+                {
+                  "date": "2024-11-08",
+                  "opportunityScore": 14.24,
+                  "hedgeBurdenScore": 24.9
+                },
+                {
+                  "date": "2024-11-14",
+                  "opportunityScore": 34.12,
+                  "hedgeBurdenScore": 41.2
+                },
+                {
+                  "date": "2024-11-20",
+                  "opportunityScore": 49.51,
+                  "hedgeBurdenScore": 35.34
+                },
+                {
+                  "date": "2024-11-26",
+                  "opportunityScore": 50.94,
+                  "hedgeBurdenScore": 30.32
+                },
+                {
+                  "date": "2024-12-02",
+                  "opportunityScore": 43.5,
+                  "hedgeBurdenScore": 33.85
+                },
+                {
+                  "date": "2024-12-06",
+                  "opportunityScore": 57.7,
+                  "hedgeBurdenScore": 35.21
+                },
+                {
+                  "date": "2024-12-12",
+                  "opportunityScore": 60.09,
+                  "hedgeBurdenScore": 27.54
+                },
+                {
+                  "date": "2024-12-18",
+                  "opportunityScore": 55.43,
+                  "hedgeBurdenScore": 26.85
+                },
+                {
+                  "date": "2024-12-24",
+                  "opportunityScore": 65.79,
+                  "hedgeBurdenScore": 33.74
+                },
+                {
+                  "date": "2025-01-02",
+                  "opportunityScore": 61.77,
+                  "hedgeBurdenScore": 32.77
+                },
+                {
+                  "date": "2025-01-08",
+                  "opportunityScore": 66.22,
+                  "hedgeBurdenScore": 26.89
+                },
+                {
+                  "date": "2025-01-14",
+                  "opportunityScore": 36.97,
+                  "hedgeBurdenScore": 24.84
+                },
+                {
+                  "date": "2025-01-20",
+                  "opportunityScore": 32.14,
+                  "hedgeBurdenScore": 23.79
+                },
+                {
+                  "date": "2025-01-24",
+                  "opportunityScore": 14.74,
+                  "hedgeBurdenScore": 21.86
+                },
+                {
+                  "date": "2025-02-05",
+                  "opportunityScore": 44.18,
+                  "hedgeBurdenScore": 25.53
+                },
+                {
+                  "date": "2025-02-11",
+                  "opportunityScore": 19.19,
+                  "hedgeBurdenScore": 23.09
+                },
+                {
+                  "date": "2025-02-17",
+                  "opportunityScore": 19.31,
+                  "hedgeBurdenScore": 21.18
+                },
+                {
+                  "date": "2025-02-21",
+                  "opportunityScore": 26.78,
+                  "hedgeBurdenScore": 20.23
+                },
+                {
+                  "date": "2025-02-27",
+                  "opportunityScore": 22.24,
+                  "hedgeBurdenScore": 21.16
+                },
+                {
+                  "date": "2025-03-06",
+                  "opportunityScore": 33.83,
+                  "hedgeBurdenScore": 24.83
+                },
+                {
+                  "date": "2025-03-12",
+                  "opportunityScore": 43.05,
+                  "hedgeBurdenScore": 25.21
+                },
+                {
+                  "date": "2025-03-18",
+                  "opportunityScore": 49.6,
+                  "hedgeBurdenScore": 24.66
+                },
+                {
+                  "date": "2025-03-24",
+                  "opportunityScore": 43.39,
+                  "hedgeBurdenScore": 23.04
+                },
+                {
+                  "date": "2025-03-28",
+                  "opportunityScore": 57.67,
+                  "hedgeBurdenScore": 27.84
+                },
+                {
+                  "date": "2025-04-03",
+                  "opportunityScore": 53.75,
+                  "hedgeBurdenScore": 31.79
+                },
+                {
+                  "date": "2025-04-09",
+                  "opportunityScore": 73.88,
+                  "hedgeBurdenScore": 58.75
+                },
+                {
+                  "date": "2025-04-15",
+                  "opportunityScore": 83.88,
+                  "hedgeBurdenScore": 54.74
+                },
+                {
+                  "date": "2025-04-21",
+                  "opportunityScore": 83.97,
+                  "hedgeBurdenScore": 56.08
+                },
+                {
+                  "date": "2025-04-25",
+                  "opportunityScore": 81.45,
+                  "hedgeBurdenScore": 48.18
+                },
+                {
+                  "date": "2025-05-02",
+                  "opportunityScore": 77.72,
+                  "hedgeBurdenScore": 44.24
+                },
+                {
+                  "date": "2025-05-09",
+                  "opportunityScore": 64.45,
+                  "hedgeBurdenScore": 38.66
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "2021-10-07_2023-03-31",
+          "label": "인플레이션·긴축·강달러",
+          "startDate": "2021-10-07",
+          "peakDate": "2022-06-14",
+          "endDate": "2023-03-31",
+          "marketPeakScore": 77.4,
+          "peakBurdenIndex": "SPX",
+          "peakBurdenScore": 51.91,
+          "peakOpportunityIndex": "SPX",
+          "peakOpportunityScore": 74.63,
+          "interpretation": "시장 스트레스 정점에는 SPX의 헤지부담이 가장 높았고, SPX의 상대 발행기회가 가장 컸습니다.",
+          "items": [
+            {
+              "id": "spx",
+              "label": "SPX",
+              "start": {
+                "date": "2021-10-07",
+                "opportunityScore": 52.86,
+                "hedgeBurdenScore": 14.25
+              },
+              "peak": {
+                "date": "2022-06-14",
+                "opportunityScore": 74.63,
+                "hedgeBurdenScore": 51.91
+              },
+              "end": {
+                "date": "2023-03-31",
+                "opportunityScore": 28.66,
+                "hedgeBurdenScore": 18.23
+              },
+              "maxOpportunityScore": 80.82,
+              "maxHedgeBurdenScore": 51.91,
+              "trajectory": [
+                {
+                  "date": "2021-10-07",
+                  "opportunityScore": 52.86,
+                  "hedgeBurdenScore": 14.25
+                },
+                {
+                  "date": "2021-10-19",
+                  "opportunityScore": 51.57,
+                  "hedgeBurdenScore": 10.12
+                },
+                {
+                  "date": "2021-10-29",
+                  "opportunityScore": 22.71,
+                  "hedgeBurdenScore": 6.54
+                },
+                {
+                  "date": "2021-11-10",
+                  "opportunityScore": 8.25,
+                  "hedgeBurdenScore": 5.87
+                },
+                {
+                  "date": "2021-11-22",
+                  "opportunityScore": 2.2,
+                  "hedgeBurdenScore": 3.51
+                },
+                {
+                  "date": "2021-12-03",
+                  "opportunityScore": 52.36,
+                  "hedgeBurdenScore": 17.25
+                },
+                {
+                  "date": "2021-12-15",
+                  "opportunityScore": 71.17,
+                  "hedgeBurdenScore": 12.95
+                },
+                {
+                  "date": "2021-12-28",
+                  "opportunityScore": 71.93,
+                  "hedgeBurdenScore": 13.73
+                },
+                {
+                  "date": "2022-01-07",
+                  "opportunityScore": 54.19,
+                  "hedgeBurdenScore": 13.69
+                },
+                {
+                  "date": "2022-01-20",
+                  "opportunityScore": 41.63,
+                  "hedgeBurdenScore": 20.84
+                },
+                {
+                  "date": "2022-02-01",
+                  "opportunityScore": 65.84,
+                  "hedgeBurdenScore": 25.17
+                },
+                {
+                  "date": "2022-02-11",
+                  "opportunityScore": 72.26,
+                  "hedgeBurdenScore": 29.0
+                },
+                {
+                  "date": "2022-02-24",
+                  "opportunityScore": 73.79,
+                  "hedgeBurdenScore": 27.65
+                },
+                {
+                  "date": "2022-03-08",
+                  "opportunityScore": 73.35,
+                  "hedgeBurdenScore": 38.18
+                },
+                {
+                  "date": "2022-03-18",
+                  "opportunityScore": 74.58,
+                  "hedgeBurdenScore": 24.7
+                },
+                {
+                  "date": "2022-03-30",
+                  "opportunityScore": 64.34,
+                  "hedgeBurdenScore": 20.3
+                },
+                {
+                  "date": "2022-04-11",
+                  "opportunityScore": 53.11,
+                  "hedgeBurdenScore": 20.38
+                },
+                {
+                  "date": "2022-04-22",
+                  "opportunityScore": 50.21,
+                  "hedgeBurdenScore": 29.98
+                },
+                {
+                  "date": "2022-05-04",
+                  "opportunityScore": 74.75,
+                  "hedgeBurdenScore": 35.43
+                },
+                {
+                  "date": "2022-05-16",
+                  "opportunityScore": 80.82,
+                  "hedgeBurdenScore": 48.71
+                },
+                {
+                  "date": "2022-05-26",
+                  "opportunityScore": 80.37,
+                  "hedgeBurdenScore": 45.37
+                },
+                {
+                  "date": "2022-06-08",
+                  "opportunityScore": 67.38,
+                  "hedgeBurdenScore": 33.61
+                },
+                {
+                  "date": "2022-06-14",
+                  "opportunityScore": 74.63,
+                  "hedgeBurdenScore": 51.91
+                },
+                {
+                  "date": "2022-06-21",
+                  "opportunityScore": 73.29,
+                  "hedgeBurdenScore": 46.81
+                },
+                {
+                  "date": "2022-07-01",
+                  "opportunityScore": 68.27,
+                  "hedgeBurdenScore": 51.81
+                },
+                {
+                  "date": "2022-07-14",
+                  "opportunityScore": 49.82,
+                  "hedgeBurdenScore": 36.48
+                },
+                {
+                  "date": "2022-07-26",
+                  "opportunityScore": 37.01,
+                  "hedgeBurdenScore": 30.53
+                },
+                {
+                  "date": "2022-08-05",
+                  "opportunityScore": 40.35,
+                  "hedgeBurdenScore": 27.17
+                },
+                {
+                  "date": "2022-08-17",
+                  "opportunityScore": 29.74,
+                  "hedgeBurdenScore": 23.06
+                },
+                {
+                  "date": "2022-08-29",
+                  "opportunityScore": 43.71,
+                  "hedgeBurdenScore": 33.48
+                },
+                {
+                  "date": "2022-09-09",
+                  "opportunityScore": 46.76,
+                  "hedgeBurdenScore": 33.76
+                },
+                {
+                  "date": "2022-09-21",
+                  "opportunityScore": 60.94,
+                  "hedgeBurdenScore": 48.0
+                },
+                {
+                  "date": "2022-10-03",
+                  "opportunityScore": 65.36,
+                  "hedgeBurdenScore": 47.59
+                },
+                {
+                  "date": "2022-10-13",
+                  "opportunityScore": 62.45,
+                  "hedgeBurdenScore": 45.28
+                },
+                {
+                  "date": "2022-10-25",
+                  "opportunityScore": 71.91,
+                  "hedgeBurdenScore": 35.85
+                },
+                {
+                  "date": "2022-11-04",
+                  "opportunityScore": 55.36,
+                  "hedgeBurdenScore": 33.95
+                },
+                {
+                  "date": "2022-11-16",
+                  "opportunityScore": 64.87,
+                  "hedgeBurdenScore": 38.69
+                },
+                {
+                  "date": "2022-11-29",
+                  "opportunityScore": 55.54,
+                  "hedgeBurdenScore": 37.17
+                },
+                {
+                  "date": "2022-12-09",
+                  "opportunityScore": 15.77,
+                  "hedgeBurdenScore": 28.65
+                },
+                {
+                  "date": "2022-12-21",
+                  "opportunityScore": 28.52,
+                  "hedgeBurdenScore": 34.4
+                },
+                {
+                  "date": "2023-01-04",
+                  "opportunityScore": 14.14,
+                  "hedgeBurdenScore": 32.61
+                },
+                {
+                  "date": "2023-01-17",
+                  "opportunityScore": 9.64,
+                  "hedgeBurdenScore": 22.26
+                },
+                {
+                  "date": "2023-01-27",
+                  "opportunityScore": 6.62,
+                  "hedgeBurdenScore": 19.45
+                },
+                {
+                  "date": "2023-02-08",
+                  "opportunityScore": 12.21,
+                  "hedgeBurdenScore": 18.32
+                },
+                {
+                  "date": "2023-02-21",
+                  "opportunityScore": 11.31,
+                  "hedgeBurdenScore": 21.71
+                },
+                {
+                  "date": "2023-03-03",
+                  "opportunityScore": 7.09,
+                  "hedgeBurdenScore": 22.93
+                },
+                {
+                  "date": "2023-03-15",
+                  "opportunityScore": 13.72,
+                  "hedgeBurdenScore": 29.46
+                },
+                {
+                  "date": "2023-03-27",
+                  "opportunityScore": 25.37,
+                  "hedgeBurdenScore": 21.36
+                },
+                {
+                  "date": "2023-03-31",
+                  "opportunityScore": 28.66,
+                  "hedgeBurdenScore": 18.23
+                }
+              ]
+            },
+            {
+              "id": "sx5e",
+              "label": "SX5E",
+              "start": {
+                "date": "2021-10-07",
+                "opportunityScore": 66.43,
+                "hedgeBurdenScore": 17.98
+              },
+              "peak": {
+                "date": "2022-06-14",
+                "opportunityScore": 62.66,
+                "hedgeBurdenScore": 46.34
+              },
+              "end": {
+                "date": "2023-03-31",
+                "opportunityScore": 71.15,
+                "hedgeBurdenScore": 16.58
+              },
+              "maxOpportunityScore": 95.09,
+              "maxHedgeBurdenScore": 69.31,
+              "trajectory": [
+                {
+                  "date": "2021-10-07",
+                  "opportunityScore": 66.43,
+                  "hedgeBurdenScore": 17.98
+                },
+                {
+                  "date": "2021-10-20",
+                  "opportunityScore": 61.19,
+                  "hedgeBurdenScore": 14.05
+                },
+                {
+                  "date": "2021-11-02",
+                  "opportunityScore": 24.71,
+                  "hedgeBurdenScore": 8.39
+                },
+                {
+                  "date": "2021-11-15",
+                  "opportunityScore": 0.22,
+                  "hedgeBurdenScore": 3.17
+                },
+                {
+                  "date": "2021-11-26",
+                  "opportunityScore": 64.93,
+                  "hedgeBurdenScore": 28.4
+                },
+                {
+                  "date": "2021-12-09",
+                  "opportunityScore": 78.39,
+                  "hedgeBurdenScore": 30.22
+                },
+                {
+                  "date": "2021-12-22",
+                  "opportunityScore": 82.45,
+                  "hedgeBurdenScore": 28.85
+                },
+                {
+                  "date": "2022-01-06",
+                  "opportunityScore": 32.24,
+                  "hedgeBurdenScore": 11.72
+                },
+                {
+                  "date": "2022-01-19",
+                  "opportunityScore": 32.2,
+                  "hedgeBurdenScore": 13.15
+                },
+                {
+                  "date": "2022-02-01",
+                  "opportunityScore": 67.3,
+                  "hedgeBurdenScore": 27.17
+                },
+                {
+                  "date": "2022-02-14",
+                  "opportunityScore": 68.89,
+                  "hedgeBurdenScore": 33.9
+                },
+                {
+                  "date": "2022-02-25",
+                  "opportunityScore": 74.01,
+                  "hedgeBurdenScore": 34.66
+                },
+                {
+                  "date": "2022-03-10",
+                  "opportunityScore": 93.53,
+                  "hedgeBurdenScore": 69.31
+                },
+                {
+                  "date": "2022-03-23",
+                  "opportunityScore": 95.09,
+                  "hedgeBurdenScore": 53.26
+                },
+                {
+                  "date": "2022-04-05",
+                  "opportunityScore": 76.76,
+                  "hedgeBurdenScore": 42.39
+                },
+                {
+                  "date": "2022-04-20",
+                  "opportunityScore": 45.3,
+                  "hedgeBurdenScore": 24.71
+                },
+                {
+                  "date": "2022-05-03",
+                  "opportunityScore": 44.54,
+                  "hedgeBurdenScore": 31.27
+                },
+                {
+                  "date": "2022-05-16",
+                  "opportunityScore": 57.34,
+                  "hedgeBurdenScore": 37.19
+                },
+                {
+                  "date": "2022-05-30",
+                  "opportunityScore": 64.76,
+                  "hedgeBurdenScore": 32.56
+                },
+                {
+                  "date": "2022-06-13",
+                  "opportunityScore": 68.49,
+                  "hedgeBurdenScore": 43.02
+                },
+                {
+                  "date": "2022-06-14",
+                  "opportunityScore": 62.66,
+                  "hedgeBurdenScore": 46.34
+                },
+                {
+                  "date": "2022-06-24",
+                  "opportunityScore": 70.57,
+                  "hedgeBurdenScore": 44.15
+                },
+                {
+                  "date": "2022-07-07",
+                  "opportunityScore": 68.99,
+                  "hedgeBurdenScore": 47.25
+                },
+                {
+                  "date": "2022-07-20",
+                  "opportunityScore": 50.42,
+                  "hedgeBurdenScore": 34.03
+                },
+                {
+                  "date": "2022-08-03",
+                  "opportunityScore": 26.54,
+                  "hedgeBurdenScore": 26.93
+                },
+                {
+                  "date": "2022-08-16",
+                  "opportunityScore": 13.33,
+                  "hedgeBurdenScore": 22.14
+                },
+                {
+                  "date": "2022-08-29",
+                  "opportunityScore": 17.87,
+                  "hedgeBurdenScore": 32.18
+                },
+                {
+                  "date": "2022-09-09",
+                  "opportunityScore": 32.29,
+                  "hedgeBurdenScore": 36.83
+                },
+                {
+                  "date": "2022-09-22",
+                  "opportunityScore": 39.76,
+                  "hedgeBurdenScore": 41.6
+                },
+                {
+                  "date": "2022-10-05",
+                  "opportunityScore": 59.01,
+                  "hedgeBurdenScore": 39.76
+                },
+                {
+                  "date": "2022-10-18",
+                  "opportunityScore": 51.89,
+                  "hedgeBurdenScore": 36.33
+                },
+                {
+                  "date": "2022-10-31",
+                  "opportunityScore": 30.89,
+                  "hedgeBurdenScore": 30.64
+                },
+                {
+                  "date": "2022-11-11",
+                  "opportunityScore": 15.95,
+                  "hedgeBurdenScore": 22.29
+                },
+                {
+                  "date": "2022-11-24",
+                  "opportunityScore": 14.08,
+                  "hedgeBurdenScore": 20.04
+                },
+                {
+                  "date": "2022-12-07",
+                  "opportunityScore": 7.09,
+                  "hedgeBurdenScore": 19.74
+                },
+                {
+                  "date": "2022-12-20",
+                  "opportunityScore": 15.37,
+                  "hedgeBurdenScore": 27.62
+                },
+                {
+                  "date": "2023-01-04",
+                  "opportunityScore": 50.1,
+                  "hedgeBurdenScore": 22.78
+                },
+                {
+                  "date": "2023-01-17",
+                  "opportunityScore": 21.68,
+                  "hedgeBurdenScore": 12.99
+                },
+                {
+                  "date": "2023-01-30",
+                  "opportunityScore": 13.65,
+                  "hedgeBurdenScore": 10.47
+                },
+                {
+                  "date": "2023-02-10",
+                  "opportunityScore": 6.52,
+                  "hedgeBurdenScore": 7.9
+                },
+                {
+                  "date": "2023-02-23",
+                  "opportunityScore": 4.22,
+                  "hedgeBurdenScore": 6.73
+                },
+                {
+                  "date": "2023-03-08",
+                  "opportunityScore": 12.87,
+                  "hedgeBurdenScore": 7.9
+                },
+                {
+                  "date": "2023-03-21",
+                  "opportunityScore": 68.96,
+                  "hedgeBurdenScore": 21.16
+                },
+                {
+                  "date": "2023-03-31",
+                  "opportunityScore": 71.15,
+                  "hedgeBurdenScore": 16.58
+                }
+              ]
+            },
+            {
+              "id": "nky",
+              "label": "NKY",
+              "start": {
+                "date": "2021-10-07",
+                "opportunityScore": 56.49,
+                "hedgeBurdenScore": 29.36
+              },
+              "peak": {
+                "date": "2022-06-14",
+                "opportunityScore": 39.78,
+                "hedgeBurdenScore": 27.61
+              },
+              "end": {
+                "date": "2023-03-31",
+                "opportunityScore": 39.66,
+                "hedgeBurdenScore": 13.28
+              },
+              "maxOpportunityScore": 79.54,
+              "maxHedgeBurdenScore": 48.49,
+              "trajectory": [
+                {
+                  "date": "2021-10-07",
+                  "opportunityScore": 56.49,
+                  "hedgeBurdenScore": 29.36
+                },
+                {
+                  "date": "2021-10-19",
+                  "opportunityScore": 65.74,
+                  "hedgeBurdenScore": 23.78
+                },
+                {
+                  "date": "2021-10-29",
+                  "opportunityScore": 51.92,
+                  "hedgeBurdenScore": 17.15
+                },
+                {
+                  "date": "2021-11-11",
+                  "opportunityScore": 36.41,
+                  "hedgeBurdenScore": 15.56
+                },
+                {
+                  "date": "2021-11-24",
+                  "opportunityScore": 19.06,
+                  "hedgeBurdenScore": 14.45
+                },
+                {
+                  "date": "2021-12-06",
+                  "opportunityScore": 20.1,
+                  "hedgeBurdenScore": 25.96
+                },
+                {
+                  "date": "2021-12-16",
+                  "opportunityScore": 52.84,
+                  "hedgeBurdenScore": 20.83
+                },
+                {
+                  "date": "2021-12-28",
+                  "opportunityScore": 49.66,
+                  "hedgeBurdenScore": 18.05
+                },
+                {
+                  "date": "2022-01-12",
+                  "opportunityScore": 62.74,
+                  "hedgeBurdenScore": 22.16
+                },
+                {
+                  "date": "2022-01-24",
+                  "opportunityScore": 54.09,
+                  "hedgeBurdenScore": 28.8
+                },
+                {
+                  "date": "2022-02-03",
+                  "opportunityScore": 71.79,
+                  "hedgeBurdenScore": 37.05
+                },
+                {
+                  "date": "2022-02-16",
+                  "opportunityScore": 69.04,
+                  "hedgeBurdenScore": 30.97
+                },
+                {
+                  "date": "2022-03-01",
+                  "opportunityScore": 45.09,
+                  "hedgeBurdenScore": 25.16
+                },
+                {
+                  "date": "2022-03-11",
+                  "opportunityScore": 76.2,
+                  "hedgeBurdenScore": 48.49
+                },
+                {
+                  "date": "2022-03-24",
+                  "opportunityScore": 79.54,
+                  "hedgeBurdenScore": 31.01
+                },
+                {
+                  "date": "2022-04-05",
+                  "opportunityScore": 67.22,
+                  "hedgeBurdenScore": 28.34
+                },
+                {
+                  "date": "2022-04-15",
+                  "opportunityScore": 36.87,
+                  "hedgeBurdenScore": 25.04
+                },
+                {
+                  "date": "2022-04-27",
+                  "opportunityScore": 31.09,
+                  "hedgeBurdenScore": 31.32
+                },
+                {
+                  "date": "2022-05-13",
+                  "opportunityScore": 60.01,
+                  "hedgeBurdenScore": 30.28
+                },
+                {
+                  "date": "2022-05-25",
+                  "opportunityScore": 49.54,
+                  "hedgeBurdenScore": 31.29
+                },
+                {
+                  "date": "2022-06-06",
+                  "opportunityScore": 27.06,
+                  "hedgeBurdenScore": 21.7
+                },
+                {
+                  "date": "2022-06-14",
+                  "opportunityScore": 39.78,
+                  "hedgeBurdenScore": 27.61
+                },
+                {
+                  "date": "2022-06-16",
+                  "opportunityScore": 34.46,
+                  "hedgeBurdenScore": 27.27
+                },
+                {
+                  "date": "2022-06-28",
+                  "opportunityScore": 38.39,
+                  "hedgeBurdenScore": 27.02
+                },
+                {
+                  "date": "2022-07-08",
+                  "opportunityScore": 52.67,
+                  "hedgeBurdenScore": 34.7
+                },
+                {
+                  "date": "2022-07-21",
+                  "opportunityScore": 30.38,
+                  "hedgeBurdenScore": 23.09
+                },
+                {
+                  "date": "2022-08-02",
+                  "opportunityScore": 17.78,
+                  "hedgeBurdenScore": 21.85
+                },
+                {
+                  "date": "2022-08-15",
+                  "opportunityScore": 16.15,
+                  "hedgeBurdenScore": 18.2
+                },
+                {
+                  "date": "2022-08-25",
+                  "opportunityScore": 13.4,
+                  "hedgeBurdenScore": 19.28
+                },
+                {
+                  "date": "2022-09-06",
+                  "opportunityScore": 28.75,
+                  "hedgeBurdenScore": 25.16
+                },
+                {
+                  "date": "2022-09-16",
+                  "opportunityScore": 39.2,
+                  "hedgeBurdenScore": 28.68
+                },
+                {
+                  "date": "2022-09-30",
+                  "opportunityScore": 47.92,
+                  "hedgeBurdenScore": 36.32
+                },
+                {
+                  "date": "2022-10-13",
+                  "opportunityScore": 65.43,
+                  "hedgeBurdenScore": 36.37
+                },
+                {
+                  "date": "2022-10-25",
+                  "opportunityScore": 63.75,
+                  "hedgeBurdenScore": 23.3
+                },
+                {
+                  "date": "2022-11-07",
+                  "opportunityScore": 44.98,
+                  "hedgeBurdenScore": 21.02
+                },
+                {
+                  "date": "2022-11-17",
+                  "opportunityScore": 18.27,
+                  "hedgeBurdenScore": 17.76
+                },
+                {
+                  "date": "2022-11-30",
+                  "opportunityScore": 11.11,
+                  "hedgeBurdenScore": 16.66
+                },
+                {
+                  "date": "2022-12-12",
+                  "opportunityScore": 2.15,
+                  "hedgeBurdenScore": 11.84
+                },
+                {
+                  "date": "2022-12-22",
+                  "opportunityScore": 6.89,
+                  "hedgeBurdenScore": 25.9
+                },
+                {
+                  "date": "2023-01-05",
+                  "opportunityScore": 8.9,
+                  "hedgeBurdenScore": 28.99
+                },
+                {
+                  "date": "2023-01-18",
+                  "opportunityScore": 30.53,
+                  "hedgeBurdenScore": 21.78
+                },
+                {
+                  "date": "2023-01-30",
+                  "opportunityScore": 23.02,
+                  "hedgeBurdenScore": 15.39
+                },
+                {
+                  "date": "2023-02-09",
+                  "opportunityScore": 15.21,
+                  "hedgeBurdenScore": 13.75
+                },
+                {
+                  "date": "2023-02-21",
+                  "opportunityScore": 0.22,
+                  "hedgeBurdenScore": 7.34
+                },
+                {
+                  "date": "2023-03-06",
+                  "opportunityScore": 6.11,
+                  "hedgeBurdenScore": 8.26
+                },
+                {
+                  "date": "2023-03-16",
+                  "opportunityScore": 25.13,
+                  "hedgeBurdenScore": 17.15
+                },
+                {
+                  "date": "2023-03-29",
+                  "opportunityScore": 37.05,
+                  "hedgeBurdenScore": 13.54
+                },
+                {
+                  "date": "2023-03-31",
+                  "opportunityScore": 39.66,
+                  "hedgeBurdenScore": 13.28
+                }
+              ]
+            },
+            {
+              "id": "hscei",
+              "label": "HSCEI",
+              "start": {
+                "date": "2021-10-07",
+                "opportunityScore": 64.39,
+                "hedgeBurdenScore": 53.39
+              },
+              "peak": {
+                "date": "2022-06-14",
+                "opportunityScore": 59.54,
+                "hedgeBurdenScore": 51.2
+              },
+              "end": {
+                "date": "2023-03-31",
+                "opportunityScore": 42.91,
+                "hedgeBurdenScore": 28.45
+              },
+              "maxOpportunityScore": 99.62,
+              "maxHedgeBurdenScore": 79.02,
+              "trajectory": [
+                {
+                  "date": "2021-10-07",
+                  "opportunityScore": 64.39,
+                  "hedgeBurdenScore": 53.39
+                },
+                {
+                  "date": "2021-10-21",
+                  "opportunityScore": 59.13,
+                  "hedgeBurdenScore": 39.77
+                },
+                {
+                  "date": "2021-11-02",
+                  "opportunityScore": 50.23,
+                  "hedgeBurdenScore": 40.73
+                },
+                {
+                  "date": "2021-11-12",
+                  "opportunityScore": 20.23,
+                  "hedgeBurdenScore": 31.01
+                },
+                {
+                  "date": "2021-11-24",
+                  "opportunityScore": 15.85,
+                  "hedgeBurdenScore": 36.24
+                },
+                {
+                  "date": "2021-12-06",
+                  "opportunityScore": 31.93,
+                  "hedgeBurdenScore": 45.96
+                },
+                {
+                  "date": "2021-12-16",
+                  "opportunityScore": 36.59,
+                  "hedgeBurdenScore": 49.85
+                },
+                {
+                  "date": "2021-12-29",
+                  "opportunityScore": 36.38,
+                  "hedgeBurdenScore": 45.36
+                },
+                {
+                  "date": "2022-01-10",
+                  "opportunityScore": 32.06,
+                  "hedgeBurdenScore": 41.77
+                },
+                {
+                  "date": "2022-01-20",
+                  "opportunityScore": 44.89,
+                  "hedgeBurdenScore": 42.75
+                },
+                {
+                  "date": "2022-02-04",
+                  "opportunityScore": 68.23,
+                  "hedgeBurdenScore": 46.63
+                },
+                {
+                  "date": "2022-02-16",
+                  "opportunityScore": 63.8,
+                  "hedgeBurdenScore": 45.72
+                },
+                {
+                  "date": "2022-02-28",
+                  "opportunityScore": 62.06,
+                  "hedgeBurdenScore": 53.31
+                },
+                {
+                  "date": "2022-03-10",
+                  "opportunityScore": 45.58,
+                  "hedgeBurdenScore": 66.14
+                },
+                {
+                  "date": "2022-03-22",
+                  "opportunityScore": 99.62,
+                  "hedgeBurdenScore": 79.02
+                },
+                {
+                  "date": "2022-04-01",
+                  "opportunityScore": 97.82,
+                  "hedgeBurdenScore": 70.32
+                },
+                {
+                  "date": "2022-04-14",
+                  "opportunityScore": 76.1,
+                  "hedgeBurdenScore": 61.54
+                },
+                {
+                  "date": "2022-04-28",
+                  "opportunityScore": 61.0,
+                  "hedgeBurdenScore": 57.14
+                },
+                {
+                  "date": "2022-05-12",
+                  "opportunityScore": 72.13,
+                  "hedgeBurdenScore": 70.89
+                },
+                {
+                  "date": "2022-05-24",
+                  "opportunityScore": 76.34,
+                  "hedgeBurdenScore": 60.68
+                },
+                {
+                  "date": "2022-06-06",
+                  "opportunityScore": 69.55,
+                  "hedgeBurdenScore": 54.43
+                },
+                {
+                  "date": "2022-06-14",
+                  "opportunityScore": 59.54,
+                  "hedgeBurdenScore": 51.2
+                },
+                {
+                  "date": "2022-06-16",
+                  "opportunityScore": 60.24,
+                  "hedgeBurdenScore": 50.64
+                },
+                {
+                  "date": "2022-06-28",
+                  "opportunityScore": 55.42,
+                  "hedgeBurdenScore": 46.93
+                },
+                {
+                  "date": "2022-07-11",
+                  "opportunityScore": 52.02,
+                  "hedgeBurdenScore": 53.26
+                },
+                {
+                  "date": "2022-07-21",
+                  "opportunityScore": 40.57,
+                  "hedgeBurdenScore": 49.78
+                },
+                {
+                  "date": "2022-08-02",
+                  "opportunityScore": 28.29,
+                  "hedgeBurdenScore": 59.04
+                },
+                {
+                  "date": "2022-08-12",
+                  "opportunityScore": 38.62,
+                  "hedgeBurdenScore": 45.24
+                },
+                {
+                  "date": "2022-08-24",
+                  "opportunityScore": 20.59,
+                  "hedgeBurdenScore": 51.58
+                },
+                {
+                  "date": "2022-09-05",
+                  "opportunityScore": 35.08,
+                  "hedgeBurdenScore": 50.42
+                },
+                {
+                  "date": "2022-09-16",
+                  "opportunityScore": 40.96,
+                  "hedgeBurdenScore": 50.7
+                },
+                {
+                  "date": "2022-09-28",
+                  "opportunityScore": 24.58,
+                  "hedgeBurdenScore": 57.69
+                },
+                {
+                  "date": "2022-10-11",
+                  "opportunityScore": 67.39,
+                  "hedgeBurdenScore": 70.26
+                },
+                {
+                  "date": "2022-10-21",
+                  "opportunityScore": 71.69,
+                  "hedgeBurdenScore": 67.15
+                },
+                {
+                  "date": "2022-11-02",
+                  "opportunityScore": 85.31,
+                  "hedgeBurdenScore": 78.21
+                },
+                {
+                  "date": "2022-11-14",
+                  "opportunityScore": 92.36,
+                  "hedgeBurdenScore": 66.07
+                },
+                {
+                  "date": "2022-11-24",
+                  "opportunityScore": 87.91,
+                  "hedgeBurdenScore": 66.05
+                },
+                {
+                  "date": "2022-12-06",
+                  "opportunityScore": 79.39,
+                  "hedgeBurdenScore": 60.04
+                },
+                {
+                  "date": "2022-12-16",
+                  "opportunityScore": 64.99,
+                  "hedgeBurdenScore": 52.61
+                },
+                {
+                  "date": "2022-12-30",
+                  "opportunityScore": 54.06,
+                  "hedgeBurdenScore": 46.83
+                },
+                {
+                  "date": "2023-01-12",
+                  "opportunityScore": 20.86,
+                  "hedgeBurdenScore": 30.91
+                },
+                {
+                  "date": "2023-01-27",
+                  "opportunityScore": 11.78,
+                  "hedgeBurdenScore": 24.27
+                },
+                {
+                  "date": "2023-02-08",
+                  "opportunityScore": 26.05,
+                  "hedgeBurdenScore": 32.62
+                },
+                {
+                  "date": "2023-02-20",
+                  "opportunityScore": 37.77,
+                  "hedgeBurdenScore": 40.16
+                },
+                {
+                  "date": "2023-03-02",
+                  "opportunityScore": 40.84,
+                  "hedgeBurdenScore": 48.23
+                },
+                {
+                  "date": "2023-03-14",
+                  "opportunityScore": 47.07,
+                  "hedgeBurdenScore": 50.29
+                },
+                {
+                  "date": "2023-03-24",
+                  "opportunityScore": 57.26,
+                  "hedgeBurdenScore": 36.24
+                },
+                {
+                  "date": "2023-03-31",
+                  "opportunityScore": 42.91,
+                  "hedgeBurdenScore": 28.45
+                }
+              ]
+            },
+            {
+              "id": "kospi200",
+              "label": "KOSPI200",
+              "start": {
+                "date": "2021-10-07",
+                "opportunityScore": 33.37,
+                "hedgeBurdenScore": 27.49
+              },
+              "peak": {
+                "date": "2022-06-14",
+                "opportunityScore": 63.52,
+                "hedgeBurdenScore": 45.19
+              },
+              "end": {
+                "date": "2023-03-31",
+                "opportunityScore": 22.5,
+                "hedgeBurdenScore": 19.59
+              },
+              "maxOpportunityScore": 76.15,
+              "maxHedgeBurdenScore": 57.35,
+              "trajectory": [
+                {
+                  "date": "2021-10-07",
+                  "opportunityScore": 33.37,
+                  "hedgeBurdenScore": 27.49
+                },
+                {
+                  "date": "2021-10-20",
+                  "opportunityScore": 45.88,
+                  "hedgeBurdenScore": 25.12
+                },
+                {
+                  "date": "2021-11-01",
+                  "opportunityScore": 45.85,
+                  "hedgeBurdenScore": 23.51
+                },
+                {
+                  "date": "2021-11-11",
+                  "opportunityScore": 16.68,
+                  "hedgeBurdenScore": 17.81
+                },
+                {
+                  "date": "2021-11-23",
+                  "opportunityScore": 36.15,
+                  "hedgeBurdenScore": 18.99
+                },
+                {
+                  "date": "2021-12-03",
+                  "opportunityScore": 59.74,
+                  "hedgeBurdenScore": 23.71
+                },
+                {
+                  "date": "2021-12-15",
+                  "opportunityScore": 55.29,
+                  "hedgeBurdenScore": 22.55
+                },
+                {
+                  "date": "2021-12-27",
+                  "opportunityScore": 46.3,
+                  "hedgeBurdenScore": 21.34
+                },
+                {
+                  "date": "2022-01-10",
+                  "opportunityScore": 23.65,
+                  "hedgeBurdenScore": 23.84
+                },
+                {
+                  "date": "2022-01-20",
+                  "opportunityScore": 27.14,
+                  "hedgeBurdenScore": 25.3
+                },
+                {
+                  "date": "2022-02-04",
+                  "opportunityScore": 64.66,
+                  "hedgeBurdenScore": 41.31
+                },
+                {
+                  "date": "2022-02-16",
+                  "opportunityScore": 67.13,
+                  "hedgeBurdenScore": 39.14
+                },
+                {
+                  "date": "2022-02-28",
+                  "opportunityScore": 69.04,
+                  "hedgeBurdenScore": 34.13
+                },
+                {
+                  "date": "2022-03-14",
+                  "opportunityScore": 62.93,
+                  "hedgeBurdenScore": 37.82
+                },
+                {
+                  "date": "2022-03-24",
+                  "opportunityScore": 62.79,
+                  "hedgeBurdenScore": 30.52
+                },
+                {
+                  "date": "2022-04-05",
+                  "opportunityScore": 31.76,
+                  "hedgeBurdenScore": 25.85
+                },
+                {
+                  "date": "2022-04-15",
+                  "opportunityScore": 21.26,
+                  "hedgeBurdenScore": 28.46
+                },
+                {
+                  "date": "2022-04-27",
+                  "opportunityScore": 30.05,
+                  "hedgeBurdenScore": 34.12
+                },
+                {
+                  "date": "2022-05-11",
+                  "opportunityScore": 43.28,
+                  "hedgeBurdenScore": 33.75
+                },
+                {
+                  "date": "2022-05-23",
+                  "opportunityScore": 57.05,
+                  "hedgeBurdenScore": 34.12
+                },
+                {
+                  "date": "2022-06-03",
+                  "opportunityScore": 55.69,
+                  "hedgeBurdenScore": 31.13
+                },
+                {
+                  "date": "2022-06-14",
+                  "opportunityScore": 63.52,
+                  "hedgeBurdenScore": 45.19
+                },
+                {
+                  "date": "2022-06-16",
+                  "opportunityScore": 64.31,
+                  "hedgeBurdenScore": 49.14
+                },
+                {
+                  "date": "2022-06-28",
+                  "opportunityScore": 70.8,
+                  "hedgeBurdenScore": 52.37
+                },
+                {
+                  "date": "2022-07-08",
+                  "opportunityScore": 76.15,
+                  "hedgeBurdenScore": 57.35
+                },
+                {
+                  "date": "2022-07-20",
+                  "opportunityScore": 60.36,
+                  "hedgeBurdenScore": 39.39
+                },
+                {
+                  "date": "2022-08-01",
+                  "opportunityScore": 30.75,
+                  "hedgeBurdenScore": 34.54
+                },
+                {
+                  "date": "2022-08-11",
+                  "opportunityScore": 7.97,
+                  "hedgeBurdenScore": 30.97
+                },
+                {
+                  "date": "2022-08-24",
+                  "opportunityScore": 4.9,
+                  "hedgeBurdenScore": 29.68
+                },
+                {
+                  "date": "2022-09-05",
+                  "opportunityScore": 37.63,
+                  "hedgeBurdenScore": 40.64
+                },
+                {
+                  "date": "2022-09-19",
+                  "opportunityScore": 58.79,
+                  "hedgeBurdenScore": 46.64
+                },
+                {
+                  "date": "2022-09-29",
+                  "opportunityScore": 58.37,
+                  "hedgeBurdenScore": 55.29
+                },
+                {
+                  "date": "2022-10-13",
+                  "opportunityScore": 45.37,
+                  "hedgeBurdenScore": 52.23
+                },
+                {
+                  "date": "2022-10-25",
+                  "opportunityScore": 61.46,
+                  "hedgeBurdenScore": 39.66
+                },
+                {
+                  "date": "2022-11-04",
+                  "opportunityScore": 36.61,
+                  "hedgeBurdenScore": 31.82
+                },
+                {
+                  "date": "2022-11-16",
+                  "opportunityScore": 40.32,
+                  "hedgeBurdenScore": 31.61
+                },
+                {
+                  "date": "2022-11-28",
+                  "opportunityScore": 43.78,
+                  "hedgeBurdenScore": 34.06
+                },
+                {
+                  "date": "2022-12-08",
+                  "opportunityScore": 50.47,
+                  "hedgeBurdenScore": 36.63
+                },
+                {
+                  "date": "2022-12-20",
+                  "opportunityScore": 22.31,
+                  "hedgeBurdenScore": 33.79
+                },
+                {
+                  "date": "2023-01-02",
+                  "opportunityScore": 23.21,
+                  "hedgeBurdenScore": 43.66
+                },
+                {
+                  "date": "2023-01-12",
+                  "opportunityScore": 52.63,
+                  "hedgeBurdenScore": 32.72
+                },
+                {
+                  "date": "2023-01-26",
+                  "opportunityScore": 40.21,
+                  "hedgeBurdenScore": 25.23
+                },
+                {
+                  "date": "2023-02-07",
+                  "opportunityScore": 33.41,
+                  "hedgeBurdenScore": 23.35
+                },
+                {
+                  "date": "2023-02-17",
+                  "opportunityScore": 42.4,
+                  "hedgeBurdenScore": 22.66
+                },
+                {
+                  "date": "2023-03-02",
+                  "opportunityScore": 25.75,
+                  "hedgeBurdenScore": 24.23
+                },
+                {
+                  "date": "2023-03-14",
+                  "opportunityScore": 32.42,
+                  "hedgeBurdenScore": 30.85
+                },
+                {
+                  "date": "2023-03-24",
+                  "opportunityScore": 16.9,
+                  "hedgeBurdenScore": 23.04
+                },
+                {
+                  "date": "2023-03-31",
+                  "opportunityScore": 22.5,
+                  "hedgeBurdenScore": 19.59
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "2020-02-25_2020-05-15",
+          "label": "코로나19 급락",
+          "startDate": "2020-02-25",
+          "peakDate": "2020-03-16",
+          "endDate": "2020-05-15",
+          "marketPeakScore": 86.5,
+          "peakBurdenIndex": "SX5E",
+          "peakBurdenScore": 96.48,
+          "peakOpportunityIndex": "SPX",
+          "peakOpportunityScore": 100.0,
+          "interpretation": "시장 스트레스 정점에는 SX5E의 헤지부담이 가장 높았고, SPX의 상대 발행기회가 가장 컸습니다.",
+          "items": [
+            {
+              "id": "spx",
+              "label": "SPX",
+              "start": {
+                "date": "2020-02-25",
+                "opportunityScore": 73.54,
+                "hedgeBurdenScore": 28.95
+              },
+              "peak": {
+                "date": "2020-03-16",
+                "opportunityScore": 100.0,
+                "hedgeBurdenScore": 96.09
+              },
+              "end": {
+                "date": "2020-05-15",
+                "opportunityScore": 56.63,
+                "hedgeBurdenScore": 36.58
+              },
+              "maxOpportunityScore": 100.0,
+              "maxHedgeBurdenScore": 96.09,
+              "trajectory": [
+                {
+                  "date": "2020-02-25",
+                  "opportunityScore": 73.54,
+                  "hedgeBurdenScore": 28.95
+                },
+                {
+                  "date": "2020-02-27",
+                  "opportunityScore": 80.24,
+                  "hedgeBurdenScore": 43.98
+                },
+                {
+                  "date": "2020-03-02",
+                  "opportunityScore": 85.53,
+                  "hedgeBurdenScore": 39.34
+                },
+                {
+                  "date": "2020-03-04",
+                  "opportunityScore": 89.07,
+                  "hedgeBurdenScore": 42.02
+                },
+                {
+                  "date": "2020-03-06",
+                  "opportunityScore": 89.76,
+                  "hedgeBurdenScore": 54.43
+                },
+                {
+                  "date": "2020-03-10",
+                  "opportunityScore": 98.81,
+                  "hedgeBurdenScore": 74.72
+                },
+                {
+                  "date": "2020-03-12",
+                  "opportunityScore": 100.0,
+                  "hedgeBurdenScore": 94.68
+                },
+                {
+                  "date": "2020-03-16",
+                  "opportunityScore": 100.0,
+                  "hedgeBurdenScore": 96.09
+                },
+                {
+                  "date": "2020-03-18",
+                  "opportunityScore": 100.0,
+                  "hedgeBurdenScore": 95.75
+                },
+                {
+                  "date": "2020-03-20",
+                  "opportunityScore": 100.0,
+                  "hedgeBurdenScore": 95.46
+                },
+                {
+                  "date": "2020-03-24",
+                  "opportunityScore": 100.0,
+                  "hedgeBurdenScore": 94.72
+                },
+                {
+                  "date": "2020-03-26",
+                  "opportunityScore": 100.0,
+                  "hedgeBurdenScore": 79.65
+                },
+                {
+                  "date": "2020-03-30",
+                  "opportunityScore": 99.56,
+                  "hedgeBurdenScore": 83.49
+                },
+                {
+                  "date": "2020-04-01",
+                  "opportunityScore": 99.12,
+                  "hedgeBurdenScore": 93.7
+                },
+                {
+                  "date": "2020-04-03",
+                  "opportunityScore": 98.9,
+                  "hedgeBurdenScore": 88.54
+                },
+                {
+                  "date": "2020-04-07",
+                  "opportunityScore": 96.82,
+                  "hedgeBurdenScore": 73.96
+                },
+                {
+                  "date": "2020-04-09",
+                  "opportunityScore": 93.68,
+                  "hedgeBurdenScore": 61.03
+                },
+                {
+                  "date": "2020-04-14",
+                  "opportunityScore": 85.47,
+                  "hedgeBurdenScore": 59.69
+                },
+                {
+                  "date": "2020-04-16",
+                  "opportunityScore": 83.28,
+                  "hedgeBurdenScore": 60.82
+                },
+                {
+                  "date": "2020-04-20",
+                  "opportunityScore": 81.91,
+                  "hedgeBurdenScore": 60.34
+                },
+                {
+                  "date": "2020-04-22",
+                  "opportunityScore": 78.42,
+                  "hedgeBurdenScore": 58.94
+                },
+                {
+                  "date": "2020-04-24",
+                  "opportunityScore": 74.68,
+                  "hedgeBurdenScore": 55.41
+                },
+                {
+                  "date": "2020-04-28",
+                  "opportunityScore": 71.74,
+                  "hedgeBurdenScore": 52.92
+                },
+                {
+                  "date": "2020-04-30",
+                  "opportunityScore": 68.42,
+                  "hedgeBurdenScore": 49.28
+                },
+                {
+                  "date": "2020-05-04",
+                  "opportunityScore": 68.86,
+                  "hedgeBurdenScore": 51.54
+                },
+                {
+                  "date": "2020-05-06",
+                  "opportunityScore": 61.99,
+                  "hedgeBurdenScore": 39.97
+                },
+                {
+                  "date": "2020-05-08",
+                  "opportunityScore": 60.04,
+                  "hedgeBurdenScore": 36.27
+                },
+                {
+                  "date": "2020-05-12",
+                  "opportunityScore": 58.58,
+                  "hedgeBurdenScore": 37.09
+                },
+                {
+                  "date": "2020-05-14",
+                  "opportunityScore": 58.19,
+                  "hedgeBurdenScore": 37.36
+                },
+                {
+                  "date": "2020-05-15",
+                  "opportunityScore": 56.63,
+                  "hedgeBurdenScore": 36.58
+                }
+              ]
+            },
+            {
+              "id": "sx5e",
+              "label": "SX5E",
+              "start": {
+                "date": "2020-02-25",
+                "opportunityScore": 73.86,
+                "hedgeBurdenScore": 30.99
+              },
+              "peak": {
+                "date": "2020-03-16",
+                "opportunityScore": 97.8,
+                "hedgeBurdenScore": 96.48
+              },
+              "end": {
+                "date": "2020-05-15",
+                "opportunityScore": 63.12,
+                "hedgeBurdenScore": 54.54
+              },
+              "maxOpportunityScore": 100.0,
+              "maxHedgeBurdenScore": 97.4,
+              "trajectory": [
+                {
+                  "date": "2020-02-25",
+                  "opportunityScore": 73.86,
+                  "hedgeBurdenScore": 30.99
+                },
+                {
+                  "date": "2020-02-27",
+                  "opportunityScore": 76.47,
+                  "hedgeBurdenScore": 37.99
+                },
+                {
+                  "date": "2020-03-02",
+                  "opportunityScore": 78.53,
+                  "hedgeBurdenScore": 45.65
+                },
+                {
+                  "date": "2020-03-04",
+                  "opportunityScore": 77.07,
+                  "hedgeBurdenScore": 44.06
+                },
+                {
+                  "date": "2020-03-06",
+                  "opportunityScore": 79.57,
+                  "hedgeBurdenScore": 56.45
+                },
+                {
+                  "date": "2020-03-10",
+                  "opportunityScore": 88.02,
+                  "hedgeBurdenScore": 84.92
+                },
+                {
+                  "date": "2020-03-12",
+                  "opportunityScore": 97.95,
+                  "hedgeBurdenScore": 97.4
+                },
+                {
+                  "date": "2020-03-16",
+                  "opportunityScore": 97.8,
+                  "hedgeBurdenScore": 96.48
+                },
+                {
+                  "date": "2020-03-18",
+                  "opportunityScore": 97.99,
+                  "hedgeBurdenScore": 96.43
+                },
+                {
+                  "date": "2020-03-20",
+                  "opportunityScore": 99.6,
+                  "hedgeBurdenScore": 95.46
+                },
+                {
+                  "date": "2020-03-24",
+                  "opportunityScore": 100.0,
+                  "hedgeBurdenScore": 96.4
+                },
+                {
+                  "date": "2020-03-26",
+                  "opportunityScore": 100.0,
+                  "hedgeBurdenScore": 90.34
+                },
+                {
+                  "date": "2020-03-30",
+                  "opportunityScore": 100.0,
+                  "hedgeBurdenScore": 91.22
+                },
+                {
+                  "date": "2020-04-01",
+                  "opportunityScore": 100.0,
+                  "hedgeBurdenScore": 96.17
+                },
+                {
+                  "date": "2020-04-03",
+                  "opportunityScore": 98.9,
+                  "hedgeBurdenScore": 93.13
+                },
+                {
+                  "date": "2020-04-07",
+                  "opportunityScore": 96.24,
+                  "hedgeBurdenScore": 70.39
+                },
+                {
+                  "date": "2020-04-09",
+                  "opportunityScore": 88.6,
+                  "hedgeBurdenScore": 67.32
+                },
+                {
+                  "date": "2020-04-15",
+                  "opportunityScore": 87.04,
+                  "hedgeBurdenScore": 69.19
+                },
+                {
+                  "date": "2020-04-17",
+                  "opportunityScore": 83.69,
+                  "hedgeBurdenScore": 67.54
+                },
+                {
+                  "date": "2020-04-21",
+                  "opportunityScore": 83.94,
+                  "hedgeBurdenScore": 69.68
+                },
+                {
+                  "date": "2020-04-23",
+                  "opportunityScore": 71.76,
+                  "hedgeBurdenScore": 56.79
+                },
+                {
+                  "date": "2020-04-27",
+                  "opportunityScore": 71.27,
+                  "hedgeBurdenScore": 55.98
+                },
+                {
+                  "date": "2020-04-29",
+                  "opportunityScore": 68.37,
+                  "hedgeBurdenScore": 52.0
+                },
+                {
+                  "date": "2020-05-04",
+                  "opportunityScore": 69.41,
+                  "hedgeBurdenScore": 56.49
+                },
+                {
+                  "date": "2020-05-06",
+                  "opportunityScore": 70.25,
+                  "hedgeBurdenScore": 56.27
+                },
+                {
+                  "date": "2020-05-08",
+                  "opportunityScore": 64.88,
+                  "hedgeBurdenScore": 50.46
+                },
+                {
+                  "date": "2020-05-12",
+                  "opportunityScore": 64.27,
+                  "hedgeBurdenScore": 51.23
+                },
+                {
+                  "date": "2020-05-14",
+                  "opportunityScore": 63.1,
+                  "hedgeBurdenScore": 55.03
+                },
+                {
+                  "date": "2020-05-15",
+                  "opportunityScore": 63.12,
+                  "hedgeBurdenScore": 54.54
+                }
+              ]
+            },
+            {
+              "id": "nky",
+              "label": "NKY",
+              "start": {
+                "date": "2020-02-25",
+                "opportunityScore": 72.25,
+                "hedgeBurdenScore": 29.72
+              },
+              "peak": {
+                "date": "2020-03-16",
+                "opportunityScore": 81.86,
+                "hedgeBurdenScore": 82.68
+              },
+              "end": {
+                "date": "2020-05-15",
+                "opportunityScore": 60.59,
+                "hedgeBurdenScore": 38.55
+              },
+              "maxOpportunityScore": 100.0,
+              "maxHedgeBurdenScore": 87.24,
+              "trajectory": [
+                {
+                  "date": "2020-02-25",
+                  "opportunityScore": 72.25,
+                  "hedgeBurdenScore": 29.72
+                },
+                {
+                  "date": "2020-02-27",
+                  "opportunityScore": 71.9,
+                  "hedgeBurdenScore": 32.45
+                },
+                {
+                  "date": "2020-03-02",
+                  "opportunityScore": 74.97,
+                  "hedgeBurdenScore": 39.56
+                },
+                {
+                  "date": "2020-03-04",
+                  "opportunityScore": 73.69,
+                  "hedgeBurdenScore": 41.29
+                },
+                {
+                  "date": "2020-03-06",
+                  "opportunityScore": 75.35,
+                  "hedgeBurdenScore": 46.84
+                },
+                {
+                  "date": "2020-03-10",
+                  "opportunityScore": 77.28,
+                  "hedgeBurdenScore": 62.88
+                },
+                {
+                  "date": "2020-03-12",
+                  "opportunityScore": 78.66,
+                  "hedgeBurdenScore": 73.78
+                },
+                {
+                  "date": "2020-03-16",
+                  "opportunityScore": 81.86,
+                  "hedgeBurdenScore": 82.68
+                },
+                {
+                  "date": "2020-03-18",
+                  "opportunityScore": 83.0,
+                  "hedgeBurdenScore": 83.36
+                },
+                {
+                  "date": "2020-03-23",
+                  "opportunityScore": 83.73,
+                  "hedgeBurdenScore": 82.41
+                },
+                {
+                  "date": "2020-03-25",
+                  "opportunityScore": 99.8,
+                  "hedgeBurdenScore": 79.32
+                },
+                {
+                  "date": "2020-03-27",
+                  "opportunityScore": 100.0,
+                  "hedgeBurdenScore": 76.95
+                },
+                {
+                  "date": "2020-03-31",
+                  "opportunityScore": 98.97,
+                  "hedgeBurdenScore": 78.07
+                },
+                {
+                  "date": "2020-04-02",
+                  "opportunityScore": 99.21,
+                  "hedgeBurdenScore": 87.24
+                },
+                {
+                  "date": "2020-04-06",
+                  "opportunityScore": 99.66,
+                  "hedgeBurdenScore": 78.53
+                },
+                {
+                  "date": "2020-04-08",
+                  "opportunityScore": 98.64,
+                  "hedgeBurdenScore": 65.94
+                },
+                {
+                  "date": "2020-04-10",
+                  "opportunityScore": 95.3,
+                  "hedgeBurdenScore": 62.23
+                },
+                {
+                  "date": "2020-04-14",
+                  "opportunityScore": 91.8,
+                  "hedgeBurdenScore": 61.78
+                },
+                {
+                  "date": "2020-04-16",
+                  "opportunityScore": 91.32,
+                  "hedgeBurdenScore": 62.97
+                },
+                {
+                  "date": "2020-04-20",
+                  "opportunityScore": 91.87,
+                  "hedgeBurdenScore": 61.76
+                },
+                {
+                  "date": "2020-04-22",
+                  "opportunityScore": 76.59,
+                  "hedgeBurdenScore": 53.77
+                },
+                {
+                  "date": "2020-04-24",
+                  "opportunityScore": 69.18,
+                  "hedgeBurdenScore": 48.11
+                },
+                {
+                  "date": "2020-04-28",
+                  "opportunityScore": 69.72,
+                  "hedgeBurdenScore": 45.92
+                },
+                {
+                  "date": "2020-05-01",
+                  "opportunityScore": 65.34,
+                  "hedgeBurdenScore": 44.38
+                },
+                {
+                  "date": "2020-05-08",
+                  "opportunityScore": 63.15,
+                  "hedgeBurdenScore": 39.09
+                },
+                {
+                  "date": "2020-05-12",
+                  "opportunityScore": 61.66,
+                  "hedgeBurdenScore": 37.76
+                },
+                {
+                  "date": "2020-05-14",
+                  "opportunityScore": 62.71,
+                  "hedgeBurdenScore": 39.82
+                },
+                {
+                  "date": "2020-05-15",
+                  "opportunityScore": 60.59,
+                  "hedgeBurdenScore": 38.55
+                }
+              ]
+            },
+            {
+              "id": "hscei",
+              "label": "HSCEI",
+              "start": {
+                "date": "2020-02-25",
+                "opportunityScore": 69.21,
+                "hedgeBurdenScore": 33.13
+              },
+              "peak": {
+                "date": "2020-03-16",
+                "opportunityScore": 79.35,
+                "hedgeBurdenScore": 66.78
+              },
+              "end": {
+                "date": "2020-05-15",
+                "opportunityScore": 55.17,
+                "hedgeBurdenScore": 37.78
+              },
+              "maxOpportunityScore": 98.05,
+              "maxHedgeBurdenScore": 78.42,
+              "trajectory": [
+                {
+                  "date": "2020-02-25",
+                  "opportunityScore": 69.21,
+                  "hedgeBurdenScore": 33.13
+                },
+                {
+                  "date": "2020-02-27",
+                  "opportunityScore": 53.35,
+                  "hedgeBurdenScore": 23.96
+                },
+                {
+                  "date": "2020-03-02",
+                  "opportunityScore": 64.68,
+                  "hedgeBurdenScore": 27.64
+                },
+                {
+                  "date": "2020-03-04",
+                  "opportunityScore": 62.99,
+                  "hedgeBurdenScore": 26.69
+                },
+                {
+                  "date": "2020-03-06",
+                  "opportunityScore": 64.12,
+                  "hedgeBurdenScore": 30.69
+                },
+                {
+                  "date": "2020-03-10",
+                  "opportunityScore": 74.79,
+                  "hedgeBurdenScore": 45.64
+                },
+                {
+                  "date": "2020-03-12",
+                  "opportunityScore": 76.92,
+                  "hedgeBurdenScore": 55.88
+                },
+                {
+                  "date": "2020-03-16",
+                  "opportunityScore": 79.35,
+                  "hedgeBurdenScore": 66.78
+                },
+                {
+                  "date": "2020-03-18",
+                  "opportunityScore": 81.26,
+                  "hedgeBurdenScore": 75.34
+                },
+                {
+                  "date": "2020-03-20",
+                  "opportunityScore": 91.67,
+                  "hedgeBurdenScore": 77.13
+                },
+                {
+                  "date": "2020-03-24",
+                  "opportunityScore": 96.94,
+                  "hedgeBurdenScore": 78.42
+                },
+                {
+                  "date": "2020-03-26",
+                  "opportunityScore": 98.05,
+                  "hedgeBurdenScore": 74.05
+                },
+                {
+                  "date": "2020-03-30",
+                  "opportunityScore": 97.05,
+                  "hedgeBurdenScore": 73.4
+                },
+                {
+                  "date": "2020-04-01",
+                  "opportunityScore": 97.43,
+                  "hedgeBurdenScore": 73.86
+                },
+                {
+                  "date": "2020-04-03",
+                  "opportunityScore": 95.98,
+                  "hedgeBurdenScore": 71.49
+                },
+                {
+                  "date": "2020-04-07",
+                  "opportunityScore": 92.99,
+                  "hedgeBurdenScore": 60.54
+                },
+                {
+                  "date": "2020-04-09",
+                  "opportunityScore": 90.92,
+                  "hedgeBurdenScore": 56.32
+                },
+                {
+                  "date": "2020-04-15",
+                  "opportunityScore": 86.87,
+                  "hedgeBurdenScore": 55.27
+                },
+                {
+                  "date": "2020-04-17",
+                  "opportunityScore": 81.5,
+                  "hedgeBurdenScore": 52.61
+                },
+                {
+                  "date": "2020-04-21",
+                  "opportunityScore": 72.34,
+                  "hedgeBurdenScore": 46.79
+                },
+                {
+                  "date": "2020-04-23",
+                  "opportunityScore": 57.68,
+                  "hedgeBurdenScore": 38.52
+                },
+                {
+                  "date": "2020-04-27",
+                  "opportunityScore": 53.67,
+                  "hedgeBurdenScore": 32.38
+                },
+                {
+                  "date": "2020-04-29",
+                  "opportunityScore": 53.02,
+                  "hedgeBurdenScore": 30.42
+                },
+                {
+                  "date": "2020-05-05",
+                  "opportunityScore": 58.65,
+                  "hedgeBurdenScore": 39.17
+                },
+                {
+                  "date": "2020-05-07",
+                  "opportunityScore": 58.38,
+                  "hedgeBurdenScore": 38.24
+                },
+                {
+                  "date": "2020-05-11",
+                  "opportunityScore": 56.31,
+                  "hedgeBurdenScore": 35.02
+                },
+                {
+                  "date": "2020-05-13",
+                  "opportunityScore": 54.88,
+                  "hedgeBurdenScore": 35.85
+                },
+                {
+                  "date": "2020-05-15",
+                  "opportunityScore": 55.17,
+                  "hedgeBurdenScore": 37.78
+                }
+              ]
+            },
+            {
+              "id": "kospi200",
+              "label": "KOSPI200",
+              "start": {
+                "date": "2020-02-25",
+                "opportunityScore": 74.78,
+                "hedgeBurdenScore": 30.89
+              },
+              "peak": {
+                "date": "2020-03-16",
+                "opportunityScore": 80.15,
+                "hedgeBurdenScore": 73.6
+              },
+              "end": {
+                "date": "2020-05-15",
+                "opportunityScore": 50.76,
+                "hedgeBurdenScore": 35.24
+              },
+              "maxOpportunityScore": 99.96,
+              "maxHedgeBurdenScore": 94.95,
+              "trajectory": [
+                {
+                  "date": "2020-02-25",
+                  "opportunityScore": 74.78,
+                  "hedgeBurdenScore": 30.89
+                },
+                {
+                  "date": "2020-02-27",
+                  "opportunityScore": 73.55,
+                  "hedgeBurdenScore": 33.87
+                },
+                {
+                  "date": "2020-03-02",
+                  "opportunityScore": 77.11,
+                  "hedgeBurdenScore": 39.29
+                },
+                {
+                  "date": "2020-03-04",
+                  "opportunityScore": 77.34,
+                  "hedgeBurdenScore": 36.81
+                },
+                {
+                  "date": "2020-03-06",
+                  "opportunityScore": 73.84,
+                  "hedgeBurdenScore": 40.66
+                },
+                {
+                  "date": "2020-03-10",
+                  "opportunityScore": 77.95,
+                  "hedgeBurdenScore": 52.77
+                },
+                {
+                  "date": "2020-03-12",
+                  "opportunityScore": 80.11,
+                  "hedgeBurdenScore": 67.3
+                },
+                {
+                  "date": "2020-03-16",
+                  "opportunityScore": 80.15,
+                  "hedgeBurdenScore": 73.6
+                },
+                {
+                  "date": "2020-03-18",
+                  "opportunityScore": 81.72,
+                  "hedgeBurdenScore": 80.44
+                },
+                {
+                  "date": "2020-03-20",
+                  "opportunityScore": 97.8,
+                  "hedgeBurdenScore": 94.84
+                },
+                {
+                  "date": "2020-03-24",
+                  "opportunityScore": 99.29,
+                  "hedgeBurdenScore": 94.95
+                },
+                {
+                  "date": "2020-03-26",
+                  "opportunityScore": 99.96,
+                  "hedgeBurdenScore": 88.84
+                },
+                {
+                  "date": "2020-03-30",
+                  "opportunityScore": 99.07,
+                  "hedgeBurdenScore": 83.63
+                },
+                {
+                  "date": "2020-04-01",
+                  "opportunityScore": 99.39,
+                  "hedgeBurdenScore": 91.15
+                },
+                {
+                  "date": "2020-04-03",
+                  "opportunityScore": 99.2,
+                  "hedgeBurdenScore": 86.09
+                },
+                {
+                  "date": "2020-04-07",
+                  "opportunityScore": 99.25,
+                  "hedgeBurdenScore": 72.43
+                },
+                {
+                  "date": "2020-04-09",
+                  "opportunityScore": 97.25,
+                  "hedgeBurdenScore": 63.83
+                },
+                {
+                  "date": "2020-04-13",
+                  "opportunityScore": 95.08,
+                  "hedgeBurdenScore": 63.43
+                },
+                {
+                  "date": "2020-04-16",
+                  "opportunityScore": 92.82,
+                  "hedgeBurdenScore": 62.44
+                },
+                {
+                  "date": "2020-04-20",
+                  "opportunityScore": 87.13,
+                  "hedgeBurdenScore": 61.16
+                },
+                {
+                  "date": "2020-04-22",
+                  "opportunityScore": 70.45,
+                  "hedgeBurdenScore": 49.01
+                },
+                {
+                  "date": "2020-04-24",
+                  "opportunityScore": 65.61,
+                  "hedgeBurdenScore": 43.94
+                },
+                {
+                  "date": "2020-04-28",
+                  "opportunityScore": 64.95,
+                  "hedgeBurdenScore": 42.16
+                },
+                {
+                  "date": "2020-05-04",
+                  "opportunityScore": 61.16,
+                  "hedgeBurdenScore": 40.86
+                },
+                {
+                  "date": "2020-05-07",
+                  "opportunityScore": 60.61,
+                  "hedgeBurdenScore": 39.5
+                },
+                {
+                  "date": "2020-05-11",
+                  "opportunityScore": 55.72,
+                  "hedgeBurdenScore": 35.96
+                },
+                {
+                  "date": "2020-05-13",
+                  "opportunityScore": 54.39,
+                  "hedgeBurdenScore": 35.32
+                },
+                {
+                  "date": "2020-05-15",
+                  "opportunityScore": 50.76,
+                  "hedgeBurdenScore": 35.24
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
     "limitations": "공개 종가지수의 실현변동성·낙폭을 사용한 상대평가입니다. 실제 발행 판단에는 만기별 내재변동성, skew·상관 smile, 금리·배당·조달비용, 기발행 재고와 상품별 delta·gamma·vega를 추가해야 합니다."
   },
   "indices": [
@@ -5252,20 +9089,20 @@
       "label": "NKY",
       "name": "Nikkei 225",
       "region": "일본",
-      "lastDate": "2026-07-17",
-      "lastClose": 64141.12,
-      "score": 58.02,
+      "lastDate": "2026-07-21",
+      "lastClose": 66001.06,
+      "score": 54.95,
       "bucket": "주의",
       "tone": "caution",
       "reading": "단기 하락 모멘텀이 점수 상승을 주도합니다. 신규 발행 여지는 생기지만 기존 북의 순연·헤지 부담을 함께 봐야 합니다.",
       "metrics": {
-        "return20dPct": -9.98,
-        "return60dPct": 9.04,
-        "realizedVol20dPct": 36.68,
-        "realizedVol60dPct": 32.9,
-        "volPercentile252d": 88.1,
-        "drawdown60dPct": -11.37,
-        "drawdown252dPct": -11.37,
+        "return20dPct": -8.78,
+        "return60dPct": 11.21,
+        "realizedVol20dPct": 37.97,
+        "realizedVol60dPct": 33.34,
+        "volPercentile252d": 91.3,
+        "drawdown60dPct": -8.8,
+        "drawdown252dPct": -8.8,
         "maxAbsDailyMove20dPct": 4.61
       },
       "ytdPriceSeries": [
@@ -5796,17 +9633,13 @@
         {
           "date": "2026-07-17",
           "close": 64141.12
+        },
+        {
+          "date": "2026-07-21",
+          "close": 66001.06
         }
       ],
       "series": [
-        {
-          "date": "2026-03-24",
-          "close": 52252.28,
-          "score": 57.18,
-          "return20dPct": -8.05,
-          "realizedVol20dPct": 37.24,
-          "drawdown252dPct": -11.21
-        },
         {
           "date": "2026-03-25",
           "close": 53749.62,
@@ -6438,6 +10271,14 @@
           "return20dPct": -9.98,
           "realizedVol20dPct": 36.68,
           "drawdown252dPct": -11.37
+        },
+        {
+          "date": "2026-07-21",
+          "close": 66001.06,
+          "score": 54.95,
+          "return20dPct": -8.78,
+          "realizedVol20dPct": 37.97,
+          "drawdown252dPct": -8.8
         }
       ]
     },
@@ -6447,20 +10288,20 @@
       "label": "HSCEI",
       "name": "Hang Seng China Enterprises",
       "region": "중국/HK",
-      "lastDate": "2026-07-20",
-      "lastClose": 8381.9,
-      "score": 56.19,
+      "lastDate": "2026-07-21",
+      "lastClose": 8359.69,
+      "score": 56.94,
       "bucket": "주의",
       "tone": "caution",
       "reading": "현재 점수는 중립권이며, 변동성 확대 여부를 중심으로 보면 됩니다.",
       "metrics": {
-        "return20dPct": 5.09,
-        "return60dPct": -6.28,
-        "realizedVol20dPct": 26.98,
-        "realizedVol60dPct": 21.89,
-        "volPercentile252d": 100.0,
-        "drawdown60dPct": -6.03,
-        "drawdown252dPct": -13.81,
+        "return20dPct": 5.62,
+        "return60dPct": -5.02,
+        "realizedVol20dPct": 26.78,
+        "realizedVol60dPct": 21.67,
+        "volPercentile252d": 99.6,
+        "drawdown60dPct": -6.28,
+        "drawdown252dPct": -14.03,
         "maxAbsDailyMove20dPct": 4.04
       },
       "ytdPriceSeries": [
@@ -6991,17 +10832,13 @@
         {
           "date": "2026-07-20",
           "close": 8381.9
+        },
+        {
+          "date": "2026-07-21",
+          "close": 8359.69
         }
       ],
       "series": [
-        {
-          "date": "2026-03-20",
-          "close": 8574.07,
-          "score": 45.58,
-          "return20dPct": -4.3,
-          "realizedVol20dPct": 22.32,
-          "drawdown252dPct": -11.83
-        },
         {
           "date": "2026-03-23",
           "close": 8307.82,
@@ -7633,6 +11470,14 @@
           "return20dPct": 5.09,
           "realizedVol20dPct": 26.98,
           "drawdown252dPct": -13.81
+        },
+        {
+          "date": "2026-07-21",
+          "close": 8359.69,
+          "score": 56.94,
+          "return20dPct": 5.62,
+          "realizedVol20dPct": 26.78,
+          "drawdown252dPct": -14.03
         }
       ]
     },
@@ -7642,20 +11487,20 @@
       "label": "KOSPI200",
       "name": "KOSPI 200",
       "region": "한국",
-      "lastDate": "2026-07-16",
-      "lastClose": 1080.36,
-      "score": 82.42,
+      "lastDate": "2026-07-21",
+      "lastClose": 1078.22,
+      "score": 82.39,
       "bucket": "경고",
       "tone": "danger",
       "reading": "고점 대비 낙폭이 커져 쿠폰 매력도는 높아질 수 있지만, 순연 가능성과 헤지 비용 증가를 우선 점검해야 합니다.",
       "metrics": {
-        "return20dPct": -25.96,
-        "return60dPct": 15.99,
-        "realizedVol20dPct": 85.23,
-        "realizedVol60dPct": 71.86,
-        "volPercentile252d": 99.2,
-        "drawdown60dPct": -26.87,
-        "drawdown252dPct": -26.87,
+        "return20dPct": -26.12,
+        "return60dPct": 15.23,
+        "realizedVol20dPct": 85.19,
+        "realizedVol60dPct": 71.87,
+        "volPercentile252d": 98.8,
+        "drawdown60dPct": -27.01,
+        "drawdown252dPct": -27.01,
         "maxAbsDailyMove20dPct": 10.53
       },
       "ytdPriceSeries": [
@@ -8186,17 +12031,13 @@
         {
           "date": "2026-07-16",
           "close": 1080.36
+        },
+        {
+          "date": "2026-07-21",
+          "close": 1078.22
         }
       ],
       "series": [
-        {
-          "date": "2026-03-23",
-          "close": 804.86,
-          "score": 62.36,
-          "return20dPct": -6.37,
-          "realizedVol20dPct": 82.17,
-          "drawdown252dPct": -14.74
-        },
         {
           "date": "2026-03-24",
           "close": 827.64,
@@ -8828,6 +12669,14 @@
           "return20dPct": -25.96,
           "realizedVol20dPct": 85.23,
           "drawdown252dPct": -26.87
+        },
+        {
+          "date": "2026-07-21",
+          "close": 1078.22,
+          "score": 82.39,
+          "return20dPct": -26.12,
+          "realizedVol20dPct": 85.19,
+          "drawdown252dPct": -27.01
         }
       ]
     }

@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260722-1";
+const ASSET_VERSION = "20260722-2";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -982,6 +982,157 @@ function renderElsIndexRiskPanel(elsRisk) {
   `;
 }
 
+function renderElsStressEpisodeReview(stressEpisodes, plot) {
+  const episodes = [...(stressEpisodes?.items ?? [])].sort(
+    (a, b) => Number(b.marketPeakScore ?? 0) - Number(a.marketPeakScore ?? 0)
+  );
+  if (!episodes.length) return "";
+
+  const configuredDefault = stressEpisodes.defaultEpisodeId;
+  const defaultEpisodeId = episodes.some((episode) => episode.id === configuredDefault)
+    ? configuredDefault
+    : episodes[0].id;
+  const ticks = [0, 25, 50, 75, 100];
+  const gridLines = ticks
+    .map((tick) => {
+      const x = plot.left + (tick / 100) * plot.width;
+      const y = plot.top + ((100 - tick) / 100) * plot.height;
+      return `
+        <path d="M ${x.toFixed(1)} ${plot.top} V ${plot.top + plot.height}" class="els-map-grid"></path>
+        <path d="M ${plot.left} ${y.toFixed(1)} H ${plot.left + plot.width}" class="els-map-grid"></path>
+        <text x="${x.toFixed(1)}" y="356" text-anchor="middle" class="els-map-tick">${tick}</text>
+        <text x="52" y="${(y + 4).toFixed(1)}" text-anchor="end" class="els-map-tick">${tick}</text>
+      `;
+    })
+    .join("");
+  const markerOffsets = {
+    spx: { dx: 10, dy: -10, anchor: "start" },
+    sx5e: { dx: 10, dy: 18, anchor: "start" },
+    nky: { dx: -10, dy: -10, anchor: "end" },
+    hscei: { dx: -10, dy: 18, anchor: "end" },
+    kospi200: { dx: 10, dy: -10, anchor: "start" }
+  };
+  const coordinate = (point) => ({
+    ...point,
+    x: plot.left + (clampScore(point.opportunityScore) / 100) * plot.width,
+    y: plot.top + ((100 - clampScore(point.hedgeBurdenScore)) / 100) * plot.height
+  });
+
+  const panels = episodes
+    .map((episode, episodeIndex) => {
+      const active = episode.id === defaultEpisodeId;
+      const markers = episode.items
+        .map(
+          (item) => `
+            <marker id="els-episode-arrow-${episodeIndex}-${item.id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" class="els-map-arrowhead els-map-arrowhead--${item.id}"></path>
+            </marker>
+          `
+        )
+        .join("");
+      const tracks = episode.items
+        .map((item) => {
+          const coordinates = (item.trajectory ?? []).map(coordinate);
+          if (coordinates.length < 2) return "";
+          const start = coordinate(item.start);
+          const peak = coordinate(item.peak);
+          const end = coordinate(item.end);
+          const path = curvedTrajectoryPath(coordinates);
+          const offset = markerOffsets[item.id] ?? { dx: 10, dy: -10, anchor: "start" };
+          return `
+            <g class="els-episode-track els-map-trajectory-series els-map-trajectory-series--${item.id}">
+              <path d="${path}" marker-end="url(#els-episode-arrow-${episodeIndex}-${item.id})">
+                <title>${item.label} ${start.date}~${end.date}: 최대 발행기회 ${Number(item.maxOpportunityScore).toFixed(1)}, 최대 헤지부담 ${Number(item.maxHedgeBurdenScore).toFixed(1)}</title>
+              </path>
+              <circle cx="${start.x.toFixed(1)}" cy="${start.y.toFixed(1)}" r="4" class="els-episode-marker els-episode-marker--start">
+                <title>${item.label} 시작 ${start.date}</title>
+              </circle>
+              <rect x="${(peak.x - 4).toFixed(1)}" y="${(peak.y - 4).toFixed(1)}" width="8" height="8" transform="rotate(45 ${peak.x.toFixed(1)} ${peak.y.toFixed(1)})" class="els-episode-marker els-episode-marker--peak">
+                <title>${item.label} 시장 정점 ${peak.date}: 기회 ${Number(peak.opportunityScore).toFixed(1)}, 부담 ${Number(peak.hedgeBurdenScore).toFixed(1)}</title>
+              </rect>
+              <circle cx="${end.x.toFixed(1)}" cy="${end.y.toFixed(1)}" r="5" class="els-episode-marker els-episode-marker--end">
+                <title>${item.label} 종료 ${end.date}</title>
+              </circle>
+              <text x="${(end.x + offset.dx).toFixed(1)}" y="${(end.y + offset.dy).toFixed(1)}" text-anchor="${offset.anchor}">${item.label}</text>
+            </g>
+          `;
+        })
+        .join("");
+      const peakScore = Number.isFinite(Number(episode.marketPeakScore))
+        ? Number(episode.marketPeakScore).toFixed(1)
+        : "-";
+
+      return `
+        <article class="els-episode-panel ${active ? "is-active" : ""}" data-els-episode-panel="${episode.id}">
+          <div class="els-episode-summary">
+            <div><span>구간</span><strong>${episode.startDate}~${episode.endDate}</strong></div>
+            <div><span>시장 정점</span><strong>${episode.peakDate}</strong><small>스트레스 ${peakScore}</small></div>
+            <div><span>정점 헤지부담</span><strong>${episode.peakBurdenIndex} ${Number(episode.peakBurdenScore).toFixed(1)}</strong></div>
+            <div><span>정점 발행기회</span><strong>${episode.peakOpportunityIndex} ${Number(episode.peakOpportunityScore).toFixed(1)}</strong></div>
+          </div>
+          <p class="els-episode-interpretation">${episode.interpretation}</p>
+          <div class="els-episode-map-scroll">
+            <svg viewBox="0 0 760 410" role="img" aria-label="${episode.label} 기간의 ELS 발행기회와 헤지부담 이동">
+              <defs>${markers}</defs>
+              <rect x="${plot.left}" y="${plot.top}" width="${plot.width}" height="${plot.height}" class="els-map-zone els-map-zone--selective"></rect>
+              <rect x="${plot.left + plot.width * 0.65}" y="${plot.top + plot.height * 0.55}" width="${plot.width * 0.35}" height="${plot.height * 0.45}" class="els-map-zone els-map-zone--opportunity"></rect>
+              <rect x="${plot.left + plot.width * 0.65}" y="${plot.top + plot.height * 0.2}" width="${plot.width * 0.35}" height="${plot.height * 0.35}" class="els-map-zone els-map-zone--caution"></rect>
+              <rect x="${plot.left}" y="${plot.top}" width="${plot.width}" height="${plot.height * 0.2}" class="els-map-zone els-map-zone--burden"></rect>
+              ${gridLines}
+              <path d="M ${plot.left + plot.width * 0.65} ${plot.top} V ${plot.top + plot.height}" class="els-map-threshold"></path>
+              <path d="M ${plot.left} ${plot.top + plot.height * 0.55} H ${plot.left + plot.width}" class="els-map-threshold"></path>
+              <path d="M ${plot.left} ${plot.top + plot.height * 0.2} H ${plot.left + plot.width}" class="els-map-threshold els-map-threshold--danger"></path>
+              ${tracks}
+              <text x="${plot.left + plot.width - 12}" y="${plot.top + 18}" text-anchor="end" class="els-map-zone-label">발행부담</text>
+              <text x="${plot.left + plot.width - 12}" y="${plot.top + plot.height * 0.2 + 20}" text-anchor="end" class="els-map-zone-label">헤지주의</text>
+              <text x="${plot.left + plot.width - 12}" y="${plot.top + plot.height - 12}" text-anchor="end" class="els-map-zone-label">발행기회</text>
+              <text x="${plot.left + 12}" y="${plot.top + plot.height - 12}" class="els-map-zone-label">선별발행</text>
+              <text x="${plot.left + plot.width / 2}" y="380" text-anchor="middle" class="els-map-axis-label">상대 발행기회 →</text>
+              <text x="${plot.left + plot.width / 2}" y="398" text-anchor="middle" class="els-map-axis-note">변동성↑ 쿠폰↑</text>
+              <text x="16" y="${plot.top + plot.height / 2}" text-anchor="middle" transform="rotate(-90 16 ${plot.top + plot.height / 2})" class="els-map-axis-label">헤지부담 →</text>
+              <text x="34" y="${plot.top + plot.height / 2}" text-anchor="middle" transform="rotate(-90 34 ${plot.top + plot.height / 2})" class="els-map-axis-note">하락위험↑ 부담↑</text>
+            </svg>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  const indexLegend = episodes[0].items
+    .map(
+      (item) => `<span class="els-map-trajectory-series els-map-trajectory-series--${item.id}"><i></i>${item.label}</span>`
+    )
+    .join("");
+
+  return `
+    <section class="els-episode-review" data-els-episode-review>
+      <header class="els-episode-review__header">
+        <div>
+          <span class="eyebrow">Historical Stress Replay</span>
+          <h3>스트레스 에피소드 리플레이</h3>
+        </div>
+        <p>${stressEpisodes.methodology}</p>
+      </header>
+      <div class="els-episode-switcher" role="group" aria-label="스트레스 에피소드 선택">
+        ${episodes
+          .map(
+            (episode) => `<button type="button" class="${episode.id === defaultEpisodeId ? "is-active" : ""}" data-els-episode="${episode.id}" aria-pressed="${episode.id === defaultEpisodeId ? "true" : "false"}">${episode.label}</button>`
+          )
+          .join("")}
+      </div>
+      ${panels}
+      <footer class="els-episode-legend">
+        <div class="els-episode-stage-legend">
+          <span><i class="els-episode-legend-start"></i>시작</span>
+          <span><i class="els-episode-legend-peak"></i>시장 정점</span>
+          <span><i class="els-episode-legend-end"></i>종료</span>
+        </div>
+        <div class="els-episode-index-legend">${indexLegend}</div>
+      </footer>
+    </section>
+  `;
+}
+
 function renderElsIssuanceHedgePage(elsRisk) {
   const map = elsRisk?.issuanceHedgeMap;
   if (!map?.items?.length || !map?.basket) {
@@ -1160,6 +1311,8 @@ function renderElsIssuanceHedgePage(elsRisk) {
           </svg>
         </div>
       </section>
+
+      ${renderElsStressEpisodeReview(map.stressEpisodes, plot)}
 
       <section class="els-comparison">
         <div class="els-comparison__header">
@@ -2358,6 +2511,22 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
         });
         mapElement.querySelectorAll("[data-els-momentum-legend]").forEach((legend) => {
           legend.hidden = target !== "1w";
+        });
+      });
+    });
+  });
+
+  app.querySelectorAll("[data-els-episode-review]").forEach((review) => {
+    review.querySelectorAll("[data-els-episode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const target = button.dataset.elsEpisode;
+        review.querySelectorAll("[data-els-episode]").forEach((option) => {
+          const active = option === button;
+          option.classList.toggle("is-active", active);
+          option.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+        review.querySelectorAll("[data-els-episode-panel]").forEach((panel) => {
+          panel.classList.toggle("is-active", panel.dataset.elsEpisodePanel === target);
         });
       });
     });
