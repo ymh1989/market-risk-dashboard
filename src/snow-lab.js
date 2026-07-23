@@ -44,14 +44,17 @@ const qualityProfiles = {
 
 function autoProfileName() {
   const cores = Number(navigator.hardwareConcurrency || 4);
-  const memory = Number(navigator.deviceMemory || 4);
+  const memory = Number(navigator.deviceMemory || 0);
   const compact = window.matchMedia("(max-width: 760px)").matches;
-  if (compact || cores <= 4 || memory <= 4) return "eco";
-  if (cores >= 10 && memory >= 8 && window.innerWidth >= 1200) return "high";
+  const lowMemory = memory > 0 && memory <= 4;
+  const highMemory = memory === 0 || memory >= 8;
+  if (compact || cores <= 4 || lowMemory) return "eco";
+  if (cores >= 10 && highMemory && window.innerWidth >= 1200) return "high";
   return "balanced";
 }
 
-const requestedQuality = new URLSearchParams(window.location.search).get("quality") || "auto";
+const qualityParameter = new URLSearchParams(window.location.search).get("quality") || "auto";
+const requestedQuality = ["auto", "high", "eco"].includes(qualityParameter) ? qualityParameter : "auto";
 const profileName = requestedQuality === "auto" ? autoProfileName() : requestedQuality;
 const profile = qualityProfiles[profileName] || qualityProfiles.balanced;
 const state = {

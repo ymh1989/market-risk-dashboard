@@ -227,6 +227,7 @@ def test_snow_lab_easter_egg_contract():
     assert "visibilitychange" in script
     assert "pointermove" in script
     assert "requestAnimationFrame" in script
+    assert "navigator.deviceMemory || 0" in script
     assert "https://" not in script
 
     assert "width: min(calc(100vw - 40px), 1440px);" in styles
