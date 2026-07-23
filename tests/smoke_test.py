@@ -16,6 +16,7 @@ SNOW_LAB_FILE = ROOT / "snow-lab.html"
 SNOW_LAB_STYLE_FILE = ROOT / "src" / "snow-lab.css"
 SNOW_LAB_SCRIPT_FILE = ROOT / "src" / "snow-lab.js"
 OCEAN_LAB_SCRIPT_FILE = ROOT / "src" / "ocean-lab.js"
+FOREST_LAB_SCRIPT_FILE = ROOT / "src" / "forest-lab.js"
 WEBGL_FLUID_FILE = ROOT / "src" / "vendor" / "webgl-fluid.mjs"
 WEBGL_FLUID_LICENSE_FILE = ROOT / "src" / "vendor" / "webgl-fluid.LICENSE"
 WEBGL_FLUID_ORIGIN_LICENSE_FILE = ROOT / "src" / "vendor" / "webgl-fluid-origin.LICENSE"
@@ -212,6 +213,7 @@ def test_snow_lab_easter_egg_contract():
     styles = SNOW_LAB_STYLE_FILE.read_text(encoding="utf-8")
     script = SNOW_LAB_SCRIPT_FILE.read_text(encoding="utf-8")
     ocean_script = OCEAN_LAB_SCRIPT_FILE.read_text(encoding="utf-8")
+    forest_script = FOREST_LAB_SCRIPT_FILE.read_text(encoding="utf-8")
     package_license = WEBGL_FLUID_LICENSE_FILE.read_text(encoding="utf-8")
     origin_license = WEBGL_FLUID_ORIGIN_LICENSE_FILE.read_text(encoding="utf-8")
     three_module = THREE_MODULE_FILE.read_text(encoding="utf-8")
@@ -224,6 +226,7 @@ def test_snow_lab_easter_egg_contract():
     assert 'data-mode-select="snow"' in html
     assert 'data-mode-select="wave"' in html
     assert 'data-mode-select="spectrum"' in html
+    assert 'data-mode-select="forest"' in html
     assert 'Navier–Stokes Field' in html
     assert 'content="noindex"' in html
     assert './src/snow-lab.css?v=' in html
@@ -237,7 +240,7 @@ def test_snow_lab_easter_egg_contract():
     assert "visibilitychange" in script
     assert "pointermove" in script
     assert "requestedMode" in script
-    assert '["snow", "wave", "spectrum"]' in script
+    assert '["snow", "wave", "spectrum", "forest"]' in script
     assert 'model: isSpectrumMode ? "spectrum" : "gerstner"' in script
     assert 'import("./ocean-lab.js")' in script
     assert "createOceanLab" in script
@@ -264,15 +267,28 @@ def test_snow_lab_easter_egg_contract():
     assert "renderer.setSize(width, height, false)" in ocean_script
     assert "https://" not in ocean_script
 
+    assert 'import * as THREE from "./vendor/three.module.min.js"' in forest_script
+    assert "new THREE.WebGLRenderer" in forest_script
+    assert "new THREE.InstancedMesh" in forest_script
+    assert "function terrainHeight" in forest_script
+    assert "function installWindShader" in forest_script
+    assert "aWindPhase" in forest_script
+    assert "aWindStrength" in forest_script
+    assert "localGust" in forest_script
+    assert "createRidgeGeometry" in forest_script
+    assert "renderer.setSize(width, height, false)" in forest_script
+    assert "https://" not in forest_script
+
     assert "width: min(calc(100vw - 40px), 1440px);" in styles
     assert "height: min(calc(100dvh - 40px), 900px);" in styles
     assert '.snow-lab[data-mode="wave"]' in styles
     assert '.snow-lab[data-mode="spectrum"]' in styles
+    assert '.snow-lab[data-mode="forest"]' in styles
     wave_rule = styles.split('.snow-lab[data-mode="wave"] .snow-lab__stage', 1)[1].split("}", 1)[0]
     assert "width: min(calc(100vw - 64px), 1280px);" in wave_rule
     assert "height: min(calc(100dvh - 64px), 760px);" in wave_rule
     assert "border-color: #1d4b57;" in wave_rule
-    assert "grid-template-columns: repeat(3" in styles
+    assert "grid-template-columns: repeat(4" in styles
 
     assert WEBGL_FLUID_FILE.stat().st_size > 50_000
     assert THREE_MODULE_FILE.stat().st_size > 300_000

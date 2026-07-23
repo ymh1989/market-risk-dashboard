@@ -14,9 +14,11 @@ const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const parameters = new URLSearchParams(window.location.search);
 
 const modeParameter = parameters.get("mode") || "snow";
-const requestedMode = ["snow", "wave", "spectrum"].includes(modeParameter) ? modeParameter : "snow";
-const isOceanMode = requestedMode !== "snow";
+const requestedMode = ["snow", "wave", "spectrum", "forest"].includes(modeParameter) ? modeParameter : "snow";
+const isOceanMode = ["wave", "spectrum"].includes(requestedMode);
 const isSpectrumMode = requestedMode === "spectrum";
+const isForestMode = requestedMode === "forest";
+const isThreeMode = isOceanMode || isForestMode;
 
 const qualityProfiles = {
   high: {
@@ -75,6 +77,7 @@ const state = {
   fluidReady: false,
   fluidPaused: false,
   ocean: null,
+  forest: null,
   oceanLoading: false,
   fallback: false,
   frameId: 0,
@@ -95,20 +98,36 @@ const state = {
 };
 
 root.dataset.mode = requestedMode;
-title.textContent = isSpectrumMode ? "Spectrum Ocean" : isOceanMode ? "Ocean Lab" : "Snow Lab";
-eyebrow.textContent = isSpectrumMode
-  ? "JONSWAP Spectrum Field"
-  : isOceanMode
-    ? "Gerstner Ocean Field"
-    : "Navier–Stokes Field";
-document.title = isSpectrumMode ? "Spectrum Ocean" : isOceanMode ? "Ocean Lab" : "Snow Lab";
+title.textContent = isForestMode
+  ? "Forest Lab"
+  : isSpectrumMode
+    ? "Spectrum Ocean"
+    : isOceanMode
+      ? "Ocean Lab"
+      : "Snow Lab";
+eyebrow.textContent = isForestMode
+  ? "Wind Canopy Field"
+  : isSpectrumMode
+    ? "JONSWAP Spectrum Field"
+    : isOceanMode
+      ? "Gerstner Ocean Field"
+      : "Navier–Stokes Field";
+document.title = isForestMode
+  ? "Forest Lab"
+  : isSpectrumMode
+    ? "Spectrum Ocean"
+    : isOceanMode
+      ? "Ocean Lab"
+      : "Snow Lab";
 stage.setAttribute(
   "aria-label",
-  isSpectrumMode
-    ? "JONSWAP 주파수 스펙트럼 기반 GPU 3D 바다 시뮬레이션"
-    : isOceanMode
-      ? "왼쪽에서 오른쪽으로 진행하는 GPU 3D 바다 파도 시뮬레이션"
-      : "GPU 유체장과 눈 입자 시뮬레이션"
+  isForestMode
+    ? "바람에 흔들리는 산과 푸른 나무의 GPU 3D 산림 시뮬레이션"
+    : isSpectrumMode
+      ? "JONSWAP 주파수 스펙트럼 기반 GPU 3D 바다 시뮬레이션"
+      : isOceanMode
+        ? "왼쪽에서 오른쪽으로 진행하는 GPU 3D 바다 파도 시뮬레이션"
+        : "GPU 유체장과 눈 입자 시뮬레이션"
 );
 
 modeButtons.forEach((button) => {
@@ -138,16 +157,26 @@ qualityButtons.forEach((button) => {
 });
 
 function simulationReady() {
+  if (isForestMode) return Boolean(state.forest);
   return isOceanMode ? Boolean(state.ocean) : state.fluidReady;
 }
 
+function activeThreeScene() {
+  return isForestMode ? state.forest : state.ocean;
+}
+
 function runningStatus() {
-  if (state.fallback) return isOceanMode ? "3D 미지원 · 단순 파도" : "눈 입자 모드";
-  if (state.oceanLoading) return "GPU 3D 해양 준비중";
+  if (state.fallback) {
+    if (isForestMode) return "3D 미지원 · 단순 산림";
+    return isOceanMode ? "3D 미지원 · 단순 파도" : "눈 입자 모드";
+  }
+  if (state.oceanLoading) return isForestMode ? "GPU 3D 산림 준비중" : "GPU 3D 해양 준비중";
   if (simulationReady()) {
+    if (isForestMode) return "GPU 산림 바람장 실행중";
     if (isSpectrumMode) return "GPU 스펙트럼 해양 실행중";
     return isOceanMode ? "GPU 3D 해양 실행중" : "GPU 유체장 실행중";
   }
+  if (isForestMode) return "GPU 3D 산림 준비중";
   return isOceanMode ? "GPU 3D 해양 준비중" : "GPU 유체장 준비중";
 }
 
@@ -160,8 +189,8 @@ function qualityLabel() {
 }
 
 function updateProfileText() {
-  const detail = isOceanMode
-    ? state.ocean?.detail || "3D 수면 준비중"
+  const detail = isThreeMode
+    ? activeThreeScene()?.detail || (isForestMode ? "3D 수관 준비중" : "3D 수면 준비중")
     : `유체 ${profile.simResolution} · 입자 ${state.particles.length.toLocaleString("ko-KR")}`;
   profileText.textContent = `${qualityLabel()} · ${detail}`;
 }
@@ -171,11 +200,12 @@ function updatePauseButton() {
   pauseButton.setAttribute("aria-label", state.paused ? "시뮬레이션 재생" : "시뮬레이션 일시정지");
   pauseButton.title = state.paused ? "재생" : "일시정지";
   root.classList.toggle("is-paused", state.paused);
-  statusText.textContent = state.paused ? `${isOceanMode ? "3D 해양" : "유체장"} 일시정지` : runningStatus();
+  const pausedLabel = isForestMode ? "3D 산림" : isOceanMode ? "3D 해양" : "유체장";
+  statusText.textContent = state.paused ? `${pausedLabel} 일시정지` : runningStatus();
 }
 
 function setFluidPaused(paused) {
-  if (isOceanMode || !state.fluidReady || state.fluidPaused === paused) return;
+  if (isThreeMode || !state.fluidReady || state.fluidPaused === paused) return;
   window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyP" }));
   state.fluidPaused = paused;
 }
@@ -254,7 +284,33 @@ async function initializeOcean() {
   }
 }
 
+async function initializeForest() {
+  if (state.forest || state.oceanLoading || state.fallback) return;
+  state.oceanLoading = true;
+  statusText.textContent = runningStatus();
+  try {
+    const { createForestLab } = await import("./forest-lab.js");
+    state.forest = createForestLab({
+      canvas: fluidCanvas,
+      stage,
+      profileName,
+      maxDpr: profile.maxDpr
+    });
+    state.forest.setPaused(state.paused);
+  } catch (error) {
+    state.fallback = true;
+    root.classList.add("is-fallback");
+    root.dataset.renderError = error instanceof Error ? error.message : String(error);
+    console.warn("Forest Lab Three.js fallback:", error);
+  } finally {
+    state.oceanLoading = false;
+    updateProfileText();
+    statusText.textContent = runningStatus();
+  }
+}
+
 function initializeSimulation() {
+  if (isForestMode) return initializeForest();
   return isOceanMode ? initializeOcean() : initializeSnowFluid();
 }
 
@@ -289,8 +345,8 @@ function resizeField() {
   fieldCanvas.height = Math.round(state.height * state.dpr);
   fieldCanvas.style.width = `${state.width}px`;
   fieldCanvas.style.height = `${state.height}px`;
-  if (!isOceanMode) seedParticles();
-  state.ocean?.resize();
+  if (!isThreeMode) seedParticles();
+  activeThreeScene()?.resize();
   updateProfileText();
 }
 
@@ -310,8 +366,9 @@ function updatePointer(event) {
   state.pointer.x = x;
   state.pointer.y = y;
   state.pointer.updatedAt = now;
-  if (isOceanMode && state.ocean && !state.paused) {
-    state.ocean.setPointer(event.clientX, event.clientY, state.pointer.speed);
+  const threeScene = activeThreeScene();
+  if (isThreeMode && threeScene && !state.paused) {
+    threeScene.setPointer(event.clientX, event.clientY, state.pointer.speed);
   }
 }
 
@@ -387,18 +444,52 @@ function drawFallbackOcean(now) {
   context.fill();
 }
 
+function drawFallbackForest(now) {
+  const sky = context.createLinearGradient(0, 0, 0, state.height);
+  sky.addColorStop(0, "#365f61");
+  sky.addColorStop(0.58, "#8cac9c");
+  sky.addColorStop(1, "#31533a");
+  context.fillStyle = sky;
+  context.fillRect(0, 0, state.width, state.height);
+
+  const horizon = state.height * 0.52;
+  context.fillStyle = "#395f4b";
+  context.beginPath();
+  context.moveTo(0, state.height);
+  for (let x = 0; x <= state.width; x += 14) {
+    const y = horizon + Math.sin(x * 0.012) * 31 + Math.sin(x * 0.032 + 1.4) * 12;
+    context.lineTo(x, y);
+  }
+  context.lineTo(state.width, state.height);
+  context.closePath();
+  context.fill();
+
+  const sway = Math.sin(now * 0.0011) * 4;
+  context.strokeStyle = "rgba(21, 61, 35, 0.82)";
+  context.lineWidth = 3;
+  for (let x = 12; x < state.width; x += 18) {
+    const treeHeight = 26 + ((x * 17) % 35);
+    context.beginPath();
+    context.moveTo(x, state.height);
+    context.quadraticCurveTo(x, state.height - treeHeight * 0.5, x + sway, state.height - treeHeight);
+    context.stroke();
+  }
+}
+
 function renderFrame(now) {
   const delta = Math.min(0.033, Math.max(0, (now - state.lastFrame) / 1000));
   state.lastFrame = now;
 
-  if (isOceanMode) {
-    if (state.ocean) {
-      if (!document.hidden) state.ocean.update(state.paused ? 0 : delta);
-      state.ocean.render();
+  if (isThreeMode) {
+    const threeScene = activeThreeScene();
+    if (threeScene) {
+      if (!document.hidden) threeScene.update(state.paused ? 0 : delta);
+      threeScene.render();
     } else if (state.fallback) {
       context.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
       context.clearRect(0, 0, state.width, state.height);
-      drawFallbackOcean(now);
+      if (isForestMode) drawFallbackForest(now);
+      else drawFallbackOcean(now);
     }
   } else {
     context.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
@@ -414,14 +505,14 @@ function renderFrame(now) {
 pauseButton.addEventListener("click", async () => {
   state.paused = !state.paused;
   if (!state.paused) await initializeSimulation();
-  state.ocean?.setPaused(state.paused);
+  activeThreeScene()?.setPaused(state.paused);
   setFluidPaused(state.paused);
   updatePauseButton();
 });
 
 resetButton.addEventListener("click", () => {
-  if (isOceanMode) {
-    state.ocean?.reset();
+  if (isThreeMode) {
+    activeThreeScene()?.reset();
     return;
   }
   seedParticles();
@@ -432,18 +523,19 @@ resetButton.addEventListener("click", () => {
 
 stage.addEventListener("pointermove", updatePointer, { passive: true });
 stage.addEventListener("pointerdown", (event) => {
-  if (!isOceanMode || !state.ocean || state.paused) return;
-  state.ocean.setPointer(event.clientX, event.clientY, 1200);
-  state.ocean.pulsePointer();
+  const threeScene = activeThreeScene();
+  if (!isThreeMode || !threeScene || state.paused) return;
+  threeScene.setPointer(event.clientX, event.clientY, 1200);
+  threeScene.pulsePointer();
 });
 stage.addEventListener("pointerleave", () => {
   state.pointer.active = false;
   state.pointer.updatedAt = 0;
-  state.ocean?.setPointerActive(false);
+  activeThreeScene()?.setPointerActive(false);
 });
 
 document.addEventListener("visibilitychange", () => {
-  if (isOceanMode) {
+  if (isThreeMode) {
     state.lastFrame = performance.now();
     return;
   }
@@ -464,6 +556,7 @@ window.addEventListener(
   () => {
     cancelAnimationFrame(state.frameId);
     state.ocean?.dispose();
+    state.forest?.dispose();
   },
   { once: true }
 );
