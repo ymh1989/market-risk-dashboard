@@ -15,9 +15,13 @@ PIPELINE_STATUS_FILE = ROOT / "data" / "pipeline-status.json"
 SNOW_LAB_FILE = ROOT / "snow-lab.html"
 SNOW_LAB_STYLE_FILE = ROOT / "src" / "snow-lab.css"
 SNOW_LAB_SCRIPT_FILE = ROOT / "src" / "snow-lab.js"
+OCEAN_LAB_SCRIPT_FILE = ROOT / "src" / "ocean-lab.js"
 WEBGL_FLUID_FILE = ROOT / "src" / "vendor" / "webgl-fluid.mjs"
 WEBGL_FLUID_LICENSE_FILE = ROOT / "src" / "vendor" / "webgl-fluid.LICENSE"
 WEBGL_FLUID_ORIGIN_LICENSE_FILE = ROOT / "src" / "vendor" / "webgl-fluid-origin.LICENSE"
+THREE_MODULE_FILE = ROOT / "src" / "vendor" / "three.module.min.js"
+THREE_CORE_FILE = ROOT / "src" / "vendor" / "three.core.min.js"
+THREE_LICENSE_FILE = ROOT / "src" / "vendor" / "three.LICENSE"
 
 
 def clamp_score(value):
@@ -207,8 +211,11 @@ def test_snow_lab_easter_egg_contract():
     html = SNOW_LAB_FILE.read_text(encoding="utf-8")
     styles = SNOW_LAB_STYLE_FILE.read_text(encoding="utf-8")
     script = SNOW_LAB_SCRIPT_FILE.read_text(encoding="utf-8")
+    ocean_script = OCEAN_LAB_SCRIPT_FILE.read_text(encoding="utf-8")
     package_license = WEBGL_FLUID_LICENSE_FILE.read_text(encoding="utf-8")
     origin_license = WEBGL_FLUID_ORIGIN_LICENSE_FILE.read_text(encoding="utf-8")
+    three_module = THREE_MODULE_FILE.read_text(encoding="utf-8")
+    three_license = THREE_LICENSE_FILE.read_text(encoding="utf-8")
 
     assert 'class="snow-lab-trigger"' in app_source
     assert 'href="./snow-lab.html"' in app_source
@@ -229,29 +236,44 @@ def test_snow_lab_easter_egg_contract():
     assert "visibilitychange" in script
     assert "pointermove" in script
     assert "requestedMode" in script
-    assert "seedWave" in script
-    assert "injectWave" in script
-    assert "updateWave" in script
-    assert "drawWave" in script
-    assert "quadraticCurveTo" in script
-    assert "context.ellipse" in script
-    assert "SPLAT_COUNT: 0" in script
+    assert 'import("./ocean-lab.js")' in script
+    assert "createOceanLab" in script
+    assert "drawFallbackOcean" in script
     assert "renderFrame(performance.now())" in script
     assert "requestAnimationFrame" in script
     assert "navigator.deviceMemory || 0" in script
     assert "https://" not in script
 
+    assert 'import * as THREE from "./vendor/three.module.min.js"' in ocean_script
+    assert "new THREE.WebGLRenderer" in ocean_script
+    assert "new THREE.PlaneGeometry" in ocean_script
+    assert "new THREE.Raycaster" in ocean_script
+    assert "addWave(point, vec2(1.0, 0.0)" in ocean_script
+    assert "uPointerStrength" in ocean_script
+    assert "pointerFalloff" in ocean_script
+    assert "renderer.setSize(width, height, false)" in ocean_script
+    assert "https://" not in ocean_script
+
     assert "width: min(calc(100vw - 40px), 1440px);" in styles
     assert "height: min(calc(100dvh - 40px), 900px);" in styles
     assert '.snow-lab[data-mode="wave"]' in styles
+    wave_rule = styles.split('.snow-lab[data-mode="wave"] .snow-lab__stage', 1)[1].split("}", 1)[0]
+    assert "width: 100vw;" in wave_rule
+    assert "height: 100dvh;" in wave_rule
+    assert "border: 0;" in wave_rule
     assert "width: 100vw;" in styles
     assert "height: 100dvh;" in styles
 
     assert WEBGL_FLUID_FILE.stat().st_size > 50_000
+    assert THREE_MODULE_FILE.stat().st_size > 300_000
+    assert THREE_CORE_FILE.stat().st_size > 300_000
+    assert 'from"./three.core.min.js"' in three_module
     assert "MIT License" in package_license
     assert "Cloyd Lau" in package_license
     assert "MIT License" in origin_license
     assert "Pavel Dobryakov" in origin_license
+    assert "MIT License" in three_license
+    assert "three.js authors" in three_license
 
 
 def test_pipeline_status_contract():
