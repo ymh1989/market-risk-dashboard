@@ -12,6 +12,12 @@ ELS_FILE = ROOT / "data" / "els-index-risk.json"
 STYLES_FILE = ROOT / "src" / "styles.css"
 APP_FILE = ROOT / "src" / "app.js"
 PIPELINE_STATUS_FILE = ROOT / "data" / "pipeline-status.json"
+SNOW_LAB_FILE = ROOT / "snow-lab.html"
+SNOW_LAB_STYLE_FILE = ROOT / "src" / "snow-lab.css"
+SNOW_LAB_SCRIPT_FILE = ROOT / "src" / "snow-lab.js"
+WEBGL_FLUID_FILE = ROOT / "src" / "vendor" / "webgl-fluid.mjs"
+WEBGL_FLUID_LICENSE_FILE = ROOT / "src" / "vendor" / "webgl-fluid.LICENSE"
+WEBGL_FLUID_ORIGIN_LICENSE_FILE = ROOT / "src" / "vendor" / "webgl-fluid-origin.LICENSE"
 
 
 def clamp_score(value):
@@ -196,6 +202,45 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert 'loadJson("./data/pipeline-status.json")' in app_source
 
 
+def test_snow_lab_easter_egg_contract():
+    app_source = APP_FILE.read_text(encoding="utf-8")
+    html = SNOW_LAB_FILE.read_text(encoding="utf-8")
+    styles = SNOW_LAB_STYLE_FILE.read_text(encoding="utf-8")
+    script = SNOW_LAB_SCRIPT_FILE.read_text(encoding="utf-8")
+    package_license = WEBGL_FLUID_LICENSE_FILE.read_text(encoding="utf-8")
+    origin_license = WEBGL_FLUID_ORIGIN_LICENSE_FILE.read_text(encoding="utf-8")
+
+    assert 'class="snow-lab-trigger"' in app_source
+    assert 'href="./snow-lab.html"' in app_source
+    assert 'data-fluid-canvas' in html
+    assert 'data-snow-canvas' in html
+    assert 'Navier–Stokes Field' in html
+    assert 'content="noindex"' in html
+    assert './src/snow-lab.css?v=' in html
+    assert './src/snow-lab.js?v=' in html
+
+    assert 'import("./vendor/webgl-fluid.mjs")' in script
+    assert "SIM_RESOLUTION" in script
+    assert "DYE_RESOLUTION" in script
+    assert "PRESSURE_ITERATIONS" in script
+    assert "prefers-reduced-motion" in script
+    assert "visibilitychange" in script
+    assert "pointermove" in script
+    assert "requestAnimationFrame" in script
+    assert "https://" not in script
+
+    assert "width: min(calc(100vw - 40px), 1440px);" in styles
+    assert "height: min(calc(100dvh - 40px), 900px);" in styles
+    assert "width: 100vw;" in styles
+    assert "height: 100dvh;" in styles
+
+    assert WEBGL_FLUID_FILE.stat().st_size > 50_000
+    assert "MIT License" in package_license
+    assert "Cloyd Lau" in package_license
+    assert "MIT License" in origin_license
+    assert "Pavel Dobryakov" in origin_license
+
+
 def test_pipeline_status_contract():
     status = json.loads(PIPELINE_STATUS_FILE.read_text(encoding="utf-8"))
     assert status["schemaVersion"] == 1
@@ -218,4 +263,5 @@ if __name__ == "__main__":
     test_dashboard_contract()
     test_watch_badge_keeps_readable_contrast()
     test_dashboard_data_requests_bypass_stale_cache()
+    test_snow_lab_easter_egg_contract()
     test_pipeline_status_contract()
