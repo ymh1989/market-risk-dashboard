@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260723-1";
+const ASSET_VERSION = "20260723-2";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -2427,7 +2427,7 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
         <strong>${data.metadata.asOf}</strong>
         <div class="hero__timestamp">
           <small>${data.metadata.generatedAt}</small>
-          <a class="snow-lab-trigger" href="./snow-lab.html" aria-label="Snow Lab 열기" title="Snow Lab">❄</a>
+          <a class="snow-lab-trigger" href="./snow-lab.html" aria-label="Field Lab 열기" title="Field Lab">❄</a>
         </div>
       </div>
     </header>

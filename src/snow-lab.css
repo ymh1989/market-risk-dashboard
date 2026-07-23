@@ -47,6 +47,9 @@ a {
     0 28px 90px rgba(0, 0, 0, 0.62),
     inset 0 0 120px rgba(0, 0, 0, 0.42);
   isolation: isolate;
+  transition:
+    border-color 320ms ease,
+    background 320ms ease;
 }
 
 .snow-lab__stage::after {
@@ -58,6 +61,20 @@ a {
     inset 0 0 130px rgba(0, 0, 0, 0.5),
     inset 0 -90px 120px rgba(3, 8, 10, 0.56);
   content: "";
+}
+
+.snow-lab[data-mode="wave"] .snow-lab__stage {
+  border-color: #1d4b57;
+  background: #03151b;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.62),
+    inset 0 0 150px rgba(0, 18, 25, 0.5);
+}
+
+.snow-lab[data-mode="wave"] .snow-lab__stage::after {
+  box-shadow:
+    inset 0 0 110px rgba(0, 8, 12, 0.34),
+    inset 0 -130px 160px rgba(0, 10, 16, 0.62);
 }
 
 .snow-lab__fluid,
@@ -79,6 +96,15 @@ a {
   z-index: 2;
   pointer-events: none;
   mix-blend-mode: screen;
+}
+
+.snow-lab[data-mode="wave"] .snow-lab__fluid {
+  opacity: 0.62;
+  filter: saturate(0.8) hue-rotate(135deg);
+}
+
+.snow-lab[data-mode="wave"] .snow-lab__particles {
+  mix-blend-mode: normal;
 }
 
 .snow-lab__toolbar {
@@ -147,9 +173,9 @@ a {
   outline: none;
 }
 
-.snow-lab__quality {
+.snow-lab__quality,
+.snow-lab__mode {
   display: inline-grid;
-  grid-template-columns: repeat(3, minmax(54px, 1fr));
   overflow: hidden;
   border: 1px solid rgba(216, 239, 242, 0.2);
   border-radius: 6px;
@@ -157,7 +183,16 @@ a {
   backdrop-filter: blur(14px);
 }
 
-.snow-lab__quality button {
+.snow-lab__quality {
+  grid-template-columns: repeat(3, minmax(54px, 1fr));
+}
+
+.snow-lab__mode {
+  grid-template-columns: repeat(2, minmax(46px, 1fr));
+}
+
+.snow-lab__quality button,
+.snow-lab__mode button {
   min-height: 40px;
   padding: 0 10px;
   border: 0;
@@ -169,19 +204,28 @@ a {
   font-weight: 800;
 }
 
-.snow-lab__quality button:last-child {
+.snow-lab__quality button:last-child,
+.snow-lab__mode button:last-child {
   border-right: 0;
 }
 
 .snow-lab__quality button:hover,
-.snow-lab__quality button:focus-visible {
+.snow-lab__quality button:focus-visible,
+.snow-lab__mode button:hover,
+.snow-lab__mode button:focus-visible {
   color: #fff;
   outline: none;
 }
 
-.snow-lab__quality button.is-active {
+.snow-lab__quality button.is-active,
+.snow-lab__mode button.is-active {
   background: #d9f3f1;
   color: #0b1a1d;
+}
+
+.snow-lab[data-mode="wave"] .snow-lab__mode button.is-active {
+  background: #9ce9eb;
+  color: #05242a;
 }
 
 .snow-lab__status {
@@ -229,6 +273,12 @@ a {
   box-shadow: none;
 }
 
+@media (max-width: 980px) {
+  .snow-lab__quality {
+    display: none;
+  }
+}
+
 @media (max-width: 760px) {
   .snow-lab__stage {
     width: 100vw;
@@ -245,10 +295,6 @@ a {
     grid-template-columns: 42px minmax(0, 1fr) auto;
   }
 
-  .snow-lab__quality {
-    display: none;
-  }
-
   .snow-lab__controls {
     gap: 6px;
   }
@@ -259,13 +305,27 @@ a {
   }
 }
 
-@media (max-width: 440px) {
-  .snow-lab__identity span {
+@media (max-width: 560px) {
+  .snow-lab__toolbar {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .snow-lab__identity {
     display: none;
   }
 
+  .snow-lab__controls {
+    justify-self: end;
+  }
+}
+
+@media (max-width: 400px) {
   .snow-lab__status small {
     display: none;
+  }
+
+  .snow-lab__mode {
+    grid-template-columns: repeat(2, 42px);
   }
 }
 

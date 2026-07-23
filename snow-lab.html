@@ -5,22 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex" />
     <meta name="theme-color" content="#05090a" />
-    <title>Snow Lab</title>
-    <link rel="stylesheet" href="./src/snow-lab.css?v=20260723-1" />
+    <title>Field Lab</title>
+    <link rel="stylesheet" href="./src/snow-lab.css?v=20260723-2" />
   </head>
   <body>
-    <main class="snow-lab" data-snow-lab>
-      <section class="snow-lab__stage" aria-label="GPU 유체장과 눈 입자 시뮬레이션">
+    <main class="snow-lab" data-snow-lab data-mode="snow">
+      <section class="snow-lab__stage" data-lab-stage aria-label="GPU 유체장 시뮬레이션">
         <canvas class="snow-lab__fluid" data-fluid-canvas aria-hidden="true"></canvas>
-        <canvas class="snow-lab__particles" data-snow-canvas aria-hidden="true"></canvas>
+        <canvas class="snow-lab__particles" data-field-canvas aria-hidden="true"></canvas>
 
         <header class="snow-lab__toolbar">
           <a class="snow-lab__icon-button" href="./" aria-label="대시보드로 돌아가기" title="대시보드로 돌아가기">←</a>
           <div class="snow-lab__identity">
             <span>Navier–Stokes Field</span>
-            <h1>Snow Lab</h1>
+            <h1 data-lab-title>Snow Lab</h1>
           </div>
           <div class="snow-lab__controls">
+            <div class="snow-lab__mode" role="group" aria-label="장면 선택">
+              <button type="button" data-mode-select="snow">눈</button>
+              <button type="button" data-mode-select="wave">파도</button>
+            </div>
             <div class="snow-lab__quality" role="group" aria-label="시뮬레이션 품질">
               <button type="button" data-quality="auto">자동</button>
               <button type="button" data-quality="high">고화질</button>
@@ -38,6 +42,6 @@
         </footer>
       </section>
     </main>
-    <script type="module" src="./src/snow-lab.js?v=20260723-1"></script>
+    <script type="module" src="./src/snow-lab.js?v=20260723-2"></script>
   </body>
 </html>

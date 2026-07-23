@@ -2,7 +2,7 @@
 
 ## webgl-fluid 0.3.9
 
-- 용도: Snow Lab의 WebGL 유체장 시뮬레이션
+- 용도: Field Lab의 눈·파도 WebGL 유체장 시뮬레이션
 - 저작권자: Cloyd Lau
 - 라이선스: MIT
 - 라이선스 전문: `src/vendor/webgl-fluid.LICENSE`

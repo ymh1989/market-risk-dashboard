@@ -213,7 +213,9 @@ def test_snow_lab_easter_egg_contract():
     assert 'class="snow-lab-trigger"' in app_source
     assert 'href="./snow-lab.html"' in app_source
     assert 'data-fluid-canvas' in html
-    assert 'data-snow-canvas' in html
+    assert 'data-field-canvas' in html
+    assert 'data-mode-select="snow"' in html
+    assert 'data-mode-select="wave"' in html
     assert 'Navier–Stokes Field' in html
     assert 'content="noindex"' in html
     assert './src/snow-lab.css?v=' in html
@@ -226,12 +228,20 @@ def test_snow_lab_easter_egg_contract():
     assert "prefers-reduced-motion" in script
     assert "visibilitychange" in script
     assert "pointermove" in script
+    assert "requestedMode" in script
+    assert "seedWave" in script
+    assert "injectWave" in script
+    assert "updateWave" in script
+    assert "drawWave" in script
+    assert "quadraticCurveTo" in script
+    assert "context.ellipse" in script
     assert "requestAnimationFrame" in script
     assert "navigator.deviceMemory || 0" in script
     assert "https://" not in script
 
     assert "width: min(calc(100vw - 40px), 1440px);" in styles
     assert "height: min(calc(100dvh - 40px), 900px);" in styles
+    assert '.snow-lab[data-mode="wave"]' in styles
     assert "width: 100vw;" in styles
     assert "height: 100dvh;" in styles
 
