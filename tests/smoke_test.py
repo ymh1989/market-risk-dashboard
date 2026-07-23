@@ -223,6 +223,7 @@ def test_snow_lab_easter_egg_contract():
     assert 'data-field-canvas' in html
     assert 'data-mode-select="snow"' in html
     assert 'data-mode-select="wave"' in html
+    assert 'data-mode-select="spectrum"' in html
     assert 'Navier–Stokes Field' in html
     assert 'content="noindex"' in html
     assert './src/snow-lab.css?v=' in html
@@ -236,6 +237,8 @@ def test_snow_lab_easter_egg_contract():
     assert "visibilitychange" in script
     assert "pointermove" in script
     assert "requestedMode" in script
+    assert '["snow", "wave", "spectrum"]' in script
+    assert 'model: isSpectrumMode ? "spectrum" : "gerstner"' in script
     assert 'import("./ocean-lab.js")' in script
     assert "createOceanLab" in script
     assert "drawFallbackOcean" in script
@@ -249,6 +252,13 @@ def test_snow_lab_easter_egg_contract():
     assert "new THREE.PlaneGeometry" in ocean_script
     assert "new THREE.Raycaster" in ocean_script
     assert "addWave(point, vec2(1.0, 0.0)" in ocean_script
+    assert "function jonswapSpectrum" in ocean_script
+    assert "buildJonswapComponents" in ocean_script
+    assert "seededRandom(20260723)" in ocean_script
+    assert "uSpectrumWaves[SPECTRUM_WAVE_COUNT]" in ocean_script
+    assert "dispersionDerivative" in ocean_script
+    assert "float jacobian" in ocean_script
+    assert "createSpectrumVertexShader" in ocean_script
     assert "uPointerStrength" in ocean_script
     assert "pointerFalloff" in ocean_script
     assert "renderer.setSize(width, height, false)" in ocean_script
@@ -257,12 +267,12 @@ def test_snow_lab_easter_egg_contract():
     assert "width: min(calc(100vw - 40px), 1440px);" in styles
     assert "height: min(calc(100dvh - 40px), 900px);" in styles
     assert '.snow-lab[data-mode="wave"]' in styles
+    assert '.snow-lab[data-mode="spectrum"]' in styles
     wave_rule = styles.split('.snow-lab[data-mode="wave"] .snow-lab__stage', 1)[1].split("}", 1)[0]
-    assert "width: 100vw;" in wave_rule
-    assert "height: 100dvh;" in wave_rule
-    assert "border: 0;" in wave_rule
-    assert "width: 100vw;" in styles
-    assert "height: 100dvh;" in styles
+    assert "width: min(calc(100vw - 64px), 1280px);" in wave_rule
+    assert "height: min(calc(100dvh - 64px), 760px);" in wave_rule
+    assert "border-color: #1d4b57;" in wave_rule
+    assert "grid-template-columns: repeat(3" in styles
 
     assert WEBGL_FLUID_FILE.stat().st_size > 50_000
     assert THREE_MODULE_FILE.stat().st_size > 300_000

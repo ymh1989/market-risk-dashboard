@@ -13,8 +13,10 @@ const qualityButtons = [...root.querySelectorAll("[data-quality]")];
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const parameters = new URLSearchParams(window.location.search);
 
-const requestedMode = parameters.get("mode") === "wave" ? "wave" : "snow";
-const isWaveMode = requestedMode === "wave";
+const modeParameter = parameters.get("mode") || "snow";
+const requestedMode = ["snow", "wave", "spectrum"].includes(modeParameter) ? modeParameter : "snow";
+const isOceanMode = requestedMode !== "snow";
+const isSpectrumMode = requestedMode === "spectrum";
 
 const qualityProfiles = {
   high: {
@@ -93,12 +95,20 @@ const state = {
 };
 
 root.dataset.mode = requestedMode;
-title.textContent = isWaveMode ? "Ocean Lab" : "Snow Lab";
-eyebrow.textContent = isWaveMode ? "Gerstner Ocean Field" : "Navier–Stokes Field";
-document.title = isWaveMode ? "Ocean Lab" : "Snow Lab";
+title.textContent = isSpectrumMode ? "Spectrum Ocean" : isOceanMode ? "Ocean Lab" : "Snow Lab";
+eyebrow.textContent = isSpectrumMode
+  ? "JONSWAP Spectrum Field"
+  : isOceanMode
+    ? "Gerstner Ocean Field"
+    : "Navier–Stokes Field";
+document.title = isSpectrumMode ? "Spectrum Ocean" : isOceanMode ? "Ocean Lab" : "Snow Lab";
 stage.setAttribute(
   "aria-label",
-  isWaveMode ? "왼쪽에서 오른쪽으로 진행하는 GPU 3D 바다 파도 시뮬레이션" : "GPU 유체장과 눈 입자 시뮬레이션"
+  isSpectrumMode
+    ? "JONSWAP 주파수 스펙트럼 기반 GPU 3D 바다 시뮬레이션"
+    : isOceanMode
+      ? "왼쪽에서 오른쪽으로 진행하는 GPU 3D 바다 파도 시뮬레이션"
+      : "GPU 유체장과 눈 입자 시뮬레이션"
 );
 
 modeButtons.forEach((button) => {
@@ -128,14 +138,17 @@ qualityButtons.forEach((button) => {
 });
 
 function simulationReady() {
-  return isWaveMode ? Boolean(state.ocean) : state.fluidReady;
+  return isOceanMode ? Boolean(state.ocean) : state.fluidReady;
 }
 
 function runningStatus() {
-  if (state.fallback) return isWaveMode ? "3D 미지원 · 단순 파도" : "눈 입자 모드";
+  if (state.fallback) return isOceanMode ? "3D 미지원 · 단순 파도" : "눈 입자 모드";
   if (state.oceanLoading) return "GPU 3D 해양 준비중";
-  if (simulationReady()) return isWaveMode ? "GPU 3D 해양 실행중" : "GPU 유체장 실행중";
-  return isWaveMode ? "GPU 3D 해양 준비중" : "GPU 유체장 준비중";
+  if (simulationReady()) {
+    if (isSpectrumMode) return "GPU 스펙트럼 해양 실행중";
+    return isOceanMode ? "GPU 3D 해양 실행중" : "GPU 유체장 실행중";
+  }
+  return isOceanMode ? "GPU 3D 해양 준비중" : "GPU 유체장 준비중";
 }
 
 function qualityLabel() {
@@ -147,7 +160,7 @@ function qualityLabel() {
 }
 
 function updateProfileText() {
-  const detail = isWaveMode
+  const detail = isOceanMode
     ? state.ocean?.detail || "3D 수면 준비중"
     : `유체 ${profile.simResolution} · 입자 ${state.particles.length.toLocaleString("ko-KR")}`;
   profileText.textContent = `${qualityLabel()} · ${detail}`;
@@ -158,11 +171,11 @@ function updatePauseButton() {
   pauseButton.setAttribute("aria-label", state.paused ? "시뮬레이션 재생" : "시뮬레이션 일시정지");
   pauseButton.title = state.paused ? "재생" : "일시정지";
   root.classList.toggle("is-paused", state.paused);
-  statusText.textContent = state.paused ? `${isWaveMode ? "3D 해양" : "유체장"} 일시정지` : runningStatus();
+  statusText.textContent = state.paused ? `${isOceanMode ? "3D 해양" : "유체장"} 일시정지` : runningStatus();
 }
 
 function setFluidPaused(paused) {
-  if (isWaveMode || !state.fluidReady || state.fluidPaused === paused) return;
+  if (isOceanMode || !state.fluidReady || state.fluidPaused === paused) return;
   window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyP" }));
   state.fluidPaused = paused;
 }
@@ -225,7 +238,8 @@ async function initializeOcean() {
       canvas: fluidCanvas,
       stage,
       profileName,
-      maxDpr: profile.maxDpr
+      maxDpr: profile.maxDpr,
+      model: isSpectrumMode ? "spectrum" : "gerstner"
     });
     state.ocean.setPaused(state.paused);
   } catch (error) {
@@ -241,7 +255,7 @@ async function initializeOcean() {
 }
 
 function initializeSimulation() {
-  return isWaveMode ? initializeOcean() : initializeSnowFluid();
+  return isOceanMode ? initializeOcean() : initializeSnowFluid();
 }
 
 function resetParticle(particle, initial = false) {
@@ -275,7 +289,7 @@ function resizeField() {
   fieldCanvas.height = Math.round(state.height * state.dpr);
   fieldCanvas.style.width = `${state.width}px`;
   fieldCanvas.style.height = `${state.height}px`;
-  if (!isWaveMode) seedParticles();
+  if (!isOceanMode) seedParticles();
   state.ocean?.resize();
   updateProfileText();
 }
@@ -296,7 +310,7 @@ function updatePointer(event) {
   state.pointer.x = x;
   state.pointer.y = y;
   state.pointer.updatedAt = now;
-  if (isWaveMode && state.ocean && !state.paused) {
+  if (isOceanMode && state.ocean && !state.paused) {
     state.ocean.setPointer(event.clientX, event.clientY, state.pointer.speed);
   }
 }
@@ -377,7 +391,7 @@ function renderFrame(now) {
   const delta = Math.min(0.033, Math.max(0, (now - state.lastFrame) / 1000));
   state.lastFrame = now;
 
-  if (isWaveMode) {
+  if (isOceanMode) {
     if (state.ocean) {
       if (!document.hidden) state.ocean.update(state.paused ? 0 : delta);
       state.ocean.render();
@@ -406,7 +420,7 @@ pauseButton.addEventListener("click", async () => {
 });
 
 resetButton.addEventListener("click", () => {
-  if (isWaveMode) {
+  if (isOceanMode) {
     state.ocean?.reset();
     return;
   }
@@ -418,7 +432,7 @@ resetButton.addEventListener("click", () => {
 
 stage.addEventListener("pointermove", updatePointer, { passive: true });
 stage.addEventListener("pointerdown", (event) => {
-  if (!isWaveMode || !state.ocean || state.paused) return;
+  if (!isOceanMode || !state.ocean || state.paused) return;
   state.ocean.setPointer(event.clientX, event.clientY, 1200);
   state.ocean.pulsePointer();
 });
@@ -429,7 +443,7 @@ stage.addEventListener("pointerleave", () => {
 });
 
 document.addEventListener("visibilitychange", () => {
-  if (isWaveMode) {
+  if (isOceanMode) {
     state.lastFrame = performance.now();
     return;
   }

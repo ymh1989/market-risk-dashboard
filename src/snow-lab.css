@@ -63,17 +63,21 @@ a {
   content: "";
 }
 
-.snow-lab[data-mode="wave"] .snow-lab__stage {
-  width: 100vw;
-  height: 100dvh;
-  min-height: 0;
-  border: 0;
-  border-radius: 0;
+.snow-lab[data-mode="wave"] .snow-lab__stage,
+.snow-lab[data-mode="spectrum"] .snow-lab__stage {
+  width: min(calc(100vw - 64px), 1280px);
+  height: min(calc(100dvh - 64px), 760px);
+  min-height: min(580px, calc(100dvh - 64px));
+  border-color: #1d4b57;
+  border-radius: 8px;
   background: #03151b;
-  box-shadow: none;
+  box-shadow:
+    0 26px 80px rgba(0, 0, 0, 0.58),
+    inset 0 0 90px rgba(0, 12, 17, 0.22);
 }
 
-.snow-lab[data-mode="wave"] .snow-lab__stage::after {
+.snow-lab[data-mode="wave"] .snow-lab__stage::after,
+.snow-lab[data-mode="spectrum"] .snow-lab__stage::after {
   box-shadow:
     inset 0 0 90px rgba(0, 8, 12, 0.18),
     inset 0 -80px 110px rgba(0, 10, 16, 0.24);
@@ -100,17 +104,20 @@ a {
   mix-blend-mode: screen;
 }
 
-.snow-lab[data-mode="wave"] .snow-lab__fluid {
+.snow-lab[data-mode="wave"] .snow-lab__fluid,
+.snow-lab[data-mode="spectrum"] .snow-lab__fluid {
   opacity: 1;
   filter: none;
 }
 
-.snow-lab[data-mode="wave"] .snow-lab__particles {
+.snow-lab[data-mode="wave"] .snow-lab__particles,
+.snow-lab[data-mode="spectrum"] .snow-lab__particles {
   opacity: 0;
   mix-blend-mode: normal;
 }
 
-.snow-lab[data-mode="wave"].is-fallback .snow-lab__particles {
+.snow-lab[data-mode="wave"].is-fallback .snow-lab__particles,
+.snow-lab[data-mode="spectrum"].is-fallback .snow-lab__particles {
   opacity: 1;
 }
 
@@ -195,7 +202,7 @@ a {
 }
 
 .snow-lab__mode {
-  grid-template-columns: repeat(2, minmax(46px, 1fr));
+  grid-template-columns: repeat(3, minmax(54px, 1fr));
 }
 
 .snow-lab__quality button,
@@ -233,6 +240,11 @@ a {
 .snow-lab[data-mode="wave"] .snow-lab__mode button.is-active {
   background: #9ce9eb;
   color: #05242a;
+}
+
+.snow-lab[data-mode="spectrum"] .snow-lab__mode button.is-active {
+  background: #e4cd79;
+  color: #262008;
 }
 
 .snow-lab__status {
@@ -288,11 +300,18 @@ a {
 
 @media (max-width: 760px) {
   .snow-lab__stage {
-    width: 100vw;
-    height: 100dvh;
-    min-height: 0;
-    border: 0;
-    border-radius: 0;
+    width: calc(100vw - 20px);
+    height: calc(100dvh - 20px);
+    min-height: min(560px, calc(100dvh - 20px));
+    border: 1px solid #23343a;
+    border-radius: 8px;
+  }
+
+  .snow-lab[data-mode="wave"] .snow-lab__stage,
+  .snow-lab[data-mode="spectrum"] .snow-lab__stage {
+    width: calc(100vw - 20px);
+    height: calc(100dvh - 20px);
+    min-height: min(560px, calc(100dvh - 20px));
   }
 
   .snow-lab__toolbar {
@@ -332,7 +351,11 @@ a {
   }
 
   .snow-lab__mode {
-    grid-template-columns: repeat(2, 42px);
+    grid-template-columns: repeat(3, 50px);
+  }
+
+  .snow-lab__controls [data-snow-reset] {
+    display: none;
   }
 }
 

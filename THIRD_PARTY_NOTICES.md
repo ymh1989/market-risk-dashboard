@@ -23,3 +23,11 @@
 - 라이선스 전문: `src/vendor/three.LICENSE`
 
 배포 파일은 `src/vendor/three.module.min.js`, `src/vendor/three.core.min.js`에 같은 버전으로 고정해 보관합니다.
+
+## 해양 스펙트럼 참고 방법론
+
+- Jerry Tessendorf, [`Simulating Ocean Water`](https://people.computing.clemson.edu/~jtessen/reports/papers_files/coursenotes2002.pdf) (1999-2001)
+- George Bolba, [`Oceans: Theory to Implementation`](https://gikster.dev/posts/Ocean-Simulation/) (CC BY 4.0)
+- 참고 범위: JONSWAP 스펙트럼, 분산관계, 수평·수직 변위, 기울기와 Jacobian 기반 포말
+
+브라우저 구현은 원문의 코드나 512×512 FFT 구현을 복제하지 않습니다. 동일한 공개 수식을 고정 시드의 희소 스펙트럼으로 다시 작성해 Three.js 꼭짓점 셰이더에서 합성합니다.
