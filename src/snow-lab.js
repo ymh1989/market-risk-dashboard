@@ -165,7 +165,7 @@ function fluidConfiguration() {
         CURL: 18,
         SPLAT_RADIUS: 0.28,
         SPLAT_FORCE: 3200,
-        SPLAT_COUNT: profileName === "eco" ? 2 : 4,
+        SPLAT_COUNT: 0,
         COLOR_UPDATE_SPEED: 0.55,
         BACK_COLOR: { r: 2, g: 16, b: 22 },
         BLOOM_INTENSITY: 0.24,
@@ -562,6 +562,10 @@ pauseButton.addEventListener("click", async () => {
 });
 
 resetButton.addEventListener("click", () => {
+  if (isWaveMode) {
+    window.location.reload();
+    return;
+  }
   seedScene();
   if (state.fluidReady) {
     window.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space" }));
@@ -599,5 +603,5 @@ window.addEventListener("pagehide", () => cancelAnimationFrame(state.frameId), {
 
 resizeFieldCanvas();
 updatePauseButton();
-state.frameId = requestAnimationFrame(renderFrame);
+renderFrame(performance.now());
 if (!state.paused) initializeFluid();

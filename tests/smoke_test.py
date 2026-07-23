@@ -235,6 +235,8 @@ def test_snow_lab_easter_egg_contract():
     assert "drawWave" in script
     assert "quadraticCurveTo" in script
     assert "context.ellipse" in script
+    assert "SPLAT_COUNT: 0" in script
+    assert "renderFrame(performance.now())" in script
     assert "requestAnimationFrame" in script
     assert "navigator.deviceMemory || 0" in script
     assert "https://" not in script
