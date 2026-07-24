@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260724-5";
+const ASSET_VERSION = "20260724-6";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -121,6 +121,44 @@ const categoryCountText = (indicators) => {
     .map(([category, count]) => `${category} ${count}`)
     .join(" · ");
 };
+
+function compactNarrativeItem(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[.!?。]\s*$/, "")
+    .replace(/해야 합니다$/, " 필요")
+    .replace(/해야 됩니다$/, " 필요")
+    .replace(/할 수 있습니다$/, " 가능")
+    .replace(/될 수 있습니다$/, " 가능")
+    .replace(/되어 있습니다$/, " 상태")
+    .replace(/돼 있습니다$/, " 상태")
+    .replace(/있습니다$/, " 있음")
+    .replace(/없습니다$/, " 없음")
+    .replace(/확인됐습니다$/, "확인")
+    .replace(/확인되었습니다$/, "확인")
+    .replace(/됐습니다$/, "됨")
+    .replace(/되었습니다$/, "됨")
+    .replace(/됩니다$/, "됨")
+    .replace(/입니다$/, "")
+    .replace(/합니다$/, "")
+    .trim();
+}
+
+function toNarrativeItems(value) {
+  const values = Array.isArray(value) ? value : [value];
+  return values
+    .flatMap((item) => String(item ?? "").split(/(?:[.!?。]\s+|\n+)/))
+    .map(compactNarrativeItem)
+    .filter(Boolean);
+}
+
+function renderNarrativeList(value, extraClass = "") {
+  const items = toNarrativeItems(value);
+  if (!items.length) return "";
+  const className = ["narrative-list", extraClass].filter(Boolean).join(" ");
+  return `<ul class="${className}">${items.map((item) => `<li>${item}</li>`).join("")}</ul>`;
+}
 
 function getStoredTheme() {
   return localStorage.getItem(THEME_STORAGE_KEY);
@@ -575,7 +613,7 @@ function renderScheduleOverview(pipelineStatus) {
                 </div>
                 <div>
                   <strong>${item.statusLabel}</strong>
-                  <p>${item.detail}</p>
+                  ${renderNarrativeList(item.detail, "narrative-list--compact")}
                 </div>
               </article>
             `
@@ -597,8 +635,8 @@ function renderOperationsPage(pipelineStatus) {
     return `
       <section class="operations-page">
         <div class="empty-state">
-          <h2>운영 상태를 불러오지 못했습니다.</h2>
-          <p>pipeline-status.json 생성 여부를 확인하세요.</p>
+          <h2>운영 상태 확인 필요</h2>
+          ${renderNarrativeList("pipeline-status.json 생성 여부 확인", "narrative-list--compact")}
         </div>
       </section>
     `;
@@ -621,7 +659,7 @@ function renderOperationsPage(pipelineStatus) {
         <div>
           <span class="eyebrow">Pipeline Operations</span>
           <h2>데이터·업데이트 운영현황</h2>
-          <p>${state.detail}</p>
+          ${renderNarrativeList(state.detail, "narrative-list--compact")}
         </div>
         <div class="operations-current operations-current--${state.tone}">
           <small>현재 판정</small>
@@ -659,12 +697,12 @@ function renderOperationsPage(pipelineStatus) {
                     <div class="data-quality-issue data-quality-issue--${issue.status}">
                       <span>${operationStatusLabel(issue.status)}</span>
                       <strong>${issue.label}</strong>
-                      <p>${issue.detail}</p>
+                      ${renderNarrativeList(issue.detail, "narrative-list--compact")}
                     </div>
                   `
                 )
                 .join("")}</div>`
-            : `<p class="data-quality-clear">필수 원천, 최신성, 시계열 정렬과 산출물 기준일 검사를 모두 통과했습니다.</p>`
+            : `<p class="data-quality-clear">필수 원천 · 최신성 · 시계열 정렬 · 산출물 기준일 검사 통과</p>`
         }
       </section>
 
@@ -679,7 +717,7 @@ function renderOperationsPage(pipelineStatus) {
               (stage, index) => `
                 <article class="pipeline-stage pipeline-stage--${stage.status}">
                   <span class="pipeline-stage__index">${index + 1}</span>
-                  <div><strong>${stage.label}</strong><p>${stage.detail}</p></div>
+                  <div><strong>${stage.label}</strong>${renderNarrativeList(stage.detail, "narrative-list--compact")}</div>
                   <div class="pipeline-stage__result">
                     <span>${operationStatusLabel(stage.status)}</span>
                     <strong>${formatDurationSeconds(stage.durationSeconds)}</strong>
@@ -772,27 +810,27 @@ function sentimentLevel(score) {
     return {
       label: "Risk-on",
       tone: "good",
-      reading: "가격과 수급이 위험선호에 우호적입니다. 과열 여부는 별도로 확인해야 합니다."
+      reading: ["가격·수급은 위험선호에 우호적", "과열 여부 별도 확인"]
     };
   }
   if (score >= 50) {
     return {
       label: "중립 우위",
       tone: "watch",
-      reading: "위험선호가 근소하게 우세하지만 방향성이 뚜렷하지 않은 구간입니다."
+      reading: ["위험선호 근소 우위", "방향성은 혼조"]
     };
   }
   if (score >= 35) {
     return {
       label: "Risk-off 경계",
       tone: "caution",
-      reading: "시장 부담이 우세합니다. 반등 국면에서도 변동성과 수급 악화를 함께 확인해야 합니다."
+      reading: ["시장 부담 우세", "반등 시 변동성·수급 악화 동시 확인"]
     };
   }
   return {
     label: "Risk-off",
     tone: "danger",
-    reading: "안전자산 선호와 방어적 포지셔닝이 우세한 구간입니다."
+    reading: ["안전자산 선호", "방어적 포지셔닝 우세"]
   };
 }
 
@@ -1169,19 +1207,20 @@ function renderElsIndexRiskPanel(elsRisk) {
       <div class="els-index-summary">
         <article>
           <span class="eyebrow">Basket 해석</span>
-          <h3>${basket.interpretation}</h3>
-          <p>
-            Basket 점수는 평균이 아니라 worst-of 구조를 반영합니다. 가장 높은 개별 리스크 점수에 50%,
-            두 번째 취약 지수에 20%, 평균 점수와 동조화 점수에 각각 15%를 반영합니다.
-          </p>
+          <h3>${compactNarrativeItem(basket.interpretation)}</h3>
+          ${renderNarrativeList([
+            "평균이 아닌 worst-of 구조",
+            "최고 위험지수 50% · 차순위 취약지수 20%",
+            "평균 점수 15% · 동조화 점수 15%"
+          ], "narrative-list--compact")}
         </article>
         <article>
           <span class="eyebrow">동조화 점수</span>
           <h3>${Number(basket.correlationScore).toFixed(1)} / 100</h3>
-          <p>
-            최근 지수 간 수익률 상관이 높을수록 동시 순연 가능성과 헤지 비용 부담이 커집니다.
-            현재 평균 개별 점수는 ${Number(basket.averageIndexScore).toFixed(1)}점입니다.
-          </p>
+          ${renderNarrativeList([
+            "높은 지수 간 상관 = 동시 순연·헤지비용 부담 확대",
+            `평균 개별 점수 ${Number(basket.averageIndexScore).toFixed(1)}`
+          ], "narrative-list--compact")}
         </article>
       </div>
 
@@ -1205,7 +1244,7 @@ function renderElsIndexRiskPanel(elsRisk) {
                   <div><dt>20D 변동성</dt><dd>${Number(item.metrics.realizedVol20dPct).toFixed(1)}%</dd></div>
                   <div><dt>252D 낙폭</dt><dd>${formatSignedPct(item.metrics.drawdown252dPct)}</dd></div>
                 </dl>
-                <p>${item.reading}</p>
+                ${renderNarrativeList(item.reading, "narrative-list--compact")}
               </article>
             `
           )
@@ -1328,7 +1367,7 @@ function renderElsStressEpisodeReview(stressEpisodes, plot) {
             <div><span>정점 헤지부담</span><strong>${episode.peakBurdenIndex} ${Number(episode.peakBurdenScore).toFixed(1)}</strong></div>
             <div><span>정점 발행기회</span><strong>${episode.peakOpportunityIndex} ${Number(episode.peakOpportunityScore).toFixed(1)}</strong></div>
           </div>
-          <p class="els-episode-interpretation">${episode.interpretation}</p>
+          ${renderNarrativeList(episode.interpretation, "narrative-list--compact els-episode-interpretation")}
           <div class="els-episode-map-scroll">
             <svg viewBox="0 0 760 410" role="img" aria-label="${episode.label} 기간의 ELS 발행기회와 헤지부담 이동">
               <defs>${markers}</defs>
@@ -1369,7 +1408,7 @@ function renderElsStressEpisodeReview(stressEpisodes, plot) {
           <span class="eyebrow">Historical Stress Replay</span>
           <h3>스트레스 에피소드 리플레이</h3>
         </div>
-        <p>${stressEpisodes.methodology}</p>
+        ${renderNarrativeList(stressEpisodes.methodology, "narrative-list--compact")}
       </header>
       <div class="els-episode-switcher" role="group" aria-label="스트레스 에피소드 선택">
         ${episodes
@@ -1398,7 +1437,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
       <section class="els-issuance-page">
         <div class="empty-state">
           <h3>ELS 발행·헤지 데이터 준비중</h3>
-          <p>다음 데이터 갱신에서 기초지수별 상대 발행기회와 헤지부담을 계산합니다.</p>
+          ${renderNarrativeList("다음 데이터 갱신 후 기초지수별 상대 발행기회·헤지부담 산출", "narrative-list--compact")}
         </div>
       </section>
     `;
@@ -1503,7 +1542,10 @@ function renderElsIssuanceHedgePage(elsRisk) {
         <div>
           <span class="eyebrow">ELS Issuance Opportunity &amp; Hedge Burden</span>
           <h2>ELS 발행기회·헤지부담 맵</h2>
-          <p>높아진 변동성이 제공하는 상대 발행기회와 기존 북의 순연·헤지비용 부담을 분리해 봅니다.</p>
+          ${renderNarrativeList([
+            "변동성 기반 상대 발행기회",
+            "기존 북의 순연·헤지비용 부담"
+          ], "narrative-list--compact")}
         </div>
         <div class="els-basket-state els-basket-state--${map.basket.tone}">
           <span>Basket 판단</span>
@@ -1526,7 +1568,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
             <h3>현재 기초지수 포지셔닝</h3>
           </div>
           <div class="els-opportunity-map__aside">
-            <p>${map.basket.interpretation}</p>
+            ${renderNarrativeList(map.basket.interpretation, "narrative-list--compact")}
             <div class="els-opportunity-map__tools">
               <div class="els-trajectory-toggle" role="group" aria-label="궤적 조회 기간">
                 ${trajectoryWindows
@@ -1603,7 +1645,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
                     <div><dt>20D 변동성</dt><dd>${Number(item.metrics.realizedVol20dPct).toFixed(1)}%</dd></div>
                     <div><dt>252D 낙폭</dt><dd>${formatSignedPct(item.metrics.drawdown252dPct)}</dd></div>
                   </dl>
-                  <p>${item.interpretation}</p>
+                  ${renderNarrativeList(item.interpretation, "narrative-list--compact")}
                 </article>
               `
             )
@@ -1612,11 +1654,11 @@ function renderElsIssuanceHedgePage(elsRisk) {
       </section>
 
       <section class="els-methodology">
-        <article><span>발행기회 산식</span><p>${map.methodology.opportunity}</p></article>
-        <article><span>헤지부담 산식</span><p>${map.methodology.hedgeBurden}</p></article>
-        <article><span>판단 기준</span><p>${map.methodology.classification}</p></article>
+        <article><span>발행기회 산식</span>${renderNarrativeList(map.methodology.opportunity, "narrative-list--compact")}</article>
+        <article><span>헤지부담 산식</span>${renderNarrativeList(map.methodology.hedgeBurden, "narrative-list--compact")}</article>
+        <article><span>판단 기준</span>${renderNarrativeList(map.methodology.classification, "narrative-list--compact")}</article>
       </section>
-      <aside class="els-limitations"><strong>운영 적용 전 확인</strong><p>${map.limitations}</p></aside>
+      <aside class="els-limitations"><strong>운영 적용 전 확인</strong>${renderNarrativeList(map.limitations, "narrative-list--compact")}</aside>
       ${renderElsStressEpisodeReview(map.stressEpisodes, plot)}
     </section>
   `;
@@ -1731,15 +1773,16 @@ function renderHmmRegimePanel(hmmRegime) {
         <article>
           <span class="eyebrow">개선 포인트</span>
           <h3>고변동성을 모두 주의로 보지 않습니다</h3>
-          <p>${hmmRegime.designNote}</p>
+          ${renderNarrativeList(hmmRegime.designNote, "narrative-list--compact")}
         </article>
         <article>
           <span class="eyebrow">Basket 해석</span>
-          <h3>${basket.interpretation}</h3>
-          <p>
-            최근 상태는 ${basket.regime}입니다. 평균 발행/헤지 부담 점수는 ${Number(basket.averageIssuerScore).toFixed(1)}점이고,
-            위험회피 확률이 가장 높은 지수는 ${basket.highestRiskOffIndex}입니다.
-          </p>
+          <h3>${compactNarrativeItem(basket.interpretation)}</h3>
+          ${renderNarrativeList([
+            `최근 상태 ${basket.regime}`,
+            `평균 발행·헤지 부담 ${Number(basket.averageIssuerScore).toFixed(1)}`,
+            `위험회피 확률 최고 ${basket.highestRiskOffIndex}`
+          ], "narrative-list--compact")}
         </article>
       </div>
 
@@ -1764,7 +1807,7 @@ function renderHmmRegimePanel(hmmRegime) {
                   <div><dt>20D 수익률</dt><dd>${formatSignedPct(item.metrics.return20dPct)}</dd></div>
                   <div><dt>20D 변동성</dt><dd>${Number(item.metrics.realizedVol20dPct).toFixed(1)}%</dd></div>
                 </dl>
-                <p>${item.reading}</p>
+                ${renderNarrativeList(item.reading, "narrative-list--compact")}
                 <small>${regimeText(item)} · 신뢰도 ${Number(item.confidencePct).toFixed(1)}%</small>
               </article>
             `
@@ -1871,14 +1914,27 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
     ? `${leadCorrelation > 0 ? "+" : ""}${leadCorrelation.toFixed(2)}`
     : "산출 대기";
   const leadReading = !Number.isFinite(leadCorrelation)
-    ? "워크포워드 관측치가 더 쌓이면 선행성을 계산합니다."
+    ? "워크포워드 관측치 누적 후 선행성 산출"
     : leadCorrelation <= -0.2
-      ? "확률 상승 뒤 KOSPI200 수익률이 낮아지는 선행 패턴이 관찰됩니다."
+      ? "확률 상승 뒤 KOSPI200 수익률 하락 패턴 관찰"
       : leadCorrelation >= 0.2
-        ? "현재 YTD 표본에서는 기대한 역방향 선행 패턴이 확인되지 않습니다."
-        : "현재 YTD 표본의 선행 관계는 약합니다.";
-  const divergenceText =
-    `현재 스트레스는 ${marketLevel.label} 단계입니다. 향후 5거래일 내 현재가 대비 -5% 도달확률은 ${crash5pct.toFixed(1)}%, -10% 도달확률은 ${crash10pct.toFixed(1)}%이며, 기존 Risk-off ${Number(latest.riskOffProbabilityPct).toFixed(1)}%와 구분해서 봐야 합니다.`;
+        ? "YTD 표본에서 기대한 역방향 선행 패턴 미확인"
+        : "YTD 표본의 선행 관계 약함";
+  const explanationItems = [
+    `현재 스트레스: ${marketLevel.label} · ${Number.isFinite(marketScore) ? marketScore.toFixed(1) : "-"}`,
+    `5D 급락 전망: -5% ${crash5pct.toFixed(1)}% · -10% ${crash10pct.toFixed(1)}%`,
+    `20D 레짐 Risk-off: ${Number(latest.riskOffProbabilityPct).toFixed(1)}% · 5D 급락확률과 별도 해석`,
+    `추가 악화 탐지 ML: recall ${Number((ml.riskOffRecall ?? 0) * 100).toFixed(1)}% · AUC ${Number(ml.riskOffAuc ?? 0).toFixed(3)}`,
+    `기준모델: recall ${Number((baseline.riskOffRecall ?? 0) * 100).toFixed(1)}% · AUC ${Number(baseline.riskOffAuc ?? 0).toFixed(3)}`,
+    `급락 OOS PR-AUC: -5% ${Number(crash5pctMetrics.averagePrecision ?? 0).toFixed(3)} · -10% ${Number(crash10pctMetrics.averagePrecision ?? 0).toFixed(3)}`,
+    `실제 급락 표본: -5% ${Number(crash5pctMetrics.eventCount ?? 0).toFixed(0)}건 · -10% ${Number(crash10pctMetrics.eventCount ?? 0).toFixed(0)}건`,
+    `확률 상위 10% 적중률: -5% ${Number((crash5pctMetrics.topDecileHitRate ?? 0) * 100).toFixed(1)}% · -10% ${Number((crash10pctMetrics.topDecileHitRate ?? 0) * 100).toFixed(1)}%`,
+    crash10pctValidated ? "-10% 급락확률 OOS 선별력 확인" : "-10% 급락확률은 희소사건 보조 경보",
+    crash5pctCalibrated && crash10pctCalibrated
+      ? "두 급락확률의 Brier score가 기준모델보다 양호"
+      : "Brier 열위 확률은 발생빈도보다 위험 순위 중심으로 해석",
+    ...(mlRisk.interpretation ?? [])
+  ];
 
   return `
     <section class="ml-risk-panel">
@@ -1898,13 +1954,16 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
         <article>
           <span class="eyebrow">현재 · 관측값</span>
           <strong>${Number.isFinite(marketScore) ? `${marketScore.toFixed(1)} / 100` : "-"}</strong>
-          <p>가격·변동성·환율·수급 등 지금 확인되는 시장 부담입니다.</p>
+          <p>가격·변동성·환율·수급에서 관측된 현재 부담</p>
         </article>
         <div class="ml-risk-horizons__divider" aria-hidden="true"></div>
         <article>
           <span class="eyebrow">미래 · 5D -5% 도달 전망</span>
           <strong>${crash5pct.toFixed(1)}%</strong>
-          <p>현재 수준에서 향후 5거래일 중 최저점이 -5% 이하에 도달할 확률입니다. ${crash5pctValidated ? "OOS 선별력이 확인됐습니다." : "현재 OOS 선별력이 확인되지 않아 연구 참고값으로만 봐야 합니다."}</p>
+          ${renderNarrativeList([
+            "향후 5거래일 중 현재가 대비 -5% 이하 도달확률",
+            crash5pctValidated ? "OOS 선별력 확인" : "OOS 선별력 미확인 · 연구 참고값"
+          ], "narrative-list--compact")}
         </article>
       </div>
 
@@ -1956,30 +2015,16 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
             <span><i class="legend-kospi200"></i>KOSPI200 · 연초=100</span>
             <span><i class="legend-pending"></i>향후 5거래일 결과 대기</span>
           </div>
-          <p class="ml-risk-chart__note">5D 선행상관 ${leadCorrelationText} · ${comparison?.observations ?? 0}개 표본. ${leadReading} 점선 구간은 현재까지 관측된 신호지만, 향후 5거래일 결과가 아직 확정되지 않아 OOS 평가에서는 제외됩니다.</p>
+          ${renderNarrativeList([
+            `5D 선행상관 ${leadCorrelationText} · ${comparison?.observations ?? 0}개 표본`,
+            leadReading,
+            "점선 구간: 최신 예측 · 향후 5거래일 결과 대기 · OOS 평가 제외"
+          ], "narrative-list--compact ml-risk-chart__note")}
         </div>
 
         <div class="ml-risk-explain">
           <strong>시간축을 나눠 읽으세요</strong>
-          <p>${divergenceText}</p>
-          <p>
-            백테스트상 추가 악화 탐지모델은 recall ${Number((ml.riskOffRecall ?? 0) * 100).toFixed(1)}%,
-            AUC ${Number(ml.riskOffAuc ?? 0).toFixed(3)}입니다. 기준모델 recall
-            ${Number((baseline.riskOffRecall ?? 0) * 100).toFixed(1)}%, AUC ${Number(baseline.riskOffAuc ?? 0).toFixed(3)}보다 높아
-            위험 구간을 놓치지 않는 능력은 개선됐지만, 확률 자체는 현재 스트레스 점수와 함께 판단해야 합니다.
-          </p>
-          <p>
-            급락모델 OOS PR-AUC는 -5% ${Number(crash5pctMetrics.averagePrecision ?? 0).toFixed(3)},
-            -10% ${Number(crash10pctMetrics.averagePrecision ?? 0).toFixed(3)}이며, 실제 급락 표본은 각각
-            ${Number(crash5pctMetrics.eventCount ?? 0).toFixed(0)}건, ${Number(crash10pctMetrics.eventCount ?? 0).toFixed(0)}건입니다. 확률 상위 10% 구간의 급락 적중률은
-            각각 ${Number((crash5pctMetrics.topDecileHitRate ?? 0) * 100).toFixed(1)}%,
-            ${Number((crash10pctMetrics.topDecileHitRate ?? 0) * 100).toFixed(1)}%입니다.
-            ${crash10pctValidated ? "-10% 급락확률도 OOS 선별력이 확인됐습니다." : "-10% 급락확률은 희소사건 표본이 적어 보조 경보로만 사용해야 합니다."}
-            ${crash5pctCalibrated && crash10pctCalibrated ? "두 확률의 Brier score도 기준모델보다 양호합니다." : "Brier score가 기준모델보다 나쁜 확률은 정확한 발생빈도보다 위험 순위를 비교하는 용도로 해석해야 합니다."}
-          </p>
-          <ul>
-            ${(mlRisk.interpretation ?? []).map((item) => `<li>${item}</li>`).join("")}
-          </ul>
+          ${renderNarrativeList(explanationItems, "ml-risk-explain__list")}
         </div>
       </div>
     </section>
@@ -2217,8 +2262,8 @@ function renderMarketIndexTrendPanel(marketIndexes) {
     .slice(0, 4)
     .map((item) => `${item.label} ${item.directionLabel}`);
   const narrative = narrativeItems.length
-    ? `${narrativeItems.join(" · ")} 흐름이 최근 관측에서 이어지고 있습니다.`
-    : "최근 관측은 한 방향의 지속성보다 자산별 혼조가 우세합니다.";
+    ? `${narrativeItems.join(" · ")} 흐름 지속`
+    : "뚜렷한 단일 방향 없이 자산별 혼조";
 
   return `
     <section class="market-trend-panel">
@@ -2226,7 +2271,7 @@ function renderMarketIndexTrendPanel(marketIndexes) {
         <div>
           <span class="eyebrow">Naver Market Direction</span>
           <h2>금리·환율·원자재·운임 방향성</h2>
-          <p>${narrative}</p>
+          ${renderNarrativeList(narrative, "narrative-list--compact")}
         </div>
         <div class="market-trend-panel__summary">
           <strong>${persistent.length}</strong>
@@ -2325,18 +2370,15 @@ function renderBacktestPanel(backtest) {
       </div>
 
       <div class="backtest-help">
-        <strong>이렇게 읽으면 됩니다</strong>
-        <p>
-          최근 ${backtest.sampleCount}개 샘플은 각 거래일의 모델 점수를 정상·관심·주의·경고로 나눈 뒤,
-          그 날 이후 20거래일 안에 KOSPI가 얼마나 크게 밀렸는지 되돌아본 조건부 진단입니다.
-          hit-rate는 해당 구간에서 향후 20거래일 최대낙폭이 -5% 이하였던 비율이고,
-          평균·최악 낙폭은 실제로 뒤따른 하락 강도를 보여줍니다.
-        </p>
-        <p>
-          따라서 이 값은 “앞으로 반드시 하락한다”는 예측 확률이 아니라, 현재 점수 구간이 과거에는
-          어느 정도의 후행 스트레스와 함께 나타났는지 보는 참고 지표입니다. 샘플 수가 적은 구간은
-          방향성 위주로 보고, 2020년 이후 스트레스 구간 테스트와 함께 해석하는 편이 좋습니다.
-        </p>
+        <strong>백테스트 읽는 법</strong>
+        ${renderNarrativeList([
+          `대상: 최근 ${backtest.sampleCount}개 거래일 점수를 정상·관심·주의·경고로 구분`,
+          "관찰: 각 날짜 이후 20거래일 KOSPI 최대낙폭",
+          "Hit-rate: 최대낙폭 -5% 이하 발생 비율",
+          "평균·최악 낙폭: 실제 후행 하락 강도",
+          "성격: 예측 확률이 아닌 과거 조건부 진단",
+          "소표본 구간: 방향성 중심 · 스트레스 사례와 병행"
+        ], "narrative-list--compact")}
       </div>
     </section>
   `;
@@ -2404,17 +2446,16 @@ function renderStressEpisodesPanel(stressEpisodes) {
 
       <div class="backtest-help">
         <strong>스트레스 구간 숫자 읽는 법</strong>
-        <p>
-          각 카드는 2020년 이후 같은 모델을 과거 데이터에 적용했을 때 스트레스 신호가 모였던 기간입니다.
-          제목 옆 점수는 해당 구간에서 모델 점수가 가장 높았던 날의 피크 점수이고, 75점 이상이면 경고권으로 봅니다.
-          “피크”는 그 점수가 가장 높았던 날짜, “14거래일”은 달력일이 아니라 실제 시장이 열린 날 기준으로 잡힌 구간 길이입니다.
-        </p>
-        <p>
-          “고점대비 최대낙폭”은 그 구간 안에서 KOSPI가 직전 252거래일 고점 대비 얼마나 내려왔는지의 최대값이고,
-          “구간 저점”은 구간 시작일 대비 가장 낮았던 KOSPI 수준입니다. “20D 선행 최대낙폭”은 피크 날짜 이후
-          20거래일 동안 추가로 확인된 최대 하락폭입니다. 0.00%라면 피크 이후 20거래일 안에는 피크 당일보다
-          더 낮은 KOSPI 저점이 나오지 않았다는 뜻입니다.
-        </p>
+        ${renderNarrativeList([
+          "카드: 2020년 이후 스트레스 신호 집중 기간",
+          "피크 점수: 구간 내 최고 모델 점수 · 75점 이상 경고권",
+          "피크 날짜: 최고 점수 관측일",
+          "거래일: 실제 시장 개장일 기준 구간 길이",
+          "고점대비 최대낙폭: 직전 252거래일 고점 대비 최대 하락",
+          "구간 저점: 구간 시작일 대비 최저 KOSPI 수준",
+          "20D 선행 최대낙폭: 피크 이후 20거래일 추가 하락",
+          "0.00%: 피크 당일보다 낮은 후행 저점 없음"
+        ], "narrative-list--compact")}
       </div>
     </section>
   `;
@@ -2465,7 +2506,7 @@ function renderIndicator(indicator, thresholds, timeseries) {
         <span style="width:${clampScore(indicator.value)}%"></span>
       </div>
       ${renderSparkline(indicator, timeseries)}
-      <p>${indicator.detail}</p>
+      ${renderNarrativeList(indicator.detail, "narrative-list--compact indicator-detail-list")}
       <footer>
         <span>${indicator.source}</span>
         <span>추세 ${trendLabel[indicator.trend] ?? "-"}</span>
@@ -2581,7 +2622,7 @@ function renderSentimentPage(data, timeseries, mlRisk, elsRisk, hmmRegime) {
         <div>
           <span class="eyebrow">Market Sentiment</span>
           <h2>시장 센티멘트</h2>
-          <p>${level.reading}</p>
+          ${renderNarrativeList(level.reading, "narrative-list--compact")}
         </div>
         <div class="sentiment-state sentiment-state--${level.tone}">
           <span>현재 심리</span>
@@ -2653,7 +2694,7 @@ function renderSentimentPage(data, timeseries, mlRisk, elsRisk, hmmRegime) {
             <span class="eyebrow">Drivers</span>
             <h2>심리 구성요소</h2>
           </div>
-          <p>높을수록 해당 영역의 시장 부담이 낮다는 뜻입니다.</p>
+          <p>높은 점수 = 낮은 시장 부담</p>
         </div>
         <div class="sentiment-component-grid">
           ${components
@@ -2724,14 +2765,14 @@ function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRi
     <section class="narrative-band">
       <div>
         <span class="eyebrow">오늘의 Summary</span>
-        <h2>${data.metadata.asOf} 현재 시장리스크는 ${market.level.label} 단계입니다.</h2>
+        <h2>${data.metadata.asOf} 시장리스크 · ${market.level.label}</h2>
       </div>
-      <p>
-        시장리스크 종합점수는 ${formatScore(market.score)}입니다. 현재 가중지표 ${scoredIndicatorCount}개와
-        종합점수 미반영 관찰지표 ${observationCount}개를
-        ${categoryCountText(market.indicators)} 범주로 모니터링하며, 상위 리스크 지표는
-        ${market.topIndicators.map((indicator) => indicator.name).join(", ")}입니다.
-      </p>
+      <dl class="summary-facts">
+        <div><dt>종합점수</dt><dd>${formatScore(market.score)}</dd></div>
+        <div><dt>모니터링</dt><dd>가중 ${scoredIndicatorCount} · 관찰 ${observationCount}</dd></div>
+        <div><dt>범주</dt><dd>${categoryCountText(market.indicators)}</dd></div>
+        <div><dt>상위 위험</dt><dd>${market.topIndicators.map((indicator) => indicator.name).join(" · ")}</dd></div>
+      </dl>
     </section>
 
     ${renderMlRiskSignalPanel(mlRisk, market, elsRisk)}
@@ -2754,12 +2795,17 @@ function renderModelPanel(section) {
       <article>
         <span class="eyebrow">Model</span>
         <h3>${model.version ?? "risk-model"}</h3>
-        <p>${model.methodology ?? "지표별 점수를 가중평균으로 합성합니다."}</p>
+        ${renderNarrativeList(model.methodology ?? "지표별 점수의 가중평균 합성", "narrative-list--compact")}
       </article>
       <article>
         <span class="eyebrow">Normalization</span>
         <h3>${normalization ? `${normalization.percentileWeight * 100}% 분위수 · ${normalization.zScoreWeight * 100}% z · ${normalization.robustZScoreWeight * 100}% robust z` : "Weighted score"}</h3>
-        <p>${normalization ? `z-score는 ${normalization.zScoreMapping}, robust z-score는 ${normalization.robustZScore} 방식으로 ${normalization.scoreRange} 점수에 매핑합니다.` : "섹션 모델 설정을 사용합니다."}</p>
+        ${renderNarrativeList(
+          normalization
+            ? [`z-score ${normalization.zScoreMapping}`, `robust z-score ${normalization.robustZScore}`, `${normalization.scoreRange} 점수 매핑`]
+            : "섹션 모델 설정 사용",
+          "narrative-list--compact"
+        )}
       </article>
       <article>
         <span class="eyebrow">Data</span>
@@ -2811,7 +2857,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
         <div>
           <span class="eyebrow">${section.owner}</span>
           <h2>${section.label}</h2>
-          <p>${section.description}</p>
+          ${renderNarrativeList(section.description, "narrative-list--compact")}
         </div>
         <div class="section-score">
           <span class="status-pill status-pill--${section.level.tone}">${section.level.label}</span>
@@ -2823,7 +2869,11 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
         isPlanned
           ? `<div class="empty-state">
               <h3>${section.label} 모듈 준비중</h3>
-              <p>지표를 ${section.id} 섹션의 indicators 배열에 추가하고 탭 enabled 값을 true로 바꾸면 화면에 즉시 노출됩니다.</p>
+              ${renderNarrativeList([
+                `${section.id}.indicators 배열에 지표 추가`,
+                "탭 enabled 값을 true로 변경",
+                "변경 즉시 화면 노출"
+              ], "narrative-list--compact")}
             </div>`
           : `
             ${renderModelPanel(section)}
@@ -2876,7 +2926,7 @@ function renderDashboard(
       <div class="hero__content">
         <span class="eyebrow">Risk Monitoring</span>
         <h1>${data.metadata.title}</h1>
-        <p>${data.metadata.subtitle}</p>
+        ${renderNarrativeList(data.metadata.subtitle, "narrative-list--hero")}
       </div>
       <div class="hero__aside">
         <span>기준일</span>
