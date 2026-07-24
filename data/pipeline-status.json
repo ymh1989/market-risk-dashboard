@@ -11,10 +11,10 @@
     "completedAt": "2026-07-24 12:31:50 KST",
     "durationSeconds": 107,
     "dataAsOf": "2026-07-24",
-    "dashboardGeneratedAt": "2026-07-24 13:56 KST",
+    "dashboardGeneratedAt": "2026-07-24 14:10 KST",
     "mlGeneratedAt": "2026-07-24 12:31 KST",
-    "qualityScore": 100.0,
-    "message": "데이터 생성과 완비성 검증을 통과했습니다."
+    "qualityScore": 99.7,
+    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
     "timezone": "Asia/Seoul",
@@ -98,11 +98,11 @@
       "id": "naver-market-index",
       "label": "Naver 시장지표",
       "status": "ok",
-      "lastDate": "2026-07-23",
-      "seriesCount": 14,
-      "detail": "14/14개 수집 · 허용시차 내 14개",
+      "lastDate": "2026-07-24",
+      "seriesCount": 15,
+      "detail": "15/15개 수집 · 허용시차 내 15개",
       "oldestLastDate": "2026-07-17",
-      "freshCount": 14,
+      "freshCount": 15,
       "staleCount": 0,
       "fallbackCount": 0
     },
@@ -136,7 +136,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-07-24 13:56 KST"
+      "generatedAt": "2026-07-24 14:10 KST"
     },
     {
       "id": "ml",
@@ -172,25 +172,33 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-07-24 13:57:54 KST"
+      "generatedAt": "2026-07-24 14:11:33 KST"
     }
   ],
   "quality": {
-    "status": "ok",
-    "score": 100.0,
+    "status": "warning",
+    "score": 99.7,
     "referenceDate": "2026-07-24",
     "summary": {
-      "checks": 168,
-      "ok": 168,
-      "warning": 0,
+      "checks": 170,
+      "ok": 169,
+      "warning": 1,
       "error": 0,
-      "sourceSeriesExpected": 71,
-      "sourceSeriesPresent": 71,
-      "freshSeries": 71,
+      "sourceSeriesExpected": 72,
+      "sourceSeriesPresent": 72,
+      "freshSeries": 72,
       "staleSeries": 0,
       "fallbackSeries": 1
     },
-    "issues": []
+    "issues": [
+      {
+        "id": "cross:naver-yahoo-domestic-values",
+        "category": "alignment",
+        "label": "국내주식 Yahoo·Naver 가격",
+        "status": "warning",
+        "detail": "동일 기준일 비교 7개 · 최대 kodex_leverage 2.15%"
+      }
+    ]
   },
   "history": [
     {
@@ -203,10 +211,10 @@
       "completedAt": "2026-07-24 12:31:50 KST",
       "durationSeconds": 107,
       "dataAsOf": "2026-07-24",
-      "dashboardGeneratedAt": "2026-07-24 13:56 KST",
+      "dashboardGeneratedAt": "2026-07-24 14:10 KST",
       "mlGeneratedAt": "2026-07-24 12:31 KST",
-      "qualityScore": 100.0,
-      "message": "데이터 생성과 완비성 검증을 통과했습니다."
+      "qualityScore": 99.7,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     },
     {
       "runId": "20260724T105126-manual",

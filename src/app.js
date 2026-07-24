@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260724-7";
+const ASSET_VERSION = "20260724-8";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -52,6 +52,7 @@ const marketTrendGroups = [
     items: [
       { id: "us2y_naver", label: "미국 2년", type: "yield", upLabel: "금리 상승", downLabel: "금리 하락" },
       { id: "us10y_naver", label: "미국 10년", type: "yield", upLabel: "금리 상승", downLabel: "금리 하락" },
+      { id: "jp10y_naver", label: "일본 10년", type: "yield", upLabel: "금리 상승", downLabel: "금리 하락" },
       { id: "kr3y", label: "한국 3년", type: "yield", upLabel: "금리 상승", downLabel: "금리 하락" },
       { id: "kr10y", label: "한국 10년", type: "yield", upLabel: "금리 상승", downLabel: "금리 하락" }
     ]
@@ -60,6 +61,7 @@ const marketTrendGroups = [
     id: "fx",
     label: "환율",
     items: [
+      { id: "usdkrw_naver", label: "원/달러", type: "fx", upLabel: "원화 약세", downLabel: "원화 강세" },
       { id: "usdjpy", label: "달러/엔", type: "fx", upLabel: "엔화 약세", downLabel: "엔화 강세" },
       { id: "usdcny", label: "달러/위안", type: "fx", upLabel: "위안화 약세", downLabel: "위안화 강세" }
     ]

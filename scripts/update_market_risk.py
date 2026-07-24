@@ -180,6 +180,15 @@ NAVER_MARKET_INDEXES = {
         "min_observations": 80,
         "max_cache_age_days": 7,
     },
+    "usdkrw_naver": {
+        "category": "exchange",
+        "symbol": "FX_USDKRW",
+        "label": "원/달러",
+        "frequency": "daily",
+        "target_observations": 504,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
     "us2y_naver": {
         "category": "bond",
         "symbol": "US2YT=RR",
@@ -435,6 +444,7 @@ def write_naver_market_index_cache(series_map, fetch_statuses):
             "metals": "https://stock.naver.com/market/marketindex/metals",
             "energy": "https://stock.naver.com/market/marketindex/energy",
             "bond": "https://stock.naver.com/market/marketindex/bondAndInterest/bond",
+            "exchange": "https://stock.naver.com/marketindex/exchange/FX_USDKRW/price",
             "exchangeWorld": "https://stock.naver.com/market/marketindex/exchangeRate/exchangeWorld",
         },
         "metadata": {
@@ -2735,7 +2745,7 @@ def update_dashboard(series_map, fred_map, market_index_map, indicators):
     market["model"]["dataSources"] = [
         "Yahoo Finance chart endpoint",
         "Naver Finance chart endpoint",
-        "Naver market-index transport, metals, energy, bond, exchangeWorld endpoints",
+        "Naver market-index transport, metals, energy, bond, exchange, exchangeWorld endpoints",
         "KOSPI/KOSDAQ price series",
         "USD/KRW, VIX, US 10Y proxy",
         "FRED US 2Y, 10Y-2Y spread, high yield OAS, STLFSI, NFCI",
@@ -2744,7 +2754,7 @@ def update_dashboard(series_map, fred_map, market_index_map, indicators):
         "Samsung Electronics, SK hynix, Hanmi Semiconductor, DB HiTek, Leeno Industrial",
         "Naver foreign ownership ratio and trading volume",
         "HYG/LQD credit proxy, EEM emerging market proxy",
-        "SCFI, BDTI, BDI, Brent, iron ore, copper, gold, USD/CNY, USD/JPY, US/KR Treasury yields",
+        "SCFI, BDTI, BDI, Brent, iron ore, copper, gold, USD/KRW, USD/CNY, USD/JPY, US/JP/KR Treasury yields",
     ]
     market["model"]["references"] = [
         {
@@ -2774,6 +2784,10 @@ def update_dashboard(series_map, fred_map, market_index_map, indicators):
         {
             "label": "Naver bond market indexes",
             "url": "https://stock.naver.com/market/marketindex/bondAndInterest/bond",
+        },
+        {
+            "label": "Naver USD/KRW market index",
+            "url": "https://stock.naver.com/marketindex/exchange/FX_USDKRW/price",
         },
         {
             "label": "Naver international FX market indexes",

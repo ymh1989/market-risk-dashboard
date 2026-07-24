@@ -107,6 +107,7 @@ def test_dashboard_contract():
         "brent",
         "usdcny",
         "usdjpy",
+        "usdkrw_naver",
         "us2y_naver",
         "us10y_naver",
         "jp10y_naver",
@@ -195,8 +196,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260724-7" in html
-    assert "app.js?v=20260724-7" in html
+    assert "styles.css?v=20260724-8" in html
+    assert "app.js?v=20260724-8" in html
     assert 'aria-pressed="${tab.id === "summary" ? "true" : "false"}"' in app_source
     assert 'tab.setAttribute("aria-pressed"' in app_source
     assert "font-weight: 800;" not in styles
@@ -283,6 +284,9 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert "renderMarketIndexTrendPanel" in app_source
     assert "금리·환율·원자재·운임 방향성" in app_source
     assert "엔화 약세" in app_source
+    assert '{ id: "jp10y_naver", label: "일본 10년"' in app_source
+    assert '{ id: "usdkrw_naver", label: "원/달러"' in app_source
+    assert 'upLabel: "원화 약세", downLabel: "원화 강세"' in app_source
 
     summary_source = app_source.split("function renderSummary", 1)[1].split("function renderModelPanel", 1)[0]
     assert summary_source.index("renderMarketIndexTrendPanel") < summary_source.index("renderBacktestPanel")
@@ -422,8 +426,8 @@ def test_pipeline_status_contract():
     assert status["quality"]["score"] >= 0
     assert status["history"]
     assert quality["schemaVersion"] == 1
-    assert quality["summary"]["sourceSeriesExpected"] == 71
-    assert quality["summary"]["sourceSeriesPresent"] == 71
+    assert quality["summary"]["sourceSeriesExpected"] == 72
+    assert quality["summary"]["sourceSeriesPresent"] == 72
     assert quality["summary"]["error"] == 0
 
 
