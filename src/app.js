@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260724-9";
+const ASSET_VERSION = "20260724-10";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -2114,10 +2114,10 @@ function renderSparkline(indicator, timeseries) {
   `;
 }
 
-function marketTrendPath(points, width = 180, height = 52, padding = 4) {
-  if (points.length < 2) return "";
+function marketTrendCoordinates(points, width = 180, height = 52, padding = 4) {
+  if (points.length < 2) return [];
   const values = points.map((point) => Number(point.close)).filter(Number.isFinite);
-  if (values.length < 2) return "";
+  if (values.length < 2) return [];
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min || Math.max(Math.abs(max), 1) * 0.01;
@@ -2126,8 +2126,16 @@ function marketTrendPath(points, width = 180, height = 52, padding = 4) {
     .map((point, index) => {
       const x = index * step;
       const y = height - padding - ((Number(point.close) - min) / range) * (height - padding * 2);
-      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
+      return { x, y };
+    });
+}
+
+function marketTrendPath(coordinates) {
+  return coordinates
+    .map(
+      (point, index) =>
+        `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`
+    )
     .join(" ");
 }
 
@@ -2155,12 +2163,39 @@ function formatMarketTrendValue(value, type) {
   return number.toFixed(4);
 }
 
+function usableMarketLiveSnapshot(definition, marketIndexes, confirmedLatest) {
+  const snapshot = marketIndexes?.liveSnapshots?.[definition.id];
+  if (
+    !snapshot?.isProvisional ||
+    !Number.isFinite(Number(snapshot.close)) ||
+    !snapshot.date ||
+    typeof snapshot.observedAt !== "string" ||
+    snapshot.observedAt.length < 16 ||
+    snapshot.date <= confirmedLatest.date
+  ) {
+    return null;
+  }
+  return {
+    date: snapshot.date,
+    close: Number(snapshot.close),
+    observedAt: snapshot.observedAt,
+    isLive: true
+  };
+}
+
 function analyzeMarketTrend(definition, marketIndexes) {
   const metadata = marketIndexes?.metadata?.[definition.id];
-  const rows = (marketIndexes?.series?.[definition.id] ?? [])
+  const confirmedRows = (marketIndexes?.series?.[definition.id] ?? [])
     .filter((point) => Number.isFinite(Number(point.close)))
     .sort((left, right) => String(left.date).localeCompare(String(right.date)));
-  if (!metadata || rows.length < 2) return null;
+  if (!metadata || confirmedRows.length < 2) return null;
+
+  const livePoint = usableMarketLiveSnapshot(
+    definition,
+    marketIndexes,
+    confirmedRows[confirmedRows.length - 1]
+  );
+  const rows = livePoint ? [...confirmedRows, livePoint] : confirmedRows;
 
   const weekly = metadata.frequency === "weekly";
   const oneWeekOffset = weekly ? 1 : 5;
@@ -2205,6 +2240,10 @@ function analyzeMarketTrend(definition, marketIndexes) {
     rows,
     chartRows: rows.slice(-(weekly ? 14 : 65)),
     latest: rows[rows.length - 1],
+    confirmedLatest: confirmedRows[confirmedRows.length - 1],
+    liveSnapshot: livePoint ? marketIndexes.liveSnapshots[definition.id] : null,
+    hasLive: Boolean(livePoint),
+    oneDayChange: marketTrendChange(rows, 1, definition.type),
     oneWeekChange: marketTrendChange(rows, oneWeekOffset, definition.type),
     oneMonthChange: monthChange,
     direction,
@@ -2218,14 +2257,12 @@ function analyzeMarketTrend(definition, marketIndexes) {
 }
 
 function renderMarketTrendRow(item) {
-  const path = marketTrendPath(item.chartRows);
-  const lastPoint = item.chartRows[item.chartRows.length - 1];
-  const lastX = 180;
-  const values = item.chartRows.map((point) => Number(point.close));
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || Math.max(Math.abs(max), 1) * 0.01;
-  const lastY = 52 - 4 - ((Number(lastPoint.close) - min) / range) * 44;
+  const coordinates = marketTrendCoordinates(item.chartRows);
+  const confirmedCoordinates = item.hasLive ? coordinates.slice(0, -1) : coordinates;
+  const liveCoordinates = item.hasLive ? coordinates.slice(-2) : [];
+  const path = marketTrendPath(confirmedCoordinates);
+  const livePath = marketTrendPath(liveCoordinates);
+  const lastPoint = coordinates[coordinates.length - 1];
   const persistenceText =
     item.direction === "flat"
       ? `상승 ${item.upCount} · 하락 ${item.downCount}`
@@ -2235,17 +2272,23 @@ function renderMarketTrendRow(item) {
     <article class="market-trend-row market-trend-row--${item.direction}">
       <div class="market-trend-row__identity">
         <strong>${item.label}</strong>
-        <span>${item.latest.date}</span>
+        ${
+          item.hasLive
+            ? `<span class="market-trend-row__asof market-trend-row__asof--live">실시간 ${item.liveSnapshot.observedAt.slice(11, 16)} · 잠정</span>`
+            : `<span class="market-trend-row__asof">${item.latest.date}</span>`
+        }
       </div>
       <div class="market-trend-row__chart">
         <svg viewBox="0 0 180 52" role="img" aria-label="${item.label} 최근 3개월 흐름">
           <path class="market-trend-row__baseline" d="M 0 26 H 180"></path>
           <path class="market-trend-row__line" d="${path}"></path>
-          <circle cx="${lastX}" cy="${lastY.toFixed(2)}" r="3"></circle>
+          ${item.hasLive ? `<path class="market-trend-row__live-line" d="${livePath}"></path>` : ""}
+          <circle class="${item.hasLive ? "market-trend-row__live-point" : ""}" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="3"></circle>
         </svg>
       </div>
       <dl class="market-trend-row__numbers">
         <div><dt>현재</dt><dd>${formatMarketTrendValue(item.latest.close, item.type)}</dd></div>
+        <div><dt>${item.metadata.frequency === "weekly" ? "직전" : "전일"}</dt><dd>${formatMarketTrendChange(item.oneDayChange, item.type)}</dd></div>
         <div><dt>1주</dt><dd>${formatMarketTrendChange(item.oneWeekChange, item.type)}</dd></div>
         <div><dt>1개월</dt><dd>${formatMarketTrendChange(item.oneMonthChange, item.type)}</dd></div>
       </dl>
@@ -2269,6 +2312,7 @@ function renderMarketIndexTrendPanel(marketIndexes) {
   if (!items.length) return "";
 
   const persistent = items.filter((item) => item.persistent);
+  const liveItems = items.filter((item) => item.hasLive);
   const latestDate = items.map((item) => item.latest.date).sort().at(-1);
   const narrativeItems = persistent
     .sort((left, right) => Math.abs(right.oneMonthChange) - Math.abs(left.oneMonthChange))
@@ -2289,7 +2333,7 @@ function renderMarketIndexTrendPanel(marketIndexes) {
         <div class="market-trend-panel__summary">
           <strong>${persistent.length}</strong>
           <span>지속 방향</span>
-          <small>최신 ${latestDate}</small>
+          <small>${liveItems.length ? `한국 금리 실시간 ${liveItems.length}개` : `최신 ${latestDate}`}</small>
         </div>
       </header>
       <div class="market-trend-groups">
@@ -2306,7 +2350,8 @@ function renderMarketIndexTrendPanel(marketIndexes) {
       </div>
       <footer class="market-trend-panel__footer">
         <span>Naver Pay 증권 시장지표</span>
-        <span>일간은 최근 10회, 주간은 최근 6회 방향을 판독</span>
+        <span>한국 금리 현재값은 실시간 잠정치 · 과거 시계열과 ML은 확정 EOD</span>
+        <span>일간 최근 10회 · 주간 최근 6회 방향 판독</span>
       </footer>
     </section>
   `;

@@ -2384,6 +2384,11 @@ a {
   font-size: 0.68rem;
 }
 
+.market-trend-row__identity .market-trend-row__asof--live {
+  color: var(--teal);
+  font-weight: 700;
+}
+
 .market-trend-row__chart {
   min-width: 0;
 }
@@ -2410,29 +2415,58 @@ a {
   stroke-width: 2.25;
 }
 
+.market-trend-row__live-line {
+  fill: none;
+  stroke: var(--muted);
+  stroke-dasharray: 3 3;
+  stroke-linecap: round;
+  stroke-width: 2.25;
+}
+
 .market-trend-row__chart circle {
   fill: var(--muted);
+}
+
+.market-trend-row__chart .market-trend-row__live-point {
+  fill: var(--surface);
+  stroke: currentColor;
+  stroke-width: 2;
 }
 
 .market-trend-row--up .market-trend-row__line {
   stroke: var(--amber);
 }
 
+.market-trend-row--up .market-trend-row__live-line {
+  stroke: var(--amber);
+}
+
 .market-trend-row--up .market-trend-row__chart circle {
   fill: var(--amber);
+  color: var(--amber);
 }
 
 .market-trend-row--down .market-trend-row__line {
   stroke: var(--teal);
 }
 
+.market-trend-row--down .market-trend-row__live-line {
+  stroke: var(--teal);
+}
+
 .market-trend-row--down .market-trend-row__chart circle {
   fill: var(--teal);
+  color: var(--teal);
+}
+
+.market-trend-row--up .market-trend-row__chart .market-trend-row__live-point,
+.market-trend-row--down .market-trend-row__chart .market-trend-row__live-point {
+  fill: var(--surface);
 }
 
 .market-trend-row__numbers {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-column: 1 / -1;
   gap: 8px;
   margin: 0;

@@ -10,9 +10,21 @@ from typing import Any
 from kospi_risk.market_data_fetcher import load_source_config
 
 try:
-    from scripts.update_market_risk import FRED_SERIES, NAVER_MARKET_INDEXES, NAVER_SYMBOLS, TICKERS
+    from scripts.update_market_risk import (
+        FRED_SERIES,
+        NAVER_LIVE_BOND_IDS,
+        NAVER_MARKET_INDEXES,
+        NAVER_SYMBOLS,
+        TICKERS,
+    )
 except ModuleNotFoundError:
-    from update_market_risk import FRED_SERIES, NAVER_MARKET_INDEXES, NAVER_SYMBOLS, TICKERS
+    from update_market_risk import (
+        FRED_SERIES,
+        NAVER_LIVE_BOND_IDS,
+        NAVER_MARKET_INDEXES,
+        NAVER_SYMBOLS,
+        TICKERS,
+    )
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -515,7 +527,10 @@ def cross_artifact_checks(data: dict[str, dict[str, Any]]) -> list[dict[str, Any
     return checks
 
 
-def cache_series_checks(data: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+def cache_series_checks(
+    data: dict[str, dict[str, Any]],
+    reference_date: date,
+) -> list[dict[str, Any]]:
     checks = []
     history = data.get("marketHistory") or {}
     for group_id, expected, min_rows in [
@@ -568,6 +583,49 @@ def cache_series_checks(data: dict[str, dict[str, Any]]) -> list[dict[str, Any]]
                 rows,
                 min_rows=minimum,
                 value_key="close",
+            )
+        )
+
+    live_snapshots = market_history.get("liveSnapshots") or {}
+    missing_live = sorted(set(NAVER_LIVE_BOND_IDS) - set(live_snapshots))
+    checks.append(
+        make_check(
+            "cache:naver-market-live:coverage",
+            "cache",
+            "한국 금리 실시간 스냅샷",
+            "warning" if missing_live else "ok",
+            f"{len(live_snapshots)}/{len(NAVER_LIVE_BOND_IDS)}개"
+            + (f" · 누락 {', '.join(missing_live)}" if missing_live else " · 누락 없음"),
+        )
+    )
+    for item_id, snapshot in live_snapshots.items():
+        observed_date = parse_date(snapshot.get("observedAt"))
+        current_value = snapshot.get("close")
+        previous_close = snapshot.get("previousClose")
+        malformed = (
+            item_id not in NAVER_LIVE_BOND_IDS
+            or observed_date is None
+            or not isinstance(current_value, (int, float))
+            or not isinstance(previous_close, (int, float))
+        )
+        lag = business_day_lag(observed_date, reference_date) if observed_date else 999
+        status = "error" if malformed else ("warning" if lag > 1 else "ok")
+        detail = (
+            "필수값 누락"
+            if malformed
+            else f"{observed_date.isoformat()} · {float(current_value):.3f}%"
+            f" · 전일 대비 {(float(current_value) - float(previous_close)) * 100:+.1f}bp"
+            f" · {snapshot.get('fetchStatus', '상태 미상')}"
+        )
+        checks.append(
+            make_check(
+                f"cache:naver-market-live:{item_id}",
+                "cache",
+                f"한국 금리 실시간/{item_id}",
+                status,
+                detail,
+                lastDate=observed_date.isoformat() if observed_date else None,
+                lagBusinessDays=lag,
             )
         )
     return checks
@@ -673,7 +731,7 @@ def build_report(now: datetime | None = None) -> dict[str, Any]:
 
     checks.extend(artifact_checks(data, reference_date))
     checks.extend(cross_artifact_checks(data))
-    checks.extend(cache_series_checks(data))
+    checks.extend(cache_series_checks(data, reference_date))
 
     counts = {status: sum(item["status"] == status for item in checks) for status in STATUS_RANK}
     status = worst_status([item["status"] for item in checks])

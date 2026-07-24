@@ -1,3 +1,4 @@
+import argparse
 import json
 import math
 import statistics
@@ -22,9 +23,11 @@ NAVER_MARKET_INDEX_CACHE_FILE = ROOT / "data" / "naver-marketindex-history.json"
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d"
 FRED_GRAPH_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 NAVER_MARKET_INDEX_URL = "https://stock.naver.com/api/securityService/marketindex/{category}/{symbol}/prices"
+NAVER_BOND_LIVE_URL = "https://stock.naver.com/api/securityService/economic/bond/{symbol}"
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-risk-dashboard/0.1)"
 KST = timezone(timedelta(hours=9))
 FRED_FETCH_ATTEMPTS = 3
+NAVER_LIVE_BOND_IDS = ("kr3y", "kr10y")
 
 TICKERS = {
     "kospi": {"symbol": "^KS11", "label": "KOSPI"},
@@ -414,7 +417,41 @@ def fetch_naver_market_index_series(config, page_size=60):
     return series[-target_observations:]
 
 
-def load_naver_market_index_cache():
+def fetch_naver_bond_live_snapshot(config):
+    if config.get("category") != "bond":
+        raise ValueError("실시간 채권 스냅샷은 bond 분류만 지원합니다.")
+
+    symbol = config["symbol"]
+    encoded_symbol = urllib.parse.quote(symbol, safe="")
+    request = urllib.request.Request(
+        NAVER_BOND_LIVE_URL.format(symbol=encoded_symbol),
+        headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+
+    traded_at = str(payload.get("localTradedAt") or payload.get("localDate") or "")
+    current_yield = parse_naver_number(payload.get("closePriceYield"))
+    previous_close = parse_naver_number(payload.get("yieldToLastClosePrice"))
+    if len(traded_at) < 16 or current_yield is None or previous_close is None:
+        raise RuntimeError(f"{symbol}: Naver 실시간 채권 응답에 필수값이 없습니다.")
+
+    change = current_yield - previous_close
+    return {
+        "date": traded_at[:10],
+        "observedAt": traded_at,
+        "close": current_yield,
+        "previousClose": previous_close,
+        "change": round(change, 6),
+        "changeBps": round(change * 100, 2),
+        "marketStatus": payload.get("marketStatus"),
+        "delayTime": payload.get("delayTime"),
+        "delayTimeName": payload.get("delayTimeName"),
+        "source": "Naver Pay Securities real-time bond endpoint",
+    }
+
+
+def load_naver_market_index_cache_payload():
     if not NAVER_MARKET_INDEX_CACHE_FILE.exists():
         return {}
     try:
@@ -423,7 +460,11 @@ def load_naver_market_index_cache():
         return {}
     if payload.get("schemaVersion") != 1:
         return {}
-    return payload.get("series") or {}
+    return payload
+
+
+def load_naver_market_index_cache():
+    return load_naver_market_index_cache_payload().get("series") or {}
 
 
 def _is_recent_market_index_cache(series, max_age_days):
@@ -434,10 +475,58 @@ def _is_recent_market_index_cache(series, max_age_days):
     return (datetime.now(KST).date() - last_date).days <= max_age_days
 
 
-def write_naver_market_index_cache(series_map, fetch_statuses):
+def _is_recent_live_snapshot(snapshot, max_age_hours=36):
+    try:
+        observed_at = datetime.fromisoformat(str(snapshot["observedAt"]))
+    except (KeyError, TypeError, ValueError):
+        return False
+    if observed_at.tzinfo is None:
+        observed_at = observed_at.replace(tzinfo=KST)
+    age = datetime.now(KST) - observed_at.astimezone(KST)
+    return timedelta(0) <= age <= timedelta(hours=max_age_hours)
+
+
+def fetch_naver_bond_live_snapshots(series_map, cached_snapshots=None, max_workers=2):
+    cached_snapshots = cached_snapshots or {}
+    snapshots = {}
+    statuses = {}
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(fetch_naver_bond_live_snapshot, NAVER_MARKET_INDEXES[key]): key
+            for key in NAVER_LIVE_BOND_IDS
+        }
+        for future in as_completed(futures):
+            key = futures[future]
+            try:
+                snapshot = future.result()
+                statuses[key] = "live"
+            except Exception as exc:
+                cached = cached_snapshots.get(key) or {}
+                if not _is_recent_live_snapshot(cached):
+                    statuses[key] = f"unavailable: {exc}"
+                    continue
+                snapshot = dict(cached)
+                statuses[key] = f"cache_fallback: {exc}"
+
+            confirmed_rows = series_map.get(key) or []
+            confirmed_date = str(confirmed_rows[-1].get("date") or "") if confirmed_rows else ""
+            snapshot["confirmedDate"] = confirmed_date or None
+            snapshot["isProvisional"] = bool(snapshot.get("date") and snapshot["date"] > confirmed_date)
+            snapshot["fetchStatus"] = statuses[key]
+            snapshots[key] = snapshot
+
+    return (
+        {key: snapshots[key] for key in NAVER_LIVE_BOND_IDS if key in snapshots},
+        {key: statuses.get(key, "unavailable") for key in NAVER_LIVE_BOND_IDS},
+    )
+
+
+def write_naver_market_index_cache(series_map, fetch_statuses, live_snapshots=None, live_statuses=None):
+    now = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
     payload = {
         "schemaVersion": 1,
-        "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
+        "generatedAt": now,
         "source": "Naver Pay Securities market-index endpoints",
         "sourcePages": {
             "transport": "https://stock.naver.com/market/marketindex/transport",
@@ -458,12 +547,16 @@ def write_naver_market_index_cache(series_map, fetch_statuses):
             for key, config in NAVER_MARKET_INDEXES.items()
         },
         "series": series_map,
+        "liveSnapshotsGeneratedAt": now,
+        "liveSnapshots": live_snapshots or {},
+        "liveSnapshotStatuses": live_statuses or {},
     }
     NAVER_MARKET_INDEX_CACHE_FILE.write_text(json.dumps(payload, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 def fetch_naver_market_indexes(max_workers=5):
-    cached = load_naver_market_index_cache()
+    cached_payload = load_naver_market_index_cache_payload()
+    cached = cached_payload.get("series") or {}
     results = {}
     fetch_statuses = {}
 
@@ -487,8 +580,32 @@ def fetch_naver_market_indexes(max_workers=5):
 
     ordered_results = {key: results[key] for key in NAVER_MARKET_INDEXES}
     ordered_statuses = {key: fetch_statuses[key] for key in NAVER_MARKET_INDEXES}
-    write_naver_market_index_cache(ordered_results, ordered_statuses)
+    live_snapshots, live_statuses = fetch_naver_bond_live_snapshots(
+        ordered_results,
+        cached_payload.get("liveSnapshots") or {},
+    )
+    write_naver_market_index_cache(ordered_results, ordered_statuses, live_snapshots, live_statuses)
     return ordered_results, ordered_statuses
+
+
+def refresh_naver_bond_live_cache():
+    payload = load_naver_market_index_cache_payload()
+    series_map = payload.get("series") or {}
+    if not series_map:
+        raise RuntimeError("Naver 시장지표 EOD 캐시가 없어 실시간 금리를 갱신할 수 없습니다.")
+
+    live_snapshots, live_statuses = fetch_naver_bond_live_snapshots(
+        series_map,
+        payload.get("liveSnapshots") or {},
+    )
+    payload["liveSnapshotsGeneratedAt"] = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
+    payload["liveSnapshots"] = live_snapshots
+    payload["liveSnapshotStatuses"] = live_statuses
+    NAVER_MARKET_INDEX_CACHE_FILE.write_text(
+        json.dumps(payload, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return live_snapshots
 
 
 def fetch_configured_series(configs, fetcher, max_workers=6):
@@ -2937,5 +3054,24 @@ def main():
     print(f"Wrote {TIMESERIES_FILE.relative_to(ROOT)}")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="시장리스크 데이터를 갱신합니다.")
+    parser.add_argument(
+        "--refresh-live-only",
+        action="store_true",
+        help="기존 EOD 캐시는 유지하고 한국 금리 실시간 스냅샷만 갱신합니다.",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    if args.refresh_live_only:
+        snapshots = refresh_naver_bond_live_cache()
+        labels = ", ".join(
+            f"{NAVER_MARKET_INDEXES[key]['label']} {snapshot['close']:.3f}%"
+            for key, snapshot in snapshots.items()
+        )
+        print(f"한국 금리 실시간 스냅샷 갱신: {labels or '사용 가능한 값 없음'}")
+    else:
+        main()

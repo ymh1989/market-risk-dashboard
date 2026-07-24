@@ -97,6 +97,14 @@ def test_dashboard_contract():
     }
     assert all(float(indicator["weight"]) == 0 for indicator in observations)
     assert market_index_cache["schemaVersion"] == 1
+    assert set(market_index_cache.get("liveSnapshots") or {}).issubset({"kr3y", "kr10y"})
+    assert set(market_index_cache.get("liveSnapshotStatuses") or {}) == {"kr3y", "kr10y"}
+    assert all(
+        isinstance(snapshot.get("isProvisional"), bool)
+        and snapshot.get("observedAt")
+        and isinstance(snapshot.get("previousClose"), (int, float))
+        for snapshot in market_index_cache["liveSnapshots"].values()
+    )
     assert set(market_index_cache["series"]) == {
         "scfi",
         "bdti",
@@ -196,8 +204,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260724-9" in html
-    assert "app.js?v=20260724-9" in html
+    assert "styles.css?v=20260724-10" in html
+    assert "app.js?v=20260724-10" in html
     assert 'aria-pressed="${tab.id === "summary" ? "true" : "false"}"' in app_source
     assert 'tab.setAttribute("aria-pressed"' in app_source
     assert "font-weight: 800;" not in styles
@@ -294,6 +302,9 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert 'loadJson("./data/naver-marketindex-history.json")' in app_source
     assert "renderMarketIndexTrendPanel" in app_source
     assert "금리·환율·원자재·운임 방향성" in app_source
+    assert "한국 금리 현재값은 실시간 잠정치" in app_source
+    assert "market-trend-row__live-line" in app_source
+    assert '"weekly" ? "직전" : "전일"' in app_source
     assert "엔화 약세" in app_source
     assert '{ id: "jp10y_naver", label: "일본 10년"' in app_source
     assert '{ id: "usdkrw_naver", label: "원/달러"' in app_source

@@ -8,6 +8,8 @@ from scripts.update_market_risk import (
     compare_series_quality,
     equity_stress_component_points,
     equity_stress_score_at,
+    fetch_naver_bond_live_snapshot,
+    fetch_naver_bond_live_snapshots,
     fetch_naver_market_index_series,
     level_and_change_component_points,
     level_and_change_score_at,
@@ -109,6 +111,72 @@ def test_naver_market_index_parser_sorts_dates_and_removes_commas(monkeypatch):
     assert [point["date"] for point in series] == ["2026-07-10", "2026-07-17"]
     assert series[-1]["close"] == 3080.31
     assert series[0]["open"] is None
+
+
+def test_naver_live_bond_parser_separates_current_yield_from_previous_close(monkeypatch):
+    payload = {
+        "localTradedAt": "2026-07-24T16:01:40+09:00",
+        "closePriceYield": 4.435,
+        "yieldToLastClosePrice": 4.383,
+        "yieldChange": 0.052,
+        "delayTime": 0,
+        "delayTimeName": "실시간",
+        "marketStatus": "OPEN",
+    }
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps(payload).encode("utf-8")
+
+    def fake_urlopen(request, timeout):
+        assert "/economic/bond/KR10YT%3DRR" in request.full_url
+        assert timeout == 20
+        return FakeResponse()
+
+    monkeypatch.setattr("scripts.update_market_risk.urllib.request.urlopen", fake_urlopen)
+
+    snapshot = fetch_naver_bond_live_snapshot(
+        {"category": "bond", "symbol": "KR10YT=RR"}
+    )
+
+    assert snapshot["date"] == "2026-07-24"
+    assert snapshot["observedAt"] == "2026-07-24T16:01:40+09:00"
+    assert snapshot["close"] == 4.435
+    assert snapshot["previousClose"] == 4.383
+    assert snapshot["changeBps"] == 5.2
+    assert snapshot["delayTimeName"] == "실시간"
+
+
+def test_live_bond_snapshot_is_appended_as_provisional_without_changing_eod(monkeypatch):
+    series_map = {
+        "kr3y": [{"date": "2026-07-23", "close": 3.907}],
+        "kr10y": [{"date": "2026-07-23", "close": 4.383}],
+    }
+    original = json.loads(json.dumps(series_map))
+
+    def fake_live(config):
+        previous_close = 3.907 if config["symbol"].startswith("KR3Y") else 4.383
+        return {
+            "date": "2026-07-24",
+            "observedAt": "2026-07-24T16:00:00+09:00",
+            "close": previous_close + 0.05,
+            "previousClose": previous_close,
+        }
+
+    monkeypatch.setattr("scripts.update_market_risk.fetch_naver_bond_live_snapshot", fake_live)
+
+    snapshots, statuses = fetch_naver_bond_live_snapshots(series_map)
+
+    assert series_map == original
+    assert statuses == {"kr3y": "live", "kr10y": "live"}
+    assert all(snapshot["isProvisional"] for snapshot in snapshots.values())
+    assert all(snapshot["confirmedDate"] == "2026-07-23" for snapshot in snapshots.values())
 
 
 def test_shipping_cost_pressure_combines_weekly_and_daily_series_without_future_values():
