@@ -193,8 +193,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260724-3" in html
-    assert "app.js?v=20260724-3" in html
+    assert "styles.css?v=20260724-4" in html
+    assert "app.js?v=20260724-4" in html
     assert 'aria-pressed="${tab.id === "summary" ? "true" : "false"}"' in app_source
     assert 'tab.setAttribute("aria-pressed"' in app_source
     assert "font-weight: 800;" not in styles
@@ -205,6 +205,18 @@ def test_ui_hierarchy_and_accessibility_contract():
     assert "border: 0;" in source_chip_rule
     assert "border: 0;" in sparkline_rule
     assert "@media (prefers-reduced-motion: reduce)" in styles
+
+
+def test_operation_mode_distinguishes_active_and_completed_runs():
+    app_source = APP_FILE.read_text(encoding="utf-8")
+
+    assert 'if (mode === "full") return "전체 갱신";' in app_source
+    assert 'if (mode === "fast") return "빠른 갱신";' in app_source
+    assert "activeRun: null" in app_source
+    assert "elapsedSeconds: Math.floor(elapsedMinutes * 60)" in app_source
+    assert "state.activeRun.mode" in app_source
+    assert "최근 완료 · ${pipelineModeLabel(current.mode)}" in app_source
+    assert "<span>${current.mode}" not in app_source
 
 
 def test_dashboard_data_requests_bypass_stale_cache():
@@ -384,6 +396,7 @@ if __name__ == "__main__":
     test_dashboard_contract()
     test_watch_badge_keeps_readable_contrast()
     test_ui_hierarchy_and_accessibility_contract()
+    test_operation_mode_distinguishes_active_and_completed_runs()
     test_dashboard_data_requests_bypass_stale_cache()
     test_snow_lab_easter_egg_contract()
     test_pipeline_status_contract()

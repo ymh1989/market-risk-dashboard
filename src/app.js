@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260724-3";
+const ASSET_VERSION = "20260724-4";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -307,6 +307,12 @@ function formatDurationSeconds(value) {
   return remainder ? `${minutes}분 ${remainder}초` : `${minutes}분`;
 }
 
+function pipelineModeLabel(mode) {
+  if (mode === "full") return "전체 갱신";
+  if (mode === "fast") return "빠른 갱신";
+  return mode || "-";
+}
+
 function buildScheduleInstances(pipelineStatus) {
   const schedule = pipelineStatus?.schedule;
   if (!schedule?.times?.length) return [];
@@ -347,7 +353,8 @@ function pipelineRuntimeState(pipelineStatus) {
       tone: "muted",
       detail: "운영 상태 파일을 불러오지 못했습니다.",
       latestSuccess: null,
-      nextRun: null
+      nextRun: null,
+      activeRun: null
     };
   }
 
@@ -370,15 +377,21 @@ function pipelineRuntimeState(pipelineStatus) {
 
   if (latestDue && !matchingRun) {
     const elapsedMinutes = Math.max(0, (now - latestDue.timestamp) / 60000);
+    const activeRun = {
+      mode: latestDue.mode,
+      scheduledTime: latestDue.time,
+      elapsedSeconds: Math.floor(elapsedMinutes * 60)
+    };
     const expectedMinutes = Number(pipelineStatus.schedule?.expectedDurationMinutes?.[latestDue.mode] ?? 10);
     const graceMinutes = Number(pipelineStatus.schedule?.delayGraceMinutes ?? 5);
     if (elapsedMinutes <= expectedMinutes + graceMinutes) {
       return {
         label: "갱신 중",
         tone: "watch",
-        detail: `${latestDue.time} ${latestDue.mode} 예약 작업의 완료 기록을 기다리고 있습니다.`,
+        detail: `${latestDue.time} ${pipelineModeLabel(latestDue.mode)} 예약 작업의 완료 기록을 기다리고 있습니다.`,
         latestSuccess,
-        nextRun
+        nextRun,
+        activeRun
       };
     }
     return {
@@ -386,7 +399,8 @@ function pipelineRuntimeState(pipelineStatus) {
       tone: "caution",
       detail: `${latestDue.label} 예약 작업이 예상 완료시간을 지났습니다. 로컬 로그 확인이 필요합니다.`,
       latestSuccess,
-      nextRun
+      nextRun,
+      activeRun
     };
   }
 
@@ -398,7 +412,8 @@ function pipelineRuntimeState(pipelineStatus) {
         ? "일부 데이터 원천 또는 산출물의 완비성을 확인해야 합니다."
         : pipelineStatus.current.message,
     latestSuccess,
-    nextRun
+    nextRun,
+    activeRun: null
   };
 }
 
@@ -420,7 +435,7 @@ function renderOperationStatusStrip(pipelineStatus) {
       </div>
       <div>
         <small>다음 예약</small>
-        <strong>${state.nextRun ? `${state.nextRun.label} · ${state.nextRun.mode}` : "-"}</strong>
+        <strong>${state.nextRun ? `${state.nextRun.label} · ${pipelineModeLabel(state.nextRun.mode)}` : "-"}</strong>
       </div>
       <div>
         <small>데이터 기준일</small>
@@ -453,11 +468,14 @@ function renderOperationsPage(pipelineStatus) {
   }
 
   const current = pipelineStatus.current;
+  const runSummary = state.activeRun
+    ? `${pipelineModeLabel(state.activeRun.mode)} · ${formatDurationSeconds(state.activeRun.elapsedSeconds)} 경과`
+    : `최근 완료 · ${pipelineModeLabel(current.mode)} · ${formatDurationSeconds(current.durationSeconds)}`;
   const quality = pipelineStatus.quality ?? {};
   const qualitySummary = quality.summary ?? {};
   const qualityIssues = quality.issues ?? [];
   const scheduleText = (pipelineStatus.schedule?.times ?? [])
-    .map((item) => `${item.time} ${item.mode}`)
+    .map((item) => `${item.time} ${pipelineModeLabel(item.mode)}`)
     .join(" · ");
 
   return `
@@ -471,13 +489,13 @@ function renderOperationsPage(pipelineStatus) {
         <div class="operations-current operations-current--${state.tone}">
           <small>현재 판정</small>
           <strong>${state.label}</strong>
-          <span>${current.mode} · ${formatDurationSeconds(current.durationSeconds)}</span>
+          <span>${runSummary}</span>
         </div>
       </header>
 
       <section class="operations-facts" aria-label="운영 요약">
         <div><small>마지막 성공</small><strong>${state.latestSuccess?.completedAt ?? "-"}</strong></div>
-        <div><small>다음 예약</small><strong>${state.nextRun ? `${state.nextRun.label} · ${state.nextRun.mode}` : "-"}</strong></div>
+        <div><small>다음 예약</small><strong>${state.nextRun ? `${state.nextRun.label} · ${pipelineModeLabel(state.nextRun.mode)}` : "-"}</strong></div>
         <div><small>평일 스케줄</small><strong>${scheduleText || "-"}</strong></div>
         <div><small>데이터 기준일</small><strong>${current.dataAsOf ?? "-"}</strong></div>
       </section>
@@ -513,7 +531,7 @@ function renderOperationsPage(pipelineStatus) {
 
       <section class="operations-section">
         <div class="operations-section__heading">
-          <div><span class="eyebrow">Latest Run</span><h3>최근 실행 단계</h3></div>
+          <div><span class="eyebrow">Latest Run</span><h3>최근 완료 실행 단계</h3></div>
           <span>${current.startedAt} → ${current.completedAt}</span>
         </div>
         <div class="pipeline-stage-list">
@@ -589,7 +607,7 @@ function renderOperationsPage(pipelineStatus) {
               .map(
                 (run) => `
                   <div>
-                    <span>${run.scheduledTime ?? "수동"} · ${run.mode}</span>
+                    <span>${run.scheduledTime ?? "수동"} · ${pipelineModeLabel(run.mode)}</span>
                     <strong>${run.completedAt}</strong>
                     <small>${formatDurationSeconds(run.durationSeconds)}</small>
                   </div>
