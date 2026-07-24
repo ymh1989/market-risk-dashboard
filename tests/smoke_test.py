@@ -193,8 +193,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260724-4" in html
-    assert "app.js?v=20260724-4" in html
+    assert "styles.css?v=20260724-5" in html
+    assert "app.js?v=20260724-5" in html
     assert 'aria-pressed="${tab.id === "summary" ? "true" : "false"}"' in app_source
     assert 'tab.setAttribute("aria-pressed"' in app_source
     assert "font-weight: 800;" not in styles
@@ -217,6 +217,22 @@ def test_operation_mode_distinguishes_active_and_completed_runs():
     assert "state.activeRun.mode" in app_source
     assert "최근 완료 · ${pipelineModeLabel(current.mode)}" in app_source
     assert "<span>${current.mode}" not in app_source
+
+
+def test_operations_page_exposes_daily_schedule_overview():
+    app_source = APP_FILE.read_text(encoding="utf-8")
+    styles = STYLES_FILE.read_text(encoding="utf-8")
+
+    assert "function buildScheduleOverview" in app_source
+    assert "function medianRunDuration" in app_source
+    assert "오늘의 예약 실행" in app_source
+    assert "다음 영업일 예약" in app_source
+    assert 'statusLabel: "완료"' in app_source
+    assert 'statusLabel: delayed ? "지연" : "진행 중"' in app_source
+    assert "최근 성공 중앙 소요시간" in app_source
+    assert "${renderScheduleOverview(pipelineStatus)}" in app_source
+    assert ".operations-schedule-list" in styles
+    assert ".operations-schedule-item--caution" in styles
 
 
 def test_dashboard_data_requests_bypass_stale_cache():
@@ -397,6 +413,7 @@ if __name__ == "__main__":
     test_watch_badge_keeps_readable_contrast()
     test_ui_hierarchy_and_accessibility_contract()
     test_operation_mode_distinguishes_active_and_completed_runs()
+    test_operations_page_exposes_daily_schedule_overview()
     test_dashboard_data_requests_bypass_stale_cache()
     test_snow_lab_easter_egg_contract()
     test_pipeline_status_contract()

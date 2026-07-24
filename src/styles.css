@@ -3263,6 +3263,95 @@ a {
   line-height: 1.4;
 }
 
+.operations-schedule-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.operations-schedule-item {
+  display: grid;
+  grid-template-columns: minmax(82px, 0.55fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  min-height: 112px;
+  border-top: 3px solid var(--muted);
+  border-right: 1px solid var(--line);
+  background: var(--surface-raised);
+  padding: 16px;
+}
+
+.operations-schedule-item:last-child {
+  border-right: 0;
+}
+
+.operations-schedule-item--good {
+  border-top-color: var(--green);
+}
+
+.operations-schedule-item--watch {
+  border-top-color: var(--blue);
+}
+
+.operations-schedule-item--caution {
+  border-top-color: var(--amber);
+}
+
+.operations-schedule-item__time {
+  display: grid;
+  gap: 3px;
+}
+
+.operations-schedule-item__time time {
+  color: var(--ink);
+  font-size: 1.3rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.operations-schedule-item__time span,
+.operations-schedule-item p {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.operations-schedule-item p {
+  margin: 5px 0 0;
+  line-height: 1.5;
+}
+
+.operations-schedule-item > div:last-child strong {
+  font-size: 0.84rem;
+}
+
+.operations-schedule-item--good > div:last-child strong {
+  color: var(--green);
+}
+
+.operations-schedule-item--watch > div:last-child strong {
+  color: var(--blue);
+}
+
+.operations-schedule-item--caution > div:last-child strong {
+  color: var(--amber);
+}
+
+.operations-schedule-baseline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: center;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.operations-schedule-baseline strong {
+  color: var(--ink);
+}
+
 .operations-section {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -4071,7 +4160,8 @@ a {
   .operation-status-strip,
   .operations-facts,
   .pipeline-stage-list,
-  .data-quality-summary {
+  .data-quality-summary,
+  .operations-schedule-list {
     grid-template-columns: 1fr;
   }
 
@@ -4093,6 +4183,15 @@ a {
 
   .operation-status-strip > div:last-child,
   .operations-facts > div:last-child {
+    border-bottom: 0;
+  }
+
+  .operations-schedule-item {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .operations-schedule-item:last-child {
     border-bottom: 0;
   }
 

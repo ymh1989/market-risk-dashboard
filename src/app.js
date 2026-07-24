@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260724-4";
+const ASSET_VERSION = "20260724-5";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -299,6 +299,7 @@ function dashboardTabsWithElsTool(tabs) {
 }
 
 function formatDurationSeconds(value) {
+  if (value === null || value === undefined || value === "") return "-";
   const seconds = Number(value);
   if (!Number.isFinite(seconds) || seconds < 0) return "-";
   if (seconds < 60) return `${Math.round(seconds)}초`;
@@ -311,6 +312,33 @@ function pipelineModeLabel(mode) {
   if (mode === "full") return "전체 갱신";
   if (mode === "fast") return "빠른 갱신";
   return mode || "-";
+}
+
+function formatCountdownSeconds(value) {
+  const seconds = Math.max(0, Number(value) || 0);
+  if (seconds < 60) return "1분 이내";
+  const minutes = Math.ceil(seconds / 60);
+  if (minutes < 60) return `${minutes}분`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder ? `${hours}시간 ${remainder}분` : `${hours}시간`;
+}
+
+function formatKstClock(value) {
+  const clock = String(value ?? "").split(" ")[1];
+  return clock ? clock.slice(0, 5) : "-";
+}
+
+function medianRunDuration(history, mode) {
+  const durations = (history ?? [])
+    .filter((run) => run.status === "success" && run.mode === mode && Number(run.durationSeconds) > 0)
+    .map((run) => Number(run.durationSeconds))
+    .sort((left, right) => left - right);
+  if (!durations.length) return null;
+  const middle = Math.floor(durations.length / 2);
+  return durations.length % 2
+    ? durations[middle]
+    : Math.round((durations[middle - 1] + durations[middle]) / 2);
 }
 
 function buildScheduleInstances(pipelineStatus) {
@@ -344,6 +372,76 @@ function buildScheduleInstances(pipelineStatus) {
   }
 
   return instances.sort((left, right) => left.timestamp - right.timestamp);
+}
+
+function buildScheduleOverview(pipelineStatus) {
+  const now = Date.now();
+  const instances = buildScheduleInstances(pipelineStatus);
+  if (!instances.length) return null;
+  const kstOffsetMs = 9 * 60 * 60 * 1000;
+  const nowKst = new Date(now + kstOffsetMs);
+  const todayKey = `${nowKst.getUTCFullYear()}-${String(nowKst.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    nowKst.getUTCDate()
+  ).padStart(2, "0")}`;
+  let scheduleDate = todayKey;
+  let scheduledItems = instances.filter((item) => item.dateKey === scheduleDate);
+
+  if (!scheduledItems.length) {
+    const nextInstance = instances.find((item) => item.timestamp > now);
+    if (!nextInstance) return null;
+    scheduleDate = nextInstance.dateKey;
+    scheduledItems = instances.filter((item) => item.dateKey === scheduleDate);
+  }
+
+  const history = pipelineStatus?.history ?? [];
+  const graceMinutes = Number(pipelineStatus?.schedule?.delayGraceMinutes ?? 5);
+  const items = scheduledItems.map((item) => {
+    const run = history.find(
+      (candidate) =>
+        candidate.status === "success" &&
+        candidate.scheduledTime === item.time &&
+        String(candidate.startedAt ?? "").startsWith(item.dateKey)
+    );
+    if (run) {
+      return {
+        ...item,
+        status: "success",
+        tone: "good",
+        statusLabel: "완료",
+        detail: `${formatKstClock(run.completedAt)} 완료 · ${formatDurationSeconds(run.durationSeconds)}`
+      };
+    }
+    if (item.timestamp > now) {
+      return {
+        ...item,
+        status: "upcoming",
+        tone: "muted",
+        statusLabel: "예정",
+        detail: `${formatCountdownSeconds(item.timestamp - now)} 후 시작`
+      };
+    }
+    const elapsedSeconds = Math.max(0, Math.floor((now - item.timestamp) / 1000));
+    const expectedMinutes = Number(pipelineStatus?.schedule?.expectedDurationMinutes?.[item.mode] ?? 10);
+    const delayed = elapsedSeconds > (expectedMinutes + graceMinutes) * 60;
+    return {
+      ...item,
+      status: delayed ? "delayed" : "running",
+      tone: delayed ? "caution" : "watch",
+      statusLabel: delayed ? "지연" : "진행 중",
+      detail: delayed
+        ? `예상 완료시간을 ${formatDurationSeconds(elapsedSeconds - expectedMinutes * 60)} 초과`
+        : `${formatDurationSeconds(elapsedSeconds)} 경과 · 통상 ${expectedMinutes}분`
+    };
+  });
+
+  return {
+    scheduleDate,
+    isToday: scheduleDate === todayKey,
+    items,
+    completedCount: items.filter((item) => item.status === "success").length,
+    fullMedian: medianRunDuration(history, "full"),
+    fastMedian: medianRunDuration(history, "fast")
+  };
 }
 
 function pipelineRuntimeState(pipelineStatus) {
@@ -454,6 +552,45 @@ function operationStatusLabel(status) {
   }[status] ?? "확인";
 }
 
+function renderScheduleOverview(pipelineStatus) {
+  const overview = buildScheduleOverview(pipelineStatus);
+  if (!overview) return "";
+  return `
+    <section class="operations-section operations-schedule">
+      <div class="operations-section__heading">
+        <div>
+          <span class="eyebrow">Schedule Timeline</span>
+          <h3>${overview.isToday ? "오늘의 예약 실행" : "다음 영업일 예약"}</h3>
+        </div>
+        <span>${overview.scheduleDate} · ${overview.completedCount}/${overview.items.length} 완료</span>
+      </div>
+      <div class="operations-schedule-list" aria-label="${overview.scheduleDate} 예약 실행 현황">
+        ${overview.items
+          .map(
+            (item) => `
+              <article class="operations-schedule-item operations-schedule-item--${item.tone}">
+                <div class="operations-schedule-item__time">
+                  <time datetime="${item.dateKey}T${item.time}:00+09:00">${item.time}</time>
+                  <span>${pipelineModeLabel(item.mode)}</span>
+                </div>
+                <div>
+                  <strong>${item.statusLabel}</strong>
+                  <p>${item.detail}</p>
+                </div>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+      <footer class="operations-schedule-baseline">
+        <span>최근 성공 중앙 소요시간</span>
+        <strong>전체 갱신 ${formatDurationSeconds(overview.fullMedian)}</strong>
+        <strong>빠른 갱신 ${formatDurationSeconds(overview.fastMedian)}</strong>
+      </footer>
+    </section>
+  `;
+}
+
 function renderOperationsPage(pipelineStatus) {
   const state = pipelineRuntimeState(pipelineStatus);
   if (!pipelineStatus?.current) {
@@ -499,6 +636,8 @@ function renderOperationsPage(pipelineStatus) {
         <div><small>평일 스케줄</small><strong>${scheduleText || "-"}</strong></div>
         <div><small>데이터 기준일</small><strong>${current.dataAsOf ?? "-"}</strong></div>
       </section>
+
+      ${renderScheduleOverview(pipelineStatus)}
 
       <section class="operations-section">
         <div class="operations-section__heading">
