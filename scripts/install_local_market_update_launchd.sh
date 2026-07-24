@@ -19,21 +19,23 @@ set +a
 
 LABEL="${LOCAL_MARKET_UPDATE_LABEL:-com.marketlab.market-risk-update}"
 TIMES="${LOCAL_MARKET_UPDATE_TIMES:-07:30,12:30,15:35}"
+SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 CALENDAR_INTERVALS=""
 UNIQUE_MINUTES=""
 
-IFS=',' read -ra schedule_times <<< "$TIMES"
+ALL_TIMES="$TIMES,$SATURDAY_TIMES"
+IFS=',' read -ra schedule_times <<< "$ALL_TIMES"
 for schedule_time in "${schedule_times[@]}"; do
   schedule_time="${schedule_time//[[:space:]]/}"
   [[ -z "$schedule_time" ]] && continue
   schedule_minute="${schedule_time#*:}"
   if [[ "$schedule_minute" == "$schedule_time" || ! "$schedule_minute" =~ ^[0-9]{1,2}$ ]]; then
-    echo "LOCAL_MARKET_UPDATE_TIMES 값이 올바르지 않습니다: $schedule_time" >&2
+    echo "시장리스크 예약 시각 값이 올바르지 않습니다: $schedule_time" >&2
     exit 1
   fi
   if (( schedule_minute < 0 || schedule_minute > 59 )); then
-    echo "LOCAL_MARKET_UPDATE_TIMES 분 값이 올바르지 않습니다: $schedule_time" >&2
+    echo "시장리스크 예약 분 값이 올바르지 않습니다: $schedule_time" >&2
     exit 1
   fi
   if [[ " $UNIQUE_MINUTES " != *" $schedule_minute "* ]]; then
@@ -91,6 +93,8 @@ launchctl bootstrap "gui/$(id -u)" "$PLIST"
 launchctl enable "gui/$(id -u)/$LABEL"
 
 echo "$LABEL LaunchAgent를 설치했습니다."
-echo "목표 시각: $TIMES KST, 평일만 실행"
+echo "평일 목표 시각: $TIMES KST"
+echo "토요일 목표 시각: $SATURDAY_TIMES KST"
+echo "일요일은 실행하지 않습니다."
 echo "plist: $PLIST"
 echo "log: $LOG_DIR/local-market-update.log"

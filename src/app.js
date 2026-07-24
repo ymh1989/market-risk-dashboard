@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260724-8";
+const ASSET_VERSION = "20260724-9";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -393,13 +393,21 @@ function buildScheduleInstances(pipelineStatus) {
   for (let offset = -8; offset <= 8; offset += 1) {
     const day = new Date(baseDate + offset * dayMs);
     const weekday = day.getUTCDay();
-    if (schedule.weekdaysOnly && (weekday === 0 || weekday === 6)) continue;
+    const scheduleItems =
+      weekday >= 1 && weekday <= 5
+        ? schedule.times
+        : weekday === 6
+          ? schedule.saturdayTimes ?? []
+          : !schedule.weekdaysOnly && !schedule.saturdayTimes
+            ? schedule.times
+            : [];
+    if (!scheduleItems.length) continue;
     const year = day.getUTCFullYear();
     const month = day.getUTCMonth();
     const date = day.getUTCDate();
     const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
 
-    schedule.times.forEach((item) => {
+    scheduleItems.forEach((item) => {
       const [hour, minute] = String(item.time).split(":").map(Number);
       if (!Number.isFinite(hour) || !Number.isFinite(minute)) return;
       instances.push({
@@ -600,7 +608,7 @@ function renderScheduleOverview(pipelineStatus) {
       <div class="operations-section__heading">
         <div>
           <span class="eyebrow">Schedule Timeline</span>
-          <h3>${overview.isToday ? "오늘의 예약 실행" : "다음 영업일 예약"}</h3>
+          <h3>${overview.isToday ? "오늘의 예약 실행" : "다음 예약"}</h3>
         </div>
         <span>${overview.scheduleDate} · ${overview.completedCount}/${overview.items.length} 완료</span>
       </div>
@@ -654,6 +662,9 @@ function renderOperationsPage(pipelineStatus) {
   const scheduleText = (pipelineStatus.schedule?.times ?? [])
     .map((item) => `${item.time} ${pipelineModeLabel(item.mode)}`)
     .join(" · ");
+  const saturdayScheduleText = (pipelineStatus.schedule?.saturdayTimes ?? [])
+    .map((item) => `${item.time} ${pipelineModeLabel(item.mode)}`)
+    .join(" · ");
 
   return `
     <section class="operations-page">
@@ -673,7 +684,7 @@ function renderOperationsPage(pipelineStatus) {
       <section class="operations-facts" aria-label="운영 요약">
         <div><small>마지막 성공</small><strong>${state.latestSuccess?.completedAt ?? "-"}</strong></div>
         <div><small>다음 예약</small><strong>${state.nextRun ? `${state.nextRun.label} · ${pipelineModeLabel(state.nextRun.mode)}` : "-"}</strong></div>
-        <div><small>평일 스케줄</small><strong>${scheduleText || "-"}</strong></div>
+        <div><small>예약 스케줄</small><strong>평일 ${scheduleText || "-"}${saturdayScheduleText ? ` · 토 ${saturdayScheduleText}` : ""}</strong></div>
         <div><small>데이터 기준일</small><strong>${current.dataAsOf ?? "-"}</strong></div>
       </section>
 

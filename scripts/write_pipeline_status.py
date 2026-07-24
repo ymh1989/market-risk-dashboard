@@ -169,6 +169,7 @@ def build_payload(args):
     }
     dashboard_metadata = data["dashboard"].get("metadata") or {}
     schedule_times = split_times(args.times)
+    saturday_times = split_times(args.saturday_times)
     full_times = set(split_times(args.full_times))
     trigger = "scheduled" if args.scheduled_time else "manual"
     scheduled_time = args.scheduled_time or None
@@ -202,11 +203,12 @@ def build_payload(args):
         "current": current,
         "schedule": {
             "timezone": "Asia/Seoul",
-            "weekdaysOnly": True,
+            "weekdaysOnly": False,
             "times": [
                 {"time": item, "mode": "full" if item in full_times else "fast"}
                 for item in schedule_times
             ],
+            "saturdayTimes": [{"time": item, "mode": "full"} for item in saturday_times],
             "expectedDurationMinutes": {"fast": 5, "full": 25},
             "delayGraceMinutes": 5,
         },
@@ -230,6 +232,7 @@ def parse_args():
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
     parser.add_argument("--mode", choices=["fast", "full"], default="full")
     parser.add_argument("--times", default="07:30,12:30,15:35")
+    parser.add_argument("--saturday-times", default="07:30")
     parser.add_argument("--full-times", default="07:30,15:35")
     parser.add_argument("--scheduled-time", default="")
     parser.add_argument("--run-id", default="")

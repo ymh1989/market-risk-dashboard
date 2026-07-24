@@ -196,8 +196,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260724-8" in html
-    assert "app.js?v=20260724-8" in html
+    assert "styles.css?v=20260724-9" in html
+    assert "app.js?v=20260724-9" in html
     assert 'aria-pressed="${tab.id === "summary" ? "true" : "false"}"' in app_source
     assert 'tab.setAttribute("aria-pressed"' in app_source
     assert "font-weight: 800;" not in styles
@@ -242,17 +242,28 @@ def test_operation_mode_distinguishes_active_and_completed_runs():
 def test_operations_page_exposes_daily_schedule_overview():
     app_source = APP_FILE.read_text(encoding="utf-8")
     styles = STYLES_FILE.read_text(encoding="utf-8")
+    run_script = (ROOT / "scripts" / "run_local_market_update.sh").read_text(encoding="utf-8")
+    installer = (ROOT / "scripts" / "install_local_market_update_launchd.sh").read_text(
+        encoding="utf-8"
+    )
 
     assert "function buildScheduleOverview" in app_source
     assert "function medianRunDuration" in app_source
     assert "오늘의 예약 실행" in app_source
-    assert "다음 영업일 예약" in app_source
+    assert "다음 예약" in app_source
+    assert "schedule.saturdayTimes ?? []" in app_source
+    assert "토 ${saturdayScheduleText}" in app_source
     assert 'statusLabel: "완료"' in app_source
     assert 'statusLabel: delayed ? "지연" : "진행 중"' in app_source
     assert "최근 성공 중앙 소요시간" in app_source
     assert "${renderScheduleOverview(pipelineStatus)}" in app_source
     assert ".operations-schedule-list" in styles
     assert ".operations-schedule-item--caution" in styles
+    assert 'SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"' in run_script
+    assert 'SCHEDULED_DAY_TYPE="saturday"' in run_script
+    assert 'if [[ "$SCHEDULED_DAY_TYPE" == "saturday" ]]' in run_script
+    assert '--saturday-times "$SATURDAY_TIMES"' in run_script
+    assert 'SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"' in installer
 
 
 def test_dashboard_data_requests_bypass_stale_cache():
@@ -413,6 +424,8 @@ def test_pipeline_status_contract():
     assert status["current"]["status"] == "success"
     assert status["current"]["dataAsOf"]
     assert {item["time"] for item in status["schedule"]["times"]} == {"07:30", "12:30", "15:35"}
+    assert status["schedule"]["saturdayTimes"] == [{"time": "07:30", "mode": "full"}]
+    assert status["schedule"]["weekdaysOnly"] is False
     assert {stage["id"] for stage in status["stages"]} == {"market", "ml", "validation", "deployment"}
     assert all(stage["status"] == "success" for stage in status["stages"])
     assert {source["id"] for source in status["sources"]} == {

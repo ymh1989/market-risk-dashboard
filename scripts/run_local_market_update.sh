@@ -9,6 +9,7 @@ STATE_DIR="$ROOT/logs/local-market-update-state"
 BRANCH="${LOCAL_MARKET_UPDATE_BRANCH:-main}"
 REMOTE="${LOCAL_MARKET_UPDATE_REMOTE:-origin}"
 TIMES="${LOCAL_MARKET_UPDATE_TIMES:-07:30,12:30,15:35}"
+SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"
 LABEL="${LOCAL_MARKET_UPDATE_LABEL:-com.marketlab.market-risk-update}"
 PYTHON_BIN="${LOCAL_MARKET_UPDATE_PYTHON:-}"
 PAGES_URL="${LOCAL_MARKET_UPDATE_PAGES_URL:-https://ymh1989.github.io/market-risk-dashboard}"
@@ -20,6 +21,7 @@ FULL_TIMES="${LOCAL_MARKET_UPDATE_FULL_TIMES:-07:30,15:35}"
 ONLY_AT_SCHEDULED_KST=0
 SCHEDULE_STATE_FILE=""
 SCHEDULED_TIME=""
+SCHEDULED_DAY_TYPE=""
 
 if [[ -f "$ENV_FILE" ]]; then
   set -a
@@ -28,6 +30,7 @@ if [[ -f "$ENV_FILE" ]]; then
   BRANCH="${LOCAL_MARKET_UPDATE_BRANCH:-$BRANCH}"
   REMOTE="${LOCAL_MARKET_UPDATE_REMOTE:-$REMOTE}"
   TIMES="${LOCAL_MARKET_UPDATE_TIMES:-$TIMES}"
+  SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-$SATURDAY_TIMES}"
   LABEL="${LOCAL_MARKET_UPDATE_LABEL:-$LABEL}"
   PYTHON_BIN="${LOCAL_MARKET_UPDATE_PYTHON:-$PYTHON_BIN}"
   PAGES_URL="${LOCAL_MARKET_UPDATE_PAGES_URL:-$PAGES_URL}"
@@ -72,16 +75,28 @@ kst_now() {
 }
 
 is_scheduled_now() {
-  local now_time now_weekday scheduled_time state_file state_key
+  local now_time now_weekday scheduled_time state_file state_key active_times schedule_label
   now_time="$(kst_now +%H:%M)"
   now_weekday="$(kst_now +%u)"
 
-  if (( now_weekday > 5 )); then
-    echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 평일이 아니어서 건너뜁니다."
-    return 1
-  fi
+  case "$now_weekday" in
+    1|2|3|4|5)
+      active_times="$TIMES"
+      schedule_label="평일"
+      SCHEDULED_DAY_TYPE="weekday"
+      ;;
+    6)
+      active_times="$SATURDAY_TIMES"
+      schedule_label="토요일"
+      SCHEDULED_DAY_TYPE="saturday"
+      ;;
+    *)
+      echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 일요일은 예약 갱신을 건너뜁니다."
+      return 1
+      ;;
+  esac
 
-  IFS=',' read -ra schedule_times <<< "$TIMES"
+  IFS=',' read -ra schedule_times <<< "$active_times"
   for scheduled_time in "${schedule_times[@]}"; do
     scheduled_time="${scheduled_time//[[:space:]]/}"
     if [[ "$now_time" == "$scheduled_time" ]]; then
@@ -98,7 +113,7 @@ is_scheduled_now() {
     fi
   done
 
-  echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 예약 시각($TIMES KST)이 아니어서 건너뜁니다."
+  echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] $schedule_label 예약 시각($active_times KST)이 아니어서 건너뜁니다."
   return 1
 }
 
@@ -141,6 +156,10 @@ resolve_update_mode() {
       ;;
     auto)
       if [[ -z "$SCHEDULED_TIME" ]]; then
+        echo "full"
+        return 0
+      fi
+      if [[ "$SCHEDULED_DAY_TYPE" == "saturday" ]]; then
         echo "full"
         return 0
       fi
@@ -265,6 +284,7 @@ RUN_COMPLETED_EPOCH="$(date +%s)"
 "$PYTHON_BIN" scripts/write_pipeline_status.py \
   --mode "$UPDATE_MODE" \
   --times "$TIMES" \
+  --saturday-times "$SATURDAY_TIMES" \
   --full-times "$FULL_TIMES" \
   --scheduled-time "$SCHEDULED_TIME" \
   --started-at "$RUN_STARTED_AT" \
