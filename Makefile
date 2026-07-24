@@ -1,10 +1,13 @@
-.PHONY: serve test update-market-risk backtest-market-risk analyze-stress-episodes send-news-digest install-news-digest
+.PHONY: serve test audit-data update-market-risk backtest-market-risk analyze-stress-episodes send-news-digest install-news-digest
 
 serve:
 	python3 -m http.server 5173 --bind 127.0.0.1
 
 test:
 	python3 tests/smoke_test.py
+
+audit-data:
+	python3 scripts/audit_data_completeness.py --strict
 
 update-market-risk:
 	python3 scripts/update_market_risk.py

@@ -196,6 +196,9 @@ cd "$WORKTREE"
 
 export PYTHONUNBUFFERED=1
 export PYTHONPATH="$WORKTREE/src"
+export PYTHONWARNINGS="${PYTHONWARNINGS:-ignore:Skipping features without any observed values:UserWarning}"
+export MPLCONFIGDIR="${MPLCONFIGDIR:-$WORKTREE/.cache/matplotlib}"
+mkdir -p "$MPLCONFIGDIR"
 
 seed_local_data_cache() {
   local filename source_file
@@ -253,6 +256,7 @@ ML_STAGE_COMPLETED_EPOCH="$(date +%s)"
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 대시보드 데이터를 검증합니다."
 VALIDATION_STAGE_STARTED_EPOCH="$(date +%s)"
+"$PYTHON_BIN" scripts/audit_data_completeness.py --strict
 make test
 VALIDATION_STAGE_COMPLETED_EPOCH="$(date +%s)"
 RUN_COMPLETED_AT="$(kst_now '+%Y-%m-%d %H:%M:%S KST')"
@@ -284,6 +288,7 @@ git add \
   data/els-index-risk.json \
   data/hmm-regime.json \
   data/ml-risk-signal.json \
+  data/data-quality.json \
   data/pipeline-status.json
 
 if git diff --cached --quiet; then

@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 KST = timezone(timedelta(hours=9))
 DEFAULT_OUTPUT = ROOT / "data" / "pipeline-status.json"
+DATA_QUALITY_FILE = ROOT / "data" / "data-quality.json"
 
 
 def read_json(path):
@@ -25,14 +26,14 @@ def latest_date(items):
     return max(dates) if dates else None
 
 
-def source_status(snapshot):
+def source_status(snapshot, quality=None):
     yahoo = list((snapshot.get("yahooSymbols") or {}).values())
     naver = list((snapshot.get("naverSymbols") or {}).values())
     fred = list((snapshot.get("fredSeries") or {}).values())
     market_indexes = list((snapshot.get("naverMarketIndexes") or {}).values())
     live_market_indexes = sum(item.get("fetchStatus") == "live" for item in market_indexes)
 
-    return [
+    sources = [
         {
             "id": "yahoo",
             "label": "Yahoo Finance",
@@ -66,6 +67,41 @@ def source_status(snapshot):
             "detail": f"금리·크레딧·금융여건 {len(fred)}개 시계열 · 저장값 대체 경로 포함",
         },
     ]
+    quality_groups = {item.get("id"): item for item in (quality or {}).get("sourceGroups", [])}
+    for source in sources:
+        group = quality_groups.get(source["id"])
+        if not group:
+            continue
+        source.update(
+            {
+                "status": group.get("status", source["status"]),
+                "lastDate": group.get("latestLastDate") or source["lastDate"],
+                "oldestLastDate": group.get("oldestLastDate"),
+                "freshCount": group.get("freshCount"),
+                "staleCount": group.get("staleCount"),
+                "fallbackCount": group.get("fallbackCount"),
+                "detail": group.get("detail", source["detail"]),
+            }
+        )
+    known_ids = {source["id"] for source in sources}
+    for group_id, group in quality_groups.items():
+        if group_id in known_ids:
+            continue
+        sources.append(
+            {
+                "id": group_id,
+                "label": group.get("label", group_id),
+                "status": group.get("status", "warning"),
+                "lastDate": group.get("latestLastDate"),
+                "oldestLastDate": group.get("oldestLastDate"),
+                "seriesCount": group.get("seriesPresent"),
+                "freshCount": group.get("freshCount"),
+                "staleCount": group.get("staleCount"),
+                "fallbackCount": group.get("fallbackCount"),
+                "detail": group.get("detail", ""),
+            }
+        )
+    return sources
 
 
 def artifact_status(data):
@@ -77,6 +113,7 @@ def artifact_status(data):
         ("hmm", "HMM 레짐", data["hmm"].get("generatedAt")),
         ("backtest", "시장 백테스트", data["backtest"].get("generatedAt")),
         ("stress", "스트레스 이력", data["stress"].get("generatedAt")),
+        ("quality", "데이터 완비성", data["quality"].get("generatedAt")),
     ]
     return [
         {"id": item_id, "label": label, "status": "ok" if generated_at else "warning", "generatedAt": generated_at}
@@ -128,6 +165,7 @@ def build_payload(args):
         "hmm": read_json(ROOT / "data" / "hmm-regime.json"),
         "backtest": read_json(ROOT / "data" / "market-risk-backtest.json"),
         "stress": read_json(ROOT / "data" / "market-stress-episodes.json"),
+        "quality": read_json(DATA_QUALITY_FILE),
     }
     dashboard_metadata = data["dashboard"].get("metadata") or {}
     schedule_times = split_times(args.times)
@@ -148,7 +186,12 @@ def build_payload(args):
         "dataAsOf": dashboard_metadata.get("asOf"),
         "dashboardGeneratedAt": dashboard_metadata.get("generatedAt"),
         "mlGeneratedAt": data["ml"].get("generatedAt"),
-        "message": "데이터 생성, 품질검증, Git 푸시와 Pages 배포를 완료했습니다.",
+        "qualityScore": data["quality"].get("score"),
+        "message": (
+            "데이터 생성과 완비성 검증을 통과했습니다."
+            if data["quality"].get("status") == "ok"
+            else "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+        ),
     }
     history = [current]
     history.extend(item for item in previous.get("history", []) if item.get("runId") != run_id)
@@ -168,8 +211,15 @@ def build_payload(args):
             "delayGraceMinutes": 5,
         },
         "stages": stage_status(args),
-        "sources": source_status(data["snapshot"]),
+        "sources": source_status(data["snapshot"], data["quality"]),
         "artifacts": artifact_status(data),
+        "quality": {
+            "status": data["quality"].get("status", "warning"),
+            "score": data["quality"].get("score"),
+            "referenceDate": data["quality"].get("referenceDate"),
+            "summary": data["quality"].get("summary") or {},
+            "issues": (data["quality"].get("issues") or [])[:8],
+        },
         "history": history[:12],
     }
 

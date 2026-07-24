@@ -12,6 +12,10 @@ required:
     provider: yahoo
     symbol: "^KS11"
     label: "KOSPI Composite Index"
+    supplements:
+      - provider: naver
+        symbol: "KOSPI"
+        label: "KOSPI Composite Index"
   SPX:
     provider: yahoo
     symbol: "^GSPC"
@@ -42,6 +46,7 @@ optional:
     provider: yahoo
     symbol: "000300.SS"
     label: "CSI 300"
+    min_coverage_ratio: 0.1
   US10Y:
     provider: yahoo
     symbol: "^TNX"

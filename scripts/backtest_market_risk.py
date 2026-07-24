@@ -1,8 +1,10 @@
 import json
 
 from update_market_risk import (
+    NAVER_DOMESTIC_INDEXES,
     ROOT,
     TICKERS,
+    fetch_naver_chart,
     fetch_yahoo_chart,
 )
 
@@ -65,6 +67,18 @@ def summarize(samples):
     }
 
 
+def fetch_kospi_with_supplement():
+    yahoo = fetch_yahoo_chart(TICKERS["kospi"]["symbol"])
+    try:
+        naver = fetch_naver_chart(NAVER_DOMESTIC_INDEXES["kospi"]["symbol"])
+    except Exception as exc:
+        print(f"Naver KOSPI 보강 조회 실패로 Yahoo 데이터만 사용합니다: {exc}")
+        return yahoo
+    merged = {point["date"]: point for point in yahoo}
+    merged.update({point["date"]: point for point in naver})
+    return [merged[date] for date in sorted(merged)]
+
+
 def main():
     dashboard = json.loads((ROOT / "data" / "risk-dashboard.json").read_text(encoding="utf-8"))
     market = next(section for section in dashboard["sections"] if section["id"] == "market")
@@ -72,7 +86,7 @@ def main():
     timeseries = json.loads(TIMESERIES_FILE.read_text(encoding="utf-8"))
     score_points = weighted_dashboard_timeseries(timeseries, market["indicators"])
 
-    kospi = fetch_yahoo_chart(TICKERS["kospi"]["symbol"])
+    kospi = fetch_kospi_with_supplement()
     kospi_dates = {point["date"]: index for index, point in enumerate(kospi)}
     kospi_values = [point["close"] for point in kospi]
 

@@ -12,6 +12,7 @@ ELS_FILE = ROOT / "data" / "els-index-risk.json"
 STYLES_FILE = ROOT / "src" / "styles.css"
 APP_FILE = ROOT / "src" / "app.js"
 PIPELINE_STATUS_FILE = ROOT / "data" / "pipeline-status.json"
+DATA_QUALITY_FILE = ROOT / "data" / "data-quality.json"
 SNOW_LAB_FILE = ROOT / "snow-lab.html"
 SNOW_LAB_STYLE_FILE = ROOT / "src" / "snow-lab.css"
 SNOW_LAB_SCRIPT_FILE = ROOT / "src" / "snow-lab.js"
@@ -318,6 +319,7 @@ def test_snow_lab_easter_egg_contract():
 
 def test_pipeline_status_contract():
     status = json.loads(PIPELINE_STATUS_FILE.read_text(encoding="utf-8"))
+    quality = json.loads(DATA_QUALITY_FILE.read_text(encoding="utf-8"))
     assert status["schemaVersion"] == 1
     assert status["current"]["status"] == "success"
     assert status["current"]["dataAsOf"]
@@ -329,9 +331,15 @@ def test_pipeline_status_contract():
         "naver-equity",
         "naver-market-index",
         "fred",
+        "ml-input",
     }
     assert len(status["artifacts"]) >= 6
+    assert status["quality"]["score"] >= 0
     assert status["history"]
+    assert quality["schemaVersion"] == 1
+    assert quality["summary"]["sourceSeriesExpected"] == 70
+    assert quality["summary"]["sourceSeriesPresent"] == 70
+    assert quality["summary"]["error"] == 0
 
 
 if __name__ == "__main__":

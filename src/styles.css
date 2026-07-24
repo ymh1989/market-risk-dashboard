@@ -3063,6 +3063,78 @@ select {
   font-weight: 900;
 }
 
+.data-quality-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.data-quality-summary > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px;
+  border-right: 1px solid var(--line);
+}
+
+.data-quality-summary > div:last-child {
+  border-right: 0;
+}
+
+.data-quality-summary small {
+  color: var(--muted);
+  font-size: 0.73rem;
+  font-weight: 800;
+}
+
+.data-quality-summary strong {
+  font-size: 1rem;
+}
+
+.data-quality-issues {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.data-quality-issue {
+  display: grid;
+  grid-template-columns: 52px minmax(140px, 0.4fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  border-left: 3px solid var(--amber);
+  background: var(--surface-soft);
+  padding: 10px 12px;
+  font-size: 0.78rem;
+}
+
+.data-quality-issue--error {
+  border-left-color: var(--red);
+}
+
+.data-quality-issue span {
+  color: var(--amber);
+  font-weight: 900;
+}
+
+.data-quality-issue--error span {
+  color: var(--red);
+}
+
+.data-quality-issue p,
+.data-quality-clear {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.data-quality-clear {
+  margin-top: 12px;
+  font-size: 0.8rem;
+}
+
 .operations-table-wrap {
   overflow-x: auto;
 }
@@ -3467,8 +3539,20 @@ select {
 
   .operation-status-strip,
   .operations-facts,
-  .pipeline-stage-list {
+  .pipeline-stage-list,
+  .data-quality-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .data-quality-summary {
+    border: 0;
+    gap: 8px;
+  }
+
+  .data-quality-summary > div,
+  .data-quality-summary > div:last-child {
+    border: 1px solid var(--line);
+    border-radius: 6px;
   }
 
   .operation-status-strip > div:nth-child(2),
@@ -3678,8 +3762,17 @@ select {
 
   .operation-status-strip,
   .operations-facts,
-  .pipeline-stage-list {
+  .pipeline-stage-list,
+  .data-quality-summary {
     grid-template-columns: 1fr;
+  }
+
+  .data-quality-issue {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .data-quality-issue p {
+    grid-column: 1 / -1;
   }
 
   .operation-status-strip > div,

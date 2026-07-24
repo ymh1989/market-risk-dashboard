@@ -6,7 +6,12 @@ import pandas as pd
 import pytest
 
 from kospi_risk import market_data_fetcher
-from kospi_risk.market_data_fetcher import SourceFetchResult, fetch_fred_series, fetch_market_data
+from kospi_risk.market_data_fetcher import (
+    SourceFetchResult,
+    fetch_fred_series,
+    fetch_market_data,
+    fetch_naver_series,
+)
 
 
 def fake_source_config():
@@ -164,3 +169,65 @@ def test_fred_series_uses_history_cache_when_network_fails(tmp_path, monkeypatch
 
     assert result.status == "cached"
     assert list(result.frame["US2Y"]) == [4.25, 4.30]
+
+
+def test_naver_series_parser_reads_index_close(monkeypatch):
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def read(self):
+            return (
+                b"[['date','open','high','low','close','volume','foreign'],"
+                b"['20260722',7000,7100,6900,7010,100,0],"
+                b"['20260723',7010,7200,7000,7150,110,0]]"
+            )
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: FakeResponse())
+    result = fetch_naver_series(
+        "KOSPI",
+        {"provider": "naver", "symbol": "KOSPI", "label": "KOSPI"},
+        {"timeout_seconds": 1},
+        start="2026-07-01",
+        end="2026-07-24",
+    )
+
+    assert result.provider == "naver"
+    assert result.frame["date"].max() == pd.Timestamp("2026-07-23")
+    assert result.frame.iloc[-1]["KOSPI"] == 7150
+
+
+def test_supplement_source_extends_and_overrides_primary_dates():
+    config = fake_source_config()
+    config["required"]["KOSPI"]["supplements"] = [
+        {"provider": "naver", "symbol": "KOSPI", "label": "KOSPI"}
+    ]
+
+    def supplementing_fetcher(column, spec, fetch_config, range_value, start, end):
+        if column == "KOSPI" and spec.get("provider") == "naver":
+            dates = pd.to_datetime(["2024-01-05", "2024-01-08"])
+            values = [999, 110]
+            provider = "naver"
+        else:
+            dates = pd.bdate_range("2024-01-01", periods=5)
+            values = list(range(100, 105))
+            provider = str(spec.get("provider", "yahoo"))
+        return SourceFetchResult(
+            column=column,
+            provider=provider,
+            symbol=spec["symbol"],
+            label=spec["label"],
+            frame=pd.DataFrame({"date": dates, column: values}),
+            status="ok",
+        )
+
+    df, metadata = fetch_market_data(config, fetcher=supplementing_fetcher)
+
+    assert df["date"].max() == pd.Timestamp("2024-01-08")
+    assert df.loc[df["date"] == pd.Timestamp("2024-01-05"), "KOSPI"].item() == 999
+    kospi_source = next(item for item in metadata["sources"] if item["column"] == "KOSPI")
+    assert kospi_source["provider"] == "yahoo+naver"
+    assert kospi_source["status"] == "supplemented"

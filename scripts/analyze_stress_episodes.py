@@ -16,6 +16,7 @@ from update_market_risk import (
     fetch_naver_chart,
     fetch_yahoo_chart,
     load_naver_market_index_cache,
+    supplement_domestic_index_series,
 )
 
 
@@ -194,6 +195,7 @@ def load_or_fetch_history():
         TICKERS,
         lambda _key, config: fetch_yahoo_chart(config["symbol"], range_value="7y"),
     )
+    series_map, _ = supplement_domestic_index_series(series_map)
     naver_map = fetch_source_map(
         "Naver",
         NAVER_SYMBOLS,

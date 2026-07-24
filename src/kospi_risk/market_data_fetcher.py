@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import io
 import json
 import subprocess
@@ -18,6 +19,7 @@ from .data_loader import save_frame
 
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
 FRED_GRAPH_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
+NAVER_CHART_URL = "https://api.finance.naver.com/siseJson.naver"
 DEFAULT_SOURCE_CONFIG = Path("configs/data_sources.yaml")
 FRED_HISTORY_CACHE = Path(__file__).resolve().parents[2] / "data" / "market-history-cache.json"
 
@@ -107,6 +109,78 @@ def fetch_yahoo_series(
     return SourceFetchResult(
         column=column,
         provider="yahoo",
+        symbol=symbol,
+        label=str(spec.get("label", column)),
+        frame=frame,
+        status="ok",
+    )
+
+
+def _range_start(range_value: str | None) -> date:
+    value = str(range_value or "10y").strip().lower()
+    multiplier = 365
+    if value.endswith("mo"):
+        multiplier = 30
+        amount = value[:-2]
+    elif value.endswith("y"):
+        amount = value[:-1]
+    else:
+        amount = "10"
+    try:
+        periods = max(1, int(amount))
+    except ValueError:
+        periods = 10
+    return date.today() - timedelta(days=periods * multiplier)
+
+
+def fetch_naver_series(
+    column: str,
+    spec: dict[str, Any],
+    fetch_config: dict[str, Any],
+    range_value: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+) -> SourceFetchResult:
+    symbol = str(spec["symbol"])
+    start_date = date.fromisoformat(start) if start else _range_start(range_value or fetch_config.get("range"))
+    end_date = date.fromisoformat(end) if end else date.today() + timedelta(days=2)
+    params = urllib.parse.urlencode(
+        {
+            "symbol": symbol,
+            "requestType": 1,
+            "startTime": start_date.strftime("%Y%m%d"),
+            "endTime": end_date.strftime("%Y%m%d"),
+            "timeframe": "day",
+        }
+    )
+    request = urllib.request.Request(
+        f"{NAVER_CHART_URL}?{params}",
+        headers={
+            "User-Agent": str(fetch_config.get("user_agent", "Mozilla/5.0")),
+            "Accept": "text/plain",
+        },
+    )
+    timeout = int(fetch_config.get("timeout_seconds", 20))
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        rows = ast.literal_eval(response.read().decode("utf-8", errors="ignore").strip())
+
+    values = []
+    for row in rows[1:]:
+        if not isinstance(row, list) or len(row) < 5 or row[4] is None:
+            continue
+        values.append(
+            {
+                "date": datetime.strptime(str(row[0]), "%Y%m%d"),
+                column: float(row[4]),
+            }
+        )
+    frame = pd.DataFrame(values)
+    if frame.empty:
+        raise RuntimeError(f"{symbol}: 유효한 Naver 종가 데이터가 없습니다.")
+    frame = frame.drop_duplicates("date", keep="last").sort_values("date").reset_index(drop=True)
+    return SourceFetchResult(
+        column=column,
+        provider="naver",
         symbol=symbol,
         label=str(spec.get("label", column)),
         frame=frame,
@@ -234,9 +308,59 @@ def fetch_source_series(
     provider = str(spec.get("provider", fetch_config.get("provider", "yahoo")))
     if provider == "yahoo":
         return fetch_yahoo_series(column, spec, fetch_config, range_value, start, end)
+    if provider == "naver":
+        return fetch_naver_series(column, spec, fetch_config, range_value, start, end)
     if provider == "fred":
         return fetch_fred_series(column, spec, fetch_config, range_value, start, end)
     raise RuntimeError(f"지원하지 않는 provider입니다: {provider}")
+
+
+def fetch_source_with_supplements(
+    column: str,
+    spec: dict[str, Any],
+    fetch_config: dict[str, Any],
+    range_value: str | None,
+    start: str | None,
+    end: str | None,
+    fetcher: Callable[
+        [str, dict[str, Any], dict[str, Any], str | None, str | None, str | None],
+        SourceFetchResult,
+    ],
+) -> SourceFetchResult:
+    primary = fetcher(column, spec, fetch_config, range_value, start, end)
+    frames = [primary.frame]
+    providers = [primary.provider]
+    symbols = [primary.symbol]
+    warnings = [primary.error] if primary.error else []
+
+    for supplement in spec.get("supplements") or []:
+        try:
+            result = fetcher(column, supplement, fetch_config, range_value, start, end)
+        except Exception as exc:
+            warnings.append(f"{supplement.get('provider', '보강 원천')} 조회 실패: {exc}")
+            continue
+        frames.append(result.frame)
+        providers.append(result.provider)
+        symbols.append(result.symbol)
+        if result.error:
+            warnings.append(result.error)
+
+    merged = (
+        pd.concat(frames, ignore_index=True)
+        .drop_duplicates("date", keep="last")
+        .sort_values("date")
+        .reset_index(drop=True)
+    )
+    supplemented = len(frames) > 1
+    return SourceFetchResult(
+        column=column,
+        provider="+".join(dict.fromkeys(providers)),
+        symbol="+".join(dict.fromkeys(symbols)),
+        label=primary.label,
+        frame=merged,
+        status="supplemented" if supplemented else primary.status,
+        error="; ".join(warnings) if warnings else None,
+    )
 
 
 def _source_items(source_config: dict[str, Any]) -> list[tuple[str, dict[str, Any], bool]]:
@@ -266,7 +390,15 @@ def fetch_market_data(
     for column, spec, required in _source_items(source_config):
         provider = str(spec.get("provider", fetch_config.get("provider", "yahoo")))
         try:
-            result = fetcher(column, spec, fetch_config, range_value, start, end)
+            result = fetch_source_with_supplements(
+                column,
+                spec,
+                fetch_config,
+                range_value,
+                start,
+                end,
+                fetcher,
+            )
             coverage_ratio = 1.0
             if frames and not required:
                 existing_dates = set(pd.concat([frame[["date"]] for frame in frames], ignore_index=True)["date"])

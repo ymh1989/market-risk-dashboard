@@ -317,7 +317,8 @@ function pipelineRuntimeState(pipelineStatus) {
       )
     : null;
   const latestSuccess = history.find((item) => item.status === "success") ?? pipelineStatus.current;
-  const sourceProblem = (pipelineStatus.sources ?? []).some((source) => source.status === "error");
+  const sourceProblem = (pipelineStatus.sources ?? []).some((source) => source.status !== "ok");
+  const qualityProblem = pipelineStatus.quality?.status && pipelineStatus.quality.status !== "ok";
 
   if (latestDue && !matchingRun) {
     const elapsedMinutes = Math.max(0, (now - latestDue.timestamp) / 60000);
@@ -342,9 +343,12 @@ function pipelineRuntimeState(pipelineStatus) {
   }
 
   return {
-    label: sourceProblem ? "일부 확인" : "정상",
-    tone: sourceProblem ? "caution" : "good",
-    detail: sourceProblem ? "일부 데이터 소스에 오류가 기록되어 있습니다." : pipelineStatus.current.message,
+    label: sourceProblem || qualityProblem ? "일부 확인" : "정상",
+    tone: sourceProblem || qualityProblem ? "caution" : "good",
+    detail:
+      sourceProblem || qualityProblem
+        ? "일부 데이터 원천 또는 산출물의 완비성을 확인해야 합니다."
+        : pipelineStatus.current.message,
     latestSuccess,
     nextRun
   };
@@ -401,6 +405,9 @@ function renderOperationsPage(pipelineStatus) {
   }
 
   const current = pipelineStatus.current;
+  const quality = pipelineStatus.quality ?? {};
+  const qualitySummary = quality.summary ?? {};
+  const qualityIssues = quality.issues ?? [];
   const scheduleText = (pipelineStatus.schedule?.times ?? [])
     .map((item) => `${item.time} ${item.mode}`)
     .join(" · ");
@@ -429,6 +436,35 @@ function renderOperationsPage(pipelineStatus) {
 
       <section class="operations-section">
         <div class="operations-section__heading">
+          <div><span class="eyebrow">Data Completeness</span><h3>데이터 완비성</h3></div>
+          <span>기준일 ${quality.referenceDate ?? current.dataAsOf ?? "-"}</span>
+        </div>
+        <div class="data-quality-summary">
+          <div><small>완비성 점수</small><strong>${quality.score != null ? `${formatNumber(quality.score, 1)} / 100` : "-"}</strong></div>
+          <div><small>원천 수집</small><strong>${qualitySummary.sourceSeriesPresent ?? "-"} / ${qualitySummary.sourceSeriesExpected ?? "-"}</strong></div>
+          <div><small>허용시차 내</small><strong>${qualitySummary.freshSeries ?? "-"}개</strong></div>
+          <div><small>보강·대체</small><strong>${qualitySummary.fallbackSeries ?? "-"}개</strong></div>
+          <div><small>확인·오류</small><strong>${(qualitySummary.warning ?? 0) + (qualitySummary.error ?? 0)}건</strong></div>
+        </div>
+        ${
+          qualityIssues.length
+            ? `<div class="data-quality-issues">${qualityIssues
+                .map(
+                  (issue) => `
+                    <div class="data-quality-issue data-quality-issue--${issue.status}">
+                      <span>${operationStatusLabel(issue.status)}</span>
+                      <strong>${issue.label}</strong>
+                      <p>${issue.detail}</p>
+                    </div>
+                  `
+                )
+                .join("")}</div>`
+            : `<p class="data-quality-clear">필수 원천, 최신성, 시계열 정렬과 산출물 기준일 검사를 모두 통과했습니다.</p>`
+        }
+      </section>
+
+      <section class="operations-section">
+        <div class="operations-section__heading">
           <div><span class="eyebrow">Latest Run</span><h3>최근 실행 단계</h3></div>
           <span>${current.startedAt} → ${current.completedAt}</span>
         </div>
@@ -453,11 +489,11 @@ function renderOperationsPage(pipelineStatus) {
       <section class="operations-section">
         <div class="operations-section__heading">
           <div><span class="eyebrow">Data Freshness</span><h3>데이터 소스</h3></div>
-          <span>마지막 관측일 기준</span>
+          <span>원천별 관측일 범위</span>
         </div>
         <div class="operations-table-wrap">
           <table class="operations-table">
-            <thead><tr><th>소스</th><th>상태</th><th>최신일</th><th>시계열</th><th>범위</th></tr></thead>
+            <thead><tr><th>소스</th><th>상태</th><th>관측일 범위</th><th>시계열</th><th>완비성</th></tr></thead>
             <tbody>
               ${(pipelineStatus.sources ?? [])
                 .map(
@@ -465,7 +501,11 @@ function renderOperationsPage(pipelineStatus) {
                     <tr>
                       <td><strong>${source.label}</strong></td>
                       <td><span class="operation-table-status operation-table-status--${source.status}">${operationStatusLabel(source.status)}</span></td>
-                      <td>${source.lastDate ?? "-"}</td>
+                      <td>${
+                        source.oldestLastDate && source.oldestLastDate !== source.lastDate
+                          ? `${source.oldestLastDate} ~ ${source.lastDate}`
+                          : source.lastDate ?? "-"
+                      }</td>
                       <td>${source.seriesCount ?? "-"}개</td>
                       <td>${source.detail}</td>
                     </tr>

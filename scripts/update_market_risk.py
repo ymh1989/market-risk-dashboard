@@ -67,6 +67,11 @@ NAVER_SYMBOLS = {
     "kodex_leverage": {"symbol": "122630", "label": "KODEX Leverage"},
 }
 
+NAVER_DOMESTIC_INDEXES = {
+    "kospi": {"symbol": "KOSPI", "label": "KOSPI"},
+    "kosdaq": {"symbol": "KOSDAQ", "label": "KOSDAQ"},
+}
+
 FRED_SERIES = {
     "us2y": {"series_id": "DGS2", "local_column": "US2Y", "label": "US 2Y Treasury"},
     "us_yield_curve_10y2y": {
@@ -306,6 +311,33 @@ def fetch_naver_chart(symbol, lookback_days=760, start_date=None, end_date=None)
     if len(series) < 80:
         raise RuntimeError(f"{symbol}: not enough Naver observations ({len(series)})")
     return series
+
+
+def supplement_domestic_index_series(series_map, max_workers=2):
+    results = {}
+    statuses = {}
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(fetch_naver_chart, config["symbol"]): key
+            for key, config in NAVER_DOMESTIC_INDEXES.items()
+        }
+        for future in as_completed(futures):
+            key = futures[future]
+            try:
+                naver_series = future.result()
+            except Exception as exc:
+                statuses[key] = f"yahoo_only: {exc}"
+                continue
+            merged = {point["date"]: point for point in series_map[key]}
+            merged.update({point["date"]: point for point in naver_series})
+            results[key] = [merged[date] for date in sorted(merged)]
+            statuses[key] = "yahoo+naver"
+
+    for key in NAVER_DOMESTIC_INDEXES:
+        if key in results:
+            series_map[key] = results[key]
+        statuses.setdefault(key, "yahoo_only")
+    return series_map, statuses
 
 
 def parse_naver_number(value):
@@ -2689,7 +2721,15 @@ def update_dashboard(series_map, fred_map, market_index_map, indicators):
     DASHBOARD_FILE.write_text(json.dumps(dashboard, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def write_snapshot(series_map, naver_map, fred_map, market_index_map, market_index_statuses, indicators):
+def write_snapshot(
+    series_map,
+    naver_map,
+    fred_map,
+    market_index_map,
+    market_index_statuses,
+    indicators,
+    domestic_index_statuses,
+):
     enriched_indicators, group_scores = enrich_indicators(indicators)
     snapshot = {
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
@@ -2701,6 +2741,12 @@ def write_snapshot(series_map, naver_map, fred_map, market_index_map, market_ind
                 "lastDate": series_map[key][-1]["date"],
                 "lastClose": round(series_map[key][-1]["close"], 4),
                 "observations": len(series_map[key]),
+                "fetchStatus": domestic_index_statuses.get(key, "yahoo"),
+                "source": (
+                    "Yahoo Finance + Naver Finance index"
+                    if domestic_index_statuses.get(key) == "yahoo+naver"
+                    else "Yahoo Finance"
+                ),
             }
             for key, config in TICKERS.items()
         },
@@ -2767,6 +2813,7 @@ def main():
     series_map = fetch_configured_series(
         TICKERS, lambda config: fetch_yahoo_chart(config["symbol"]), max_workers=6
     )
+    series_map, domestic_index_statuses = supplement_domestic_index_series(series_map)
     print("Naver 주식·시장지표 시계열을 조회합니다.", flush=True)
     naver_map = fetch_configured_series(
         NAVER_SYMBOLS, lambda config: fetch_naver_chart(config["symbol"]), max_workers=4
@@ -2778,7 +2825,15 @@ def main():
     )
     indicators = build_indicators(series_map, naver_map, fred_map, market_index_map)
     update_dashboard(series_map, fred_map, market_index_map, indicators)
-    write_snapshot(series_map, naver_map, fred_map, market_index_map, market_index_statuses, indicators)
+    write_snapshot(
+        series_map,
+        naver_map,
+        fred_map,
+        market_index_map,
+        market_index_statuses,
+        indicators,
+        domestic_index_statuses,
+    )
     write_timeseries(series_map, naver_map, fred_map, market_index_map)
 
     total_weight = sum(indicator["weight"] for indicator in indicators)

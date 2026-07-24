@@ -87,7 +87,9 @@ make run-local-market-update
 
 ## 운영현황 콘솔
 
-홈페이지 상단 상태 바와 `운영현황` 탭은 `data/pipeline-status.json`을 읽습니다. 마지막 성공시각, 다음 예약, 데이터 기준일, 시장지표·ML·검증·배포 단계, Yahoo·Naver·FRED 최신 관측일과 최근 성공 이력을 한 화면에서 확인할 수 있습니다.
+홈페이지 상단 상태 바와 `운영현황` 탭은 `data/pipeline-status.json`과 `data/data-quality.json`을 읽습니다. 마지막 성공시각, 다음 예약, 데이터 기준일, 시장지표·ML·검증·배포 단계, 원천별 관측일 범위와 최근 성공 이력을 한 화면에서 확인할 수 있습니다.
+
+`scripts/audit_data_completeness.py`는 시장화면 원천 53개와 ML 입력 원천 17개, 장기 캐시, 지표별 시계열, ELS·HMM·ML 산출물의 기준일 정렬을 검사합니다. 휴장일과 주간 통계의 공표 시차는 별도 허용폭을 적용하며, 필수 원천 누락·관측치 부족·날짜 중복·산출물 말단 불일치가 있으면 `--strict` 실행이 실패해 배포를 중단합니다.
 
 예약시각이 됐지만 해당 실행의 새 완료 기록이 아직 없으면 예상 소요시간 동안 `갱신 중`으로 표시합니다. fast는 5분, full은 25분을 기본 예상시간으로 사용하며 여기에 5분의 유예시간을 더한 뒤에도 완료 기록이 없으면 `지연`으로 바뀝니다. GitHub Pages는 정적 홈페이지이므로 운영현황은 읽기 전용이며, 수동 재실행은 `make run-local-market-update` 또는 `bash scripts/run_local_market_update.sh --fast`로 수행합니다.
 
@@ -194,6 +196,7 @@ make run-news-bot
 - `data/naver-marketindex-history.json`: 네이버 운임·금속·에너지·채권·국제환율의 선별 원천 이력과 자산별 실시간/캐시 사용 상태를 저장합니다.
 - `data/els-index-risk.json`: ELS 5개 기초지수와 worst-of basket 리스크를 저장합니다.
 - `data/ml-risk-signal.json`: 최신 ML risk-off 신호, 성능지표와 최근 흐름을 저장합니다.
+- `data/data-quality.json`: 원천별 완비성·최신성, 캐시 상태와 산출물 정렬 검사 결과를 저장합니다.
 - `data/pipeline-status.json`: 예약 스케줄, 최근 성공, 단계별 소요시간, 데이터 소스 신선도와 실행 이력을 저장합니다.
 - `src/risk-model.js`: 점수 계산과 등급 판정 로직입니다.
 - `src/app.js`: JSON 데이터를 읽어 화면을 렌더링합니다.
@@ -201,6 +204,7 @@ make run-news-bot
 - `scripts/update_market_risk.py`: 외부 데이터를 가져와 시장리스크 지표를 재계산합니다.
 - `scripts/export_els_index_risk.py`: ELS 5개 기초지수 및 basket 리스크를 계산합니다.
 - `scripts/export_ml_risk_signal.py`: 연구용 ML 결과를 홈페이지용 JSON으로 변환합니다.
+- `scripts/audit_data_completeness.py`: 원천·캐시·산출물의 완비성과 최신성을 검사하고 오류 시 배포를 차단합니다.
 - `scripts/write_pipeline_status.py`: 홈페이지 운영현황 상태 파일을 생성하고 최근 성공 이력을 누적합니다.
 - `scripts/backtest_market_risk.py`: 시장 종합점수의 선행 낙폭 진단을 생성합니다.
 - `scripts/analyze_stress_episodes.py`: 과거 스트레스 구간과 기여지표를 분석합니다.
@@ -267,7 +271,7 @@ python -m pip install -e .
 
 기본 입력 파일은 `data/raw/market_data.csv`입니다. 필수 컬럼은 `date`, `KOSPI`, `SPX`, `SOX`, `USDKRW`입니다. `VIX`, `VKOSPI`, `NASDAQ`, 수급, basis, skew, 금리, 원자재 등 선택 컬럼은 존재할 때만 feature로 사용하며, 없어도 파이프라인은 실패하지 않습니다.
 
-실제 시장 데이터 소스는 `configs/data_sources.yaml`에서 관리합니다. 현재 기본 구현은 Yahoo Finance chart API를 사용해 KOSPI, S&P 500, SOX, USD/KRW와 일부 글로벌 optional 지표를 수집합니다. 수집 감사 정보는 `data/raw/market_data_sources.json`에 저장됩니다.
+실제 시장 데이터 소스는 `configs/data_sources.yaml`에서 관리합니다. 장기 이력은 Yahoo Finance를 기본으로 사용하고, KOSPI는 Naver 지수 시계열을 날짜별로 병합해 국내장 최신 구간을 보강합니다. S&P 500, SOX, USD/KRW와 일부 글로벌 선택 지표는 Yahoo Finance를 사용하며, 수집 원천·보강 상태·결측치는 `data/raw/market_data_sources.json`에 기록됩니다.
 
 Backtest는 기본적으로 최근 12개 walk-forward fold를 사용합니다. 더 긴 검증을 원하면 `configs/base.yaml`의 `validation.max_backtest_folds`를 늘리고, 전체 기간 fold를 모두 돌리고 싶으면 `0`으로 바꿉니다.
 
