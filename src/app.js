@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260724-2";
+const ASSET_VERSION = "20260724-3";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -2740,7 +2740,7 @@ function renderDashboard(
             (tab) => `
               <button class="tab-button ${tab.id === "summary" ? "is-active" : ""}" data-tab="${tab.id}" ${
                 tab.enabled ? "" : "disabled"
-              }>
+              } aria-pressed="${tab.id === "summary" ? "true" : "false"}">
                 ${tab.label}
               </button>
             `
@@ -2777,6 +2777,9 @@ function renderDashboard(
       if (!enabledTabs.some((tab) => tab.id === target)) return;
 
       app.querySelectorAll(".tab-button").forEach((tab) => tab.classList.toggle("is-active", tab === button));
+      app
+        .querySelectorAll(".tab-button")
+        .forEach((tab) => tab.setAttribute("aria-pressed", tab === button ? "true" : "false"));
       app
         .querySelectorAll("[data-panel]")
         .forEach((panel) => panel.classList.toggle("is-active", panel.dataset.panel === target));

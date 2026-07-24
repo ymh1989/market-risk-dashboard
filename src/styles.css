@@ -13,11 +13,13 @@
   --hero-aside: rgba(9, 20, 30, 0.34);
   --navy: #18324a;
   --teal: #1f8a86;
-  --green: #2f8f58;
-  --amber: #b7791f;
-  --red: #c2413a;
+  --green: #25784a;
+  --amber: #8c5f13;
+  --red: #b63833;
   --blue: #2f6fbb;
-  --shadow: 0 18px 50px rgba(23, 32, 38, 0.1);
+  --status-ink: #ffffff;
+  --focus-ring: #2f6fbb;
+  --shadow: 0 12px 32px rgba(23, 32, 38, 0.08);
 }
 
 [data-theme="dark"] {
@@ -38,7 +40,9 @@
   --amber: #d6a24a;
   --red: #e07169;
   --blue: #6fa1d9;
-  --shadow: 0 18px 52px rgba(0, 0, 0, 0.34);
+  --status-ink: #071014;
+  --focus-ring: #8bb9eb;
+  --shadow: 0 12px 34px rgba(0, 0, 0, 0.28);
 }
 
 * {
@@ -52,6 +56,7 @@ body {
   color: var(--ink);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.5;
 }
 
 button,
@@ -59,6 +64,35 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(button, a, input, textarea, select):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--focus-ring) 72%, transparent);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 20;
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--surface);
+  font-weight: 700;
+  padding: 10px 14px;
+  text-decoration: none;
+  transform: translateY(-160%);
+  transition: transform 160ms ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 .app-shell {
@@ -107,7 +141,7 @@ select {
 .hero h1 {
   max-width: 820px;
   margin: 8px 0 14px;
-  font-size: clamp(1.75rem, 3vw, 3.35rem);
+  font-size: 2.75rem;
   line-height: 1.08;
   letter-spacing: 0;
 }
@@ -164,17 +198,19 @@ select {
 .snow-lab-trigger:focus-visible {
   border-color: rgba(255, 255, 255, 0.76);
   color: #fff;
-  outline: none;
   transform: rotate(120deg);
 }
 
 .eyebrow {
   display: inline-block;
-  color: inherit;
+  color: var(--muted);
   font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.hero .eyebrow {
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .tabs {
@@ -189,7 +225,7 @@ select {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--tabs-bg);
-  box-shadow: 0 10px 30px rgba(23, 32, 38, 0.07);
+  box-shadow: 0 6px 20px rgba(23, 32, 38, 0.06);
   backdrop-filter: blur(12px);
 }
 
@@ -207,7 +243,7 @@ select {
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  font-weight: 800;
+  font-weight: 700;
   padding: 0 16px;
 }
 
@@ -221,14 +257,26 @@ select {
   color: var(--ink);
   cursor: pointer;
   font-size: 1rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .theme-toggle:hover {
   border-color: var(--teal);
 }
 
+.tab-button:hover:not(:disabled),
+.tab-button:focus-visible {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
 .tab-button.is-active {
+  background: var(--navy);
+  color: #fff;
+}
+
+.tab-button.is-active:hover,
+.tab-button.is-active:focus-visible {
   background: var(--navy);
   color: #fff;
 }
@@ -281,7 +329,7 @@ select {
 .operation-status-strip small {
   color: var(--muted);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .operation-status-strip strong {
@@ -333,7 +381,7 @@ select {
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .metric-card,
@@ -356,10 +404,10 @@ select {
 
 .metric-card {
   display: grid;
-  min-height: 156px;
+  min-height: 142px;
   align-content: space-between;
   gap: 12px;
-  padding: 20px;
+  padding: 18px;
 }
 
 .metric-card__label,
@@ -371,6 +419,14 @@ select {
 .metric-card strong {
   font-size: 1.9rem;
   line-height: 1.08;
+}
+
+.summary-grid .metric-card:nth-child(2) {
+  background: var(--surface-raised);
+}
+
+.summary-grid .metric-card:nth-child(2) strong {
+  font-size: 2.15rem;
 }
 
 .metric-card--good {
@@ -392,7 +448,7 @@ select {
 .ml-risk-panel {
   display: grid;
   gap: 18px;
-  margin-top: 16px;
+  margin-top: 20px;
   padding: 24px;
   background: var(--surface);
 }
@@ -423,7 +479,7 @@ select {
 .ml-risk-state span {
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .ml-risk-state strong {
@@ -435,7 +491,7 @@ select {
 .ml-risk-state small {
   color: var(--muted);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .ml-risk-state--danger {
@@ -478,7 +534,7 @@ select {
 }
 
 .ml-risk-horizons article:last-child {
-  text-align: right;
+  text-align: left;
 }
 
 .ml-risk-horizons strong {
@@ -495,7 +551,7 @@ select {
 }
 
 .ml-risk-horizons article:last-child p {
-  justify-self: end;
+  justify-self: start;
 }
 
 .ml-risk-horizons__divider {
@@ -595,7 +651,7 @@ select {
   gap: 10px;
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .ml-risk-chart__legend span {
@@ -678,7 +734,7 @@ select {
 .els-index-panel {
   display: grid;
   gap: 18px;
-  margin-top: 16px;
+  margin-top: 20px;
   padding: 24px;
   background: var(--surface);
 }
@@ -710,7 +766,7 @@ select {
 .els-basket-state small {
   color: var(--muted);
   font-size: 0.76rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .els-basket-state strong {
@@ -826,7 +882,7 @@ select {
   gap: 8px;
   color: var(--muted);
   font-size: 0.74rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .els-index-card dt,
@@ -885,7 +941,7 @@ select {
   gap: 10px;
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .els-index-legend span {
@@ -988,7 +1044,7 @@ select {
 .els-issuance-facts small {
   color: var(--muted);
   font-size: 0.74rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .els-issuance-facts strong {
@@ -1062,7 +1118,7 @@ select {
   color: var(--muted);
   font: inherit;
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -1085,7 +1141,7 @@ select {
   gap: 10px;
   color: var(--muted);
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .els-trajectory-legend span {
@@ -1186,7 +1242,7 @@ select {
   fill: var(--muted);
   font-family: inherit;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .els-map-zone-label {
@@ -1342,7 +1398,7 @@ select {
   color: var(--muted);
   font: inherit;
   font-size: 0.76rem;
-  font-weight: 900;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -1392,7 +1448,7 @@ select {
 .els-episode-summary small {
   color: var(--muted);
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .els-episode-summary strong {
@@ -1440,7 +1496,7 @@ select {
   fill: currentColor;
   font-family: inherit;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 700;
   paint-order: stroke;
   stroke: var(--surface-raised);
   stroke-width: 3px;
@@ -1473,7 +1529,7 @@ select {
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .els-episode-stage-legend,
@@ -1526,7 +1582,7 @@ select {
 
 .els-comparison__header small {
   color: var(--muted);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .els-comparison-list {
@@ -1569,7 +1625,7 @@ select {
 .els-comparison-row__identity span {
   color: var(--muted);
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .els-comparison-row__identity strong {
@@ -1584,7 +1640,7 @@ select {
   padding: 3px 7px;
   font-size: 0.68rem;
   font-style: normal;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .els-comparison-row--good .els-comparison-row__identity em {
@@ -1614,7 +1670,7 @@ select {
   justify-content: space-between;
   color: var(--muted);
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .els-comparison-row__scores span strong {
@@ -1666,7 +1722,7 @@ select {
 }
 
 .els-comparison-row dd {
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .els-comparison-row p {
@@ -1714,7 +1770,7 @@ select {
 .hmm-regime-panel {
   display: grid;
   gap: 18px;
-  margin-top: 16px;
+  margin-top: 20px;
   padding: 24px;
   background: var(--surface);
 }
@@ -1747,7 +1803,7 @@ select {
 .hmm-basket-state small {
   color: var(--muted);
   font-size: 0.76rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .hmm-basket-state strong {
@@ -1860,7 +1916,7 @@ select {
   gap: 8px;
   color: var(--muted);
   font-size: 0.74rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .hmm-regime-card dt,
@@ -1897,7 +1953,7 @@ select {
   gap: 8px;
   color: var(--muted);
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .hmm-regime-key span {
@@ -1920,7 +1976,7 @@ select {
   margin-right: 208px;
   color: var(--muted);
   font-size: 0.68rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .hmm-regime-month-rail span {
@@ -1977,7 +2033,7 @@ select {
   overflow-wrap: anywhere;
   color: var(--muted);
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1.35;
 }
 
@@ -2087,7 +2143,7 @@ select {
   padding: 8px 10px;
   color: var(--muted);
   font-size: 0.68rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .hmm-regime-row__stats dt,
@@ -2105,15 +2161,17 @@ select {
   display: grid;
   grid-template-columns: 0.8fr 1.2fr;
   gap: 24px;
-  margin-top: 16px;
+  margin-top: 20px;
+  border: 0;
+  border-left: 4px solid var(--teal);
   padding: 28px;
-  background: var(--surface-raised);
+  background: var(--surface-soft);
 }
 
 .backtest-panel {
   display: grid;
   gap: 18px;
-  margin-top: 16px;
+  margin-top: 20px;
   padding: 24px;
   background: var(--surface);
 }
@@ -2121,7 +2179,7 @@ select {
 .stress-panel {
   display: grid;
   gap: 18px;
-  margin-top: 16px;
+  margin-top: 20px;
   padding: 24px;
   background: var(--surface-raised);
 }
@@ -2129,7 +2187,7 @@ select {
 .market-trend-panel {
   display: grid;
   gap: 22px;
-  margin-top: 16px;
+  margin-top: 20px;
   padding: 24px;
   background: var(--surface);
 }
@@ -2169,7 +2227,7 @@ select {
 
 .market-trend-panel__summary span {
   font-size: 0.8rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .market-trend-panel__summary small {
@@ -2203,7 +2261,7 @@ select {
 .market-trend-group > header span {
   color: var(--muted);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .market-trend-row {
@@ -2300,14 +2358,14 @@ select {
 .market-trend-row__numbers dt {
   color: var(--muted);
   font-size: 0.64rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .market-trend-row__numbers dd {
   margin: 2px 0 0;
   font-size: 0.76rem;
   font-variant-numeric: tabular-nums;
-  font-weight: 800;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -2343,7 +2401,7 @@ select {
 .trend-panel {
   display: grid;
   gap: 16px;
-  margin-top: 16px;
+  margin-top: 20px;
   padding: 24px;
   background: var(--surface);
 }
@@ -2366,7 +2424,7 @@ select {
   gap: 3px;
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .trend-score strong {
@@ -2397,7 +2455,7 @@ select {
 .change-pill small {
   color: var(--muted);
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: 0;
 }
 
@@ -2484,7 +2542,7 @@ select {
 .chart-month-label {
   fill: var(--muted);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .backtest-panel__header {
@@ -2505,8 +2563,7 @@ select {
   gap: 2px;
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 800;
-  text-transform: uppercase;
+  font-weight: 700;
 }
 
 .backtest-panel__meta strong {
@@ -2543,7 +2600,7 @@ select {
   gap: 12px;
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .backtest-card--경고 {
@@ -2668,7 +2725,7 @@ select {
   background: var(--surface-soft);
   color: var(--muted);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
   padding: 10px;
 }
 
@@ -2694,7 +2751,7 @@ select {
 .stress-card footer {
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .stress-contributors {
@@ -2710,7 +2767,7 @@ select {
   background: var(--surface-soft);
   color: var(--muted);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
   overflow: hidden;
   padding: 8px 10px;
   text-overflow: ellipsis;
@@ -2770,7 +2827,7 @@ select {
   gap: 12px;
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.35;
 }
 
@@ -2791,7 +2848,10 @@ select {
 }
 
 .risk-section {
-  padding: 26px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 8px 0 0;
 }
 
 .section-heading {
@@ -2800,6 +2860,8 @@ select {
   gap: 24px;
   align-items: flex-start;
   margin-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 20px;
 }
 
 .section-score {
@@ -2816,16 +2878,24 @@ select {
 .model-panel {
   display: grid;
   grid-template-columns: 1.05fr 0.8fr 1.15fr;
-  gap: 14px;
+  gap: 0;
   margin: 0 0 20px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-soft);
 }
 
 .model-panel article {
-  min-height: 132px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-raised);
+  min-height: 124px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
   padding: 18px;
+}
+
+.model-panel article:last-child {
+  border-right: 0;
 }
 
 .model-panel h3 {
@@ -2842,14 +2912,15 @@ select {
 }
 
 .source-chips span {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
+  border: 0;
+  border-left: 2px solid var(--line);
+  border-radius: 0;
+  background: transparent;
   color: var(--muted);
   font-size: 0.74rem;
-  font-weight: 800;
-  line-height: 1;
-  padding: 8px 10px;
+  font-weight: 700;
+  line-height: 1.35;
+  padding: 2px 0 2px 8px;
 }
 
 .status-pill {
@@ -2858,9 +2929,9 @@ select {
   min-height: 28px;
   border-radius: 999px;
   padding: 0 11px;
-  color: #fff;
+  color: var(--status-ink);
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .status-pill--good {
@@ -2869,7 +2940,6 @@ select {
 
 .status-pill--watch {
   background: var(--blue);
-  color: #fff;
 }
 
 .status-pill--caution {
@@ -2932,7 +3002,7 @@ select {
   justify-content: space-between;
   color: var(--muted);
   font-size: 0.8rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .indicator-grid {
@@ -2948,6 +3018,7 @@ select {
   gap: 16px;
   padding: 14px 16px;
   border: 1px solid var(--line);
+  border-radius: 8px;
   background: var(--surface-raised);
 }
 
@@ -2962,6 +3033,7 @@ select {
   gap: 4px;
   padding: 4px;
   border: 1px solid var(--line);
+  border-radius: 6px;
   background: var(--surface);
 }
 
@@ -2973,14 +3045,13 @@ select {
   cursor: pointer;
   font: inherit;
   font-size: 0.82rem;
-  font-weight: 900;
+  font-weight: 700;
   padding: 9px 11px;
 }
 
 .indicator-sort__button:hover,
 .indicator-sort__button:focus-visible {
   color: var(--ink);
-  outline: 0;
 }
 
 .indicator-sort__button.is-active {
@@ -3036,10 +3107,11 @@ select {
 
 .sparkline {
   min-height: 104px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-raised);
-  padding: 10px 10px 8px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  padding: 12px 0 0;
 }
 
 .sparkline svg {
@@ -3085,7 +3157,7 @@ select {
   place-items: center;
   color: var(--muted);
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .indicator-card footer {
@@ -3182,7 +3254,7 @@ select {
 .operations-facts small {
   color: var(--muted);
   font-size: 0.76rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .operations-facts strong {
@@ -3253,7 +3325,7 @@ select {
   background: var(--ink);
   color: var(--surface);
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .pipeline-stage p {
@@ -3275,7 +3347,7 @@ select {
 
 .pipeline-stage__result span {
   color: var(--green);
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .data-quality-summary {
@@ -3301,7 +3373,7 @@ select {
 .data-quality-summary small {
   color: var(--muted);
   font-size: 0.73rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .data-quality-summary strong {
@@ -3331,7 +3403,7 @@ select {
 
 .data-quality-issue span {
   color: var(--amber);
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .data-quality-issue--error span {
@@ -3386,7 +3458,7 @@ select {
   background: color-mix(in srgb, var(--green) 16%, transparent);
   color: var(--green);
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 700;
   padding: 5px 8px;
 }
 
@@ -3435,7 +3507,7 @@ select {
 
 .run-history-list small {
   color: var(--muted);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .sentiment-page {
@@ -3485,7 +3557,7 @@ select {
 .sentiment-state small {
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .sentiment-state strong {
@@ -3699,7 +3771,7 @@ select {
 }
 
 .action-panel {
-  margin-top: 16px;
+  margin-top: 20px;
   padding: 20px;
   background: var(--surface-raised);
 }
@@ -3736,6 +3808,10 @@ select {
   .hero__content,
   .hero__aside {
     padding: 26px;
+  }
+
+  .hero h1 {
+    font-size: 2.3rem;
   }
 
   .summary-grid,
@@ -3794,6 +3870,15 @@ select {
 
   .model-panel {
     grid-template-columns: 1fr;
+  }
+
+  .model-panel article {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .model-panel article:last-child {
+    border-bottom: 0;
   }
 
   .section-heading {
@@ -3938,6 +4023,10 @@ select {
 
   .hero {
     min-height: 360px;
+  }
+
+  .hero h1 {
+    font-size: 1.9rem;
   }
 
   .tabs {
@@ -4109,4 +4198,15 @@ select {
     height: 170px;
   }
 
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

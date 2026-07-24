@@ -4,6 +4,7 @@ import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DATA_FILE = ROOT / "data" / "risk-dashboard.json"
+INDEX_FILE = ROOT / "index.html"
 TIMESERIES_FILE = ROOT / "data" / "market-risk-timeseries.json"
 MARKET_INDEX_CACHE_FILE = ROOT / "data" / "naver-marketindex-history.json"
 BACKTEST_FILE = ROOT / "data" / "market-risk-backtest.json"
@@ -176,9 +177,34 @@ def test_dashboard_contract():
 def test_watch_badge_keeps_readable_contrast():
     styles = STYLES_FILE.read_text(encoding="utf-8")
     assert styles.count(".status-pill--watch") == 1
+    status_rule = styles.split(".status-pill {", 1)[1].split("}", 1)[0]
     watch_rule = styles.split(".status-pill--watch", 1)[1].split("}", 1)[0]
+    assert styles.count("--status-ink:") == 2
+    assert "color: var(--status-ink);" in status_rule
     assert "background: var(--blue);" in watch_rule
-    assert "color: #fff;" in watch_rule
+
+
+def test_ui_hierarchy_and_accessibility_contract():
+    html = INDEX_FILE.read_text(encoding="utf-8")
+    styles = STYLES_FILE.read_text(encoding="utf-8")
+    app_source = APP_FILE.read_text(encoding="utf-8")
+    eyebrow_rule = styles.split(".eyebrow {", 1)[1].split("}", 1)[0]
+    source_chip_rule = styles.split(".source-chips span {", 1)[1].split("}", 1)[0]
+    sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
+
+    assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
+    assert "styles.css?v=20260724-3" in html
+    assert "app.js?v=20260724-3" in html
+    assert 'aria-pressed="${tab.id === "summary" ? "true" : "false"}"' in app_source
+    assert 'tab.setAttribute("aria-pressed"' in app_source
+    assert "font-weight: 800;" not in styles
+    assert "font-weight: 900;" not in styles
+    assert "text-transform: uppercase;" not in styles
+    assert "font-size: clamp(" not in styles
+    assert "letter-spacing: 0;" in eyebrow_rule
+    assert "border: 0;" in source_chip_rule
+    assert "border: 0;" in sparkline_rule
+    assert "@media (prefers-reduced-motion: reduce)" in styles
 
 
 def test_dashboard_data_requests_bypass_stale_cache():
@@ -357,6 +383,7 @@ def test_pipeline_status_contract():
 if __name__ == "__main__":
     test_dashboard_contract()
     test_watch_badge_keeps_readable_contrast()
+    test_ui_hierarchy_and_accessibility_contract()
     test_dashboard_data_requests_bypass_stale_cache()
     test_snow_lab_easter_egg_contract()
     test_pipeline_status_contract()
