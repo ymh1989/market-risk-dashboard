@@ -236,6 +236,10 @@ def test_snow_lab_easter_egg_contract():
     assert "SIM_RESOLUTION" in script
     assert "DYE_RESOLUTION" in script
     assert "PRESSURE_ITERATIONS" in script
+    assert "COLOR_UPDATE_SPEED: 0.7" in script
+    assert "SPLAT_FORCE: 3200" in script
+    assert "BLOOM_INTENSITY: 0.18" in script
+    assert "SUNRAYS: false" in script
     assert "prefers-reduced-motion" in script
     assert "visibilitychange" in script
     assert "pointermove" in script
@@ -293,6 +297,7 @@ def test_snow_lab_easter_egg_contract():
     assert '.snow-lab[data-mode="wave"]' in styles
     assert '.snow-lab[data-mode="spectrum"]' in styles
     assert '.snow-lab[data-mode="forest"]' in styles
+    assert "filter: grayscale(0.94) sepia(0.28) hue-rotate(150deg)" in styles
     wave_rule = styles.split('.snow-lab[data-mode="wave"] .snow-lab__stage', 1)[1].split("}", 1)[0]
     assert "width: min(calc(100vw - 64px), 1280px);" in wave_rule
     assert "height: min(calc(100dvh - 64px), 760px);" in wave_rule
