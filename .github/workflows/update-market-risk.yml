@@ -29,6 +29,7 @@ jobs:
           make backtest-market-risk
           REFRESH_STRESS_CACHE=1 make analyze-stress-episodes
           python3 scripts/export_els_index_risk.py
+          python3 scripts/export_hmm_regime.py
 
       - name: Refresh ML risk-off signal
         run: |

@@ -18,6 +18,7 @@ from sklearn.cluster import KMeans
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_FILE = ROOT / "data" / "hmm-regime.json"
+ELS_INDEX_RISK_FILE = ROOT / "data" / "els-index-risk.json"
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d"
 INVESTING_VKOSPI_HISTORY_URL = "https://kr.investing.com/indices/kospi-volatility-historical-data"
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-hmm-regime/0.1)"
@@ -93,6 +94,44 @@ def _fetch_yahoo(symbol: str, range_value: str = RANGE_VALUE, min_rows: int = 12
     if len(frame) < min_rows:
         raise RuntimeError(f"{symbol}: 관측치가 부족합니다: {len(frame)}")
     return frame
+
+
+def _load_els_price_history(path: Path = ELS_INDEX_RISK_FILE) -> dict[str, pd.DataFrame]:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+    cached = {}
+    for index in payload.get("indices", []):
+        rows = index.get("ytdPriceSeries") or index.get("series") or []
+        valid_rows = [
+            {"date": row.get("date"), "close": row.get("close")}
+            for row in rows
+            if row.get("date") and row.get("close") is not None
+        ]
+        if valid_rows and index.get("id"):
+            cached[index["id"]] = pd.DataFrame(valid_rows)
+    return cached
+
+
+def _fetch_price_history(symbol: str, cached_prices: pd.DataFrame | None = None) -> pd.DataFrame:
+    historical = _fetch_yahoo(symbol, RANGE_VALUE, min_rows=320)
+    frames = [historical]
+    if cached_prices is not None and not cached_prices.empty:
+        frames.append(cached_prices[["date", "close"]])
+    try:
+        frames.append(_fetch_yahoo(symbol, "2y", min_rows=120))
+    except Exception as error:
+        warnings.warn(f"{symbol}: Yahoo 2y 보강 조회 실패, 장기·캐시 데이터로 계속합니다: {error}", RuntimeWarning)
+    return (
+        pd.concat(frames, ignore_index=True)
+        .drop_duplicates("date", keep="last")
+        .sort_values("date")
+        .reset_index(drop=True)
+    )
 
 
 def _fetch_investing_historical(url: str, min_rows: int = 5) -> pd.DataFrame:
@@ -389,8 +428,8 @@ def _reading(regime: str, latest: pd.Series, probabilities: dict[str, float], vo
     return "가격 모멘텀과 변동성 압력이 상대적으로 안정적입니다. 발행 조건보다 기존 북 관리 부담이 낮은 구간입니다."
 
 
-def _index_payload(spec: dict) -> dict:
-    price = _fetch_yahoo(spec["symbol"], min_rows=320)
+def _index_payload(spec: dict, cached_prices: pd.DataFrame | None = None) -> dict:
+    price = _fetch_price_history(spec["symbol"], cached_prices)
     vol, vol_symbol, vol_source_label = _fetch_vol_proxy(spec)
     frame = _features(price, vol)
     columns = ["ret_20d", "realized_vol_20d", "drawdown_60d", "vol_proxy_rank_252d", "vol_proxy_change_20d"]
@@ -430,6 +469,7 @@ def _index_payload(spec: dict) -> dict:
     return {
         **{key: spec[key] for key in ["id", "label", "name", "region"]},
         "symbol": spec["symbol"],
+        "priceSource": "Yahoo Finance 다중 구간 + ELS 가격 캐시",
         "volSymbol": vol_symbol,
         "volSource": vol_source,
         "lastDate": latest["date"],
@@ -456,9 +496,10 @@ def _index_payload(spec: dict) -> dict:
 
 
 def build_payload() -> dict:
+    cached_prices = _load_els_price_history()
     indices = []
     for spec in INDICES:
-        indices.append(_index_payload(spec))
+        indices.append(_index_payload(spec, cached_prices.get(spec["id"])))
 
     risk_off_count = sum(1 for item in indices if item["regime"] == "위험회피")
     bull_count = sum(1 for item in indices if item["regime"] == "고변동성 활황")
