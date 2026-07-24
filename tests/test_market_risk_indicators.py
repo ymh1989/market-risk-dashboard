@@ -8,8 +8,8 @@ from scripts.update_market_risk import (
     compare_series_quality,
     equity_stress_component_points,
     equity_stress_score_at,
-    fetch_naver_bond_live_snapshot,
-    fetch_naver_bond_live_snapshots,
+    fetch_naver_market_index_latest_snapshot,
+    fetch_naver_market_index_latest_snapshots,
     fetch_naver_market_index_series,
     level_and_change_component_points,
     level_and_change_score_at,
@@ -141,7 +141,7 @@ def test_naver_live_bond_parser_separates_current_yield_from_previous_close(monk
 
     monkeypatch.setattr("scripts.update_market_risk.urllib.request.urlopen", fake_urlopen)
 
-    snapshot = fetch_naver_bond_live_snapshot(
+    snapshot = fetch_naver_market_index_latest_snapshot(
         {"category": "bond", "symbol": "KR10YT=RR"}
     )
 
@@ -151,16 +151,57 @@ def test_naver_live_bond_parser_separates_current_yield_from_previous_close(monk
     assert snapshot["previousClose"] == 4.383
     assert snapshot["changeBps"] == 5.2
     assert snapshot["delayTimeName"] == "실시간"
+    assert snapshot["displayStatus"] == "실시간"
 
 
-def test_live_bond_snapshot_is_appended_as_provisional_without_changing_eod(monkeypatch):
+def test_naver_delayed_market_index_parser_preserves_delay_status(monkeypatch):
+    payload = {
+        "localTradedAt": "2026-07-24T08:32:37+01:00",
+        "closePrice": "98.57",
+        "fluctuations": "-2.12",
+        "delayTime": 10,
+        "delayTimeName": "10분 지연",
+        "marketStatus": "OPEN",
+        "priceDataType": "DELAYED_PRICE",
+        "marketIndexTotalInfos": [
+            {"code": "lastClosePrice", "key": "전일", "value": "100.69"}
+        ],
+    }
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps(payload).encode("utf-8")
+
+    monkeypatch.setattr(
+        "scripts.update_market_risk.urllib.request.urlopen",
+        lambda request, timeout: FakeResponse(),
+    )
+
+    snapshot = fetch_naver_market_index_latest_snapshot(
+        {"category": "energy", "symbol": "LCOcv1"}
+    )
+
+    assert snapshot["close"] == 98.57
+    assert snapshot["previousClose"] == 100.69
+    assert snapshot["change"] == -2.12
+    assert snapshot["changeBps"] is None
+    assert snapshot["displayStatus"] == "10분 지연"
+
+
+def test_latest_snapshot_is_appended_as_provisional_without_changing_eod(monkeypatch):
     series_map = {
         "kr3y": [{"date": "2026-07-23", "close": 3.907}],
         "kr10y": [{"date": "2026-07-23", "close": 4.383}],
     }
     original = json.loads(json.dumps(series_map))
 
-    def fake_live(config):
+    def fake_latest(config):
         previous_close = 3.907 if config["symbol"].startswith("KR3Y") else 4.383
         return {
             "date": "2026-07-24",
@@ -169,9 +210,16 @@ def test_live_bond_snapshot_is_appended_as_provisional_without_changing_eod(monk
             "previousClose": previous_close,
         }
 
-    monkeypatch.setattr("scripts.update_market_risk.fetch_naver_bond_live_snapshot", fake_live)
+    monkeypatch.setattr(
+        "scripts.update_market_risk.NAVER_LATEST_INDEX_IDS",
+        ("kr3y", "kr10y"),
+    )
+    monkeypatch.setattr(
+        "scripts.update_market_risk.fetch_naver_market_index_latest_snapshot",
+        fake_latest,
+    )
 
-    snapshots, statuses = fetch_naver_bond_live_snapshots(series_map)
+    snapshots, statuses = fetch_naver_market_index_latest_snapshots(series_map)
 
     assert series_map == original
     assert statuses == {"kr3y": "live", "kr10y": "live"}

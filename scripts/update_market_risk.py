@@ -23,11 +23,13 @@ NAVER_MARKET_INDEX_CACHE_FILE = ROOT / "data" / "naver-marketindex-history.json"
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d"
 FRED_GRAPH_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 NAVER_MARKET_INDEX_URL = "https://stock.naver.com/api/securityService/marketindex/{category}/{symbol}/prices"
+NAVER_MARKET_INDEX_DETAIL_URL = (
+    "https://stock.naver.com/api/securityService/marketindex/{category}/{symbol}"
+)
 NAVER_BOND_LIVE_URL = "https://stock.naver.com/api/securityService/economic/bond/{symbol}"
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-risk-dashboard/0.1)"
 KST = timezone(timedelta(hours=9))
 FRED_FETCH_ATTEMPTS = 3
-NAVER_LIVE_BOND_IDS = ("kr3y", "kr10y")
 
 TICKERS = {
     "kospi": {"symbol": "^KS11", "label": "KOSPI"},
@@ -238,6 +240,7 @@ NAVER_MARKET_INDEXES = {
         "max_cache_age_days": 7,
     },
 }
+NAVER_LATEST_INDEX_IDS = tuple(NAVER_MARKET_INDEXES)
 
 RISK_GROUPS = {
     "crash": {"label": "Crash Stress", "weight": 0.18},
@@ -417,37 +420,80 @@ def fetch_naver_market_index_series(config, page_size=60):
     return series[-target_observations:]
 
 
-def fetch_naver_bond_live_snapshot(config):
-    if config.get("category") != "bond":
-        raise ValueError("실시간 채권 스냅샷은 bond 분류만 지원합니다.")
+def _naver_previous_close(payload, current_value):
+    for item in payload.get("marketIndexTotalInfos") or []:
+        if item.get("code") == "lastClosePrice":
+            previous_close = parse_naver_number(item.get("value"))
+            if previous_close is not None:
+                return previous_close
+    fluctuations = parse_naver_number(payload.get("fluctuations"))
+    return current_value - fluctuations if fluctuations is not None else None
 
+
+def _naver_snapshot_display_status(payload):
+    delay_name = str(payload.get("delayTimeName") or "").strip()
+    if delay_name:
+        return delay_name
+    price_data_type = str(payload.get("priceDataType") or "")
+    if price_data_type == "NOTICE_ROUND":
+        return "실시간 고시"
+    if price_data_type == "CLOSING_PRICE":
+        return "마감"
+    delay_time = payload.get("delayTime")
+    if delay_time == 0 or payload.get("marketStatus") == "OPEN":
+        return "실시간"
+    return "최신"
+
+
+def fetch_naver_market_index_latest_snapshot(config):
+    category = config["category"]
     symbol = config["symbol"]
     encoded_symbol = urllib.parse.quote(symbol, safe="")
+    if category == "bond":
+        url = NAVER_BOND_LIVE_URL.format(symbol=encoded_symbol)
+    else:
+        url = NAVER_MARKET_INDEX_DETAIL_URL.format(
+            category=category,
+            symbol=encoded_symbol,
+        )
     request = urllib.request.Request(
-        NAVER_BOND_LIVE_URL.format(symbol=encoded_symbol),
+        url,
         headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
     )
     with urllib.request.urlopen(request, timeout=20) as response:
         payload = json.loads(response.read().decode("utf-8"))
 
-    traded_at = str(payload.get("localTradedAt") or payload.get("localDate") or "")
-    current_yield = parse_naver_number(payload.get("closePriceYield"))
-    previous_close = parse_naver_number(payload.get("yieldToLastClosePrice"))
-    if len(traded_at) < 16 or current_yield is None or previous_close is None:
-        raise RuntimeError(f"{symbol}: Naver 실시간 채권 응답에 필수값이 없습니다.")
+    if category == "exchange":
+        payload = payload.get("exchangeInfo") or {}
 
-    change = current_yield - previous_close
+    traded_at = str(payload.get("localTradedAt") or payload.get("localDate") or "")
+    if category == "bond":
+        current_value = parse_naver_number(payload.get("closePriceYield"))
+        previous_close = parse_naver_number(payload.get("yieldToLastClosePrice"))
+    else:
+        current_value = parse_naver_number(payload.get("closePrice"))
+        previous_close = (
+            _naver_previous_close(payload, current_value)
+            if current_value is not None
+            else None
+        )
+    if len(traded_at) < 16 or current_value is None or previous_close is None:
+        raise RuntimeError(f"{symbol}: Naver 최신값 응답에 필수값이 없습니다.")
+
+    change = current_value - previous_close
     return {
         "date": traded_at[:10],
         "observedAt": traded_at,
-        "close": current_yield,
+        "close": current_value,
         "previousClose": previous_close,
         "change": round(change, 6),
-        "changeBps": round(change * 100, 2),
+        "changeBps": round(change * 100, 2) if category == "bond" else None,
         "marketStatus": payload.get("marketStatus"),
         "delayTime": payload.get("delayTime"),
         "delayTimeName": payload.get("delayTimeName"),
-        "source": "Naver Pay Securities real-time bond endpoint",
+        "priceDataType": payload.get("priceDataType"),
+        "displayStatus": _naver_snapshot_display_status(payload),
+        "source": "Naver Pay Securities latest market-index endpoint",
     }
 
 
@@ -486,15 +532,22 @@ def _is_recent_live_snapshot(snapshot, max_age_hours=36):
     return timedelta(0) <= age <= timedelta(hours=max_age_hours)
 
 
-def fetch_naver_bond_live_snapshots(series_map, cached_snapshots=None, max_workers=2):
+def fetch_naver_market_index_latest_snapshots(
+    series_map,
+    cached_snapshots=None,
+    max_workers=6,
+):
     cached_snapshots = cached_snapshots or {}
     snapshots = {}
     statuses = {}
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(fetch_naver_bond_live_snapshot, NAVER_MARKET_INDEXES[key]): key
-            for key in NAVER_LIVE_BOND_IDS
+            executor.submit(
+                fetch_naver_market_index_latest_snapshot,
+                NAVER_MARKET_INDEXES[key],
+            ): key
+            for key in NAVER_LATEST_INDEX_IDS
         }
         for future in as_completed(futures):
             key = futures[future]
@@ -512,13 +565,21 @@ def fetch_naver_bond_live_snapshots(series_map, cached_snapshots=None, max_worke
             confirmed_rows = series_map.get(key) or []
             confirmed_date = str(confirmed_rows[-1].get("date") or "") if confirmed_rows else ""
             snapshot["confirmedDate"] = confirmed_date or None
-            snapshot["isProvisional"] = bool(snapshot.get("date") and snapshot["date"] > confirmed_date)
+            same_day_open = (
+                snapshot.get("date") == confirmed_date
+                and snapshot.get("marketStatus") == "OPEN"
+                and snapshot.get("priceDataType") != "CLOSING_PRICE"
+            )
+            snapshot["isProvisional"] = bool(
+                snapshot.get("date")
+                and (snapshot["date"] > confirmed_date or same_day_open)
+            )
             snapshot["fetchStatus"] = statuses[key]
             snapshots[key] = snapshot
 
     return (
-        {key: snapshots[key] for key in NAVER_LIVE_BOND_IDS if key in snapshots},
-        {key: statuses.get(key, "unavailable") for key in NAVER_LIVE_BOND_IDS},
+        {key: snapshots[key] for key in NAVER_LATEST_INDEX_IDS if key in snapshots},
+        {key: statuses.get(key, "unavailable") for key in NAVER_LATEST_INDEX_IDS},
     )
 
 
@@ -580,7 +641,7 @@ def fetch_naver_market_indexes(max_workers=5):
 
     ordered_results = {key: results[key] for key in NAVER_MARKET_INDEXES}
     ordered_statuses = {key: fetch_statuses[key] for key in NAVER_MARKET_INDEXES}
-    live_snapshots, live_statuses = fetch_naver_bond_live_snapshots(
+    live_snapshots, live_statuses = fetch_naver_market_index_latest_snapshots(
         ordered_results,
         cached_payload.get("liveSnapshots") or {},
     )
@@ -588,13 +649,13 @@ def fetch_naver_market_indexes(max_workers=5):
     return ordered_results, ordered_statuses
 
 
-def refresh_naver_bond_live_cache():
+def refresh_naver_market_index_latest_cache():
     payload = load_naver_market_index_cache_payload()
     series_map = payload.get("series") or {}
     if not series_map:
         raise RuntimeError("Naver 시장지표 EOD 캐시가 없어 실시간 금리를 갱신할 수 없습니다.")
 
-    live_snapshots, live_statuses = fetch_naver_bond_live_snapshots(
+    live_snapshots, live_statuses = fetch_naver_market_index_latest_snapshots(
         series_map,
         payload.get("liveSnapshots") or {},
     )
@@ -3059,7 +3120,7 @@ def parse_args():
     parser.add_argument(
         "--refresh-live-only",
         action="store_true",
-        help="기존 EOD 캐시는 유지하고 한국 금리 실시간 스냅샷만 갱신합니다.",
+        help="기존 EOD 캐시는 유지하고 시장지표 최신 스냅샷만 갱신합니다.",
     )
     return parser.parse_args()
 
@@ -3067,11 +3128,12 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     if args.refresh_live_only:
-        snapshots = refresh_naver_bond_live_cache()
+        snapshots = refresh_naver_market_index_latest_cache()
         labels = ", ".join(
-            f"{NAVER_MARKET_INDEXES[key]['label']} {snapshot['close']:.3f}%"
+            f"{NAVER_MARKET_INDEXES[key]['label']} {snapshot['close']}"
             for key, snapshot in snapshots.items()
+            if snapshot.get("isProvisional")
         )
-        print(f"한국 금리 실시간 스냅샷 갱신: {labels or '사용 가능한 값 없음'}")
+        print(f"시장지표 장중 스냅샷 갱신: {labels or '새 잠정값 없음'}")
     else:
         main()

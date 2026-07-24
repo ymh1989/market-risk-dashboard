@@ -12,7 +12,7 @@ from kospi_risk.market_data_fetcher import load_source_config
 try:
     from scripts.update_market_risk import (
         FRED_SERIES,
-        NAVER_LIVE_BOND_IDS,
+        NAVER_LATEST_INDEX_IDS,
         NAVER_MARKET_INDEXES,
         NAVER_SYMBOLS,
         TICKERS,
@@ -20,7 +20,7 @@ try:
 except ModuleNotFoundError:
     from update_market_risk import (
         FRED_SERIES,
-        NAVER_LIVE_BOND_IDS,
+        NAVER_LATEST_INDEX_IDS,
         NAVER_MARKET_INDEXES,
         NAVER_SYMBOLS,
         TICKERS,
@@ -587,14 +587,14 @@ def cache_series_checks(
         )
 
     live_snapshots = market_history.get("liveSnapshots") or {}
-    missing_live = sorted(set(NAVER_LIVE_BOND_IDS) - set(live_snapshots))
+    missing_live = sorted(set(NAVER_LATEST_INDEX_IDS) - set(live_snapshots))
     checks.append(
         make_check(
             "cache:naver-market-live:coverage",
             "cache",
-            "한국 금리 실시간 스냅샷",
+            "시장지표 최신 스냅샷",
             "warning" if missing_live else "ok",
-            f"{len(live_snapshots)}/{len(NAVER_LIVE_BOND_IDS)}개"
+            f"{len(live_snapshots)}/{len(NAVER_LATEST_INDEX_IDS)}개"
             + (f" · 누락 {', '.join(missing_live)}" if missing_live else " · 누락 없음"),
         )
     )
@@ -603,25 +603,30 @@ def cache_series_checks(
         current_value = snapshot.get("close")
         previous_close = snapshot.get("previousClose")
         malformed = (
-            item_id not in NAVER_LIVE_BOND_IDS
+            item_id not in NAVER_LATEST_INDEX_IDS
             or observed_date is None
             or not isinstance(current_value, (int, float))
             or not isinstance(previous_close, (int, float))
         )
         lag = business_day_lag(observed_date, reference_date) if observed_date else 999
-        status = "error" if malformed else ("warning" if lag > 1 else "ok")
+        allowed_lag = (
+            7
+            if NAVER_MARKET_INDEXES.get(item_id, {}).get("frequency") == "weekly"
+            else 1
+        )
+        status = "error" if malformed else ("warning" if lag > allowed_lag else "ok")
         detail = (
             "필수값 누락"
             if malformed
-            else f"{observed_date.isoformat()} · {float(current_value):.3f}%"
-            f" · 전일 대비 {(float(current_value) - float(previous_close)) * 100:+.1f}bp"
+            else f"{observed_date.isoformat()} · {float(current_value):,.4f}"
+            f" · {snapshot.get('displayStatus', '상태 미상')}"
             f" · {snapshot.get('fetchStatus', '상태 미상')}"
         )
         checks.append(
             make_check(
                 f"cache:naver-market-live:{item_id}",
                 "cache",
-                f"한국 금리 실시간/{item_id}",
+                f"시장지표 최신값/{item_id}",
                 status,
                 detail,
                 lastDate=observed_date.isoformat() if observed_date else None,

@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260724-10";
+const ASSET_VERSION = "20260724-11";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -2163,6 +2163,17 @@ function formatMarketTrendValue(value, type) {
   return number.toFixed(4);
 }
 
+function formatMarketSnapshotTime(observedAt) {
+  const parsed = new Date(observedAt);
+  if (Number.isNaN(parsed.getTime())) return String(observedAt).slice(11, 16);
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(parsed);
+}
+
 function usableMarketLiveSnapshot(definition, marketIndexes, confirmedLatest) {
   const snapshot = marketIndexes?.liveSnapshots?.[definition.id];
   if (
@@ -2171,7 +2182,7 @@ function usableMarketLiveSnapshot(definition, marketIndexes, confirmedLatest) {
     !snapshot.date ||
     typeof snapshot.observedAt !== "string" ||
     snapshot.observedAt.length < 16 ||
-    snapshot.date <= confirmedLatest.date
+    snapshot.date < confirmedLatest.date
   ) {
     return null;
   }
@@ -2195,7 +2206,11 @@ function analyzeMarketTrend(definition, marketIndexes) {
     marketIndexes,
     confirmedRows[confirmedRows.length - 1]
   );
-  const rows = livePoint ? [...confirmedRows, livePoint] : confirmedRows;
+  const rows = livePoint
+    ? livePoint.date === confirmedRows[confirmedRows.length - 1].date
+      ? [...confirmedRows.slice(0, -1), livePoint]
+      : [...confirmedRows, livePoint]
+    : confirmedRows;
 
   const weekly = metadata.frequency === "weekly";
   const oneWeekOffset = weekly ? 1 : 5;
@@ -2274,7 +2289,7 @@ function renderMarketTrendRow(item) {
         <strong>${item.label}</strong>
         ${
           item.hasLive
-            ? `<span class="market-trend-row__asof market-trend-row__asof--live">실시간 ${item.liveSnapshot.observedAt.slice(11, 16)} · 잠정</span>`
+            ? `<span class="market-trend-row__asof market-trend-row__asof--live">${item.liveSnapshot.displayStatus || "최신"} ${formatMarketSnapshotTime(item.liveSnapshot.observedAt)} KST · 잠정</span>`
             : `<span class="market-trend-row__asof">${item.latest.date}</span>`
         }
       </div>
@@ -2333,7 +2348,7 @@ function renderMarketIndexTrendPanel(marketIndexes) {
         <div class="market-trend-panel__summary">
           <strong>${persistent.length}</strong>
           <span>지속 방향</span>
-          <small>${liveItems.length ? `한국 금리 실시간 ${liveItems.length}개` : `최신 ${latestDate}`}</small>
+          <small>${liveItems.length ? `장중 최신값 ${liveItems.length}개` : `최신 ${latestDate}`}</small>
         </div>
       </header>
       <div class="market-trend-groups">
@@ -2350,7 +2365,7 @@ function renderMarketIndexTrendPanel(marketIndexes) {
       </div>
       <footer class="market-trend-panel__footer">
         <span>Naver Pay 증권 시장지표</span>
-        <span>한국 금리 현재값은 실시간 잠정치 · 과거 시계열과 ML은 확정 EOD</span>
+        <span>현재값은 실시간·지연 잠정치 · 과거 시계열과 ML은 확정 EOD</span>
         <span>일간 최근 10회 · 주간 최근 6회 방향 판독</span>
       </footer>
     </section>

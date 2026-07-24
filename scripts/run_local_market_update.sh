@@ -273,7 +273,7 @@ fi
 "$PYTHON_BIN" scripts/export_ml_risk_signal.py
 ML_STAGE_COMPLETED_EPOCH="$(date +%s)"
 
-echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 게시 직전 한국 금리 실시간값을 갱신합니다."
+echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 게시 직전 시장지표 최신값을 갱신합니다."
 "$PYTHON_BIN" scripts/update_market_risk.py --refresh-live-only
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 대시보드 데이터를 검증합니다."
