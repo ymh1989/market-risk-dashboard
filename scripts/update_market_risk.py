@@ -198,6 +198,15 @@ NAVER_MARKET_INDEXES = {
         "min_observations": 80,
         "max_cache_age_days": 7,
     },
+    "jp10y_naver": {
+        "category": "bond",
+        "symbol": "JP10YT=RR",
+        "label": "일본 국채 10년",
+        "frequency": "daily",
+        "target_observations": 504,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
     "kr3y": {
         "category": "bond",
         "symbol": "KR3YT=RR",
@@ -1849,6 +1858,51 @@ def korea_us_rate_fx_score(series_map, market_index_map):
     }
 
 
+def japan_us_rate_spread_component_points(market_index_map, limit=120, step=1):
+    rate_spread = make_difference_series(
+        market_index_map["us10y_naver"], market_index_map["jp10y_naver"]
+    )
+    component_points = {
+        "short_narrowing": {
+            "weight": 0.4,
+            "points": change_pressure_component_points(
+                rate_spread, change_periods=5, direction="down", point_change=True
+            ),
+        },
+        "medium_narrowing": {
+            "weight": 0.6,
+            "points": change_pressure_component_points(
+                rate_spread, change_periods=20, direction="down", point_change=True
+            ),
+        },
+    }
+    return _weighted_asof_score_points(component_points, limit=limit, step=step)
+
+
+def japan_us_rate_spread_score(market_index_map):
+    rate_spread = make_difference_series(
+        market_index_map["us10y_naver"], market_index_map["jp10y_naver"]
+    )
+    points = japan_us_rate_spread_component_points(market_index_map, limit=504)
+    latest, trend = _latest_composite_score(
+        points, "미·일 10년 금리차 관찰점수를 계산할 데이터가 없습니다."
+    )
+    as_of = latest["date"]
+    spread_values = closes(rate_spread)
+    return {
+        "score": latest["value"],
+        "trend": trend,
+        "metrics": {
+            "asOf": as_of,
+            "us10yLast": close_asof(market_index_map["us10y_naver"], as_of),
+            "jp10yLast": close_asof(market_index_map["jp10y_naver"], as_of),
+            "rateSpreadLastPctp": close_asof(rate_spread, as_of),
+            "rateSpreadChange5ObsPctp": round(spread_values[-1] - spread_values[-6], 3),
+            "rateSpreadChange20ObsPctp": round(spread_values[-1] - spread_values[-21], 3),
+        },
+    }
+
+
 def energy_import_cost_series(series_map, market_index_map):
     return make_product_series(market_index_map["brent"], series_map["usdkrw"])
 
@@ -2145,6 +2199,9 @@ def build_timeseries(series_map, naver_map, fred_map, market_index_map=None, lim
                 "korea_us_rate_fx_watch": korea_us_rate_fx_component_points(
                     series_map, market_index_map, limit=limit, step=step
                 ),
+                "japan_us_rate_spread_watch": japan_us_rate_spread_component_points(
+                    market_index_map, limit=limit, step=step
+                ),
             }
         )
     return timeseries
@@ -2254,6 +2311,7 @@ def build_indicators(series_map, naver_map, fred_map, market_index_map):
     energy_import_cost = energy_import_cost_score(series_map, market_index_map)
     yen_carry_unwind = yen_carry_unwind_score(series_map, market_index_map)
     korea_us_rate_fx = korea_us_rate_fx_score(series_map, market_index_map)
+    japan_us_rate_spread = japan_us_rate_spread_score(market_index_map)
     global_ai = semiconductor_global_score(series_map)
     bigtech_demand = bigtech_ai_demand_pressure_score(series_map)
     korea_ai = korean_ai_semiconductor_score(series_map)
@@ -2477,6 +2535,27 @@ def build_indicators(series_map, naver_map, fred_map, market_index_map):
             "source": "Naver market index: KR3YT=RR, US2YT=RR; Yahoo Finance: KRW=X",
         },
         {
+            "id": "japan_us_rate_spread_watch",
+            "name": "미·일 10년 금리차 축소",
+            "category": "관찰/금리·외환",
+            "group": "macro",
+            "role": "observation",
+            "value": japan_us_rate_spread["score"],
+            "unit": "score",
+            "weight": 0.0,
+            "trend": japan_us_rate_spread["trend"],
+            "detail": (
+                f"미국 10년 {japan_us_rate_spread['metrics']['us10yLast']:.3f}%, 일본 10년 "
+                f"{japan_us_rate_spread['metrics']['jp10yLast']:.3f}%, 미국-일본 금리차 "
+                f"{japan_us_rate_spread['metrics']['rateSpreadLastPctp']:+.3f}%p. "
+                f"5개 관측치 변화 {japan_us_rate_spread['metrics']['rateSpreadChange5ObsPctp']:+.3f}%p, "
+                f"20개 관측치 변화 {japan_us_rate_spread['metrics']['rateSpreadChange20ObsPctp']:+.3f}%p. "
+                "금리차 축소에 따른 달러 캐리 매력 저하와 엔화 강세·자금 환류 가능성을 보는 "
+                "연구 관찰점수이며 종합점수에는 반영하지 않습니다."
+            ),
+            "source": "Naver market index: US10YT=RR, JP10YT=RR",
+        },
+        {
             "id": "global_ai_semiconductor_stress",
             "name": "글로벌 AI 반도체 스트레스",
             "category": "AI 반도체",
@@ -2633,10 +2712,10 @@ def update_dashboard(series_map, fred_map, market_index_map, indicators):
         "운임 비용-수요 괴리·중국 경기/위안화·원화 환산 에너지 수입비용, "
         "외국인 보유비중, 거래량, "
         "대형 반도체 단일종목 레버리지성 스트레스, 빅테크 AI 수요 우려, "
-        "AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다. 엔 캐리 청산과 "
-        "한미 금리차·원화 압력은 종합점수와 분리한 연구 관찰카드로 제공합니다."
+        "AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다. 엔 캐리 청산, "
+        "한미 금리차·원화 압력과 미·일 10년 금리차 축소는 종합점수와 분리한 연구 관찰카드로 제공합니다."
     )
-    market["model"]["version"] = "market-risk-v6-observation-harness"
+    market["model"]["version"] = "market-risk-v7-observation-harness"
     market["model"]["methodology"] = (
         "각 시계열의 최대 2년 히스토리에서 레벨, 20개 관측치 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 "
         "분위수 점수, z-score 정규분포 변환 점수, median/MAD 기반 robust z-score 변환 점수로 "

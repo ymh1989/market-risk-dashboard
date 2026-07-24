@@ -93,6 +93,7 @@ def test_dashboard_contract():
     assert {indicator["id"] for indicator in observations} == {
         "yen_carry_unwind_watch",
         "korea_us_rate_fx_watch",
+        "japan_us_rate_spread_watch",
     }
     assert all(float(indicator["weight"]) == 0 for indicator in observations)
     assert market_index_cache["schemaVersion"] == 1
@@ -108,6 +109,7 @@ def test_dashboard_contract():
         "usdjpy",
         "us2y_naver",
         "us10y_naver",
+        "jp10y_naver",
         "kr3y",
         "kr10y",
     }
@@ -420,8 +422,8 @@ def test_pipeline_status_contract():
     assert status["quality"]["score"] >= 0
     assert status["history"]
     assert quality["schemaVersion"] == 1
-    assert quality["summary"]["sourceSeriesExpected"] == 70
-    assert quality["summary"]["sourceSeriesPresent"] == 70
+    assert quality["summary"]["sourceSeriesExpected"] == 71
+    assert quality["summary"]["sourceSeriesPresent"] == 71
     assert quality["summary"]["error"] == 0
 
 

@@ -12,6 +12,7 @@ from scripts.update_market_risk import (
     level_and_change_component_points,
     level_and_change_score_at,
     level_and_point_change_score,
+    japan_us_rate_spread_component_points,
     make_difference_series,
     make_product_series,
     rolling_negative_point_changes,
@@ -225,6 +226,35 @@ def test_yen_carry_watch_requires_actual_yen_strength():
     points = yen_carry_unwind_component_points(series_map, market_index_map)
 
     assert points[-1]["value"] == 0.0
+
+
+def test_japan_us_rate_spread_watch_tracks_narrowing_without_future_data():
+    start = date(2025, 1, 1)
+    dates = [(start + timedelta(days=index)).isoformat() for index in range(100)]
+    narrowing_map = {
+        "us10y_naver": [{"date": day, "close": 4.5} for day in dates],
+        "jp10y_naver": [
+            {"date": day, "close": 0.8 + index * 0.02} for index, day in enumerate(dates)
+        ],
+    }
+    widening_map = {
+        "us10y_naver": [{"date": day, "close": 4.5} for day in dates],
+        "jp10y_naver": [
+            {"date": day, "close": 2.8 - index * 0.02} for index, day in enumerate(dates)
+        ],
+    }
+
+    narrowing = japan_us_rate_spread_component_points(narrowing_map)
+    widening = japan_us_rate_spread_component_points(widening_map)
+    historical_score = narrowing[-1]["value"]
+    narrowing_map["jp10y_naver"].append(
+        {"date": (start + timedelta(days=100)).isoformat(), "close": 4.4}
+    )
+    extended = japan_us_rate_spread_component_points(narrowing_map)
+
+    assert historical_score > 0
+    assert widening[-1]["value"] == 0.0
+    assert extended[-2]["value"] == historical_score
 
 
 def test_precomputed_rolling_scores_match_point_in_time_calculation():
