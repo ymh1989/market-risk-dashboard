@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260724-12";
+const ASSET_VERSION = "20260724-13";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -2957,10 +2957,14 @@ function renderGroupScores(section) {
           };
           const weightedIndicators = (section.indicators ?? []).filter(
             (indicator) => indicator.group === group.id && indicator.role !== "observation"
+          ).sort(
+            (left, right) =>
+              Number(right.contribution ?? 0) - Number(left.contribution ?? 0) ||
+              Number(right.value ?? 0) - Number(left.value ?? 0)
           );
           const observationIndicators = (section.indicators ?? []).filter(
             (indicator) => indicator.group === group.id && indicator.role === "observation"
-          );
+          ).sort((left, right) => Number(right.value ?? 0) - Number(left.value ?? 0));
           const tooltipId = `group-tooltip-${section.id}-${group.id}`;
           return `
             <article class="group-card group-card--${group.id}">
@@ -2988,12 +2992,16 @@ function renderGroupScores(section) {
               <div class="group-card__tooltip" id="${tooltipId}" role="tooltip">
                 <strong>${definition.label} 구성</strong>
                 <p>${definition.description}</p>
-                <span>가중 반영</span>
+                <span>가중 반영 · 기여도 높은 순</span>
                 <ul>
                   ${weightedIndicators
                     .map(
                       (indicator) =>
-                        `<li><span>${indicator.name}</span><strong>${clampScore(indicator.value).toFixed(1)}</strong></li>`
+                        `<li>
+                           <span>${indicator.name}</span>
+                           <small>${clampScore(indicator.value).toFixed(1)} × ${Number(indicator.contributionPct ?? 0).toFixed(1)}%</small>
+                           <strong>+${Number(indicator.contribution ?? 0).toFixed(2)}점</strong>
+                         </li>`
                     )
                     .join("")}
                 </ul>
@@ -3004,7 +3012,11 @@ function renderGroupScores(section) {
                          ${observationIndicators
                            .map(
                              (indicator) =>
-                               `<li><span>${indicator.name}</span><strong>${clampScore(indicator.value).toFixed(1)}</strong></li>`
+                               `<li>
+                                  <span>${indicator.name}</span>
+                                  <small>${clampScore(indicator.value).toFixed(1)} × 0.0%</small>
+                                  <strong>+0.00점</strong>
+                                </li>`
                            )
                            .join("")}
                        </ul>`

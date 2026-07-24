@@ -208,8 +208,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260724-12" in html
-    assert "app.js?v=20260724-12" in html
+    assert "styles.css?v=20260724-13" in html
+    assert "app.js?v=20260724-13" in html
     assert 'aria-pressed="${tab.id === "summary" ? "true" : "false"}"' in app_source
     assert 'tab.setAttribute("aria-pressed"' in app_source
     assert "font-weight: 800;" not in styles
@@ -316,6 +316,9 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert 'role="tooltip"' in app_source
     assert 'aria-describedby="${tooltipId}"' in app_source
     assert "관찰 전용 · 가중치 미반영" in app_source
+    assert "가중 반영 · 기여도 높은 순" in app_source
+    assert "indicator.contributionPct" in app_source
+    assert "Number(right.contribution ?? 0) - Number(left.contribution ?? 0)" in app_source
     assert "indicator-group-tag" in app_source
     assert ".group-card:hover .group-card__tooltip" in styles
     assert ".group-card:focus-within .group-card__tooltip" in styles

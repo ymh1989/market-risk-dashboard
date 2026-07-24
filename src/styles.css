@@ -3090,9 +3090,9 @@ a {
 }
 
 .group-card__tooltip li {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: baseline;
-  justify-content: space-between;
   gap: 12px;
   font-size: 0.73rem;
 }
@@ -3101,10 +3101,18 @@ a {
   min-width: 0;
 }
 
+.group-card__tooltip li small {
+  color: #bac7ce;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .group-card__tooltip li strong {
   flex: 0 0 auto;
   color: #ffffff;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .group-card footer,
