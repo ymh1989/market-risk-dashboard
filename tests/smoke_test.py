@@ -206,6 +206,18 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert "변동성↑ 쿠폰↑" in app_source
     assert "하락위험↑ 부담↑" in app_source
     assert 'loadJson("./data/pipeline-status.json")' in app_source
+    assert 'loadJson("./data/naver-marketindex-history.json")' in app_source
+    assert "renderMarketIndexTrendPanel" in app_source
+    assert "금리·환율·원자재·운임 방향성" in app_source
+    assert "엔화 약세" in app_source
+
+    summary_source = app_source.split("function renderSummary", 1)[1].split("function renderModelPanel", 1)[0]
+    assert summary_source.index("renderMarketIndexTrendPanel") < summary_source.index("renderBacktestPanel")
+    assert summary_source.index("renderBacktestPanel") < summary_source.index("renderStressEpisodesPanel")
+
+    section_source = app_source.split("function renderSection", 1)[1].split("function renderDashboard", 1)[0]
+    assert section_source.index("renderIndicatorSortControls") < section_source.index("renderBacktestPanel")
+    assert section_source.index("renderBacktestPanel") < section_source.index("renderStressEpisodesPanel")
 
 
 def test_snow_lab_easter_egg_contract():

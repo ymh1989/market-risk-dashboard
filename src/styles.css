@@ -342,6 +342,7 @@ select {
 .ml-risk-panel,
 .els-index-panel,
 .hmm-regime-panel,
+.market-trend-panel,
 .trend-panel,
 .backtest-panel,
 .stress-panel,
@@ -2125,6 +2126,220 @@ select {
   background: var(--surface-raised);
 }
 
+.market-trend-panel {
+  display: grid;
+  gap: 22px;
+  margin-top: 16px;
+  padding: 24px;
+  background: var(--surface);
+}
+
+.market-trend-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.market-trend-panel__header h2 {
+  margin: 6px 0 8px;
+  font-size: 1.35rem;
+}
+
+.market-trend-panel__header p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.market-trend-panel__summary {
+  display: grid;
+  min-width: 112px;
+  justify-items: end;
+  gap: 2px;
+  color: var(--muted);
+}
+
+.market-trend-panel__summary strong {
+  color: var(--ink);
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.market-trend-panel__summary span {
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.market-trend-panel__summary small {
+  margin-top: 5px;
+  font-size: 0.7rem;
+}
+
+.market-trend-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 26px 32px;
+}
+
+.market-trend-group {
+  min-width: 0;
+}
+
+.market-trend-group > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 9px;
+}
+
+.market-trend-group > header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.market-trend-group > header span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.market-trend-row {
+  display: grid;
+  grid-template-columns: minmax(76px, 0.65fr) minmax(118px, 0.9fr);
+  gap: 10px 14px;
+  align-items: center;
+  min-height: 118px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  padding: 12px 0;
+}
+
+.market-trend-row:last-child {
+  border-bottom: 0;
+}
+
+.market-trend-row__identity {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.market-trend-row__identity strong {
+  overflow: hidden;
+  font-size: 0.88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.market-trend-row__identity span,
+.market-trend-row__state span {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.market-trend-row__chart {
+  min-width: 0;
+}
+
+.market-trend-row__chart svg {
+  display: block;
+  width: 100%;
+  height: 52px;
+  overflow: visible;
+}
+
+.market-trend-row__baseline {
+  fill: none;
+  stroke: var(--line);
+  stroke-dasharray: 3 5;
+  stroke-width: 1;
+}
+
+.market-trend-row__line {
+  fill: none;
+  stroke: var(--muted);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.25;
+}
+
+.market-trend-row__chart circle {
+  fill: var(--muted);
+}
+
+.market-trend-row--up .market-trend-row__line {
+  stroke: var(--amber);
+}
+
+.market-trend-row--up .market-trend-row__chart circle {
+  fill: var(--amber);
+}
+
+.market-trend-row--down .market-trend-row__line {
+  stroke: var(--teal);
+}
+
+.market-trend-row--down .market-trend-row__chart circle {
+  fill: var(--teal);
+}
+
+.market-trend-row__numbers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-column: 1 / -1;
+  gap: 8px;
+  margin: 0;
+}
+
+.market-trend-row__numbers div {
+  min-width: 0;
+}
+
+.market-trend-row__numbers dt {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 800;
+}
+
+.market-trend-row__numbers dd {
+  margin: 2px 0 0;
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.market-trend-row__state {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 2px;
+}
+
+.market-trend-row__state strong {
+  font-size: 0.76rem;
+}
+
+.market-trend-row--up .market-trend-row__state strong {
+  color: var(--amber);
+}
+
+.market-trend-row--down .market-trend-row__state strong {
+  color: var(--teal);
+}
+
+.market-trend-panel__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
 .trend-panel {
   display: grid;
   gap: 16px;
@@ -3601,6 +3816,10 @@ select {
     display: grid;
   }
 
+  .market-trend-groups {
+    grid-template-columns: 1fr;
+  }
+
   .trend-score {
     justify-items: start;
   }
@@ -3866,6 +4085,7 @@ select {
   }
 
   .backtest-panel__header,
+  .market-trend-panel__header,
   .trend-panel__header,
   .hmm-regime-timeline__header,
   .stress-card header,
@@ -3878,6 +4098,10 @@ select {
   }
 
   .backtest-panel__meta {
+    justify-items: start;
+  }
+
+  .market-trend-panel__summary {
     justify-items: start;
   }
 

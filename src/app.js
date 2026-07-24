@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260723-2";
+const ASSET_VERSION = "20260724-2";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -45,7 +45,55 @@ const sentimentGroupDefinitions = [
   { id: "overheating", label: "과열 부담 완화", detail: "밸류에이션·쏠림 부담의 반대 점수" }
 ];
 
+const marketTrendGroups = [
+  {
+    id: "rates",
+    label: "국채금리",
+    items: [
+      { id: "us2y_naver", label: "미국 2년", type: "yield", upLabel: "금리 상승", downLabel: "금리 하락" },
+      { id: "us10y_naver", label: "미국 10년", type: "yield", upLabel: "금리 상승", downLabel: "금리 하락" },
+      { id: "kr3y", label: "한국 3년", type: "yield", upLabel: "금리 상승", downLabel: "금리 하락" },
+      { id: "kr10y", label: "한국 10년", type: "yield", upLabel: "금리 상승", downLabel: "금리 하락" }
+    ]
+  },
+  {
+    id: "fx",
+    label: "환율",
+    items: [
+      { id: "usdjpy", label: "달러/엔", type: "fx", upLabel: "엔화 약세", downLabel: "엔화 강세" },
+      { id: "usdcny", label: "달러/위안", type: "fx", upLabel: "위안화 약세", downLabel: "위안화 강세" }
+    ]
+  },
+  {
+    id: "commodities",
+    label: "에너지·금속",
+    items: [
+      { id: "brent", label: "브렌트유", type: "price", upLabel: "유가 상승", downLabel: "유가 하락" },
+      { id: "copper", label: "구리", type: "price", upLabel: "가격 상승", downLabel: "가격 하락" },
+      { id: "iron_ore", label: "철광석", type: "price", upLabel: "가격 상승", downLabel: "가격 하락" },
+      { id: "gold", label: "국제 금", type: "price", upLabel: "금값 상승", downLabel: "금값 하락" }
+    ]
+  },
+  {
+    id: "transport",
+    label: "운임",
+    items: [
+      { id: "scfi", label: "SCFI", type: "index", upLabel: "운임 상승", downLabel: "운임 하락" },
+      { id: "bdti", label: "BDTI", type: "index", upLabel: "운임 상승", downLabel: "운임 하락" },
+      { id: "bdi", label: "BDI", type: "index", upLabel: "운임 상승", downLabel: "운임 하락" }
+    ]
+  }
+];
+
 const formatScore = (value) => `${clampScore(value).toFixed(1)} / 100`;
+const formatNumber = (value, digits = 0) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "-";
+  return new Intl.NumberFormat("ko-KR", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits
+  }).format(number);
+};
 const formatPct = (value) => `${Number(value).toFixed(2)}%`;
 const formatSignedPct = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
@@ -1851,6 +1899,204 @@ function renderSparkline(indicator, timeseries) {
   `;
 }
 
+function marketTrendPath(points, width = 180, height = 52, padding = 4) {
+  if (points.length < 2) return "";
+  const values = points.map((point) => Number(point.close)).filter(Number.isFinite);
+  if (values.length < 2) return "";
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || Math.max(Math.abs(max), 1) * 0.01;
+  const step = width / (points.length - 1);
+  return points
+    .map((point, index) => {
+      const x = index * step;
+      const y = height - padding - ((Number(point.close) - min) / range) * (height - padding * 2);
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
+function marketTrendChange(rows, offset, type) {
+  if (!rows?.length || rows.length <= offset) return null;
+  const latest = Number(rows[rows.length - 1].close);
+  const base = Number(rows[rows.length - 1 - offset].close);
+  if (!Number.isFinite(latest) || !Number.isFinite(base) || base === 0) return null;
+  return type === "yield" ? (latest - base) * 100 : (latest / base - 1) * 100;
+}
+
+function formatMarketTrendChange(value, type) {
+  if (!Number.isFinite(value)) return "-";
+  const sign = value > 0 ? "+" : "";
+  return type === "yield" ? `${sign}${value.toFixed(1)}bp` : `${sign}${value.toFixed(2)}%`;
+}
+
+function formatMarketTrendValue(value, type) {
+  if (!Number.isFinite(Number(value))) return "-";
+  const number = Number(value);
+  if (type === "yield") return `${number.toFixed(3)}%`;
+  if (type === "fx") return number >= 100 ? number.toFixed(2) : number.toFixed(4);
+  if (number >= 1000) return formatNumber(number, 1);
+  if (number >= 100) return number.toFixed(2);
+  return number.toFixed(4);
+}
+
+function analyzeMarketTrend(definition, marketIndexes) {
+  const metadata = marketIndexes?.metadata?.[definition.id];
+  const rows = (marketIndexes?.series?.[definition.id] ?? [])
+    .filter((point) => Number.isFinite(Number(point.close)))
+    .sort((left, right) => String(left.date).localeCompare(String(right.date)));
+  if (!metadata || rows.length < 2) return null;
+
+  const weekly = metadata.frequency === "weekly";
+  const oneWeekOffset = weekly ? 1 : 5;
+  const oneMonthOffset = weekly ? 4 : 20;
+  const recentWindow = rows.slice(-(weekly ? 7 : 11));
+  const changes = recentWindow
+    .slice(1)
+    .map((point, index) => Number(point.close) - Number(recentWindow[index].close))
+    .filter((value) => value !== 0);
+  const upCount = changes.filter((value) => value > 0).length;
+  const downCount = changes.filter((value) => value < 0).length;
+  const upShare = changes.length ? upCount / changes.length : 0.5;
+  const monthChange = marketTrendChange(rows, oneMonthOffset, definition.type);
+  const meaningfulThreshold = definition.type === "yield" ? 3 : 0.5;
+  const meaningful = Number.isFinite(monthChange) && Math.abs(monthChange) >= meaningfulThreshold;
+  let direction = "flat";
+  let persistent = false;
+  if (meaningful && monthChange > 0) {
+    direction = "up";
+    persistent = upShare >= 0.68;
+  } else if (meaningful && monthChange < 0) {
+    direction = "down";
+    persistent = upShare <= 0.32;
+  }
+
+  const directionLabel =
+    direction === "up"
+      ? `${definition.upLabel}${persistent ? " 지속" : ""}`
+      : direction === "down"
+        ? `${definition.downLabel}${persistent ? " 지속" : ""}`
+        : "방향 혼조";
+  const directionalCount =
+    direction === "up"
+      ? upCount
+      : direction === "down"
+        ? downCount
+        : Math.max(upCount, downCount);
+
+  return {
+    ...definition,
+    metadata,
+    rows,
+    chartRows: rows.slice(-(weekly ? 14 : 65)),
+    latest: rows[rows.length - 1],
+    oneWeekChange: marketTrendChange(rows, oneWeekOffset, definition.type),
+    oneMonthChange: monthChange,
+    direction,
+    persistent,
+    directionLabel,
+    directionalCount,
+    directionSamples: changes.length,
+    upCount,
+    downCount
+  };
+}
+
+function renderMarketTrendRow(item) {
+  const path = marketTrendPath(item.chartRows);
+  const lastPoint = item.chartRows[item.chartRows.length - 1];
+  const lastX = 180;
+  const values = item.chartRows.map((point) => Number(point.close));
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || Math.max(Math.abs(max), 1) * 0.01;
+  const lastY = 52 - 4 - ((Number(lastPoint.close) - min) / range) * 44;
+  const persistenceText =
+    item.direction === "flat"
+      ? `상승 ${item.upCount} · 하락 ${item.downCount}`
+      : `최근 ${item.directionSamples}회 중 ${item.directionalCount}회 ${item.direction === "up" ? "상승" : "하락"}`;
+
+  return `
+    <article class="market-trend-row market-trend-row--${item.direction}">
+      <div class="market-trend-row__identity">
+        <strong>${item.label}</strong>
+        <span>${item.latest.date}</span>
+      </div>
+      <div class="market-trend-row__chart">
+        <svg viewBox="0 0 180 52" role="img" aria-label="${item.label} 최근 3개월 흐름">
+          <path class="market-trend-row__baseline" d="M 0 26 H 180"></path>
+          <path class="market-trend-row__line" d="${path}"></path>
+          <circle cx="${lastX}" cy="${lastY.toFixed(2)}" r="3"></circle>
+        </svg>
+      </div>
+      <dl class="market-trend-row__numbers">
+        <div><dt>현재</dt><dd>${formatMarketTrendValue(item.latest.close, item.type)}</dd></div>
+        <div><dt>1주</dt><dd>${formatMarketTrendChange(item.oneWeekChange, item.type)}</dd></div>
+        <div><dt>1개월</dt><dd>${formatMarketTrendChange(item.oneMonthChange, item.type)}</dd></div>
+      </dl>
+      <div class="market-trend-row__state">
+        <strong>${item.directionLabel}</strong>
+        <span>${persistenceText}</span>
+      </div>
+    </article>
+  `;
+}
+
+function renderMarketIndexTrendPanel(marketIndexes) {
+  if (!marketIndexes?.series || !marketIndexes?.metadata) return "";
+  const groups = marketTrendGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.map((item) => analyzeMarketTrend(item, marketIndexes)).filter(Boolean)
+    }))
+    .filter((group) => group.items.length);
+  const items = groups.flatMap((group) => group.items);
+  if (!items.length) return "";
+
+  const persistent = items.filter((item) => item.persistent);
+  const latestDate = items.map((item) => item.latest.date).sort().at(-1);
+  const narrativeItems = persistent
+    .sort((left, right) => Math.abs(right.oneMonthChange) - Math.abs(left.oneMonthChange))
+    .slice(0, 4)
+    .map((item) => `${item.label} ${item.directionLabel}`);
+  const narrative = narrativeItems.length
+    ? `${narrativeItems.join(" · ")} 흐름이 최근 관측에서 이어지고 있습니다.`
+    : "최근 관측은 한 방향의 지속성보다 자산별 혼조가 우세합니다.";
+
+  return `
+    <section class="market-trend-panel">
+      <header class="market-trend-panel__header">
+        <div>
+          <span class="eyebrow">Naver Market Direction</span>
+          <h2>금리·환율·원자재·운임 방향성</h2>
+          <p>${narrative}</p>
+        </div>
+        <div class="market-trend-panel__summary">
+          <strong>${persistent.length}</strong>
+          <span>지속 방향</span>
+          <small>최신 ${latestDate}</small>
+        </div>
+      </header>
+      <div class="market-trend-groups">
+        ${groups
+          .map(
+            (group) => `
+              <section class="market-trend-group market-trend-group--${group.id}">
+                <header><h3>${group.label}</h3><span>${group.items.length}개</span></header>
+                <div>${group.items.map(renderMarketTrendRow).join("")}</div>
+              </section>
+            `
+          )
+          .join("")}
+      </div>
+      <footer class="market-trend-panel__footer">
+        <span>Naver Pay 증권 시장지표</span>
+        <span>일간은 최근 10회, 주간은 최근 6회 방향을 판독</span>
+      </footer>
+    </section>
+  `;
+}
+
 function createMetricCard({ label, value, meta, tone = "neutral" }) {
   return `
     <article class="metric-card metric-card--${tone}">
@@ -2280,7 +2526,7 @@ function renderSentimentPage(data, timeseries, mlRisk, elsRisk, hmmRegime) {
   `;
 }
 
-function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime) {
+function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime, marketIndexes) {
   const market = data.sections.find((section) => section.id === "market");
   const scoredIndicatorCount = (market.indicators ?? []).filter(isScoredIndicator).length;
   const observationCount = (market.indicators ?? []).filter((indicator) => indicator.role === "observation").length;
@@ -2334,6 +2580,7 @@ function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRi
     ${renderMlRiskSignalPanel(mlRisk, market, elsRisk)}
     ${renderElsIndexRiskPanel(elsRisk)}
     ${renderHmmRegimePanel(hmmRegime)}
+    ${renderMarketIndexTrendPanel(marketIndexes)}
     ${renderCompositeTrend(market, timeseries)}
     ${renderBacktestPanel(backtest)}
     ${renderStressEpisodesPanel(stressEpisodes)}
@@ -2397,7 +2644,7 @@ function renderGroupScores(section) {
   `;
 }
 
-function renderSection(section, timeseries, backtest, stressEpisodes) {
+function renderSection(section, timeseries, backtest, stressEpisodes, marketIndexes) {
   const isPlanned = section.status !== "active";
   const initiallySortedIndicators = sortedIndicators(section, timeseries);
 
@@ -2424,9 +2671,8 @@ function renderSection(section, timeseries, backtest, stressEpisodes) {
           : `
             ${renderModelPanel(section)}
             ${renderGroupScores(section)}
+            ${section.id === "market" ? renderMarketIndexTrendPanel(marketIndexes) : ""}
             ${renderCompositeTrend(section.id === "market" ? section : null, timeseries)}
-            ${renderBacktestPanel(section.id === "market" ? backtest : null)}
-            ${renderStressEpisodesPanel(section.id === "market" ? stressEpisodes : null)}
             ${renderGauge(section.score, section.level, section.model.thresholds)}
             ${section.id === "market" ? renderIndicatorSortControls(section.id) : ""}
             <div class="indicator-grid" data-indicator-grid="${section.id}">
@@ -2443,11 +2689,24 @@ function renderSection(section, timeseries, backtest, stressEpisodes) {
           ${section.actions.map((action) => `<li>${action}</li>`).join("")}
         </ul>
       </div>
+
+      ${!isPlanned && section.id === "market" ? renderBacktestPanel(backtest) : ""}
+      ${!isPlanned && section.id === "market" ? renderStressEpisodesPanel(stressEpisodes) : ""}
     </section>
   `;
 }
 
-function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime, pipelineStatus) {
+function renderDashboard(
+  rawData,
+  timeseries,
+  backtest,
+  stressEpisodes,
+  mlRisk,
+  elsRisk,
+  hmmRegime,
+  pipelineStatus,
+  marketIndexes
+) {
   const data = evaluateDashboard(rawData);
   const dashboardTabs = dashboardTabsWithElsTool(data.tabs);
   const enabledTabs = dashboardTabs.filter((tab) => tab.enabled);
@@ -2495,7 +2754,7 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
 
     <div class="panel-stack">
       <section class="tab-panel is-active" data-panel="summary">
-        ${renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime)}
+          ${renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime, marketIndexes)}
       </section>
       <section class="tab-panel" data-panel="sentiment">
         ${renderSentimentPage(data, timeseries, mlRisk, elsRisk, hmmRegime)}
@@ -2506,7 +2765,9 @@ function renderDashboard(rawData, timeseries, backtest, stressEpisodes, mlRisk, 
       <section class="tab-panel" data-panel="els-issuance">
         ${renderElsIssuanceHedgePage(elsRisk)}
       </section>
-      ${data.sections.map((section) => renderSection(section, timeseries, backtest, stressEpisodes)).join("")}
+          ${data.sections
+            .map((section) => renderSection(section, timeseries, backtest, stressEpisodes, marketIndexes))
+            .join("")}
     </div>
   `;
 
@@ -2612,10 +2873,21 @@ Promise.all([
   loadJson("./data/ml-risk-signal.json"),
   loadJson("./data/els-index-risk.json"),
   loadJson("./data/hmm-regime.json"),
-  loadJson("./data/pipeline-status.json")
+  loadJson("./data/pipeline-status.json"),
+  loadJson("./data/naver-marketindex-history.json")
 ])
-  .then(([dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime, pipelineStatus]) =>
-    renderDashboard(dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime, pipelineStatus)
+  .then(([dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime, pipelineStatus, marketIndexes]) =>
+    renderDashboard(
+      dashboard,
+      timeseries,
+      backtest,
+      stressEpisodes,
+      mlRisk,
+      elsRisk,
+      hmmRegime,
+      pipelineStatus,
+      marketIndexes
+    )
   )
   .catch((error) => {
     app.innerHTML = `
