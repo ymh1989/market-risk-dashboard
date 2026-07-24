@@ -1,9 +1,9 @@
 import * as THREE from "./vendor/three.module.min.js";
 
 const forestProfiles = {
-  high: { trees: 1900, terrainX: 112, terrainZ: 88, crownSegments: 9 },
-  balanced: { trees: 1250, terrainX: 88, terrainZ: 68, crownSegments: 8 },
-  eco: { trees: 720, terrainX: 64, terrainZ: 48, crownSegments: 7 }
+  high: { trees: 2400, terrainX: 112, terrainZ: 88, crownSegments: 8 },
+  balanced: { trees: 1650, terrainX: 88, terrainZ: 68, crownSegments: 7 },
+  eco: { trees: 950, terrainX: 64, terrainZ: 48, crownSegments: 6 }
 };
 
 function seededRandom(seed) {
@@ -100,39 +100,54 @@ function installWindShader(material, windUniforms) {
         `vec3 transformed = vec3(position);
         vec3 treeAnchor = vec3(instanceMatrix[3]);
         float crownHeight = smoothstep(0.35, 5.2, position.y);
-        float slowWind = sin(
-          uForestTime * 0.72 +
-          treeAnchor.x * 0.125 +
-          treeAnchor.z * 0.052 +
-          aWindPhase
+        float prevailingWind = sin(
+          uForestTime * 0.88 +
+          treeAnchor.x * 0.092 +
+          treeAnchor.z * 0.047 +
+          aWindPhase * 0.34
         );
         float leafFlutter = sin(
-          uForestTime * 1.63 -
+          uForestTime * 2.05 -
           treeAnchor.x * 0.071 +
           treeAnchor.z * 0.095 +
           aWindPhase * 1.91
         );
-        float longGust = 0.5 + 0.5 * sin(
-          uForestTime * 0.19 +
-          treeAnchor.x * 0.028 -
-          treeAnchor.z * 0.037
+        float crossWind = sin(
+          uForestTime * 1.24 -
+          treeAnchor.x * 0.044 +
+          treeAnchor.z * 0.081 +
+          aWindPhase * 0.62
         );
+        float gustSignal = 0.5 + 0.5 * sin(
+          uForestTime * 0.34 -
+          treeAnchor.x * 0.036 +
+          treeAnchor.z * 0.061
+        );
+        float travelingGust = smoothstep(0.32, 0.82, gustSignal);
+        float windEnvelope = 0.86 + travelingGust * 0.82;
         float pointerDistance = distance(treeAnchor.xz, uForestPointer);
         float localGust = exp(-pointerDistance * pointerDistance * 0.018) *
           uForestPointerStrength;
         float bend = (
-          slowWind * 0.21 +
-          leafFlutter * 0.055 +
-          longGust * 0.045 +
+          prevailingWind * 0.36 +
+          crossWind * 0.13 +
+          leafFlutter * 0.075
+        ) * windEnvelope + (
+          travelingGust * 0.09 +
           localGust * sin(uForestTime * 3.2 + pointerDistance * 0.55) * 0.58
-        ) * aWindStrength;
+        );
+        bend *= aWindStrength;
         float bendMask = crownHeight * crownHeight;
         transformed.x += bend * bendMask;
         transformed.z += (
-          slowWind * 0.055 +
+          prevailingWind * 0.11 +
+          crossWind * 0.062 * windEnvelope +
           localGust * cos(uForestTime * 2.7 + aWindPhase) * 0.19
         ) * aWindStrength * bendMask;
-        vForestSway = abs(bend) * crownHeight + localGust * 0.22;`
+        vForestSway =
+          abs(bend) * crownHeight +
+          travelingGust * 0.12 +
+          localGust * 0.22;`
       );
     shader.fragmentShader = shader.fragmentShader
       .replace(
@@ -147,7 +162,7 @@ function installWindShader(material, windUniforms) {
         #include <dithering_fragment>`
       );
   };
-  material.customProgramCacheKey = () => "forest-wind-v1";
+  material.customProgramCacheKey = () => "forest-wind-v2";
 }
 
 function createTieredCrownGeometry(segments) {

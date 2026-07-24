@@ -275,6 +275,12 @@ def test_snow_lab_easter_egg_contract():
     assert "aWindPhase" in forest_script
     assert "aWindStrength" in forest_script
     assert "localGust" in forest_script
+    assert "high: { trees: 2400" in forest_script
+    assert "balanced: { trees: 1650" in forest_script
+    assert "eco: { trees: 950" in forest_script
+    assert "float travelingGust" in forest_script
+    assert "float windEnvelope" in forest_script
+    assert '"forest-wind-v2"' in forest_script
     assert "const foregroundShare = 0.12" in forest_script
     assert "const risingSlope" in forest_script
     assert "compactView ? 15.8 : 14.2" in forest_script

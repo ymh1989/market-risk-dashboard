@@ -289,7 +289,7 @@ async function initializeForest() {
   state.oceanLoading = true;
   statusText.textContent = runningStatus();
   try {
-    const { createForestLab } = await import("./forest-lab.js?v=20260724-1");
+    const { createForestLab } = await import("./forest-lab.js?v=20260724-2");
     state.forest = createForestLab({
       canvas: fluidCanvas,
       stage,
