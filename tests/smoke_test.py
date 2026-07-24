@@ -275,6 +275,9 @@ def test_snow_lab_easter_egg_contract():
     assert "aWindPhase" in forest_script
     assert "aWindStrength" in forest_script
     assert "localGust" in forest_script
+    assert "const foregroundShare = 0.12" in forest_script
+    assert "const risingSlope" in forest_script
+    assert "compactView ? 15.8 : 14.2" in forest_script
     assert "createRidgeGeometry" in forest_script
     assert "renderer.setSize(width, height, false)" in forest_script
     assert "https://" not in forest_script

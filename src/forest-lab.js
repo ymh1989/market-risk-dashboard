@@ -18,12 +18,15 @@ function seededRandom(seed) {
 }
 
 function terrainHeight(x, z) {
-  const depth = THREE.MathUtils.clamp((-z - 4) / 78, 0, 1);
-  const broadRidge = Math.sin(x * 0.074 + z * 0.018) * (0.8 + depth * 1.7);
-  const brokenSlope = Math.sin(x * 0.19 - z * 0.052) * 0.48;
-  const sideMountain = Math.exp(-Math.pow((x + 19) / 22, 2)) * (2.8 + depth * 2.4);
-  const rightShoulder = Math.exp(-Math.pow((x - 28) / 18, 2)) * (1.8 + depth * 2.1);
-  return -2.1 + depth * 7.6 + broadRidge + brokenSlope + sideMountain + rightShoulder;
+  const depth = THREE.MathUtils.clamp((7 - z) / 90, 0, 1);
+  const risingSlope = -2.8 + depth * 11.8;
+  const broadRidge = Math.sin(x * 0.066 + z * 0.023) * (0.9 + depth * 2.5);
+  const brokenSlope = Math.sin(x * 0.17 - z * 0.057) * (0.42 + depth * 0.48);
+  const leftMountain = Math.exp(-Math.pow((x + 23) / 20, 2)) * (2.3 + depth * 3.7);
+  const rightShoulder = Math.exp(-Math.pow((x - 27) / 17, 2)) * (1.5 + depth * 3.1);
+  const middleValley =
+    Math.exp(-Math.pow((x - 3) / 15, 2) - Math.pow((z + 34) / 34, 2)) * 2.4;
+  return risingSlope + broadRidge + brokenSlope + leftMountain + rightShoulder - middleValley;
 }
 
 function createTerrain(profile) {
@@ -175,6 +178,7 @@ function createTieredCrownGeometry(segments) {
 
 function createForestInstances(profile, windUniforms) {
   const random = seededRandom(20260723);
+  const foregroundShare = 0.12;
   const crownGeometry = createTieredCrownGeometry(profile.crownSegments);
   const trunkGeometry = new THREE.CylinderGeometry(0.13, 0.22, 2.3, 6, 1);
   trunkGeometry.translate(0, 1.15, 0);
@@ -209,13 +213,17 @@ function createForestInstances(profile, windUniforms) {
   const color = new THREE.Color();
 
   for (let index = 0; index < profile.trees; index += 1) {
-    const depthProgress = Math.pow(random(), 0.82);
-    const z = -5.5 - depthProgress * 76;
-    const availableWidth = 42 + depthProgress * 54;
+    // 가장 가까운 12%는 카메라 앞 경사면에 따로 배치해 전경의 빈 땅을 없앱니다.
+    const inForeground = index < Math.round(profile.trees * foregroundShare);
+    const depthProgress = inForeground
+      ? random() * 0.13
+      : 0.08 + Math.pow(random(), 1.03) * 0.92;
+    const z = 6.2 - depthProgress * 88;
+    const availableWidth = 58 + depthProgress * 48;
     const x = (random() - 0.5) * availableWidth;
     const y = terrainHeight(x, z);
-    const baseScale = 0.66 + random() * 0.64;
-    const depthScale = 1 - depthProgress * 0.22;
+    const baseScale = 0.72 + random() * 0.72;
+    const depthScale = 1 - depthProgress * 0.18;
     const slenderness = 0.82 + random() * 0.28;
 
     position.set(x, y, z);
@@ -297,7 +305,7 @@ export function createForestLab({ canvas, stage, profileName, maxDpr }) {
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x76958a, 0.0125);
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 180);
-  const lookTarget = new THREE.Vector3(0, 3.2, -31);
+  const lookTarget = new THREE.Vector3(0, 5.0, -29);
 
   const skyGeometry = new THREE.SphereGeometry(150, 42, 20);
   const skyMaterial = new THREE.ShaderMaterial({
@@ -361,7 +369,7 @@ export function createForestLab({ canvas, stage, profileName, maxDpr }) {
     renderer.setPixelRatio(Math.min(maxDpr, window.devicePixelRatio || 1));
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
-    camera.fov = compactView ? 51 : 42;
+    camera.fov = compactView ? 48 : 40;
     camera.updateProjectionMatrix();
   }
 
@@ -409,8 +417,8 @@ export function createForestLab({ canvas, stage, profileName, maxDpr }) {
     );
 
     const drift = Math.sin(simulationTime * 0.035) * (compactView ? 0.32 : 0.62);
-    camera.position.set(drift, compactView ? 9.5 : 8.3, compactView ? 24.5 : 23.5);
-    lookTarget.set(drift * 0.18, compactView ? 3.8 : 3.2, compactView ? -27 : -31);
+    camera.position.set(drift, compactView ? 15.8 : 14.2, compactView ? 28.0 : 25.5);
+    lookTarget.set(drift * 0.18, compactView ? 5.8 : 5.0, compactView ? -27 : -29);
     camera.lookAt(lookTarget);
   }
 
