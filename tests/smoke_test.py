@@ -193,8 +193,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260724-6" in html
-    assert "app.js?v=20260724-6" in html
+    assert "styles.css?v=20260724-7" in html
+    assert "app.js?v=20260724-7" in html
     assert 'aria-pressed="${tab.id === "summary" ? "true" : "false"}"' in app_source
     assert 'tab.setAttribute("aria-pressed"' in app_source
     assert "font-weight: 800;" not in styles
@@ -212,6 +212,8 @@ def test_korean_copy_uses_structured_lists_and_contextual_wrapping():
     app_source = APP_FILE.read_text(encoding="utf-8")
 
     assert "function renderNarrativeList" in app_source
+    assert '.replace(/입니다$/, "임")' in app_source
+    assert '.replace(/입니다$/, "")' not in app_source
     assert '<dl class="summary-facts">' in app_source
     assert 'narrative-list--compact indicator-detail-list' in app_source
     assert "현재 시장리스크는 ${market.level.label} 단계입니다." not in app_source

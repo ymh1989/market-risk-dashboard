@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260724-6";
+const ASSET_VERSION = "20260724-7";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -140,7 +140,7 @@ function compactNarrativeItem(value) {
     .replace(/됐습니다$/, "됨")
     .replace(/되었습니다$/, "됨")
     .replace(/됩니다$/, "됨")
-    .replace(/입니다$/, "")
+    .replace(/입니다$/, "임")
     .replace(/합니다$/, "")
     .trim();
 }
