@@ -2929,12 +2929,64 @@ a {
 }
 
 .group-card {
+  --group-accent: var(--muted);
+
   display: grid;
   gap: 12px;
+  position: relative;
   border: 1px solid var(--line);
+  border-top: 3px solid var(--group-accent);
   border-radius: 8px;
   background: var(--surface);
   padding: 16px;
+}
+
+.group-card:hover,
+.group-card:focus-within {
+  z-index: 20;
+}
+
+.group-card--crash,
+.indicator-card--group-crash,
+.indicator-group-tag--crash {
+  --group-accent: var(--red);
+}
+
+.group-card--macro,
+.indicator-card--group-macro,
+.indicator-group-tag--macro {
+  --group-accent: var(--blue);
+}
+
+.group-card--ai_semi,
+.indicator-card--group-ai_semi,
+.indicator-group-tag--ai_semi {
+  --group-accent: var(--teal);
+}
+
+.group-card--overheating,
+.indicator-card--group-overheating,
+.indicator-group-tag--overheating {
+  --group-accent: var(--amber);
+}
+
+.group-card--flow,
+.indicator-card--group-flow,
+.indicator-group-tag--flow {
+  --group-accent: var(--green);
+}
+
+.group-card--liquidity,
+.indicator-card--group-liquidity,
+.indicator-group-tag--liquidity {
+  --group-accent: var(--navy);
+}
+
+.group-card__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .group-card h3 {
@@ -2942,8 +2994,117 @@ a {
   font-size: 1rem;
 }
 
+.group-card h3 small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.group-card__info {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: help;
+  font-family: Georgia, serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.group-card__info:hover,
+.group-card__info:focus-visible {
+  border-color: var(--group-accent);
+  color: var(--group-accent);
+}
+
 .group-card > strong {
   font-size: 1.45rem;
+}
+
+.group-card__tooltip {
+  display: grid;
+  visibility: hidden;
+  z-index: 30;
+  position: absolute;
+  top: calc(100% - 4px);
+  left: 50%;
+  width: min(390px, calc(100vw - 48px));
+  max-height: min(480px, 66vh);
+  gap: 8px;
+  overflow-y: auto;
+  border: 1px solid color-mix(in srgb, var(--group-accent) 58%, #ffffff);
+  border-radius: 6px;
+  background: #172026;
+  box-shadow: var(--shadow);
+  color: #f5f8fa;
+  opacity: 0;
+  padding: 15px;
+  pointer-events: none;
+  transform: translate(-50%, 6px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease,
+    visibility 140ms ease;
+}
+
+.group-card:hover .group-card__tooltip,
+.group-card:focus-within .group-card__tooltip {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+.group-card__tooltip > strong {
+  font-size: 0.9rem;
+}
+
+.group-card__tooltip p {
+  margin: 0;
+  color: #bac7ce;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.group-card__tooltip > span {
+  margin-top: 3px;
+  color: #91a4af;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.group-card__tooltip ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.group-card__tooltip li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.73rem;
+}
+
+.group-card__tooltip li span {
+  min-width: 0;
+}
+
+.group-card__tooltip li strong {
+  flex: 0 0 auto;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
 }
 
 .group-card footer,
@@ -3192,12 +3353,32 @@ a {
   grid-template-rows: auto auto auto auto auto 104px 1fr auto;
 }
 
+.indicator-card:not(.indicator-card--observation) {
+  border-top: 3px solid var(--group-accent, var(--muted));
+}
+
 .indicator-card--observation {
   border-top: 4px solid var(--blue);
 }
 
 .indicator-card--observation .contribution-line strong {
   color: var(--blue);
+}
+
+.indicator-group-tag {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+}
+
+.indicator-group-tag i {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--group-accent, var(--muted));
 }
 
 .indicator-card h3 {

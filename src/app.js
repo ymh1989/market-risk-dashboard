@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260724-11";
+const ASSET_VERSION = "20260724-12";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -44,6 +44,45 @@ const sentimentGroupDefinitions = [
   { id: "liquidity", label: "거래 안정감", detail: "거래량 과열·위축 부담의 반대 점수" },
   { id: "overheating", label: "과열 부담 완화", detail: "밸류에이션·쏠림 부담의 반대 점수" }
 ];
+
+const riskGroupDefinitions = {
+  crash: {
+    label: "급락 스트레스",
+    shortLabel: "Crash",
+    englishLabel: "Crash Stress",
+    description: "KOSPI와 KOSDAQ의 가격 하락 충격"
+  },
+  macro: {
+    label: "거시환경 부담",
+    shortLabel: "Macro",
+    englishLabel: "Macro",
+    description: "환율·변동성·금리·신용·원자재·운임의 거시 부담"
+  },
+  ai_semi: {
+    label: "AI·반도체 부담",
+    shortLabel: "AI Semi",
+    englishLabel: "AI Semi",
+    description: "글로벌 AI 수요와 국내외 반도체 집중 위험"
+  },
+  overheating: {
+    label: "과열·쏠림",
+    shortLabel: "Overheating",
+    englishLabel: "Overheating",
+    description: "레버리지와 신흥국 위험선호로 본 시장 과열"
+  },
+  flow: {
+    label: "수급 압력",
+    shortLabel: "Flow",
+    englishLabel: "Flow",
+    description: "외국인 보유비중 변화로 본 수급 이탈 압력"
+  },
+  liquidity: {
+    label: "거래 유동성",
+    shortLabel: "Liquidity",
+    englishLabel: "Liquidity",
+    description: "거래량과 거래대금의 과열 또는 위축"
+  }
+};
 
 const marketTrendGroups = [
   {
@@ -2559,9 +2598,15 @@ function renderIndicator(indicator, thresholds, timeseries) {
   const tone = level?.tone ?? "muted";
   const indicatorPoints = timeseries?.series?.[indicator.id] ?? [];
   const isObservation = indicator.role === "observation";
+  const group = riskGroupDefinitions[indicator.group] ?? {
+    label: indicator.group ?? "리스크",
+    shortLabel: indicator.group ?? "Risk",
+    englishLabel: indicator.group ?? "Risk",
+    description: "소속 리스크 그룹"
+  };
 
   return `
-    <article class="indicator-card ${isObservation ? "indicator-card--observation" : ""}">
+    <article class="indicator-card indicator-card--group-${indicator.group ?? "risk"} ${isObservation ? "indicator-card--observation" : ""}">
       <div>
         <span class="eyebrow">${indicator.category}</span>
         <h3>${indicator.name}</h3>
@@ -2571,7 +2616,13 @@ function renderIndicator(indicator, thresholds, timeseries) {
         <span class="status-pill status-pill--${isObservation ? "watch" : tone}">${isObservation ? `관찰 · ${level?.label ?? "N/A"}` : level?.label ?? "N/A"}</span>
       </div>
       <div class="contribution-line">
-        <span>${indicator.group ?? "risk"}</span>
+        <span
+          class="indicator-group-tag indicator-group-tag--${indicator.group ?? "risk"}"
+          title="${group.englishLabel} · ${group.description}"
+        >
+          <i aria-hidden="true"></i>
+          ${group.label} · ${group.shortLabel}
+        </span>
         <strong>${isObservation ? "종합점수 미반영" : `기여도 +${Number(indicator.contribution ?? 0).toFixed(2)}점`}</strong>
       </div>
       ${renderChangePills(indicator.value, indicatorPoints)}
@@ -2897,12 +2948,34 @@ function renderGroupScores(section) {
   return `
     <section class="group-panel">
       ${groups
-        .map(
-          (group) => `
-            <article class="group-card">
-              <div>
-                <span class="eyebrow">가중 ${group.indicatorCount}${group.observationCount ? ` · 관찰 ${group.observationCount}` : ""}</span>
-                <h3>${group.label}</h3>
+        .map((group) => {
+          const definition = riskGroupDefinitions[group.id] ?? {
+            label: group.label,
+            shortLabel: group.label,
+            englishLabel: group.label,
+            description: "리스크 구성 지표"
+          };
+          const weightedIndicators = (section.indicators ?? []).filter(
+            (indicator) => indicator.group === group.id && indicator.role !== "observation"
+          );
+          const observationIndicators = (section.indicators ?? []).filter(
+            (indicator) => indicator.group === group.id && indicator.role === "observation"
+          );
+          const tooltipId = `group-tooltip-${section.id}-${group.id}`;
+          return `
+            <article class="group-card group-card--${group.id}">
+              <div class="group-card__heading">
+                <div>
+                  <span class="eyebrow">가중 ${group.indicatorCount}${group.observationCount ? ` · 관찰 ${group.observationCount}` : ""}</span>
+                  <h3>${definition.label}<small>${definition.englishLabel}</small></h3>
+                </div>
+                <button
+                  type="button"
+                  class="group-card__info"
+                  aria-label="${definition.label} 구성 지표 보기"
+                  aria-describedby="${tooltipId}"
+                  title="${definition.label} 구성 지표 보기"
+                >i</button>
               </div>
               <strong>${formatScore(group.score)}</strong>
               <div class="mini-bar" aria-hidden="true">
@@ -2912,9 +2985,35 @@ function renderGroupScores(section) {
                 <span>비중 ${(group.weight * 100).toFixed(1)}%</span>
                 <span>기여도 +${Number(group.contribution).toFixed(2)}점</span>
               </footer>
+              <div class="group-card__tooltip" id="${tooltipId}" role="tooltip">
+                <strong>${definition.label} 구성</strong>
+                <p>${definition.description}</p>
+                <span>가중 반영</span>
+                <ul>
+                  ${weightedIndicators
+                    .map(
+                      (indicator) =>
+                        `<li><span>${indicator.name}</span><strong>${clampScore(indicator.value).toFixed(1)}</strong></li>`
+                    )
+                    .join("")}
+                </ul>
+                ${
+                  observationIndicators.length
+                    ? `<span>관찰 전용 · 가중치 미반영</span>
+                       <ul>
+                         ${observationIndicators
+                           .map(
+                             (indicator) =>
+                               `<li><span>${indicator.name}</span><strong>${clampScore(indicator.value).toFixed(1)}</strong></li>`
+                           )
+                           .join("")}
+                       </ul>`
+                    : ""
+                }
+              </div>
             </article>
-          `
-        )
+          `;
+        })
         .join("")}
     </section>
   `;
