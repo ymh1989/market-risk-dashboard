@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25 07:32:36 KST",
+  "generatedAt": "2026-07-27 07:32:35 KST",
   "source": "Yahoo Finance, Naver Finance equity/market-index, and FRED endpoints",
   "historyCache": "data/market-history-cache.json",
   "methodology": "2020년 이후 동일 시장리스크 모델 점수와 KOSPI 252일 고점대비 낙폭을 함께 평가해 모델 점수 75 이상 또는 KOSPI 낙폭 10% 이상인 거래일을 주요 스트레스 후보로 묶습니다.",
@@ -20,45 +20,45 @@
       "startDate": "2026-07-13",
       "endDate": "2026-07-24",
       "tradingDays": 3,
-      "peakDate": "2026-07-23",
-      "peakScore": 68.2,
-      "averageScore": 68.0,
+      "peakDate": "2026-07-13",
+      "peakScore": 68.0,
+      "averageScore": 67.4,
       "kospiStart": 6806.93,
       "kospiEnd": 6690.62,
       "kospiLow": 6690.62,
       "kospiEpisodeReturnPct": -1.71,
       "kospiMaxDrawdownFromHighPct": 26.59,
       "kospiLowFromStartPct": -1.71,
-      "forward20dMaxDrawdownFromPeakPct": -5.72,
+      "forward20dMaxDrawdownFromPeakPct": -4.27,
       "trigger": "kospiDrawdown",
       "topContributors": [
         {
           "id": "kospi_price_stress",
           "name": "KOSPI 가격 스트레스",
           "group": "crash",
-          "score": 93.7,
-          "contribution": 10.85
-        },
-        {
-          "id": "korea_ai_semiconductor_concentration",
-          "name": "한국 AI 반도체 쏠림/스트레스",
-          "group": "ai_semi",
-          "score": 73.4,
-          "contribution": 7.73
+          "score": 94.2,
+          "contribution": 10.36
         },
         {
           "id": "global_ai_semiconductor_stress",
           "name": "글로벌 AI 반도체 스트레스",
           "group": "ai_semi",
-          "score": 73.3,
-          "contribution": 7.72
+          "score": 79.5,
+          "contribution": 7.95
         },
         {
-          "id": "kosdaq_growth_stress",
-          "name": "KOSDAQ 성장주 스트레스",
-          "group": "crash",
-          "score": 92.0,
-          "contribution": 6.78
+          "id": "foreign_ownership_pressure",
+          "name": "외국인 소진율 이탈 압력",
+          "group": "flow",
+          "score": 71.1,
+          "contribution": 7.11
+        },
+        {
+          "id": "korea_ai_semiconductor_concentration",
+          "name": "한국 AI 반도체 쏠림/스트레스",
+          "group": "ai_semi",
+          "score": 67.3,
+          "contribution": 6.73
         }
       ]
     },
