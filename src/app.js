@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260724-13";
+const ASSET_VERSION = "20260726-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -152,17 +152,6 @@ const formatShortDate = (value) => {
   return `${date.getUTCMonth() + 1}.${String(date.getUTCDate()).padStart(2, "0")}`;
 };
 const inverseScore = (value) => clampScore(100 - clampScore(value));
-const categoryCountText = (indicators) => {
-  const counts = indicators.reduce((acc, indicator) => {
-    acc[indicator.category] = (acc[indicator.category] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  return Object.entries(counts)
-    .map(([category, count]) => `${category} ${count}`)
-    .join(" · ");
-};
-
 function compactNarrativeItem(value) {
   return String(value ?? "")
     .trim()
@@ -349,6 +338,25 @@ function buildCompositeSeries(section, timeseries) {
     composite.push({ date: section.asOf ?? latest.date, value: currentScore });
   }
   return composite;
+}
+
+function buildScoreAttribution(section, timeseries, offset) {
+  const indicators = (section?.indicators ?? []).filter(isScoredIndicator);
+  const totalWeight = indicators.reduce((sum, indicator) => sum + Number(indicator.weight || 0), 0);
+  if (!totalWeight) return [];
+
+  return indicators
+    .map((indicator) => {
+      const points = timeseries?.series?.[indicator.id] ?? [];
+      const scoreChange = valueChange(indicator.value, points, offset);
+      if (!Number.isFinite(Number(scoreChange))) return null;
+      return {
+        ...indicator,
+        scoreChange,
+        weightedChange: (scoreChange * Number(indicator.weight || 0)) / totalWeight
+      };
+    })
+    .filter(Boolean);
 }
 
 function dashboardTabsWithSentiment(tabs) {
@@ -2639,32 +2647,41 @@ function renderIndicator(indicator, thresholds, timeseries) {
   `;
 }
 
-function renderIndicatorSortControls(sectionId) {
+function renderIndicatorSortControls(sectionId, indicatorCount) {
   return `
     <div class="indicator-toolbar">
-      <div>
+      <div class="indicator-toolbar__heading">
         <span class="eyebrow">Indicator Sort</span>
         <h3>시장리스크 카드 정렬</h3>
+        <span data-indicator-filter-status="${sectionId}">전체 ${indicatorCount}개</span>
       </div>
-      <div class="indicator-sort" role="group" aria-label="시장리스크 카드 정렬 기준">
-        ${indicatorSortOptions
-          .map(
-            (option, index) => `
-              <button
-                type="button"
-                class="indicator-sort__button ${index === 0 ? "is-active" : ""}"
-                data-indicator-sort="${option.key}"
-                data-section-id="${sectionId}"
-                data-sort-direction="desc"
-                title="${sortOptionDescription(option, index === 0, "desc")}"
-                aria-pressed="${index === 0 ? "true" : "false"}"
-                aria-label="${sortOptionLabel(option, index === 0, "desc")} 정렬"
-              >
-                ${sortOptionLabel(option, index === 0, "desc")}
-              </button>
-            `
-          )
-          .join("")}
+      <div class="indicator-toolbar__controls">
+        <button
+          type="button"
+          class="indicator-filter-reset"
+          data-indicator-filter-reset="${sectionId}"
+          hidden
+        >전체 그룹</button>
+        <div class="indicator-sort" role="group" aria-label="시장리스크 카드 정렬 기준">
+          ${indicatorSortOptions
+            .map(
+              (option, index) => `
+                <button
+                  type="button"
+                  class="indicator-sort__button ${index === 0 ? "is-active" : ""}"
+                  data-indicator-sort="${option.key}"
+                  data-section-id="${sectionId}"
+                  data-sort-direction="desc"
+                  title="${sortOptionDescription(option, index === 0, "desc")}"
+                  aria-pressed="${index === 0 ? "true" : "false"}"
+                  aria-label="${sortOptionLabel(option, index === 0, "desc")} 정렬"
+                >
+                  ${sortOptionLabel(option, index === 0, "desc")}
+                </button>
+              `
+            )
+            .join("")}
+        </div>
       </div>
     </div>
   `;
@@ -2848,64 +2865,174 @@ function renderSentimentPage(data, timeseries, mlRisk, elsRisk, hmmRegime) {
   `;
 }
 
-function renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime, marketIndexes) {
+function summaryCrashTone(probability, metrics) {
+  const baseRatePct = Number(metrics?.eventRate) * 100;
+  const relativeRisk = baseRatePct > 0 ? Number(probability) / baseRatePct : 0;
+  if (relativeRisk >= 3) return "danger";
+  if (relativeRisk >= 1.5) return "caution";
+  return "watch";
+}
+
+function renderDecisionCockpit(data, timeseries, mlRisk, hmmRegime) {
   const market = data.sections.find((section) => section.id === "market");
-  const scoredIndicatorCount = (market.indicators ?? []).filter(isScoredIndicator).length;
-  const observationCount = (market.indicators ?? []).filter((indicator) => indicator.role === "observation").length;
-  market.asOf = data.metadata.asOf;
-  const plannedLabels = data.sections
-    .filter((section) => section.status !== "active")
-    .map((section) => section.label)
-    .join(", ");
+  if (!market) return "";
+
+  const composite = buildCompositeSeries(market, timeseries);
+  const latestComposite = composite[composite.length - 1];
+  const change1d = latestComposite ? valueChange(latestComposite.value, composite, 1) : null;
+  const change1w = latestComposite ? valueChange(latestComposite.value, composite, 5) : null;
+  const topContributor = [...(market.indicators ?? [])]
+    .filter(isScoredIndicator)
+    .sort((left, right) => Number(right.contribution ?? 0) - Number(left.contribution ?? 0))[0];
+  const crashProbability = Number(mlRisk?.latest?.crash5d5pctProbabilityPct);
+  const crashMetrics = mlRisk?.metrics?.crash5d5pct ?? {};
+  const hmmBasket = hmmRegime?.basket;
 
   return `
-    <section class="summary-grid">
-      ${createMetricCard({
-        label: "통합 경보등급",
-        value: data.summary.level.label,
-        meta: `활성 모듈 ${data.summary.activeCount}개 · 준비중 ${data.summary.plannedCount}개`,
-        tone: data.summary.level.tone
-      })}
-      ${createMetricCard({
-        label: "시장리스크 종합점수",
-        value: formatScore(market.score),
-        meta: `${market.level.label} · 기준일 ${data.metadata.asOf}`,
-        tone: market.level.tone
-      })}
-      ${createMetricCard({
-        label: "고위험 시장지표",
-        value: `${market.highRiskCount}개`,
-        meta: `가중 ${scoredIndicatorCount}개 · 관찰 ${observationCount}개`,
-        tone: market.highRiskCount > 0 ? "danger" : "good"
-      })}
-      ${createMetricCard({
-        label: "확장 예정 모듈",
-        value: plannedLabels || "없음",
-        meta: "동일 데이터 스키마로 추가 가능",
-        tone: "neutral"
-      })}
-    </section>
-
-    <section class="narrative-band">
-      <div>
-        <span class="eyebrow">오늘의 Summary</span>
-        <h2>${data.metadata.asOf} 시장리스크 · ${market.level.label}</h2>
+    <section class="decision-cockpit" aria-labelledby="decision-cockpit-title">
+      <header class="decision-cockpit__header">
+        <div>
+          <span class="eyebrow">Decision Cockpit</span>
+          <h2 id="decision-cockpit-title">오늘 먼저 볼 네 가지</h2>
+        </div>
+        <span>${data.metadata.asOf} 확정 EOD 기준</span>
+      </header>
+      <div class="decision-grid">
+        ${createMetricCard({
+          label: "시장 스트레스",
+          value: `${market.level.label} · ${Number(market.score).toFixed(1)}`,
+          meta: `1D ${formatPointDelta(change1d)} · 1W ${formatPointDelta(change1w)}`,
+          tone: market.level.tone
+        })}
+        ${createMetricCard({
+          label: "최대 점수 기여",
+          value: topContributor ? `+${Number(topContributor.contribution ?? 0).toFixed(2)}점` : "-",
+          meta: topContributor
+            ? `${topContributor.name} · 현재 ${clampScore(topContributor.value).toFixed(1)}`
+            : "가중 지표 확인 필요",
+          tone: topContributor && clampScore(topContributor.value) >= 75 ? "danger" : "caution"
+        })}
+        ${createMetricCard({
+          label: "5D -5% 급락확률",
+          value: Number.isFinite(crashProbability) ? `${crashProbability.toFixed(1)}%` : "-",
+          meta: Number.isFinite(crashProbability)
+            ? `향후 5거래일 도달 · OOS AP ${Number(crashMetrics.averagePrecision ?? 0).toFixed(3)}`
+            : "ML 산출물 확인 필요",
+          tone: Number.isFinite(crashProbability) ? summaryCrashTone(crashProbability, crashMetrics) : "neutral"
+        })}
+        ${createMetricCard({
+          label: "Cross-market HMM",
+          value: hmmBasket?.regime ?? "-",
+          meta: hmmBasket
+            ? `위험회피 ${hmmBasket.riskOffCount} · 활황 ${hmmBasket.highVolBullCount} · 안정 ${hmmBasket.stableCount}`
+            : "HMM 산출물 확인 필요",
+          tone: hmmBasket?.tone ?? "neutral"
+        })}
       </div>
-      <dl class="summary-facts">
-        <div><dt>종합점수</dt><dd>${formatScore(market.score)}</dd></div>
-        <div><dt>모니터링</dt><dd>가중 ${scoredIndicatorCount} · 관찰 ${observationCount}</dd></div>
-        <div><dt>범주</dt><dd>${categoryCountText(market.indicators)}</dd></div>
-        <div><dt>상위 위험</dt><dd>${market.topIndicators.map((indicator) => indicator.name).join(" · ")}</dd></div>
-      </dl>
     </section>
+  `;
+}
 
+function renderAttributionList(items, direction, maxMagnitude) {
+  const selected = items
+    .filter((item) => (direction === "up" ? item.weightedChange > 0.005 : item.weightedChange < -0.005))
+    .sort((left, right) =>
+      direction === "up"
+        ? right.weightedChange - left.weightedChange
+        : left.weightedChange - right.weightedChange
+    )
+    .slice(0, 5);
+
+  if (!selected.length) {
+    return `<p class="attribution-empty">유의한 ${direction === "up" ? "상승" : "완화"} 요인 없음</p>`;
+  }
+
+  return `
+    <ol class="attribution-list attribution-list--${direction}">
+      ${selected
+        .map((item) => {
+          const definition = riskGroupDefinitions[item.group] ?? { label: item.group ?? "기타" };
+          const width = maxMagnitude > 0 ? (Math.abs(item.weightedChange) / maxMagnitude) * 100 : 0;
+          return `
+            <li>
+              <div class="attribution-list__identity">
+                <span>${item.name}</span>
+                <small>${definition.label} · 원점수 ${formatPointDelta(item.scoreChange)}</small>
+              </div>
+              <div class="attribution-list__bar" aria-hidden="true"><span style="width:${width.toFixed(1)}%"></span></div>
+              <strong>${formatPointDelta(item.weightedChange)}</strong>
+            </li>
+          `;
+        })
+        .join("")}
+    </ol>
+  `;
+}
+
+function renderAttributionPeriod(market, timeseries, offset, id, active = false) {
+  const items = buildScoreAttribution(market, timeseries, offset);
+  const totalChange = items.reduce((sum, item) => sum + item.weightedChange, 0);
+  const maxMagnitude = Math.max(...items.map((item) => Math.abs(item.weightedChange)), 0);
+
+  return `
+    <div
+      class="attribution-period ${active ? "is-active" : ""}"
+      data-attribution-panel="${id}"
+      ${active ? "" : "hidden"}
+    >
+      <div class="attribution-period__summary">
+        <span>종합점수 변화</span>
+        <strong class="change-pill change-pill--${changeTone(totalChange)}">${formatPointDelta(totalChange)}</strong>
+        <small>개별 점수 변화 × 종합모델 가중치</small>
+      </div>
+      <div class="attribution-columns">
+        <section>
+          <header><span class="attribution-dot attribution-dot--up"></span><h3>부담 상승</h3></header>
+          ${renderAttributionList(items, "up", maxMagnitude)}
+        </section>
+        <section>
+          <header><span class="attribution-dot attribution-dot--down"></span><h3>부담 완화</h3></header>
+          ${renderAttributionList(items, "down", maxMagnitude)}
+        </section>
+      </div>
+    </div>
+  `;
+}
+
+function renderScoreAttribution(market, timeseries) {
+  return `
+    <section class="attribution-panel">
+      <header class="attribution-panel__header">
+        <div>
+          <span class="eyebrow">Score Attribution</span>
+          <h2>점수가 왜 움직였나</h2>
+          <p>종합점수 변화에 실제로 기여한 지표를 분해</p>
+        </div>
+        <div class="attribution-toggle" role="group" aria-label="점수 변화 기간">
+          <button type="button" class="is-active" data-attribution-window="1d" aria-pressed="true">1D</button>
+          <button type="button" data-attribution-window="1w" aria-pressed="false">1W</button>
+        </div>
+      </header>
+      ${renderAttributionPeriod(market, timeseries, 1, "1d", true)}
+      ${renderAttributionPeriod(market, timeseries, 5, "1w")}
+      <footer>
+        <span>상승 = 시장 부담 확대</span>
+        <button type="button" data-open-tab="market">전체 지표에서 확인</button>
+      </footer>
+    </section>
+  `;
+}
+
+function renderSummary(data, timeseries, mlRisk, elsRisk, hmmRegime) {
+  const market = data.sections.find((section) => section.id === "market");
+  market.asOf = data.metadata.asOf;
+
+  return `
+    ${renderDecisionCockpit(data, timeseries, mlRisk, hmmRegime)}
+    ${renderScoreAttribution(market, timeseries)}
     ${renderMlRiskSignalPanel(mlRisk, market, elsRisk)}
     ${renderElsIndexRiskPanel(elsRisk)}
     ${renderHmmRegimePanel(hmmRegime)}
-    ${renderMarketIndexTrendPanel(marketIndexes)}
-    ${renderCompositeTrend(market, timeseries)}
-    ${renderBacktestPanel(backtest)}
-    ${renderStressEpisodesPanel(stressEpisodes)}
   `;
 }
 
@@ -2967,7 +3094,7 @@ function renderGroupScores(section) {
           ).sort((left, right) => Number(right.value ?? 0) - Number(left.value ?? 0));
           const tooltipId = `group-tooltip-${section.id}-${group.id}`;
           return `
-            <article class="group-card group-card--${group.id}">
+            <article class="group-card group-card--${group.id}" data-risk-group-card="${group.id}">
               <div class="group-card__heading">
                 <div>
                   <span class="eyebrow">가중 ${group.indicatorCount}${group.observationCount ? ` · 관찰 ${group.observationCount}` : ""}</span>
@@ -2989,6 +3116,13 @@ function renderGroupScores(section) {
                 <span>비중 ${(group.weight * 100).toFixed(1)}%</span>
                 <span>기여도 +${Number(group.contribution).toFixed(2)}점</span>
               </footer>
+              <button
+                type="button"
+                class="group-card__filter"
+                data-group-filter="${group.id}"
+                data-section-id="${section.id}"
+                aria-pressed="false"
+              >이 그룹만 보기</button>
               <div class="group-card__tooltip" id="${tooltipId}" role="tooltip">
                 <strong>${definition.label} 구성</strong>
                 <p>${definition.description}</p>
@@ -3031,12 +3165,21 @@ function renderGroupScores(section) {
   `;
 }
 
-function renderSection(section, timeseries, backtest, stressEpisodes, marketIndexes) {
+function renderSection(section, timeseries, backtest, stressEpisodes, marketIndexes, activeTab) {
   const isPlanned = section.status !== "active";
   const initiallySortedIndicators = sortedIndicators(section, timeseries);
+  const isActive = section.id === activeTab;
 
   return `
-    <section class="risk-section" data-panel="${section.id}">
+    <section
+      class="risk-section tab-panel ${isActive ? "is-active" : ""}"
+      id="panel-${section.id}"
+      data-panel="${section.id}"
+      role="tabpanel"
+      aria-labelledby="tab-${section.id}"
+      tabindex="0"
+      ${isActive ? "" : "hidden"}
+    >
       <div class="section-heading">
         <div>
           <span class="eyebrow">${section.owner}</span>
@@ -3062,10 +3205,18 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
           : `
             ${renderModelPanel(section)}
             ${renderGroupScores(section)}
-            ${section.id === "market" ? renderMarketIndexTrendPanel(marketIndexes) : ""}
+            ${
+              section.id === "market"
+                ? `<div data-market-direction-slot>${renderMarketIndexTrendPanel(marketIndexes)}</div>`
+                : ""
+            }
             ${renderCompositeTrend(section.id === "market" ? section : null, timeseries)}
             ${renderGauge(section.score, section.level, section.model.thresholds)}
-            ${section.id === "market" ? renderIndicatorSortControls(section.id) : ""}
+            ${
+              section.id === "market"
+                ? renderIndicatorSortControls(section.id, initiallySortedIndicators.length)
+                : ""
+            }
             <div class="indicator-grid" data-indicator-grid="${section.id}">
               ${initiallySortedIndicators
                 .map((indicator) => renderIndicator(indicator, section.model.thresholds, timeseries))
@@ -3081,8 +3232,14 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
         </ul>
       </div>
 
-      ${!isPlanned && section.id === "market" ? renderBacktestPanel(backtest) : ""}
-      ${!isPlanned && section.id === "market" ? renderStressEpisodesPanel(stressEpisodes) : ""}
+      ${
+        !isPlanned && section.id === "market"
+          ? `<div data-market-history-slot>
+              ${renderBacktestPanel(backtest)}
+              ${renderStressEpisodesPanel(stressEpisodes)}
+            </div>`
+          : ""
+      }
     </section>
   `;
 }
@@ -3090,20 +3247,27 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
 function renderDashboard(
   rawData,
   timeseries,
-  backtest,
-  stressEpisodes,
   mlRisk,
   elsRisk,
   hmmRegime,
-  pipelineStatus,
-  marketIndexes
+  pipelineStatus
 ) {
   const data = evaluateDashboard(rawData);
   const dashboardTabs = dashboardTabsWithElsTool(data.tabs);
   const enabledTabs = dashboardTabs.filter((tab) => tab.enabled);
+  const requestedTab = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+  const activeTab = enabledTabs.some((tab) => tab.id === requestedTab) ? requestedTab : "summary";
   const indicatorSortStates = Object.fromEntries(
-    data.sections.map((section) => [section.id, { key: "score", direction: "desc" }])
+    data.sections.map((section) => [section.id, { key: "score", direction: "desc", group: null }])
   );
+  const panelState = (id) => ({
+    className: id === activeTab ? "is-active" : "",
+    hidden: id === activeTab ? "" : "hidden"
+  });
+  const summaryState = panelState("summary");
+  const sentimentState = panelState("sentiment");
+  const operationsState = panelState("operations");
+  const elsIssuanceState = panelState("els-issuance");
 
   app.innerHTML = `
     <header class="hero">
@@ -3125,17 +3289,26 @@ function renderDashboard(
     ${renderOperationStatusStrip(pipelineStatus)}
 
     <nav class="tabs" aria-label="리스크 대시보드 탭">
-      <div class="tabs__items">
+      <div class="tabs__items" role="tablist" aria-label="리스크 화면 선택">
         ${dashboardTabs
-          .map(
-            (tab) => `
-              <button class="tab-button ${tab.id === "summary" ? "is-active" : ""}" data-tab="${tab.id}" ${
-                tab.enabled ? "" : "disabled"
-              } aria-pressed="${tab.id === "summary" ? "true" : "false"}">
+          .map((tab) => {
+            const selected = tab.id === activeTab;
+            return `
+              <button
+                class="tab-button ${selected ? "is-active" : ""}"
+                id="tab-${tab.id}"
+                data-tab="${tab.id}"
+                role="tab"
+                aria-controls="panel-${tab.id}"
+                aria-selected="${selected ? "true" : "false"}"
+                aria-disabled="${tab.enabled ? "false" : "true"}"
+                tabindex="${selected ? "0" : "-1"}"
+                ${tab.enabled ? "" : "disabled"}
+              >
                 ${tab.label}
               </button>
-            `
-          )
+            `;
+          })
           .join("")}
       </div>
       <button class="theme-toggle" type="button" data-theme-toggle aria-label="다크 모드로 전환" title="다크 모드">
@@ -3144,38 +3317,174 @@ function renderDashboard(
     </nav>
 
     <div class="panel-stack">
-      <section class="tab-panel is-active" data-panel="summary">
-          ${renderSummary(data, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime, marketIndexes)}
+      <section
+        class="tab-panel ${summaryState.className}"
+        id="panel-summary"
+        data-panel="summary"
+        role="tabpanel"
+        aria-labelledby="tab-summary"
+        tabindex="0"
+        ${summaryState.hidden}
+      >
+        ${renderSummary(data, timeseries, mlRisk, elsRisk, hmmRegime)}
       </section>
-      <section class="tab-panel" data-panel="sentiment">
+      <section
+        class="tab-panel ${sentimentState.className}"
+        id="panel-sentiment"
+        data-panel="sentiment"
+        role="tabpanel"
+        aria-labelledby="tab-sentiment"
+        tabindex="0"
+        ${sentimentState.hidden}
+      >
         ${renderSentimentPage(data, timeseries, mlRisk, elsRisk, hmmRegime)}
       </section>
-      <section class="tab-panel" data-panel="operations">
+      <section
+        class="tab-panel ${operationsState.className}"
+        id="panel-operations"
+        data-panel="operations"
+        role="tabpanel"
+        aria-labelledby="tab-operations"
+        tabindex="0"
+        ${operationsState.hidden}
+      >
         ${renderOperationsPage(pipelineStatus)}
       </section>
-      <section class="tab-panel" data-panel="els-issuance">
+      <section
+        class="tab-panel ${elsIssuanceState.className}"
+        id="panel-els-issuance"
+        data-panel="els-issuance"
+        role="tabpanel"
+        aria-labelledby="tab-els-issuance"
+        tabindex="0"
+        ${elsIssuanceState.hidden}
+      >
         ${renderElsIssuanceHedgePage(elsRisk)}
       </section>
           ${data.sections
-            .map((section) => renderSection(section, timeseries, backtest, stressEpisodes, marketIndexes))
+            .map((section) => renderSection(section, timeseries, null, null, null, activeTab))
             .join("")}
     </div>
   `;
 
-  app.querySelectorAll(".tab-button").forEach((button) => {
-    button.addEventListener("click", () => {
-      const target = button.dataset.tab;
-      if (!enabledTabs.some((tab) => tab.id === target)) return;
+  let marketDetailsStatus = "idle";
+  const hydrateMarketDetails = async () => {
+    if (marketDetailsStatus !== "idle") return;
+    marketDetailsStatus = "loading";
+    const directionSlot = app.querySelector("[data-market-direction-slot]");
+    const historySlot = app.querySelector("[data-market-history-slot]");
+    const loadingMarkup = `<div class="deferred-panel"><span class="loading-dot" aria-hidden="true"></span>상세 데이터를 불러오는 중</div>`;
+    if (directionSlot) directionSlot.innerHTML = loadingMarkup;
+    if (historySlot) historySlot.innerHTML = loadingMarkup;
 
-      app.querySelectorAll(".tab-button").forEach((tab) => tab.classList.toggle("is-active", tab === button));
-      app
-        .querySelectorAll(".tab-button")
-        .forEach((tab) => tab.setAttribute("aria-pressed", tab === button ? "true" : "false"));
-      app
-        .querySelectorAll("[data-panel]")
-        .forEach((panel) => panel.classList.toggle("is-active", panel.dataset.panel === target));
+    const [marketIndexes, backtest, stressEpisodes] = await Promise.all([
+      loadJson("./data/naver-marketindex-history.json"),
+      loadJson("./data/market-risk-backtest.json"),
+      loadJson("./data/market-stress-episodes.json")
+    ]);
+
+    if (directionSlot) {
+      directionSlot.innerHTML =
+        renderMarketIndexTrendPanel(marketIndexes) ||
+        `<div class="deferred-panel deferred-panel--error">시장 방향성 데이터를 확인하지 못했습니다</div>`;
+    }
+    if (historySlot) {
+      historySlot.innerHTML =
+        `${renderBacktestPanel(backtest)}${renderStressEpisodesPanel(stressEpisodes)}` ||
+        `<div class="deferred-panel deferred-panel--error">백테스트 데이터를 확인하지 못했습니다</div>`;
+    }
+    marketDetailsStatus = "loaded";
+  };
+
+  const activateTab = (target, { focus = false, updateHash = true } = {}) => {
+    if (!enabledTabs.some((tab) => tab.id === target)) return;
+    app.querySelectorAll('[role="tab"][data-tab]').forEach((tab) => {
+      const selected = tab.dataset.tab === target;
+      tab.classList.toggle("is-active", selected);
+      tab.setAttribute("aria-selected", selected ? "true" : "false");
+      tab.tabIndex = selected ? 0 : -1;
+      if (selected && focus) tab.focus();
+    });
+    app.querySelectorAll(".tab-panel[data-panel]").forEach((panel) => {
+      const selected = panel.dataset.panel === target;
+      panel.classList.toggle("is-active", selected);
+      panel.hidden = !selected;
+    });
+    if (target === "market") void hydrateMarketDetails();
+    if (updateHash) history.replaceState(null, "", `#${target}`);
+  };
+
+  app.querySelectorAll('[role="tab"][data-tab]').forEach((button) => {
+    button.addEventListener("click", () => activateTab(button.dataset.tab));
+  });
+
+  const tabList = app.querySelector('[role="tablist"]');
+  tabList?.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    const buttons = [...tabList.querySelectorAll('[role="tab"]:not(:disabled)')];
+    const currentIndex = buttons.indexOf(document.activeElement);
+    if (currentIndex < 0) return;
+    event.preventDefault();
+    const nextIndex =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? buttons.length - 1
+          : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + buttons.length) % buttons.length;
+    activateTab(buttons[nextIndex].dataset.tab, { focus: true });
+  });
+
+  app.querySelectorAll("[data-open-tab]").forEach((button) => {
+    button.addEventListener("click", () => activateTab(button.dataset.openTab, { focus: true }));
+  });
+
+  window.addEventListener("hashchange", () => {
+    const target = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+    activateTab(target, { updateHash: false });
+  });
+
+  app.querySelectorAll("[data-attribution-window]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = button.dataset.attributionWindow;
+      app.querySelectorAll("[data-attribution-window]").forEach((option) => {
+        const selected = option === button;
+        option.classList.toggle("is-active", selected);
+        option.setAttribute("aria-pressed", selected ? "true" : "false");
+      });
+      app.querySelectorAll("[data-attribution-panel]").forEach((panel) => {
+        const selected = panel.dataset.attributionPanel === target;
+        panel.classList.toggle("is-active", selected);
+        panel.hidden = !selected;
+      });
     });
   });
+
+  const updateIndicatorGrid = (sectionId) => {
+    const section = data.sections.find((item) => item.id === sectionId);
+    const grid = app.querySelector(`[data-indicator-grid="${sectionId}"]`);
+    if (!section || !grid) return;
+    const state = indicatorSortStates[sectionId] ?? { key: "score", direction: "desc", group: null };
+    const indicators = sortedIndicators(section, timeseries, state.key, state.direction).filter(
+      (indicator) => !state.group || indicator.group === state.group
+    );
+    grid.innerHTML = indicators
+      .map((indicator) => renderIndicator(indicator, section.model.thresholds, timeseries))
+      .join("");
+
+    const definition = state.group ? riskGroupDefinitions[state.group] : null;
+    const status = app.querySelector(`[data-indicator-filter-status="${sectionId}"]`);
+    if (status) status.textContent = definition ? `${definition.label} ${indicators.length}개` : `전체 ${indicators.length}개`;
+    const reset = app.querySelector(`[data-indicator-filter-reset="${sectionId}"]`);
+    if (reset) reset.hidden = !state.group;
+
+    app.querySelectorAll(`[data-group-filter][data-section-id="${sectionId}"]`).forEach((button) => {
+      const selected = button.dataset.groupFilter === state.group;
+      button.classList.toggle("is-active", selected);
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+      button.textContent = selected ? "선택 해제" : "이 그룹만 보기";
+      button.closest("[data-risk-group-card]")?.classList.toggle("is-filtered", selected);
+    });
+  };
 
   app.querySelectorAll("[data-indicator-sort]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -3184,12 +3493,12 @@ function renderDashboard(
       const section = data.sections.find((item) => item.id === sectionId);
       const grid = app.querySelector(`[data-indicator-grid="${sectionId}"]`);
       if (!section || !grid) return;
-      const current = indicatorSortStates[sectionId] ?? { key: "score", direction: "desc" };
+      const current = indicatorSortStates[sectionId] ?? { key: "score", direction: "desc", group: null };
       const nextDirection = sortKey !== "score" && current.key === sortKey && current.direction === "desc" ? "asc" : "desc";
-      indicatorSortStates[sectionId] = { key: sortKey, direction: nextDirection };
+      indicatorSortStates[sectionId] = { ...current, key: sortKey, direction: nextDirection };
 
       app
-        .querySelectorAll(`[data-section-id="${sectionId}"]`)
+        .querySelectorAll(`[data-indicator-sort][data-section-id="${sectionId}"]`)
         .forEach((item) => {
           const option = indicatorSortOptions.find((candidate) => candidate.key === item.dataset.indicatorSort);
           const active = item === button;
@@ -3201,9 +3510,30 @@ function renderDashboard(
           item.setAttribute("aria-label", `${sortOptionLabel(option, active, nextDirection)} 정렬`);
         });
 
-      grid.innerHTML = sortedIndicators(section, timeseries, sortKey, nextDirection)
-        .map((indicator) => renderIndicator(indicator, section.model.thresholds, timeseries))
-        .join("");
+      updateIndicatorGrid(sectionId);
+    });
+  });
+
+  app.querySelectorAll("[data-group-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const sectionId = button.dataset.sectionId;
+      const current = indicatorSortStates[sectionId];
+      if (!current) return;
+      current.group = current.group === button.dataset.groupFilter ? null : button.dataset.groupFilter;
+      updateIndicatorGrid(sectionId);
+      app.querySelector(`[data-indicator-grid="${sectionId}"]`)?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        block: "start"
+      });
+    });
+  });
+
+  app.querySelectorAll("[data-indicator-filter-reset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const sectionId = button.dataset.indicatorFilterReset;
+      if (!indicatorSortStates[sectionId]) return;
+      indicatorSortStates[sectionId].group = null;
+      updateIndicatorGrid(sectionId);
     });
   });
 
@@ -3245,6 +3575,7 @@ function renderDashboard(
   const themeButton = app.querySelector("[data-theme-toggle]");
   themeButton.addEventListener("click", toggleTheme);
   updateThemeButton();
+  activateTab(activeTab, { updateHash: false });
 }
 
 async function loadJson(path, required = false) {
@@ -3262,25 +3593,19 @@ async function loadJson(path, required = false) {
 Promise.all([
   loadJson("./data/risk-dashboard.json", true),
   loadJson("./data/market-risk-timeseries.json"),
-  loadJson("./data/market-risk-backtest.json"),
-  loadJson("./data/market-stress-episodes.json"),
   loadJson("./data/ml-risk-signal.json"),
   loadJson("./data/els-index-risk.json"),
   loadJson("./data/hmm-regime.json"),
-  loadJson("./data/pipeline-status.json"),
-  loadJson("./data/naver-marketindex-history.json")
+  loadJson("./data/pipeline-status.json")
 ])
-  .then(([dashboard, timeseries, backtest, stressEpisodes, mlRisk, elsRisk, hmmRegime, pipelineStatus, marketIndexes]) =>
+  .then(([dashboard, timeseries, mlRisk, elsRisk, hmmRegime, pipelineStatus]) =>
     renderDashboard(
       dashboard,
       timeseries,
-      backtest,
-      stressEpisodes,
       mlRisk,
       elsRisk,
       hmmRegime,
-      pipelineStatus,
-      marketIndexes
+      pipelineStatus
     )
   )
   .catch((error) => {

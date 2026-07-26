@@ -208,10 +208,13 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260724-13" in html
-    assert "app.js?v=20260724-13" in html
-    assert 'aria-pressed="${tab.id === "summary" ? "true" : "false"}"' in app_source
-    assert 'tab.setAttribute("aria-pressed"' in app_source
+    assert "styles.css?v=20260726-1" in html
+    assert "app.js?v=20260726-1" in html
+    assert 'role="tablist"' in app_source
+    assert 'role="tab"' in app_source
+    assert 'role="tabpanel"' in app_source
+    assert 'tab.setAttribute("aria-selected"' in app_source
+    assert 'history.replaceState(null, "", `#${target}`)' in app_source
     assert "font-weight: 800;" not in styles
     assert "font-weight: 900;" not in styles
     assert "text-transform: uppercase;" not in styles
@@ -229,11 +232,12 @@ def test_korean_copy_uses_structured_lists_and_contextual_wrapping():
     assert "function renderNarrativeList" in app_source
     assert '.replace(/입니다$/, "임")' in app_source
     assert '.replace(/입니다$/, "")' not in app_source
-    assert '<dl class="summary-facts">' in app_source
+    assert 'class="decision-cockpit"' in app_source
+    assert 'class="attribution-list attribution-list--${direction}"' in app_source
     assert 'narrative-list--compact indicator-detail-list' in app_source
     assert "현재 시장리스크는 ${market.level.label} 단계입니다." not in app_source
     assert ".narrative-list {" in styles
-    assert ".summary-facts {" in styles
+    assert ".attribution-panel {" in styles
     assert "word-break: keep-all;" in styles
     assert "text-wrap: pretty;" in styles
     assert "text-wrap: balance;" in styles
@@ -320,20 +324,29 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert "indicator.contributionPct" in app_source
     assert "Number(right.contribution ?? 0) - Number(left.contribution ?? 0)" in app_source
     assert "indicator-group-tag" in app_source
+    assert 'data-group-filter="${group.id}"' in app_source
+    assert "function updateIndicatorGrid" not in app_source
+    assert "const updateIndicatorGrid" in app_source
+    assert 'data-indicator-filter-reset="${sectionId}"' in app_source
     assert ".group-card:hover .group-card__tooltip" in styles
-    assert ".group-card:focus-within .group-card__tooltip" in styles
+    assert ".group-card:has(.group-card__info:focus-visible) .group-card__tooltip" in styles
     assert "엔화 약세" in app_source
     assert '{ id: "jp10y_naver", label: "일본 10년"' in app_source
     assert '{ id: "usdkrw_naver", label: "원/달러"' in app_source
     assert 'upLabel: "원화 약세", downLabel: "원화 강세"' in app_source
 
     summary_source = app_source.split("function renderSummary", 1)[1].split("function renderModelPanel", 1)[0]
-    assert summary_source.index("renderMarketIndexTrendPanel") < summary_source.index("renderBacktestPanel")
-    assert summary_source.index("renderBacktestPanel") < summary_source.index("renderStressEpisodesPanel")
+    assert "renderDecisionCockpit" in summary_source
+    assert "renderScoreAttribution" in summary_source
+    assert "renderMarketIndexTrendPanel" not in summary_source
+    assert "renderBacktestPanel" not in summary_source
+    assert "renderStressEpisodesPanel" not in summary_source
 
     section_source = app_source.split("function renderSection", 1)[1].split("function renderDashboard", 1)[0]
     assert section_source.index("renderIndicatorSortControls") < section_source.index("renderBacktestPanel")
     assert section_source.index("renderBacktestPanel") < section_source.index("renderStressEpisodesPanel")
+    assert 'data-market-direction-slot' in section_source
+    assert 'data-market-history-slot' in section_source
 
 
 def test_snow_lab_easter_egg_contract():
