@@ -208,8 +208,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260726-1" in html
-    assert "app.js?v=20260726-1" in html
+    assert "styles.css?v=20260727-1" in html
+    assert "app.js?v=20260727-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -234,6 +234,9 @@ def test_korean_copy_uses_structured_lists_and_contextual_wrapping():
     assert '.replace(/입니다$/, "")' not in app_source
     assert 'class="decision-cockpit"' in app_source
     assert 'class="attribution-list attribution-list--${direction}"' in app_source
+    assert "formatAttributionDelta(totalChange)" in app_source
+    assert 'const periodLabel = id === "1w" ? "1W 종합점수 변화" : "1D 종합점수 변화";' in app_source
+    assert ".attribution-period[hidden]" in styles
     assert 'narrative-list--compact indicator-detail-list' in app_source
     assert "현재 시장리스크는 ${market.level.label} 단계입니다." not in app_source
     assert ".narrative-list {" in styles

@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260726-1";
+const ASSET_VERSION = "20260727-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 
 const indicatorSortOptions = [
@@ -145,6 +145,11 @@ const formatPointDelta = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
   const number = Number(value);
   return `${number > 0 ? "+" : ""}${number.toFixed(1)}p`;
+};
+const formatAttributionDelta = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
+  const number = Number(value);
+  return `${number > 0 ? "+" : ""}${number.toFixed(2)}p`;
 };
 const formatShortDate = (value) => {
   if (!value) return "-";
@@ -2960,7 +2965,7 @@ function renderAttributionList(items, direction, maxMagnitude) {
                 <small>${definition.label} · 원점수 ${formatPointDelta(item.scoreChange)}</small>
               </div>
               <div class="attribution-list__bar" aria-hidden="true"><span style="width:${width.toFixed(1)}%"></span></div>
-              <strong>${formatPointDelta(item.weightedChange)}</strong>
+              <strong>${formatAttributionDelta(item.weightedChange)}</strong>
             </li>
           `;
         })
@@ -2973,17 +2978,20 @@ function renderAttributionPeriod(market, timeseries, offset, id, active = false)
   const items = buildScoreAttribution(market, timeseries, offset);
   const totalChange = items.reduce((sum, item) => sum + item.weightedChange, 0);
   const maxMagnitude = Math.max(...items.map((item) => Math.abs(item.weightedChange)), 0);
+  const periodLabel = id === "1w" ? "1W 종합점수 변화" : "1D 종합점수 변화";
+  const comparisonLabel = id === "1w" ? "5거래일 전 대비" : "전 거래일 대비";
 
   return `
     <div
       class="attribution-period ${active ? "is-active" : ""}"
       data-attribution-panel="${id}"
+      aria-hidden="${active ? "false" : "true"}"
       ${active ? "" : "hidden"}
     >
       <div class="attribution-period__summary">
-        <span>종합점수 변화</span>
-        <strong class="change-pill change-pill--${changeTone(totalChange)}">${formatPointDelta(totalChange)}</strong>
-        <small>개별 점수 변화 × 종합모델 가중치</small>
+        <span>${periodLabel}</span>
+        <strong class="change-pill change-pill--${changeTone(totalChange)}">${formatAttributionDelta(totalChange)}</strong>
+        <small>${comparisonLabel} · 개별 점수 변화 × 종합모델 가중치</small>
       </div>
       <div class="attribution-columns">
         <section>
@@ -3455,6 +3463,7 @@ function renderDashboard(
         const selected = panel.dataset.attributionPanel === target;
         panel.classList.toggle("is-active", selected);
         panel.hidden = !selected;
+        panel.setAttribute("aria-hidden", selected ? "false" : "true");
       });
     });
   });
