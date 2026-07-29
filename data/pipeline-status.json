@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-29 07:49:58 KST",
+  "generatedAt": "2026-07-29 13:44:51 KST",
   "current": {
-    "runId": "20260729T074958-07:30",
+    "runId": "20260729T134451-manual",
     "status": "success",
-    "mode": "full",
-    "trigger": "scheduled",
-    "scheduledTime": "07:30",
-    "startedAt": "2026-07-29 07:30:01 KST",
-    "completedAt": "2026-07-29 07:49:58 KST",
-    "durationSeconds": 1197,
-    "dataAsOf": "2026-07-28",
-    "dashboardGeneratedAt": "2026-07-29 07:30 KST",
-    "mlGeneratedAt": "2026-07-29 07:49 KST",
-    "qualityScore": 98.4,
+    "mode": "fast",
+    "trigger": "manual",
+    "scheduledTime": null,
+    "startedAt": "2026-07-29 13:42:47 KST",
+    "completedAt": "2026-07-29 13:44:51 KST",
+    "durationSeconds": 124,
+    "dataAsOf": "2026-07-29",
+    "dashboardGeneratedAt": "2026-07-29 13:43 KST",
+    "mlGeneratedAt": "2026-07-29 13:44 KST",
+    "qualityScore": 99.2,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
@@ -50,14 +50,14 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 170,
+      "durationSeconds": 88,
       "detail": "시장 데이터 수집, 위험점수, ELS·HMM 산출"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
-      "durationSeconds": 1024,
+      "durationSeconds": 33,
       "detail": "특성 생성, 모델 학습, 예측 및 OOS 검증"
     },
     {
@@ -80,7 +80,7 @@
       "id": "yahoo",
       "label": "Yahoo Finance",
       "status": "ok",
-      "lastDate": "2026-07-28",
+      "lastDate": "2026-07-29",
       "seriesCount": 28,
       "detail": "28/28개 수집 · 허용시차 내 28개",
       "oldestLastDate": "2026-07-28",
@@ -92,10 +92,10 @@
       "id": "naver-equity",
       "label": "Naver 국내주식",
       "status": "ok",
-      "lastDate": "2026-07-28",
+      "lastDate": "2026-07-29",
       "seriesCount": 7,
       "detail": "7/7개 수집 · 허용시차 내 7개",
-      "oldestLastDate": "2026-07-28",
+      "oldestLastDate": "2026-07-29",
       "freshCount": 7,
       "staleCount": 0,
       "fallbackCount": 0
@@ -104,7 +104,7 @@
       "id": "naver-market-index",
       "label": "Naver 시장지표",
       "status": "ok",
-      "lastDate": "2026-07-28",
+      "lastDate": "2026-07-29",
       "seriesCount": 15,
       "detail": "15/15개 수집 · 허용시차 내 15개",
       "oldestLastDate": "2026-07-24",
@@ -116,7 +116,7 @@
       "id": "fred",
       "label": "FRED",
       "status": "warning",
-      "lastDate": "2026-07-27",
+      "lastDate": "2026-07-28",
       "seriesCount": 5,
       "detail": "5/5개 수집 · 허용시차 내 3개",
       "oldestLastDate": "2026-07-10",
@@ -128,7 +128,7 @@
       "id": "ml-input",
       "label": "ML 입력 원천",
       "status": "ok",
-      "lastDate": "2026-07-28",
+      "lastDate": "2026-07-29",
       "oldestLastDate": "2026-07-17",
       "seriesCount": 17,
       "freshCount": 17,
@@ -142,31 +142,31 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-07-29 07:30 KST"
+      "generatedAt": "2026-07-29 13:43 KST"
     },
     {
       "id": "ml",
       "label": "ML 위험신호",
       "status": "ok",
-      "generatedAt": "2026-07-29 07:49 KST"
+      "generatedAt": "2026-07-29 13:44 KST"
     },
     {
       "id": "els",
       "label": "ELS 지수위험",
       "status": "ok",
-      "generatedAt": "2026-07-29 07:32 KST"
+      "generatedAt": "2026-07-29 13:44 KST"
     },
     {
       "id": "hmm",
       "label": "HMM 레짐",
       "status": "ok",
-      "generatedAt": "2026-07-29 07:32 KST"
+      "generatedAt": "2026-07-29 13:44 KST"
     },
     {
       "id": "backtest",
       "label": "시장 백테스트",
       "status": "ok",
-      "generatedAt": "2026-07-29 07:30 KST"
+      "generatedAt": "2026-07-29 13:43 KST"
     },
     {
       "id": "stress",
@@ -178,17 +178,17 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-07-29 07:49:58 KST"
+      "generatedAt": "2026-07-29 13:44:51 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 98.4,
+    "score": 99.2,
     "referenceDate": "2026-07-29",
     "summary": {
       "checks": 186,
-      "ok": 180,
-      "warning": 6,
+      "ok": 183,
+      "warning": 3,
       "error": 0,
       "sourceSeriesExpected": 72,
       "sourceSeriesPresent": 72,
@@ -220,44 +220,30 @@
         "fetchStatus": "live"
       },
       {
-        "id": "cache:naver-market-live:bdti",
-        "category": "cache",
-        "label": "시장지표 최신값/bdti",
+        "id": "cross:naver-yahoo-domestic-values",
+        "category": "alignment",
+        "label": "국내주식 Yahoo·Naver 가격",
         "status": "warning",
-        "detail": "2026-07-27 · 2,582.0000 · 실시간 · live",
-        "lastDate": "2026-07-27",
-        "lagBusinessDays": 2
-      },
-      {
-        "id": "cache:naver-market-live:bdi",
-        "category": "cache",
-        "label": "시장지표 최신값/bdi",
-        "status": "warning",
-        "detail": "2026-07-27 · 2,696.0000 · 실시간 · live",
-        "lastDate": "2026-07-27",
-        "lagBusinessDays": 2
-      },
-      {
-        "id": "cache:naver-market-live:usdcny",
-        "category": "cache",
-        "label": "시장지표 최신값/usdcny",
-        "status": "warning",
-        "detail": "2026-07-27 · 6.7657 · 마감 · live",
-        "lastDate": "2026-07-27",
-        "lagBusinessDays": 2
-      },
-      {
-        "id": "cache:naver-market-live:usdjpy",
-        "category": "cache",
-        "label": "시장지표 최신값/usdjpy",
-        "status": "warning",
-        "detail": "2026-07-27 · 163.6400 · 마감 · live",
-        "lastDate": "2026-07-27",
-        "lagBusinessDays": 2
+        "detail": "동일 기준일 비교 7개 · 최대 kodex_leverage 2.32%"
       }
     ]
   },
   "history": [
+    {
+      "runId": "20260729T134451-manual",
+      "status": "success",
+      "mode": "fast",
+      "trigger": "manual",
+      "scheduledTime": null,
+      "startedAt": "2026-07-29 13:42:47 KST",
+      "completedAt": "2026-07-29 13:44:51 KST",
+      "durationSeconds": 124,
+      "dataAsOf": "2026-07-29",
+      "dashboardGeneratedAt": "2026-07-29 13:43 KST",
+      "mlGeneratedAt": "2026-07-29 13:44 KST",
+      "qualityScore": 99.2,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20260729T074958-07:30",
       "status": "success",
@@ -420,20 +406,6 @@
       "dataAsOf": "2026-07-23",
       "dashboardGeneratedAt": "2026-07-24 07:30 KST",
       "mlGeneratedAt": "2026-07-24 07:48 KST",
-      "message": "데이터 생성, 품질검증, Git 푸시와 Pages 배포를 완료했습니다."
-    },
-    {
-      "runId": "20260723T155332-15:35",
-      "status": "success",
-      "mode": "full",
-      "trigger": "scheduled",
-      "scheduledTime": "15:35",
-      "startedAt": "2026-07-23 15:35:00 KST",
-      "completedAt": "2026-07-23 15:53:32 KST",
-      "durationSeconds": 1112,
-      "dataAsOf": "2026-07-23",
-      "dashboardGeneratedAt": "2026-07-23 15:35 KST",
-      "mlGeneratedAt": "2026-07-23 15:53 KST",
       "message": "데이터 생성, 품질검증, Git 푸시와 Pages 배포를 완료했습니다."
     }
   ]
