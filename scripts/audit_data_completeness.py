@@ -46,6 +46,7 @@ ARTIFACTS = {
 }
 
 STATUS_RANK = {"ok": 0, "warning": 1, "error": 2}
+STATUS_LABEL = {"warning": "확인", "error": "오류"}
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -80,6 +81,16 @@ def business_day_lag(last_date: date, reference_date: date) -> int:
 
 def worst_status(statuses: list[str]) -> str:
     return max(statuses or ["ok"], key=lambda item: STATUS_RANK.get(item, 2))
+
+
+def issue_log_lines(report: dict[str, Any]) -> list[str]:
+    return [
+        (
+            f"[데이터 {STATUS_LABEL.get(issue['status'], issue['status'])}] "
+            f"{issue['label']} ({issue['id']}) · {issue['detail']}"
+        )
+        for issue in report.get("issues", [])
+    ]
 
 
 def make_check(
@@ -789,6 +800,8 @@ def main() -> int:
         f"데이터 완비성 {report['score']:.1f}점 · "
         f"정상 {summary['ok']} · 확인 {summary['warning']} · 오류 {summary['error']}"
     )
+    for line in issue_log_lines(report):
+        print(line)
     print(f"Wrote {output}")
     return 1 if args.strict and report["status"] == "error" else 0
 

@@ -1,7 +1,11 @@
 from datetime import date
 
 from scripts import audit_data_completeness
-from scripts.audit_data_completeness import assess_source_group, validate_series_rows
+from scripts.audit_data_completeness import (
+    assess_source_group,
+    issue_log_lines,
+    validate_series_rows,
+)
 
 
 def test_source_audit_detects_missing_and_stale_series():
@@ -106,3 +110,23 @@ def test_ml_source_audit_surfaces_supplement_failure(monkeypatch):
 
     assert group["status"] == "warning"
     assert checks[0]["status"] == "warning"
+
+
+def test_issue_log_lines_include_failed_check_identity_and_detail():
+    lines = issue_log_lines(
+        {
+            "issues": [
+                {
+                    "id": "cross:kospi200-hmm-els",
+                    "label": "KOSPI200 HMM·ELS 기준일",
+                    "status": "error",
+                    "detail": "HMM 2026-07-28 · ELS 2026-07-29",
+                }
+            ]
+        }
+    )
+
+    assert lines == [
+        "[데이터 오류] KOSPI200 HMM·ELS 기준일 "
+        "(cross:kospi200-hmm-els) · HMM 2026-07-28 · ELS 2026-07-29"
+    ]
