@@ -2862,7 +2862,7 @@ a {
 
 .market-trend-row__numbers {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(92px, 1.25fr) repeat(3, minmax(0, 1fr));
   grid-column: 1 / -1;
   gap: 8px;
   margin: 0;
@@ -2884,6 +2884,27 @@ a {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.market-trend-row__numbers .market-trend-row__current {
+  display: grid;
+  align-content: center;
+  min-height: 38px;
+  border-right: 1px solid var(--line);
+  padding-right: 10px;
+}
+
+.market-trend-row__current dt {
+  color: color-mix(in srgb, var(--ink) 76%, var(--muted));
+  font-size: 0.67rem;
+}
+
+.market-trend-row__current dd {
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: 0.94rem;
+  font-weight: 700;
+  line-height: 1.15;
 }
 
 .market-trend-row__state {

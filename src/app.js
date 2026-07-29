@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260729-3";
+const ASSET_VERSION = "20260729-4";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -2703,7 +2703,10 @@ function renderMarketTrendRow(item, seriesIndex, timelineDomains) {
         ${rangeLayers}
       </div>
       <dl class="market-trend-row__numbers">
-        <div><dt>현재</dt><dd>${formatMarketTrendValue(item.latest.close, item.type)}</dd></div>
+        <div class="market-trend-row__current">
+          <dt>현재값</dt>
+          <dd>${formatMarketTrendValue(item.latest.close, item.type)}</dd>
+        </div>
         <div><dt>${item.metadata.frequency === "weekly" ? "직전" : "전일"}</dt><dd>${formatMarketTrendChange(item.oneDayChange, item.type)}</dd></div>
         <div><dt>1주</dt><dd>${formatMarketTrendChange(item.oneWeekChange, item.type)}</dd></div>
         <div><dt>1개월</dt><dd>${formatMarketTrendChange(item.oneMonthChange, item.type)}</dd></div>

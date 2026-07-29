@@ -209,8 +209,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260729-3" in html
-    assert "app.js?v=20260729-3" in html
+    assert "styles.css?v=20260729-4" in html
+    assert "app.js?v=20260729-4" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -317,6 +317,8 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert "금리·환율·원자재·운임 방향성" in app_source
     assert "현재값은 실시간·지연 잠정치" in app_source
     assert "market-trend-row__live-line" in app_source
+    assert 'class="market-trend-row__current"' in app_source
+    assert ".market-trend-row__current dd" in styles
     assert '"weekly" ? "직전" : "전일"' in app_source
     assert "const riskGroupDefinitions" in app_source
     assert 'class="group-card__info"' in app_source
