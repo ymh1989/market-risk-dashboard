@@ -1016,7 +1016,7 @@ a {
 
 .chart-range-control {
   display: inline-grid;
-  grid-template-columns: repeat(3, 42px);
+  grid-template-columns: repeat(5, 42px);
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -3454,7 +3454,7 @@ a {
     visibility 140ms ease;
 }
 
-.group-card:hover .group-card__tooltip,
+.group-card:has(.group-card__info:hover) .group-card__tooltip,
 .group-card:has(.group-card__info:focus-visible) .group-card__tooltip {
   visibility: visible;
   opacity: 1;
@@ -3530,6 +3530,72 @@ a {
   border-color: var(--line);
   background: var(--surface-soft);
   padding: 7px 9px;
+}
+
+.group-card__trend {
+  min-width: 0;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.group-card__trend-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 0.69rem;
+  font-weight: 700;
+}
+
+.group-card__trend-heading small {
+  color: var(--group-accent);
+  font-size: 0.65rem;
+}
+
+.group-card__trend svg {
+  display: block;
+  width: 100%;
+  min-height: 88px;
+  overflow: visible;
+}
+
+.group-card__trend-grid {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.group-card__trend-line {
+  fill: none;
+  stroke: var(--group-accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.5;
+}
+
+.group-card__trend-end {
+  fill: var(--surface);
+  stroke: var(--group-accent);
+  stroke-width: 2;
+}
+
+.group-card__trend .chart-month-label {
+  font-size: 0.58rem;
+}
+
+.group-card__trend .chart-cursor-tooltip {
+  min-width: 190px;
+}
+
+.group-card__trend--empty {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.69rem;
+  font-weight: 700;
 }
 
 .group-card__filter:hover,

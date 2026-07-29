@@ -2,18 +2,16 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const CHART_RANGE_STORAGE_KEY = "risk-dashboard-chart-range";
-const ASSET_VERSION = "20260729-1";
+const ASSET_VERSION = "20260729-2";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
   { id: "3m", label: "3M", calendarDays: 93 },
-  { id: "ytd", label: "YTD" }
+  { id: "ytd", label: "YTD" },
+  { id: "1y", label: "1Y", calendarDays: 366 },
+  { id: "3y", label: "3Y", calendarDays: 1096 }
 ];
-const storedChartRange = localStorage.getItem(CHART_RANGE_STORAGE_KEY);
-let activeChartRange = chartRangeOptions.some((option) => option.id === storedChartRange)
-  ? storedChartRange
-  : "ytd";
+let activeChartRange = "ytd";
 let interactiveChartSequence = 0;
 const interactiveChartRegistry = new Map();
 
@@ -353,6 +351,53 @@ function buildCompositeSeries(section, timeseries) {
   const currentScore = Number(section.score);
   if (Number.isFinite(currentScore) && Math.abs(latest.value - currentScore) > 0.05) {
     composite.push({ date: section.asOf ?? latest.date, value: currentScore });
+  }
+  return composite;
+}
+
+function buildGroupCompositeSeries(section, groupId, timeseries) {
+  const indicators = (section?.indicators ?? []).filter(
+    (indicator) =>
+      indicator.group === groupId &&
+      isScoredIndicator(indicator) &&
+      Number(indicator.weight) > 0
+  );
+  const totalWeight = indicators.reduce(
+    (sum, indicator) => sum + Number(indicator.weight || 0),
+    0
+  );
+  if (!totalWeight) return [];
+
+  const dateScores = {};
+  const dateWeights = {};
+  indicators.forEach((indicator) => {
+    const weight = Number(indicator.weight);
+    (timeseries?.series?.[indicator.id] ?? []).forEach((point) => {
+      if (!Number.isFinite(Number(point.value))) return;
+      dateScores[point.date] = (dateScores[point.date] ?? 0) + clampScore(point.value) * weight;
+      dateWeights[point.date] = (dateWeights[point.date] ?? 0) + weight;
+    });
+  });
+
+  const composite = Object.keys(dateScores)
+    .sort()
+    .filter((date) => dateWeights[date] >= totalWeight * 0.7)
+    .map((date) => ({
+      date,
+      value: dateScores[date] / dateWeights[date]
+    }));
+  if (!composite.length) return composite;
+
+  const currentGroup = (section.groupScores ?? []).find((group) => group.id === groupId);
+  const currentScore = Number(currentGroup?.score);
+  const currentDate = section.asOf;
+  if (Number.isFinite(currentScore) && currentDate) {
+    const latest = composite.at(-1);
+    if (latest.date === currentDate) {
+      latest.value = currentScore;
+    } else if (latest.date < currentDate) {
+      composite.push({ date: currentDate, value: currentScore });
+    }
   }
   return composite;
 }
@@ -1159,6 +1204,8 @@ function monthSegmentsFromDomain(domain, width = 100) {
     const year = String(cursor.getUTCFullYear());
     segments.push({
       key: `${year}-${month}`,
+      year,
+      month,
       startX,
       endX,
       centerX: (startX + endX) / 2,
@@ -1235,25 +1282,40 @@ function renderMonthAxisFromDomain(
   labelY = 207
 ) {
   const segments = monthSegmentsFromDomain(domain, width);
+  const maxLabels = Math.max(2, Math.floor(width / (width <= 320 ? 54 : 72)));
+  const labelStride = Math.max(1, Math.ceil(segments.length / maxLabels));
+  const labelSegments = segments.filter(
+    (segment, index) =>
+      index === 0 ||
+      index === segments.length - 1 ||
+      index % labelStride === 0
+  );
+  const dividerSegments =
+    segments.length > 18
+      ? labelSegments
+      : segments.slice(1);
   return {
     grid: `
-      ${segments
-        .map(
-          (segment, index) =>
-            index % 2 === 1
-              ? `<rect class="chart-month-band" x="${segment.startX.toFixed(2)}" y="${plotTop}" width="${(segment.endX - segment.startX).toFixed(2)}" height="${plotBottom - plotTop}"></rect>`
-              : ""
-        )
-        .join("")}
-      ${segments
-        .slice(1)
+      ${
+        segments.length <= 18
+          ? segments
+              .map(
+                (segment, index) =>
+                  index % 2 === 1
+                    ? `<rect class="chart-month-band" x="${segment.startX.toFixed(2)}" y="${plotTop}" width="${(segment.endX - segment.startX).toFixed(2)}" height="${plotBottom - plotTop}"></rect>`
+                    : ""
+              )
+              .join("")
+          : ""
+      }
+      ${dividerSegments
         .map(
           (segment) =>
             `<line class="chart-month-divider" x1="${segment.startX.toFixed(2)}" x2="${segment.startX.toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>`
         )
         .join("")}
     `,
-    labels: segments
+    labels: labelSegments
       .map(
         (segment) =>
           `<text class="chart-month-label" x="${segment.centerX.toFixed(2)}" y="${labelY}" text-anchor="middle">${segment.label}</text>`
@@ -3420,7 +3482,90 @@ function renderModelPanel(section) {
   `;
 }
 
-function renderGroupScores(section) {
+function renderGroupScoreTrend(section, group, timeseries) {
+  const points = buildGroupCompositeSeries(section, group.id, timeseries);
+  if (points.length < 2) {
+    return `
+      <div class="group-card__trend group-card__trend--empty">
+        <span>가중 점수 흐름</span>
+        <small>시계열 준비중</small>
+      </div>
+    `;
+  }
+
+  const chartId = registerInteractiveChart({
+    width: 280,
+    tooltipMode: "all",
+    series: [
+      {
+        label: riskGroupDefinitions[group.id]?.label ?? group.label,
+        points,
+        valueKey: "value",
+        color: "var(--group-accent)",
+        format: (value) => `${Number(value).toFixed(1)}점`
+      }
+    ]
+  });
+  const layers = chartRangeOptions
+    .map((range) => {
+      const domain = chartRangeDomain([points], range.id);
+      const visible = pointsWithinDomain(points, domain, "value");
+      const rawValueDomain = numericChartDomain(visible, "value", 0.18);
+      const center = (rawValueDomain.min + rawValueDomain.max) / 2;
+      const halfSpan = Math.max((rawValueDomain.max - rawValueDomain.min) / 2, 10);
+      const valueDomain = {
+        min: Math.max(0, center - halfSpan),
+        max: Math.min(100, center + halfSpan)
+      };
+      const axis = renderMonthAxisFromDomain(domain, 280, 8, 62, 81);
+      const latest = visible.at(-1);
+      const latestX = latest ? xFromDate(latest.date, domain, 280) : 0;
+      const latestY = latest
+        ? 62 -
+          ((Number(latest.value) - valueDomain.min) /
+            Math.max(valueDomain.max - valueDomain.min, 1)) *
+            54
+        : 0;
+      return `
+        <svg
+          class="${chartRangeLayerClass(range.id)}"
+          data-chart-range-layer="${range.id}"
+          data-chart-svg
+          viewBox="0 0 280 88"
+          role="img"
+          aria-label="${riskGroupDefinitions[group.id]?.label ?? group.label} ${range.label} 가중 점수 흐름"
+        >
+          ${axis.grid}
+          <path class="group-card__trend-grid" d="M 0 35 L 280 35 M 0 62 L 280 62"></path>
+          <path
+            class="group-card__trend-line"
+            d="${datedValuePath(points, "value", domain, valueDomain, 280, 8, 62)}"
+          ></path>
+          ${
+            latest
+              ? `<circle class="group-card__trend-end" cx="${latestX.toFixed(2)}" cy="${latestY.toFixed(2)}" r="3"></circle>`
+              : ""
+          }
+          ${renderChartCursorLine(8, 62)}
+          ${axis.labels}
+        </svg>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="group-card__trend" data-timeseries-chart="${chartId}">
+      <div class="group-card__trend-heading">
+        <span>가중 점수 흐름</span>
+        <small data-chart-active-range-label>${chartRangeOptions.find((option) => option.id === activeChartRange)?.label ?? "YTD"}</small>
+      </div>
+      ${layers}
+      ${renderChartTooltip()}
+    </div>
+  `;
+}
+
+function renderGroupScores(section, timeseries) {
   const groups = section.groupScores ?? [];
   if (!groups.length) return "";
 
@@ -3468,6 +3613,7 @@ function renderGroupScores(section) {
                 <span>비중 ${(group.weight * 100).toFixed(1)}%</span>
                 <span>기여도 +${Number(group.contribution).toFixed(2)}점</span>
               </footer>
+              ${renderGroupScoreTrend(section, group, timeseries)}
               <button
                 type="button"
                 class="group-card__filter"
@@ -3556,7 +3702,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
             </div>`
           : `
             ${renderModelPanel(section)}
-            ${renderGroupScores(section)}
+            ${renderGroupScores(section, timeseries)}
             ${
               section.id === "market"
                 ? `<div data-market-direction-slot>${renderMarketIndexTrendPanel(marketIndexes)}</div>`
@@ -3699,7 +3845,8 @@ function updateChartCursor(chart, svg, event) {
 function activateChartRange(rangeId) {
   if (!chartRangeOptions.some((option) => option.id === rangeId)) return;
   activeChartRange = rangeId;
-  localStorage.setItem(CHART_RANGE_STORAGE_KEY, rangeId);
+  const activeLabel =
+    chartRangeOptions.find((option) => option.id === rangeId)?.label ?? "YTD";
   app.querySelectorAll("[data-chart-range]").forEach((button) => {
     const selected = button.dataset.chartRange === rangeId;
     button.classList.toggle("is-active", selected);
@@ -3707,6 +3854,9 @@ function activateChartRange(rangeId) {
   });
   app.querySelectorAll("[data-chart-range-layer]").forEach((layer) => {
     layer.classList.toggle("is-active", layer.dataset.chartRangeLayer === rangeId);
+  });
+  app.querySelectorAll("[data-chart-active-range-label]").forEach((label) => {
+    label.textContent = activeLabel;
   });
   app.querySelectorAll("[data-timeseries-chart]").forEach(hideChartCursor);
 }

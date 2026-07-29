@@ -209,8 +209,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260729-1" in html
-    assert "app.js?v=20260729-1" in html
+    assert "styles.css?v=20260729-2" in html
+    assert "app.js?v=20260729-2" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -332,7 +332,7 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert "function updateIndicatorGrid" not in app_source
     assert "const updateIndicatorGrid" in app_source
     assert 'data-indicator-filter-reset="${sectionId}"' in app_source
-    assert ".group-card:hover .group-card__tooltip" in styles
+    assert ".group-card:has(.group-card__info:hover) .group-card__tooltip" in styles
     assert ".group-card:has(.group-card__info:focus-visible) .group-card__tooltip" in styles
     assert "엔화 약세" in app_source
     assert '{ id: "jp10y_naver", label: "일본 10년"' in app_source
@@ -360,7 +360,10 @@ def test_interactive_timeline_range_and_cursor_contract():
     assert '{ id: "1m", label: "1M", calendarDays: 31 }' in app_source
     assert '{ id: "3m", label: "3M", calendarDays: 93 }' in app_source
     assert '{ id: "ytd", label: "YTD" }' in app_source
-    assert "CHART_RANGE_STORAGE_KEY" in app_source
+    assert '{ id: "1y", label: "1Y", calendarDays: 366 }' in app_source
+    assert '{ id: "3y", label: "3Y", calendarDays: 1096 }' in app_source
+    assert 'let activeChartRange = "ytd"' in app_source
+    assert "CHART_RANGE_STORAGE_KEY" not in app_source
     assert "function chartRangeDomain" in app_source
     assert "function registerInteractiveChart" in app_source
     assert "function initializeInteractiveCharts" in app_source
@@ -384,6 +387,23 @@ def test_interactive_timeline_range_and_cursor_contract():
     assert ".chart-cursor-line.is-visible" in styles
     assert ".chart-cursor-tooltip.is-visible" in styles
     assert ".chart-value-status__provisional" in styles
+
+
+def test_weighted_group_timeline_contract():
+    app_source = APP_FILE.read_text(encoding="utf-8")
+    styles = STYLES_FILE.read_text(encoding="utf-8")
+
+    assert "function buildGroupCompositeSeries" in app_source
+    assert "indicator.group === groupId" in app_source
+    assert "isScoredIndicator(indicator)" in app_source
+    assert "dateWeights[date] >= totalWeight * 0.7" in app_source
+    assert "const currentGroup = (section.groupScores ?? []).find" in app_source
+    assert "function renderGroupScoreTrend" in app_source
+    assert "가중 점수 흐름" in app_source
+    assert "data-chart-active-range-label" in app_source
+    assert "renderGroupScores(section, timeseries)" in app_source
+    assert ".group-card__trend-line" in styles
+    assert "grid-template-columns: repeat(5, 42px)" in styles
 
 
 def test_snow_lab_easter_egg_contract():
