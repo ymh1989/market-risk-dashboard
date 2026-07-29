@@ -455,7 +455,7 @@ def test_snow_lab_easter_egg_contract():
     assert '["snow", "wave", "spectrum", "obstacle", "forest"]' in script
     assert 'model: isSpectrumMode ? "spectrum" : "gerstner"' in script
     assert 'import("./ocean-lab.js")' in script
-    assert 'import("./obstacle-wave-lab.js?v=20260727-1")' in script
+    assert 'import("./obstacle-wave-lab.js?v=20260729-1")' in script
     assert "createOceanLab" in script
     assert "createObstacleWaveLab" in script
     assert "drawFallbackOcean" in script
@@ -490,6 +490,12 @@ def test_snow_lab_easter_egg_contract():
     assert "collisionJet" in obstacle_script
     assert "diffraction" in obstacle_script
     assert "createSpraySystem" in obstacle_script
+    assert "sampleImpactState" in obstacle_script
+    assert "verticalVelocity" in obstacle_script
+    assert "surfaceHeightAt" in obstacle_script
+    assert "THREE.NormalBlending" in obstacle_script
+    assert "impactCrest" not in obstacle_script
+    assert "burstPending" not in obstacle_script
     assert "pointerNearObstacle" in obstacle_script
     assert 'stage.setAttribute("data-obstacle-wave-ready", "true")' in obstacle_script
     assert "renderer.setSize(width, height, false)" in obstacle_script

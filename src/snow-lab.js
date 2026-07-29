@@ -318,7 +318,7 @@ async function initializeObstacleWave() {
   state.threeLoading = true;
   statusText.textContent = runningStatus();
   try {
-    const { createObstacleWaveLab } = await import("./obstacle-wave-lab.js?v=20260727-1");
+    const { createObstacleWaveLab } = await import("./obstacle-wave-lab.js?v=20260729-1");
     state.obstacle = createObstacleWaveLab({
       canvas: fluidCanvas,
       stage,
