@@ -209,8 +209,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260727-1" in html
-    assert "app.js?v=20260727-1" in html
+    assert "styles.css?v=20260729-1" in html
+    assert "app.js?v=20260729-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -351,6 +351,39 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert section_source.index("renderBacktestPanel") < section_source.index("renderStressEpisodesPanel")
     assert 'data-market-direction-slot' in section_source
     assert 'data-market-history-slot' in section_source
+
+
+def test_interactive_timeline_range_and_cursor_contract():
+    app_source = APP_FILE.read_text(encoding="utf-8")
+    styles = STYLES_FILE.read_text(encoding="utf-8")
+
+    assert '{ id: "1m", label: "1M", calendarDays: 31 }' in app_source
+    assert '{ id: "3m", label: "3M", calendarDays: 93 }' in app_source
+    assert '{ id: "ytd", label: "YTD" }' in app_source
+    assert "CHART_RANGE_STORAGE_KEY" in app_source
+    assert "function chartRangeDomain" in app_source
+    assert "function registerInteractiveChart" in app_source
+    assert "function initializeInteractiveCharts" in app_source
+    assert "function updateChartCursor" in app_source
+    assert "function nearestChartPoint" in app_source
+    assert 'data-chart-range="${option.id}"' in app_source
+    assert 'data-chart-range-layer="${range.id}"' in app_source
+    assert "data-chart-cursor-line" in app_source
+    assert "data-chart-tooltip" in app_source
+    assert 'chart.addEventListener("pointermove"' in app_source
+    assert 'chart.addEventListener("pointerdown"' in app_source
+    assert 'status === "잠정"' in app_source
+    assert "renderChartRangeControls(chartId, {" in app_source
+    assert 'tooltipMode: "hovered"' in app_source
+    assert 'data-timeseries-chart="${chartId}"' in app_source
+    assert 'data-chart-series-index="${seriesIndex}"' in app_source
+    assert "renderHmmRegimeBands(visible, domain)" in app_source
+    assert "market-trend-row__live-line" in app_source
+    assert ".chart-range-control" in styles
+    assert ".chart-range-layer.is-active" in styles
+    assert ".chart-cursor-line.is-visible" in styles
+    assert ".chart-cursor-tooltip.is-visible" in styles
+    assert ".chart-value-status__provisional" in styles
 
 
 def test_snow_lab_easter_egg_contract():

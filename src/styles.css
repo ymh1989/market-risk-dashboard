@@ -998,6 +998,185 @@ a {
   line-height: 1.5;
 }
 
+[data-timeseries-chart] {
+  position: relative;
+}
+
+.chart-range-toolbar,
+.chart-panel-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chart-panel-tools {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.chart-range-control {
+  display: inline-grid;
+  grid-template-columns: repeat(3, 42px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.chart-range-control button {
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.chart-range-control button:last-child {
+  border-right: 0;
+}
+
+.chart-range-control button:hover,
+.chart-range-control button:focus-visible {
+  background: var(--surface-soft);
+  color: var(--ink);
+  outline: none;
+}
+
+.chart-range-control button.is-active {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.chart-value-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chart-value-status i {
+  width: 15px;
+  height: 0;
+  border-top: 2px solid var(--muted);
+}
+
+.chart-value-status .chart-value-status__provisional {
+  margin-left: 3px;
+  border-top-style: dashed;
+}
+
+.chart-range-layer {
+  display: none !important;
+}
+
+.chart-range-layer.is-active {
+  display: block !important;
+}
+
+.chart-cursor-line {
+  opacity: 0;
+  stroke: color-mix(in srgb, var(--ink) 68%, transparent);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-cursor-line.is-visible {
+  opacity: 1;
+}
+
+.chart-cursor-tooltip {
+  position: absolute;
+  z-index: 40;
+  display: none;
+  min-width: 210px;
+  max-width: min(390px, calc(100% - 24px));
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--ink) 22%, var(--line));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 12px 28px rgba(2, 8, 23, 0.24);
+  color: var(--ink);
+  pointer-events: none;
+  backdrop-filter: blur(12px);
+}
+
+.chart-cursor-tooltip.is-visible {
+  display: grid;
+  gap: 7px;
+}
+
+.chart-cursor-tooltip[data-placement="above"] {
+  transform: translate(-50%, -100%);
+}
+
+.chart-cursor-tooltip[data-placement="below"] {
+  transform: translateX(-50%);
+}
+
+.chart-cursor-tooltip > b {
+  font-size: 0.72rem;
+}
+
+.chart-cursor-tooltip__row {
+  display: grid;
+  grid-template-columns: 7px minmax(74px, 1fr) auto auto;
+  gap: 5px 7px;
+  align-items: center;
+  font-size: 0.7rem;
+}
+
+.chart-cursor-tooltip__row > i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.chart-cursor-tooltip__row > span {
+  overflow: hidden;
+  color: var(--muted);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-cursor-tooltip__row > strong {
+  font-size: 0.74rem;
+}
+
+.chart-cursor-tooltip__row > small {
+  grid-column: 2 / 4;
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+.chart-cursor-tooltip__row > em {
+  grid-column: 4;
+  grid-row: 1;
+  color: var(--muted);
+  font-size: 0.6rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.chart-cursor-tooltip__row > em.is-provisional {
+  color: var(--amber);
+}
+
+.ml-risk-chart__heading {
+  display: grid;
+  gap: 3px;
+}
+
 .ml-risk-explain {
   display: grid;
   align-content: start;
@@ -2531,6 +2710,12 @@ a {
 .market-trend-panel__summary small {
   margin-top: 5px;
   font-size: 0.7rem;
+}
+
+.market-trend-panel__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -10px;
 }
 
 .market-trend-groups {
@@ -4675,6 +4860,11 @@ a {
     justify-content: flex-start;
   }
 
+  .chart-panel-tools,
+  .market-trend-panel__toolbar {
+    justify-content: flex-start;
+  }
+
   .els-opportunity-map__aside {
     justify-items: start;
   }
@@ -4768,6 +4958,19 @@ a {
 
   .tab-button {
     flex: 0 0 auto;
+  }
+
+  .chart-range-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .ml-risk-chart__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .chart-cursor-tooltip {
+    max-width: calc(100% - 16px);
   }
 
   .decision-grid,

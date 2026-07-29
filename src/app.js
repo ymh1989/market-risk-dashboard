@@ -2,8 +2,20 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260727-1";
+const CHART_RANGE_STORAGE_KEY = "risk-dashboard-chart-range";
+const ASSET_VERSION = "20260729-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
+const chartRangeOptions = [
+  { id: "1m", label: "1M", calendarDays: 31 },
+  { id: "3m", label: "3M", calendarDays: 93 },
+  { id: "ytd", label: "YTD" }
+];
+const storedChartRange = localStorage.getItem(CHART_RANGE_STORAGE_KEY);
+let activeChartRange = chartRangeOptions.some((option) => option.id === storedChartRange)
+  ? storedChartRange
+  : "ytd";
+let interactiveChartSequence = 0;
+const interactiveChartRegistry = new Map();
 
 const indicatorSortOptions = [
   { key: "score", label: "점수순", description: "현재 점수가 높은 지표부터 봅니다." },
@@ -912,61 +924,6 @@ function sentimentChangeTone(value) {
   return value > 0 ? "up" : "down";
 }
 
-function trendChartPath(points, width = 760, height = 210, padding = 18) {
-  if (points.length < 2) return "";
-  const values = points.map((point) => clampScore(point.value));
-  const min = Math.max(0, Math.min(...values) - 5);
-  const max = Math.min(100, Math.max(...values) + 5);
-  const range = max - min || 1;
-  const step = width / (points.length - 1);
-
-  return points
-    .map((point, index) => {
-      const x = index * step;
-      const y = height - padding - ((clampScore(point.value) - min) / range) * (height - padding * 2);
-      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(" ");
-}
-
-function linePath(points, valueKey, width = 760, height = 210, padding = 18) {
-  const valid = points.filter((point) => Number.isFinite(Number(point[valueKey])));
-  if (valid.length < 2) return "";
-  const values = valid.map((point) => Number(point[valueKey]));
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const step = width / (valid.length - 1);
-
-  return valid
-    .map((point, index) => {
-      const x = index * step;
-      const y = height - padding - ((Number(point[valueKey]) - min) / range) * (height - padding * 2);
-      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(" ");
-}
-
-function datedLinePath(points, valueKey, startDate, endDate, width = 760, height = 210, padding = 18, domain = null) {
-  const valid = points.filter((point) => Number.isFinite(Number(point[valueKey])));
-  if (valid.length < 2) return "";
-  const values = valid.map((point) => Number(point[valueKey]));
-  const min = domain?.min ?? Math.min(...values);
-  const max = domain?.max ?? Math.max(...values);
-  const range = max - min || 1;
-  const start = Date.parse(`${startDate}T00:00:00Z`);
-  const end = Date.parse(`${endDate}T00:00:00Z`);
-  const dateRange = end - start || 1;
-
-  return valid
-    .map((point, index) => {
-      const x = ((Date.parse(`${point.date}T00:00:00Z`) - start) / dateRange) * width;
-      const y = height - padding - ((Number(point[valueKey]) - min) / range) * (height - padding * 2);
-      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(" ");
-}
-
 function pearsonCorrelation(pairs) {
   if (pairs.length < 3) return null;
   const meanX = pairs.reduce((sum, pair) => sum + pair[0], 0) / pairs.length;
@@ -1031,20 +988,6 @@ function buildLeadLagComparison(mlRisk, elsRisk, horizon = 5) {
     signalDomain,
     signalEndX: Math.max(0, Math.min(760, signalEndX))
   };
-}
-
-function scorePath(points, valueKey = "score", width = 760, height = 210, padding = 18) {
-  const valid = points.filter((point) => Number.isFinite(Number(point[valueKey])));
-  if (valid.length < 2) return "";
-  const step = width / (valid.length - 1);
-
-  return valid
-    .map((point, index) => {
-      const x = index * step;
-      const y = height - padding - (clampScore(point[valueKey]) / 100) * (height - padding * 2);
-      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(" ");
 }
 
 function smoothTrajectoryPoints(points) {
@@ -1120,20 +1063,6 @@ function timelineDomain(seriesList) {
 function xFromDate(date, domain, width = 100) {
   if (!domain) return 0;
   return ((dateMs(date) - domain.start) / domain.span) * width;
-}
-
-function scorePathByDate(points, valueKey = "score", width = 260, height = 62, padding = 7, domain = null) {
-  const valid = points.filter((point) => Number.isFinite(Number(point[valueKey])) && Number.isFinite(dateMs(point.date)));
-  const safeDomain = domain ?? timelineDomain([valid]);
-  if (valid.length < 2 || !safeDomain) return "";
-
-  return valid
-    .map((point, index) => {
-      const x = xFromDate(point.date, safeDomain, width);
-      const y = height - padding - (clampScore(point[valueKey]) / 100) * (height - padding * 2);
-      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(" ");
 }
 
 function scorePathByDatePlot(points, valueKey = "score", width = 260, plotTop = 26, plotBottom = 80, domain = null) {
@@ -1241,12 +1170,155 @@ function monthSegmentsFromDomain(domain, width = 100) {
   return segments.filter((segment) => segment.endX > segment.startX);
 }
 
+function chartRangeDomain(seriesList, rangeId = activeChartRange) {
+  const fullDomain = timelineDomain(seriesList);
+  if (!fullDomain) return null;
+  const option = chartRangeOptions.find((candidate) => candidate.id === rangeId) ?? chartRangeOptions.at(-1);
+  const endDate = new Date(fullDomain.end);
+  const requestedStart =
+    option.id === "ytd"
+      ? Date.UTC(endDate.getUTCFullYear(), 0, 1)
+      : fullDomain.end - option.calendarDays * 24 * 60 * 60 * 1000;
+  const start = Math.max(fullDomain.start, requestedStart);
+  return { start, end: fullDomain.end, span: Math.max(fullDomain.end - start, 1) };
+}
+
+function pointsWithinDomain(points, domain, valueKey = null) {
+  if (!domain) return [];
+  return (points ?? [])
+    .filter((point) => {
+      const time = dateMs(point.date);
+      const validValue = valueKey ? Number.isFinite(Number(point[valueKey])) : true;
+      return validValue && Number.isFinite(time) && time >= domain.start && time <= domain.end;
+    })
+    .sort((left, right) => dateMs(left.date) - dateMs(right.date));
+}
+
+function numericChartDomain(points, valueKey, padding = 0, fixedDomain = null) {
+  if (fixedDomain) return fixedDomain;
+  const values = points.map((point) => Number(point[valueKey])).filter(Number.isFinite);
+  if (!values.length) return { min: 0, max: 1 };
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || Math.max(Math.abs(max), 1) * 0.02;
+  return { min: min - span * padding, max: max + span * padding };
+}
+
+function datedValuePath(
+  points,
+  valueKey,
+  timeline,
+  valueDomain,
+  width = 760,
+  plotTop = 18,
+  plotBottom = 190
+) {
+  const valid = pointsWithinDomain(points, timeline, valueKey);
+  if (valid.length < 2 || !timeline) return "";
+  const span = valueDomain.max - valueDomain.min || 1;
+  return valid
+    .map((point, index) => {
+      const x = xFromDate(point.date, timeline, width);
+      const y =
+        plotBottom -
+        ((Number(point[valueKey]) - valueDomain.min) / span) * (plotBottom - plotTop);
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
+function renderMonthAxisFromDomain(
+  domain,
+  width = 760,
+  plotTop = 18,
+  plotBottom = 190,
+  labelY = 207
+) {
+  const segments = monthSegmentsFromDomain(domain, width);
+  return {
+    grid: `
+      ${segments
+        .map(
+          (segment, index) =>
+            index % 2 === 1
+              ? `<rect class="chart-month-band" x="${segment.startX.toFixed(2)}" y="${plotTop}" width="${(segment.endX - segment.startX).toFixed(2)}" height="${plotBottom - plotTop}"></rect>`
+              : ""
+        )
+        .join("")}
+      ${segments
+        .slice(1)
+        .map(
+          (segment) =>
+            `<line class="chart-month-divider" x1="${segment.startX.toFixed(2)}" x2="${segment.startX.toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>`
+        )
+        .join("")}
+    `,
+    labels: segments
+      .map(
+        (segment) =>
+          `<text class="chart-month-label" x="${segment.centerX.toFixed(2)}" y="${labelY}" text-anchor="middle">${segment.label}</text>`
+      )
+      .join("")
+  };
+}
+
+function registerInteractiveChart({ series, width = 760, tooltipMode = "all" }) {
+  interactiveChartSequence += 1;
+  const id = `timeline-chart-${interactiveChartSequence}`;
+  interactiveChartRegistry.set(id, {
+    width,
+    tooltipMode,
+    series: series.map((item) => ({
+      ...item,
+      points: [...(item.points ?? [])].sort((left, right) => dateMs(left.date) - dateMs(right.date))
+    }))
+  });
+  return id;
+}
+
+function chartRangeLayerClass(rangeId) {
+  return `chart-range-layer${rangeId === activeChartRange ? " is-active" : ""}`;
+}
+
+function renderChartRangeControls(chartId, { hasProvisional = false } = {}) {
+  return `
+    <div class="chart-range-toolbar">
+      <div class="chart-range-control" role="group" aria-label="시계열 조회 기간">
+        ${chartRangeOptions
+          .map(
+            (option) => `
+              <button
+                type="button"
+                class="${option.id === activeChartRange ? "is-active" : ""}"
+                data-chart-range="${option.id}"
+                data-chart-id="${chartId}"
+                aria-pressed="${option.id === activeChartRange ? "true" : "false"}"
+              >${option.label}</button>
+            `
+          )
+          .join("")}
+      </div>
+      <span class="chart-value-status">
+        <i class="chart-value-status__eod"></i>EOD
+        ${hasProvisional ? `<i class="chart-value-status__provisional"></i>잠정` : ""}
+      </span>
+    </div>
+  `;
+}
+
+function renderChartCursorLine(y1, y2) {
+  return `<line class="chart-cursor-line" data-chart-cursor-line x1="0" x2="0" y1="${y1}" y2="${y2}"></line>`;
+}
+
+function renderChartTooltip() {
+  return `<div class="chart-cursor-tooltip" data-chart-tooltip role="status" aria-live="polite"></div>`;
+}
+
 function renderElsIndexRiskPanel(elsRisk) {
   if (!elsRisk?.indices?.length || !elsRisk?.basket) return "";
 
   const sorted = [...elsRisk.indices].sort((a, b) => Number(b.score) - Number(a.score));
   const basket = elsRisk.basket;
-  const monthAxis = renderMonthAxis(sorted[0].series ?? []);
   const colorClass = {
     spx: "els-line--spx",
     sx5e: "els-line--sx5e",
@@ -1254,6 +1326,46 @@ function renderElsIndexRiskPanel(elsRisk) {
     hscei: "els-line--hscei",
     kospi200: "els-line--kospi200"
   };
+  const cursorColor = {
+    spx: "var(--blue)",
+    sx5e: "var(--teal)",
+    nky: "var(--amber)",
+    hscei: "var(--red)",
+    kospi200: "var(--green)"
+  };
+  const chartId = registerInteractiveChart({
+    series: elsRisk.indices.map((item) => ({
+      label: item.label,
+      points: item.series,
+      valueKey: "score",
+      color: cursorColor[item.id],
+      format: (value) => `${Number(value).toFixed(1)}점`,
+      detail: (point) => `20D ${formatSignedPct(point.return20dPct)}`
+    }))
+  });
+  const rangeLayers = chartRangeOptions
+    .map((range) => {
+      const domain = chartRangeDomain(
+        elsRisk.indices.map((item) => item.series ?? []),
+        range.id
+      );
+      const monthAxis = renderMonthAxisFromDomain(domain);
+      return `
+        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 760 210" role="img">
+          ${monthAxis.grid}
+          <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
+          ${elsRisk.indices
+            .map(
+              (item) =>
+                `<path class="els-index-line ${colorClass[item.id] ?? ""}" d="${datedValuePath(item.series, "score", domain, { min: 0, max: 100 })}"></path>`
+            )
+            .join("")}
+          ${renderChartCursorLine(18, 190)}
+          ${monthAxis.labels}
+        </svg>
+      `;
+    })
+    .join("");
 
   return `
     <section class="els-index-panel">
@@ -1316,22 +1428,15 @@ function renderElsIndexRiskPanel(elsRisk) {
           .join("")}
       </div>
 
-      <div class="els-index-chart" aria-label="기초지수별 ELS 리스크 점수 흐름">
-        <svg viewBox="0 0 760 210" role="img">
-          ${monthAxis.grid}
-          <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
-          ${elsRisk.indices
-            .map(
-              (item) => `<path class="els-index-line ${colorClass[item.id] ?? ""}" d="${scorePath(item.series)}"></path>`
-            )
-            .join("")}
-          ${monthAxis.labels}
-        </svg>
+      <div class="els-index-chart" data-timeseries-chart="${chartId}" aria-label="기초지수별 ELS 리스크 점수 흐름">
+        ${renderChartRangeControls(chartId)}
+        ${rangeLayers}
         <div class="els-index-legend">
           ${elsRisk.indices
             .map((item) => `<span><i class="${colorClass[item.id] ?? ""}"></i>${item.label}</span>`)
             .join("")}
         </div>
+        ${renderChartTooltip()}
       </div>
     </section>
   `;
@@ -1729,12 +1834,12 @@ function renderElsIssuanceHedgePage(elsRisk) {
   `;
 }
 
-function renderHmmMonthRail(domain) {
+function renderHmmMonthRail(domain, rangeId) {
   const segments = monthSegmentsFromDomain(domain, 100);
   if (!segments.length) return "";
 
   return `
-    <div class="hmm-regime-month-rail" aria-hidden="true">
+    <div class="hmm-regime-month-rail ${chartRangeLayerClass(rangeId)}" data-chart-range-layer="${rangeId}" aria-hidden="true">
       ${segments
       .map(
         (segment) => `
@@ -1808,8 +1913,13 @@ function renderHmmRegimePanel(hmmRegime) {
 
   const sorted = [...hmmRegime.indices].sort((a, b) => Number(b.issuerScore) - Number(a.issuerScore));
   const basket = hmmRegime.basket;
-  const timelineDomainValue = timelineDomain(hmmRegime.indices.map((item) => item.series ?? []));
-  const timelineAxis = renderHmmMonthRail(timelineDomainValue);
+  const timelineSeries = hmmRegime.indices.map((item) => item.series ?? []);
+  const timelineDomains = Object.fromEntries(
+    chartRangeOptions.map((range) => [range.id, chartRangeDomain(timelineSeries, range.id)])
+  );
+  const timelineAxis = chartRangeOptions
+    .map((range) => renderHmmMonthRail(timelineDomains[range.id], range.id))
+    .join("");
   const colorClass = {
     spx: "hmm-line--spx",
     sx5e: "hmm-line--sx5e",
@@ -1817,6 +1927,23 @@ function renderHmmRegimePanel(hmmRegime) {
     hscei: "hmm-line--hscei",
     kospi200: "hmm-line--kospi200"
   };
+  const cursorColor = {
+    spx: "var(--blue)",
+    sx5e: "var(--teal)",
+    nky: "var(--amber)",
+    hscei: "var(--red)",
+    kospi200: "var(--green)"
+  };
+  const chartId = registerInteractiveChart({
+    series: hmmRegime.indices.map((item) => ({
+      label: item.label,
+      points: item.series,
+      valueKey: "issuerScore",
+      color: cursorColor[item.id],
+      format: (value) => `부담 ${Number(value).toFixed(1)}`,
+      detail: (point) => point.regime
+    }))
+  });
   const regimeText = (item) =>
     `${item.regime} · 위험회피 ${Number(item.probabilities["위험회피"]).toFixed(1)}% · 활황 ${Number(item.probabilities["고변동성 활황"]).toFixed(1)}%`;
 
@@ -1880,16 +2007,19 @@ function renderHmmRegimePanel(hmmRegime) {
           .join("")}
       </div>
 
-      <div class="hmm-regime-timeline" aria-label="국가별 HMM 레짐 흐름">
+      <div class="hmm-regime-timeline" data-timeseries-chart="${chartId}" aria-label="국가별 HMM 레짐 흐름">
         <div class="hmm-regime-timeline__header">
           <div>
             <span class="eyebrow">Regime Timeline</span>
             <h3>지수별 레짐 흐름</h3>
           </div>
-          <div class="hmm-regime-key" aria-label="레짐 색상">
-            <span><i class="hmm-regime-strip__cell--good"></i>안정</span>
-            <span><i class="hmm-regime-strip__cell--caution"></i>고변동성 활황</span>
-            <span><i class="hmm-regime-strip__cell--danger"></i>위험회피</span>
+          <div class="chart-panel-tools">
+            ${renderChartRangeControls(chartId)}
+            <div class="hmm-regime-key" aria-label="레짐 색상">
+              <span><i class="hmm-regime-strip__cell--good"></i>안정</span>
+              <span><i class="hmm-regime-strip__cell--caution"></i>고변동성 활황</span>
+              <span><i class="hmm-regime-strip__cell--danger"></i>위험회피</span>
+            </div>
           </div>
         </div>
 
@@ -1897,8 +2027,24 @@ function renderHmmRegimePanel(hmmRegime) {
 
         <div class="hmm-regime-rows">
           ${hmmRegime.indices
-          .map(
-            (item) => `
+          .map((item, seriesIndex) => {
+            const rangeLayers = chartRangeOptions
+              .map((range) => {
+                const domain = timelineDomains[range.id];
+                const visible = pointsWithinDomain(item.series, domain, "issuerScore");
+                return `
+                  <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg data-chart-series-index="${seriesIndex}" viewBox="0 0 260 86" preserveAspectRatio="none" role="img" aria-label="${item.label} HMM 레짐과 부담 점수">
+                    ${renderHmmMonthGuides(domain)}
+                    <rect class="hmm-regime-band-bg" x="0" y="4" width="260" height="12"></rect>
+                    ${renderHmmRegimeBands(visible, domain)}
+                    <path class="hmm-regime-spark-grid" d="M 0 30 L 260 30 M 0 48 L 260 48 M 0 66 L 260 66"></path>
+                    <path class="hmm-regime-spark ${colorClass[item.id] ?? ""}" d="${scorePathByDatePlot(visible, "issuerScore", 260, 26, 80, domain)}"></path>
+                    ${renderChartCursorLine(4, 80)}
+                  </svg>
+                `;
+              })
+              .join("");
+            return `
               <article class="hmm-regime-row hmm-regime-row--${item.tone}">
                 <div class="hmm-regime-row__meta">
                   <strong>${item.label}</strong>
@@ -1906,13 +2052,7 @@ function renderHmmRegimePanel(hmmRegime) {
                   <small>${item.regime} · 부담 ${Number(item.issuerScore).toFixed(1)}</small>
                 </div>
                 <div class="hmm-regime-row__track">
-                  <svg viewBox="0 0 260 86" preserveAspectRatio="none" role="img" aria-label="${item.label} HMM 레짐과 부담 점수">
-                    ${renderHmmMonthGuides(timelineDomainValue)}
-                    <rect class="hmm-regime-band-bg" x="0" y="4" width="260" height="12"></rect>
-                    ${renderHmmRegimeBands(item.series, timelineDomainValue)}
-                    <path class="hmm-regime-spark-grid" d="M 0 30 L 260 30 M 0 48 L 260 48 M 0 66 L 260 66"></path>
-                    <path class="hmm-regime-spark ${colorClass[item.id] ?? ""}" d="${scorePathByDatePlot(item.series, "issuerScore", 260, 26, 80, timelineDomainValue)}"></path>
-                  </svg>
+                  ${rangeLayers}
                 </div>
                 <dl class="hmm-regime-row__stats">
                   <div><dt>위험회피</dt><dd>${Number(item.probabilities["위험회피"]).toFixed(1)}%</dd></div>
@@ -1920,10 +2060,11 @@ function renderHmmRegimePanel(hmmRegime) {
                   <div><dt>20D</dt><dd>${formatSignedPct(item.metrics.return20dPct)}</dd></div>
                 </dl>
               </article>
-            `
-          )
+            `;
+          })
           .join("")}
         </div>
+        ${renderChartTooltip()}
       </div>
     </section>
   `;
@@ -1937,17 +2078,114 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
   const crash5pct = Number(latest.crash5d5pctProbabilityPct);
   const crash10pct = Number(latest.crash5d10pctProbabilityPct);
   const comparison = buildLeadLagComparison(mlRisk, elsRisk);
-  const chartSeries = comparison?.priceSeries ?? series;
-  const monthAxis = renderMonthAxis(chartSeries);
-  const riskPath = comparison
-    ? datedLinePath(comparison.signalSeries, "crash5d5pctProbabilityPct", comparison.startDate, comparison.endDate, 760, 210, 18, comparison.signalDomain)
-    : linePath(series, "riskOffProbabilityPct");
-  const pendingRiskPath = comparison
-    ? datedLinePath(comparison.pendingSignalSeries, "crash5d5pctProbabilityPct", comparison.startDate, comparison.endDate, 760, 210, 18, comparison.signalDomain)
-    : "";
-  const kospi200Path = comparison
-    ? datedLinePath(comparison.priceSeries, "kospi200YtdIndex", comparison.startDate, comparison.endDate)
-    : "";
+  const latestSignalPoints = comparison
+    ? [...comparison.signalSeries, ...comparison.pendingSignalSeries.slice(1)]
+    : series;
+  const chartId = registerInteractiveChart({
+    series: comparison
+      ? [
+          {
+            label: "ML 5D -5%",
+            points: latestSignalPoints,
+            valueKey: "crash5d5pctProbabilityPct",
+            color: "var(--red)",
+            format: (value) => `${Number(value).toFixed(1)}%`,
+            status: (point) => (point.date > comparison.signalEndDate ? "잠정" : "EOD")
+          },
+          {
+            label: "KOSPI200",
+            points: comparison.priceSeries,
+            valueKey: "kospi200YtdIndex",
+            color: "var(--green)",
+            format: (value) => `${Number(value).toFixed(1)}`
+          }
+        ]
+      : [
+          {
+            label: "20D Risk-off",
+            points: series,
+            valueKey: "riskOffProbabilityPct",
+            color: "var(--red)",
+            format: (value) => `${Number(value).toFixed(1)}%`
+          }
+        ]
+  });
+  const mlRangeLayers = chartRangeOptions
+    .map((range) => {
+      const sourceSeries = comparison
+        ? [comparison.signalSeries, comparison.pendingSignalSeries, comparison.priceSeries]
+        : [series];
+      const domain = chartRangeDomain(sourceSeries, range.id);
+      const monthAxis = renderMonthAxisFromDomain(domain);
+      const visibleSignals = comparison
+        ? pointsWithinDomain(comparison.signalSeries, domain, "crash5d5pctProbabilityPct")
+        : pointsWithinDomain(series, domain, "riskOffProbabilityPct");
+      const visiblePending = comparison
+        ? pointsWithinDomain(
+            comparison.pendingSignalSeries,
+            domain,
+            "crash5d5pctProbabilityPct"
+          )
+        : [];
+      const visiblePrices = comparison
+        ? pointsWithinDomain(comparison.priceSeries, domain, "kospi200YtdIndex")
+        : [];
+      const signalValueKey = comparison
+        ? "crash5d5pctProbabilityPct"
+        : "riskOffProbabilityPct";
+      const signalValueDomain = numericChartDomain(
+        [...visibleSignals, ...visiblePending],
+        signalValueKey,
+        0.06
+      );
+      const priceValueDomain = numericChartDomain(
+        visiblePrices,
+        "kospi200YtdIndex",
+        0.06
+      );
+      const riskPath = datedValuePath(
+        visibleSignals,
+        signalValueKey,
+        domain,
+        signalValueDomain
+      );
+      const pendingRiskPath = comparison
+        ? datedValuePath(
+            visiblePending,
+            "crash5d5pctProbabilityPct",
+            domain,
+            signalValueDomain
+          )
+        : "";
+      const kospi200Path = comparison
+        ? datedValuePath(
+            visiblePrices,
+            "kospi200YtdIndex",
+            domain,
+            priceValueDomain
+          )
+        : "";
+      const cutoffX = comparison
+        ? Math.max(0, Math.min(760, xFromDate(comparison.signalEndDate, domain, 760)))
+        : 760;
+      const pendingArea =
+        comparison && visiblePending.length > 1 && cutoffX < 760
+          ? `<rect class="ml-risk-chart__pending" x="${cutoffX.toFixed(2)}" y="18" width="${(760 - cutoffX).toFixed(2)}" height="172"></rect><line class="ml-risk-chart__cutoff" x1="${cutoffX.toFixed(2)}" y1="18" x2="${cutoffX.toFixed(2)}" y2="190"></line>`
+          : "";
+      return `
+        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 760 210" role="img">
+          ${pendingArea}
+          ${monthAxis.grid}
+          <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
+          <path class="ml-risk-chart__risk" d="${riskPath}"></path>
+          <path class="ml-risk-chart__risk-pending" d="${pendingRiskPath}"></path>
+          <path class="ml-risk-chart__kospi200" d="${kospi200Path}"></path>
+          ${renderChartCursorLine(18, 190)}
+          ${monthAxis.labels}
+        </svg>
+      `;
+    })
+    .join("");
   const ml = mlRisk.metrics?.ml ?? {};
   const baseline = mlRisk.metrics?.baseline ?? {};
   const crash5pctMetrics = mlRisk.metrics?.crash5d5pct ?? {};
@@ -2060,20 +2298,17 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
       </div>
 
       <div class="ml-risk-body">
-        <div class="ml-risk-chart" aria-label="워크포워드 5일 -5% 급락확률과 KOSPI200 YTD 선행성 비교">
+        <div class="ml-risk-chart" data-timeseries-chart="${chartId}" aria-label="워크포워드 5일 -5% 급락확률과 KOSPI200 선행성 비교">
           <div class="ml-risk-chart__header">
-            <strong>5일 급락신호 → KOSPI200</strong>
-            <span>현재 신호 ${formatShortDate(comparison?.currentSignalDate)} · OOS 결과 ${formatShortDate(comparison?.resultKnownThroughDate)}까지 확인</span>
+            <div class="ml-risk-chart__heading">
+              <strong>5일 급락신호 → KOSPI200</strong>
+              <span>현재 신호 ${formatShortDate(comparison?.currentSignalDate)} · OOS 결과 ${formatShortDate(comparison?.resultKnownThroughDate)}까지 확인</span>
+            </div>
+            ${renderChartRangeControls(chartId, {
+              hasProvisional: Boolean(comparison?.pendingSignalSeries?.length > 1)
+            })}
           </div>
-          <svg viewBox="0 0 760 210" role="img">
-            ${comparison && comparison.signalEndX < 760 ? `<rect class="ml-risk-chart__pending" x="${comparison.signalEndX.toFixed(2)}" y="0" width="${(760 - comparison.signalEndX).toFixed(2)}" height="210"></rect><line class="ml-risk-chart__cutoff" x1="${comparison.signalEndX.toFixed(2)}" y1="0" x2="${comparison.signalEndX.toFixed(2)}" y2="210"></line>` : ""}
-            ${monthAxis.grid}
-            <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
-            <path class="ml-risk-chart__risk" d="${riskPath}"></path>
-            <path class="ml-risk-chart__risk-pending" d="${pendingRiskPath}"></path>
-            <path class="ml-risk-chart__kospi200" d="${kospi200Path}"></path>
-            ${monthAxis.labels}
-          </svg>
+          ${mlRangeLayers}
           <div class="ml-risk-chart__legend">
             <span><i class="legend-risk"></i>ML 5D -5% 도달확률 · OOS 확인</span>
             <span><i class="legend-risk-pending"></i>현재까지의 최신 예측</span>
@@ -2085,6 +2320,7 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
             leadReading,
             "점선 구간: 최신 예측 · 향후 5거래일 결과 대기 · OOS 평가 제외"
           ], "narrative-list--compact ml-risk-chart__note")}
+          ${renderChartTooltip()}
         </div>
 
         <div class="ml-risk-explain">
@@ -2101,14 +2337,52 @@ function renderCompositeTrend(section, timeseries) {
   if (points.length < 2) return "";
 
   const latest = points[points.length - 1];
-  const path = trendChartPath(points);
-  const areaPath = `${path} L 760 190 L 0 190 Z`;
   const change1d = valueChange(latest.value, points, 1);
   const change1w = valueChange(latest.value, points, 5);
   const change1m = valueChange(latest.value, points, 20);
   const minPoint = points.reduce((min, point) => (point.value < min.value ? point : min), points[0]);
   const maxPoint = points.reduce((max, point) => (point.value > max.value ? point : max), points[0]);
-  const monthAxis = renderMonthAxis(points);
+  const chartId = registerInteractiveChart({
+    series: [
+      {
+        label: "종합점수",
+        points,
+        valueKey: "value",
+        color: "var(--teal)",
+        format: (value) => `${Number(value).toFixed(1)}점`
+      }
+    ]
+  });
+  const rangeLayers = chartRangeOptions
+    .map((range) => {
+      const domain = chartRangeDomain([points], range.id);
+      const visible = pointsWithinDomain(points, domain, "value");
+      const values = visible.map((point) => clampScore(point.value));
+      const valueDomain = values.length
+        ? {
+            min: Math.max(0, Math.min(...values) - 5),
+            max: Math.min(100, Math.max(...values) + 5)
+          }
+        : { min: 0, max: 100 };
+      const path = datedValuePath(visible, "value", domain, valueDomain);
+      const firstX = visible.length ? xFromDate(visible[0].date, domain, 760) : 0;
+      const lastX = visible.length ? xFromDate(visible.at(-1).date, domain, 760) : 760;
+      const areaPath = path
+        ? `${path} L ${lastX.toFixed(2)} 190 L ${firstX.toFixed(2)} 190 Z`
+        : "";
+      const monthAxis = renderMonthAxisFromDomain(domain);
+      return `
+        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 760 210" role="img">
+          ${monthAxis.grid}
+          <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
+          <path class="trend-chart__area" d="${areaPath}"></path>
+          <path class="trend-chart__line" d="${path}"></path>
+          ${renderChartCursorLine(18, 190)}
+          ${monthAxis.labels}
+        </svg>
+      `;
+    })
+    .join("");
 
   return `
     <section class="trend-panel">
@@ -2129,14 +2403,10 @@ function renderCompositeTrend(section, timeseries) {
         <span><small>High</small><strong>${maxPoint.value.toFixed(1)}</strong></span>
         <span><small>Low</small><strong>${minPoint.value.toFixed(1)}</strong></span>
       </div>
-      <div class="trend-chart" aria-label="시장리스크 종합점수 시계열">
-        <svg viewBox="0 0 760 210" role="img">
-          ${monthAxis.grid}
-          <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
-          <path class="trend-chart__area" d="${areaPath}"></path>
-          <path class="trend-chart__line" d="${path}"></path>
-          ${monthAxis.labels}
-        </svg>
+      <div class="trend-chart" data-timeseries-chart="${chartId}" aria-label="시장리스크 종합점수 시계열">
+        ${renderChartRangeControls(chartId)}
+        ${rangeLayers}
+        ${renderChartTooltip()}
       </div>
     </section>
   `;
@@ -2166,17 +2436,16 @@ function renderSparkline(indicator, timeseries) {
   `;
 }
 
-function marketTrendCoordinates(points, width = 180, height = 52, padding = 4) {
+function marketTrendCoordinates(points, domain = null, width = 180, height = 52, padding = 4) {
   if (points.length < 2) return [];
   const values = points.map((point) => Number(point.close)).filter(Number.isFinite);
   if (values.length < 2) return [];
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min || Math.max(Math.abs(max), 1) * 0.01;
-  const step = width / (points.length - 1);
   return points
     .map((point, index) => {
-      const x = index * step;
+      const x = domain ? xFromDate(point.date, domain, width) : (index / (points.length - 1)) * width;
       const y = height - padding - ((Number(point.close) - min) / range) * (height - padding * 2);
       return { x, y };
     });
@@ -2323,13 +2592,29 @@ function analyzeMarketTrend(definition, marketIndexes) {
   };
 }
 
-function renderMarketTrendRow(item) {
-  const coordinates = marketTrendCoordinates(item.chartRows);
-  const confirmedCoordinates = item.hasLive ? coordinates.slice(0, -1) : coordinates;
-  const liveCoordinates = item.hasLive ? coordinates.slice(-2) : [];
-  const path = marketTrendPath(confirmedCoordinates);
-  const livePath = marketTrendPath(liveCoordinates);
-  const lastPoint = coordinates[coordinates.length - 1];
+function renderMarketTrendRow(item, seriesIndex, timelineDomains) {
+  const rangeLayers = chartRangeOptions
+    .map((range) => {
+      const domain = timelineDomains[range.id];
+      const visible = pointsWithinDomain(item.rows, domain, "close");
+      const coordinates = marketTrendCoordinates(visible, domain);
+      const hasVisibleLive = Boolean(visible.at(-1)?.isLive);
+      const confirmedCoordinates = hasVisibleLive ? coordinates.slice(0, -1) : coordinates;
+      const liveCoordinates = hasVisibleLive ? coordinates.slice(-2) : [];
+      const path = marketTrendPath(confirmedCoordinates);
+      const livePath = marketTrendPath(liveCoordinates);
+      const lastPoint = coordinates.at(-1);
+      return `
+        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg data-chart-series-index="${seriesIndex}" viewBox="0 0 180 52" role="img" aria-label="${item.label} 선택 기간 흐름">
+          <path class="market-trend-row__baseline" d="M 0 26 H 180"></path>
+          <path class="market-trend-row__line" d="${path}"></path>
+          ${hasVisibleLive ? `<path class="market-trend-row__live-line" d="${livePath}"></path>` : ""}
+          ${lastPoint ? `<circle class="${hasVisibleLive ? "market-trend-row__live-point" : ""}" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="3"></circle>` : ""}
+          ${renderChartCursorLine(3, 49)}
+        </svg>
+      `;
+    })
+    .join("");
   const persistenceText =
     item.direction === "flat"
       ? `상승 ${item.upCount} · 하락 ${item.downCount}`
@@ -2346,12 +2631,7 @@ function renderMarketTrendRow(item) {
         }
       </div>
       <div class="market-trend-row__chart">
-        <svg viewBox="0 0 180 52" role="img" aria-label="${item.label} 최근 3개월 흐름">
-          <path class="market-trend-row__baseline" d="M 0 26 H 180"></path>
-          <path class="market-trend-row__line" d="${path}"></path>
-          ${item.hasLive ? `<path class="market-trend-row__live-line" d="${livePath}"></path>` : ""}
-          <circle class="${item.hasLive ? "market-trend-row__live-point" : ""}" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="3"></circle>
-        </svg>
+        ${rangeLayers}
       </div>
       <dl class="market-trend-row__numbers">
         <div><dt>현재</dt><dd>${formatMarketTrendValue(item.latest.close, item.type)}</dd></div>
@@ -2381,6 +2661,23 @@ function renderMarketIndexTrendPanel(marketIndexes) {
   const persistent = items.filter((item) => item.persistent);
   const liveItems = items.filter((item) => item.hasLive);
   const latestDate = items.map((item) => item.latest.date).sort().at(-1);
+  const timelineSeries = items.map((item) => item.rows);
+  const timelineDomains = Object.fromEntries(
+    chartRangeOptions.map((range) => [range.id, chartRangeDomain(timelineSeries, range.id)])
+  );
+  const chartId = registerInteractiveChart({
+    tooltipMode: "hovered",
+    width: 180,
+    series: items.map((item) => ({
+      label: item.label,
+      points: item.rows,
+      valueKey: "close",
+      color: item.direction === "up" ? "var(--red)" : item.direction === "down" ? "var(--green)" : "var(--blue)",
+      format: (value) => formatMarketTrendValue(value, item.type),
+      status: (point) => (point.isLive ? "잠정" : "EOD")
+    }))
+  });
+  const seriesIndexById = new Map(items.map((item, index) => [item.id, index]));
   const narrativeItems = persistent
     .sort((left, right) => Math.abs(right.oneMonthChange) - Math.abs(left.oneMonthChange))
     .slice(0, 4)
@@ -2390,7 +2687,7 @@ function renderMarketIndexTrendPanel(marketIndexes) {
     : "뚜렷한 단일 방향 없이 자산별 혼조";
 
   return `
-    <section class="market-trend-panel">
+    <section class="market-trend-panel" data-timeseries-chart="${chartId}">
       <header class="market-trend-panel__header">
         <div>
           <span class="eyebrow">Naver Market Direction</span>
@@ -2403,18 +2700,26 @@ function renderMarketIndexTrendPanel(marketIndexes) {
           <small>${liveItems.length ? `장중 최신값 ${liveItems.length}개` : `최신 ${latestDate}`}</small>
         </div>
       </header>
+      <div class="market-trend-panel__toolbar">
+        ${renderChartRangeControls(chartId, { hasProvisional: liveItems.length > 0 })}
+      </div>
       <div class="market-trend-groups">
         ${groups
           .map(
             (group) => `
               <section class="market-trend-group market-trend-group--${group.id}">
                 <header><h3>${group.label}</h3><span>${group.items.length}개</span></header>
-                <div>${group.items.map(renderMarketTrendRow).join("")}</div>
+                <div>${group.items
+                  .map((item) =>
+                    renderMarketTrendRow(item, seriesIndexById.get(item.id), timelineDomains)
+                  )
+                  .join("")}</div>
               </section>
             `
           )
           .join("")}
       </div>
+      ${renderChartTooltip()}
       <footer class="market-trend-panel__footer">
         <span>Naver Pay 증권 시장지표</span>
         <span>현재값은 실시간·지연 잠정치 · 과거 시계열과 ML은 확정 EOD</span>
@@ -2732,9 +3037,52 @@ function renderSentimentPage(data, timeseries, mlRisk, elsRisk, hmmRegime) {
   const level = sentimentLevel(score);
   const points = buildSentimentSeries(market, timeseries);
   const latest = points[points.length - 1] ?? { date: data.metadata.asOf, value: score };
-  const path = trendChartPath(points);
-  const areaPath = path ? `${path} L 760 190 L 0 190 Z` : "";
-  const monthAxis = renderMonthAxis(points);
+  const sentimentChartId =
+    points.length >= 2
+      ? registerInteractiveChart({
+          series: [
+            {
+              label: "센티멘트",
+              points,
+              valueKey: "value",
+              color: "var(--teal)",
+              format: (value) => `${Number(value).toFixed(1)}점`
+            }
+          ]
+        })
+      : null;
+  const sentimentRangeLayers = sentimentChartId
+    ? chartRangeOptions
+        .map((range) => {
+          const domain = chartRangeDomain([points], range.id);
+          const visible = pointsWithinDomain(points, domain, "value");
+          const values = visible.map((point) => clampScore(point.value));
+          const valueDomain = values.length
+            ? {
+                min: Math.max(0, Math.min(...values) - 5),
+                max: Math.min(100, Math.max(...values) + 5)
+              }
+            : { min: 0, max: 100 };
+          const path = datedValuePath(visible, "value", domain, valueDomain);
+          const firstX = visible.length ? xFromDate(visible[0].date, domain, 760) : 0;
+          const lastX = visible.length ? xFromDate(visible.at(-1).date, domain, 760) : 760;
+          const areaPath = path
+            ? `${path} L ${lastX.toFixed(2)} 190 L ${firstX.toFixed(2)} 190 Z`
+            : "";
+          const monthAxis = renderMonthAxisFromDomain(domain);
+          return `
+            <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 760 210" role="img">
+              ${monthAxis.grid}
+              <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
+              <path class="trend-chart__area" d="${areaPath}"></path>
+              <path class="trend-chart__line" d="${path}"></path>
+              ${renderChartCursorLine(18, 190)}
+              ${monthAxis.labels}
+            </svg>
+          `;
+        })
+        .join("")
+    : "";
   const changes = [
     ["1D", valueChange(latest.value, points, 1)],
     ["1W", valueChange(latest.value, points, 5)],
@@ -2821,14 +3169,10 @@ function renderSentimentPage(data, timeseries, mlRisk, elsRisk, hmmRegime) {
                   .join("")}
                 <span><small>기준</small><strong>50.0</strong></span>
               </div>
-              <div class="trend-chart" aria-label="시장 센티멘트 시계열">
-                <svg viewBox="0 0 760 210" role="img">
-                  ${monthAxis.grid}
-                  <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
-                  <path class="trend-chart__area" d="${areaPath}"></path>
-                  <path class="trend-chart__line" d="${path}"></path>
-                  ${monthAxis.labels}
-                </svg>
+              <div class="trend-chart" data-timeseries-chart="${sentimentChartId}" aria-label="시장 센티멘트 시계열">
+                ${renderChartRangeControls(sentimentChartId)}
+                ${sentimentRangeLayers}
+                ${renderChartTooltip()}
               </div>
             </section>`
           : ""
@@ -3252,6 +3596,143 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
   `;
 }
 
+function nearestChartPoint(points, targetTime, domain, valueKey) {
+  const visible = pointsWithinDomain(points, domain, valueKey);
+  if (!visible.length) return null;
+  return visible.reduce((nearest, point) =>
+    Math.abs(dateMs(point.date) - targetTime) < Math.abs(dateMs(nearest.date) - targetTime)
+      ? point
+      : nearest
+  );
+}
+
+function hideChartCursor(chart) {
+  chart.querySelectorAll("[data-chart-cursor-line]").forEach((line) => {
+    line.classList.remove("is-visible");
+  });
+  chart.querySelector("[data-chart-tooltip]")?.classList.remove("is-visible");
+}
+
+function updateChartCursor(chart, svg, event) {
+  const model = interactiveChartRegistry.get(chart.dataset.timeseriesChart);
+  if (!model) return;
+  const domain = chartRangeDomain(
+    model.series.map((item) => item.points),
+    activeChartRange
+  );
+  if (!domain) return;
+
+  const svgRect = svg.getBoundingClientRect();
+  if (!svgRect.width) return;
+  const ratio = Math.max(0, Math.min(1, (event.clientX - svgRect.left) / svgRect.width));
+  const requestedTime = domain.start + ratio * domain.span;
+  const hoveredIndex = Number(svg.dataset.chartSeriesIndex);
+  const hasHoveredSeries = Number.isInteger(hoveredIndex) && model.series[hoveredIndex];
+  const anchorSeries = hasHoveredSeries ? model.series[hoveredIndex] : model.series[0];
+  const anchorPoint = nearestChartPoint(
+    anchorSeries.points,
+    requestedTime,
+    domain,
+    anchorSeries.valueKey
+  );
+  if (!anchorPoint) return;
+
+  const cursorTime = dateMs(anchorPoint.date);
+  const cursorRatio = Math.max(0, Math.min(1, (cursorTime - domain.start) / domain.span));
+  chart
+    .querySelectorAll(
+      `[data-chart-range-layer="${activeChartRange}"] [data-chart-cursor-line]`
+    )
+    .forEach((line) => {
+      const ownerSvg = line.ownerSVGElement;
+      const width = ownerSvg?.viewBox?.baseVal?.width || model.width;
+      const x = cursorRatio * width;
+      line.setAttribute("x1", x.toFixed(2));
+      line.setAttribute("x2", x.toFixed(2));
+      line.classList.add("is-visible");
+    });
+
+  const tooltipSeries =
+    model.tooltipMode === "hovered" && hasHoveredSeries
+      ? [model.series[hoveredIndex]]
+      : model.series;
+  const rows = tooltipSeries
+    .map((item) => {
+      const point = nearestChartPoint(item.points, cursorTime, domain, item.valueKey);
+      if (!point) return "";
+      const value = item.format
+        ? item.format(point[item.valueKey], point)
+        : formatNumber(point[item.valueKey], 2);
+      const detail = item.detail?.(point);
+      const status = item.status?.(point) ?? "EOD";
+      const alternateDate = point.date === anchorPoint.date ? "" : formatShortDate(point.date);
+      const secondary = [detail, alternateDate].filter(Boolean).join(" · ");
+      return `
+        <div class="chart-cursor-tooltip__row">
+          <i style="background:${item.color ?? "var(--blue)"}"></i>
+          <span>${item.label}</span>
+          <strong>${value}</strong>
+          ${secondary ? `<small>${secondary}</small>` : ""}
+          <em class="${status === "잠정" ? "is-provisional" : ""}">${status}</em>
+        </div>
+      `;
+    })
+    .filter(Boolean)
+    .join("");
+  const tooltip = chart.querySelector("[data-chart-tooltip]");
+  if (!tooltip || !rows) return;
+  tooltip.innerHTML = `<b>${anchorPoint.date}</b>${rows}`;
+  const chartRect = chart.getBoundingClientRect();
+  const horizontalInset = Math.min(110, Math.max(16, chartRect.width / 2));
+  const localX = Math.max(
+    horizontalInset,
+    Math.min(chartRect.width - horizontalInset, event.clientX - chartRect.left)
+  );
+  const localY = event.clientY - chartRect.top;
+  const above = localY > chartRect.height * 0.52;
+  tooltip.style.left = `${localX}px`;
+  tooltip.style.top = `${above ? localY - 14 : localY + 14}px`;
+  tooltip.dataset.placement = above ? "above" : "below";
+  tooltip.classList.add("is-visible");
+}
+
+function activateChartRange(rangeId) {
+  if (!chartRangeOptions.some((option) => option.id === rangeId)) return;
+  activeChartRange = rangeId;
+  localStorage.setItem(CHART_RANGE_STORAGE_KEY, rangeId);
+  app.querySelectorAll("[data-chart-range]").forEach((button) => {
+    const selected = button.dataset.chartRange === rangeId;
+    button.classList.toggle("is-active", selected);
+    button.setAttribute("aria-pressed", selected ? "true" : "false");
+  });
+  app.querySelectorAll("[data-chart-range-layer]").forEach((layer) => {
+    layer.classList.toggle("is-active", layer.dataset.chartRangeLayer === rangeId);
+  });
+  app.querySelectorAll("[data-timeseries-chart]").forEach(hideChartCursor);
+}
+
+function initializeInteractiveCharts(scope = app) {
+  scope.querySelectorAll("[data-chart-range]:not([data-chart-range-bound])").forEach((button) => {
+    button.dataset.chartRangeBound = "true";
+    button.addEventListener("click", () => activateChartRange(button.dataset.chartRange));
+  });
+  scope
+    .querySelectorAll("[data-timeseries-chart]:not([data-timeseries-chart-bound])")
+    .forEach((chart) => {
+      chart.dataset.timeseriesChartBound = "true";
+      const handlePointer = (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        const svg = target?.closest("svg[data-chart-svg]");
+        if (!svg || !chart.contains(svg)) return;
+        updateChartCursor(chart, svg, event);
+      };
+      chart.addEventListener("pointermove", handlePointer, { passive: true });
+      chart.addEventListener("pointerdown", handlePointer, { passive: true });
+      chart.addEventListener("pointerleave", () => hideChartCursor(chart));
+    });
+  activateChartRange(activeChartRange);
+}
+
 function renderDashboard(
   rawData,
   timeseries,
@@ -3260,6 +3741,8 @@ function renderDashboard(
   hmmRegime,
   pipelineStatus
 ) {
+  interactiveChartRegistry.clear();
+  interactiveChartSequence = 0;
   const data = evaluateDashboard(rawData);
   const dashboardTabs = dashboardTabsWithElsTool(data.tabs);
   const enabledTabs = dashboardTabs.filter((tab) => tab.enabled);
@@ -3374,6 +3857,7 @@ function renderDashboard(
             .join("")}
     </div>
   `;
+  initializeInteractiveCharts(app);
 
   let marketDetailsStatus = "idle";
   const hydrateMarketDetails = async () => {
@@ -3395,6 +3879,7 @@ function renderDashboard(
       directionSlot.innerHTML =
         renderMarketIndexTrendPanel(marketIndexes) ||
         `<div class="deferred-panel deferred-panel--error">시장 방향성 데이터를 확인하지 못했습니다</div>`;
+      initializeInteractiveCharts(directionSlot);
     }
     if (historySlot) {
       historySlot.innerHTML =
