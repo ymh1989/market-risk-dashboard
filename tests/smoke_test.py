@@ -209,8 +209,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260729-4" in html
-    assert "app.js?v=20260729-4" in html
+    assert "styles.css?v=20260729-5" in html
+    assert "app.js?v=20260729-5" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -268,12 +268,15 @@ def test_operations_page_exposes_daily_schedule_overview():
     )
 
     assert "function buildScheduleOverview" in app_source
+    assert "function findSuccessfulRunForSchedule" in app_source
+    assert "candidate.completedTimestamp >= scheduleItem.timestamp" in app_source
+    assert 'scheduleItem.mode === "full"' in app_source
     assert "function medianRunDuration" in app_source
     assert "오늘의 예약 실행" in app_source
     assert "다음 예약" in app_source
     assert "schedule.saturdayTimes ?? []" in app_source
     assert "토 ${saturdayScheduleText}" in app_source
-    assert 'statusLabel: "완료"' in app_source
+    assert 'statusLabel: matched.replacement ? "보완 완료" : "완료"' in app_source
     assert 'statusLabel: delayed ? "지연" : "진행 중"' in app_source
     assert "최근 성공 중앙 소요시간" in app_source
     assert "${renderScheduleOverview(pipelineStatus)}" in app_source

@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260729-4";
+const ASSET_VERSION = "20260729-5";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -478,6 +478,48 @@ function formatKstClock(value) {
   return clock ? clock.slice(0, 5) : "-";
 }
 
+function parseKstTimestamp(value) {
+  const match = String(value ?? "").match(
+    /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/
+  );
+  if (!match) return Number.NaN;
+  const [, year, month, day, hour, minute, second = "0"] = match;
+  return Date.UTC(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour) - 9,
+    Number(minute),
+    Number(second)
+  );
+}
+
+function findSuccessfulRunForSchedule(history, scheduleItem) {
+  const modeMatches = (run) =>
+    scheduleItem.mode === "full"
+      ? run.mode === "full"
+      : run.mode === "fast" || run.mode === "full";
+  const successful = (history ?? []).filter(
+    (run) => run.status === "success" && modeMatches(run)
+  );
+  const exact = successful.find(
+    (run) =>
+      run.scheduledTime === scheduleItem.time &&
+      String(run.startedAt ?? "").startsWith(scheduleItem.dateKey)
+  );
+  if (exact) return { run: exact, replacement: false };
+
+  const replacement = successful
+    .map((run) => ({ run, completedTimestamp: parseKstTimestamp(run.completedAt) }))
+    .filter(
+      (candidate) =>
+        Number.isFinite(candidate.completedTimestamp) &&
+        candidate.completedTimestamp >= scheduleItem.timestamp
+    )
+    .sort((left, right) => left.completedTimestamp - right.completedTimestamp)[0];
+  return replacement ? { run: replacement.run, replacement: true } : null;
+}
+
 function medianRunDuration(history, mode) {
   const durations = (history ?? [])
     .filter((run) => run.status === "success" && run.mode === mode && Number(run.durationSeconds) > 0)
@@ -553,19 +595,14 @@ function buildScheduleOverview(pipelineStatus) {
   const history = pipelineStatus?.history ?? [];
   const graceMinutes = Number(pipelineStatus?.schedule?.delayGraceMinutes ?? 5);
   const items = scheduledItems.map((item) => {
-    const run = history.find(
-      (candidate) =>
-        candidate.status === "success" &&
-        candidate.scheduledTime === item.time &&
-        String(candidate.startedAt ?? "").startsWith(item.dateKey)
-    );
-    if (run) {
+    const matched = findSuccessfulRunForSchedule(history, item);
+    if (matched) {
       return {
         ...item,
         status: "success",
         tone: "good",
-        statusLabel: "완료",
-        detail: `${formatKstClock(run.completedAt)} 완료 · ${formatDurationSeconds(run.durationSeconds)}`
+        statusLabel: matched.replacement ? "보완 완료" : "완료",
+        detail: `${formatKstClock(matched.run.completedAt)} ${matched.replacement ? "보완 실행 완료" : "완료"} · ${formatDurationSeconds(matched.run.durationSeconds)}`
       };
     }
     if (item.timestamp > now) {
@@ -619,12 +656,7 @@ function pipelineRuntimeState(pipelineStatus) {
   const latestDue = [...instances].reverse().find((item) => item.timestamp <= now);
   const nextRun = instances.find((item) => item.timestamp > now) ?? null;
   const matchingRun = latestDue
-    ? history.find(
-        (item) =>
-          item.status === "success" &&
-          item.scheduledTime === latestDue.time &&
-          String(item.startedAt ?? "").startsWith(latestDue.dateKey)
-      )
+    ? findSuccessfulRunForSchedule(history, latestDue)
     : null;
   const latestSuccess = history.find((item) => item.status === "success") ?? pipelineStatus.current;
   const sourceProblem = (pipelineStatus.sources ?? []).some((source) => source.status !== "ok");
