@@ -209,8 +209,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260729-2" in html
-    assert "app.js?v=20260729-2" in html
+    assert "styles.css?v=20260729-3" in html
+    assert "app.js?v=20260729-3" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -365,6 +365,8 @@ def test_interactive_timeline_range_and_cursor_contract():
     assert 'let activeChartRange = "ytd"' in app_source
     assert "CHART_RANGE_STORAGE_KEY" not in app_source
     assert "function chartRangeDomain" in app_source
+    assert "const estimatedHalfWidth = Math.max(8, segment.label.length * 3.5)" in app_source
+    assert "Math.min(width - edgePadding - estimatedHalfWidth, segment.centerX)" in app_source
     assert "function registerInteractiveChart" in app_source
     assert "function initializeInteractiveCharts" in app_source
     assert "function updateChartCursor" in app_source

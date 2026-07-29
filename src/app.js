@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260729-2";
+const ASSET_VERSION = "20260729-3";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -1317,8 +1317,15 @@ function renderMonthAxisFromDomain(
     `,
     labels: labelSegments
       .map(
-        (segment) =>
-          `<text class="chart-month-label" x="${segment.centerX.toFixed(2)}" y="${labelY}" text-anchor="middle">${segment.label}</text>`
+        (segment) => {
+          const edgePadding = width <= 320 ? 3 : 5;
+          const estimatedHalfWidth = Math.max(8, segment.label.length * 3.5);
+          const labelX = Math.max(
+            edgePadding + estimatedHalfWidth,
+            Math.min(width - edgePadding - estimatedHalfWidth, segment.centerX)
+          );
+          return `<text class="chart-month-label" x="${labelX.toFixed(2)}" y="${labelY}" text-anchor="middle">${segment.label}</text>`;
+        }
       )
       .join("")
   };
