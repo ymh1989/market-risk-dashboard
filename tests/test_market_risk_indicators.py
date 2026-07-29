@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 from scripts.update_market_risk import (
     _weighted_asof_score_points,
+    broad_reinflation_component_points,
     change_pressure_component_points,
     compare_series_quality,
     equity_stress_component_points,
@@ -19,6 +20,8 @@ from scripts.update_market_risk import (
     make_product_series,
     rolling_negative_point_changes,
     shipping_cost_pressure_score,
+    us_market_breadth_component_points,
+    volatility_term_structure_component_points,
     yen_carry_unwind_component_points,
 )
 
@@ -371,6 +374,97 @@ def test_japan_us_rate_spread_watch_tracks_narrowing_without_future_data():
     assert historical_score > 0
     assert widening[-1]["value"] == 0.0
     assert extended[-2]["value"] == historical_score
+
+
+def test_volatility_term_structure_watch_detects_curve_and_vvix_stress_without_lookahead():
+    start = date(2025, 1, 1)
+    dates = [(start + timedelta(days=index)).isoformat() for index in range(180)]
+    calm_map = {
+        "vix": [{"date": day, "close": 18 + math.sin(index / 8)} for index, day in enumerate(dates)],
+        "vix3m": [
+            {"date": day, "close": 21 + math.sin(index / 8)} for index, day in enumerate(dates)
+        ],
+        "vvix": [
+            {"date": day, "close": 85 + math.sin(index / 6) * 2}
+            for index, day in enumerate(dates)
+        ],
+    }
+    stressed_map = json.loads(json.dumps(calm_map))
+    for index in range(160, 180):
+        stressed_map["vix"][index]["close"] += (index - 159) * 1.3
+        stressed_map["vix3m"][index]["close"] += (index - 159) * 0.25
+        stressed_map["vvix"][index]["close"] += (index - 159) * 2.0
+
+    calm = volatility_term_structure_component_points(calm_map, limit=504)
+    stressed = volatility_term_structure_component_points(stressed_map, limit=504)
+    historical_score = stressed[-1]["value"]
+    next_day = (start + timedelta(days=180)).isoformat()
+    for key, close in (("vix", 90), ("vix3m", 35), ("vvix", 180)):
+        stressed_map[key].append({"date": next_day, "close": close})
+    extended = volatility_term_structure_component_points(stressed_map, limit=504)
+
+    assert stressed[-1]["value"] > calm[-1]["value"]
+    assert extended[-2]["value"] == historical_score
+
+
+def test_market_breadth_watch_only_rises_when_equal_weight_lags():
+    start = date(2025, 1, 1)
+    dates = [(start + timedelta(days=index)).isoformat() for index in range(120)]
+    weakening = {
+        "spy": [{"date": day, "close": 100.0} for day in dates],
+        "qqq": [{"date": day, "close": 100.0} for day in dates],
+        "rsp": [
+            {"date": day, "close": 100.0 if index < 95 else 100 - (index - 94)}
+            for index, day in enumerate(dates)
+        ],
+        "qqew": [
+            {"date": day, "close": 100.0 if index < 95 else 100 - (index - 94) * 1.2}
+            for index, day in enumerate(dates)
+        ],
+    }
+    broadening = json.loads(json.dumps(weakening))
+    broadening["rsp"] = [
+        {"date": day, "close": 100.0 if index < 95 else 100 + (index - 94)}
+        for index, day in enumerate(dates)
+    ]
+    broadening["qqew"] = [
+        {"date": day, "close": 100.0 if index < 95 else 100 + (index - 94) * 1.2}
+        for index, day in enumerate(dates)
+    ]
+
+    weakening_points = us_market_breadth_component_points(weakening)
+    broadening_points = us_market_breadth_component_points(broadening)
+
+    assert weakening_points[-1]["value"] > 50
+    assert broadening_points[-1]["value"] == 0.0
+
+
+def test_broad_reinflation_watch_separates_rising_and_falling_commodity_baskets():
+    start = date(2025, 1, 1)
+    dates = [(start + timedelta(days=index)).isoformat() for index in range(140)]
+
+    def basket(direction):
+        return {
+            "dbc": [
+                {
+                    "date": day,
+                    "close": 25 + math.sin(index / 6) + direction * max(0, index - 115) * 0.35,
+                }
+                for index, day in enumerate(dates)
+            ],
+            "dba": [
+                {
+                    "date": day,
+                    "close": 20 + math.sin(index / 7) + direction * max(0, index - 115) * 0.22,
+                }
+                for index, day in enumerate(dates)
+            ],
+        }
+
+    rising = broad_reinflation_component_points(basket(1))
+    falling = broad_reinflation_component_points(basket(-1))
+
+    assert rising[-1]["value"] > falling[-1]["value"]
 
 
 def test_precomputed_rolling_scores_match_point_in_time_calculation():

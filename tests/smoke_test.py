@@ -95,8 +95,22 @@ def test_dashboard_contract():
         "yen_carry_unwind_watch",
         "korea_us_rate_fx_watch",
         "japan_us_rate_spread_watch",
+        "volatility_term_structure_watch",
+        "us_market_breadth_watch",
+        "broad_reinflation_watch",
     }
     assert all(float(indicator["weight"]) == 0 for indicator in observations)
+    assert len(market["observationJournal"]) == 5
+    assert {item["id"] for item in market["observationJournal"]} == {
+        "ai-roi",
+        "geopolitics-reinflation",
+        "macro-rates",
+        "flow-deleveraging",
+        "china-memory-capex",
+    }
+    assert next(
+        item for item in market["observationJournal"] if item["id"] == "china-memory-capex"
+    )["score"] is None
     assert market_index_cache["schemaVersion"] == 1
     assert set(market_index_cache.get("liveSnapshots") or {}).issubset(
         set(market_index_cache["series"])
@@ -209,8 +223,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260729-5" in html
-    assert "app.js?v=20260729-5" in html
+    assert "styles.css?v=20260729-6" in html
+    assert "app.js?v=20260729-6" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -280,6 +294,10 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert 'statusLabel: delayed ? "지연" : "진행 중"' in app_source
     assert "최근 성공 중앙 소요시간" in app_source
     assert "${renderScheduleOverview(pipelineStatus)}" in app_source
+    assert "function renderResearchOperationsLog" in app_source
+    assert "${renderResearchOperationsLog(pipelineStatus.researchLog)}" in app_source
+    assert "관찰지표 운영일지" in app_source
+    assert ".research-operations-log__item" in styles
     assert ".operations-schedule-list" in styles
     assert ".operations-schedule-item--caution" in styles
     assert 'SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"' in run_script
@@ -356,6 +374,9 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert section_source.index("renderBacktestPanel") < section_source.index("renderStressEpisodesPanel")
     assert 'data-market-direction-slot' in section_source
     assert 'data-market-history-slot' in section_source
+    assert "renderObservationJournal(section)" in section_source
+    assert "시장 의견 검증 일지" in app_source
+    assert ".observation-journal__item" in styles
 
 
 def test_interactive_timeline_range_and_cursor_contract():
@@ -567,10 +588,12 @@ def test_pipeline_status_contract():
     }
     assert len(status["artifacts"]) >= 6
     assert status["quality"]["score"] >= 0
+    assert len(status["researchLog"]) == 5
+    assert all(item["decision"] and item["operation"] for item in status["researchLog"])
     assert status["history"]
     assert quality["schemaVersion"] == 1
-    assert quality["summary"]["sourceSeriesExpected"] == 72
-    assert quality["summary"]["sourceSeriesPresent"] == 72
+    assert quality["summary"]["sourceSeriesExpected"] == 80
+    assert quality["summary"]["sourceSeriesPresent"] == 80
     assert quality["summary"]["error"] == 0
 
 

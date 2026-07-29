@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260729-5";
+const ASSET_VERSION = "20260729-6";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -780,6 +780,38 @@ function renderScheduleOverview(pipelineStatus) {
   `;
 }
 
+function renderResearchOperationsLog(items) {
+  if (!items?.length) return "";
+
+  return `
+    <section class="operations-section research-operations-log">
+      <div class="operations-section__heading">
+        <div><span class="eyebrow">Research Operations</span><h3>관찰지표 운영일지</h3></div>
+        <span>가중치 0 · OOS 검증 전</span>
+      </div>
+      <div class="research-operations-log__list">
+        ${items
+          .map(
+            (item) => `
+              <article class="research-operations-log__item research-operations-log__item--${item.tone ?? "muted"}">
+                <div>
+                  <span>${item.decision ?? "검토"}</span>
+                  <strong>${item.title}</strong>
+                </div>
+                <div>
+                  <span>${item.status ?? "확인 필요"}</span>
+                  <strong>${item.score == null ? "점수 보류" : `${formatNumber(item.score, 1)}점`}</strong>
+                </div>
+                ${renderNarrativeList(item.operation ?? "운영 조치 확인", "narrative-list--compact")}
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderOperationsPage(pipelineStatus) {
   const state = pipelineRuntimeState(pipelineStatus);
   if (!pipelineStatus?.current) {
@@ -830,6 +862,7 @@ function renderOperationsPage(pipelineStatus) {
       </section>
 
       ${renderScheduleOverview(pipelineStatus)}
+      ${renderResearchOperationsLog(pipelineStatus.researchLog)}
 
       <section class="operations-section">
         <div class="operations-section__heading">
@@ -3705,6 +3738,48 @@ function renderGroupScores(section, timeseries) {
   `;
 }
 
+function renderObservationJournal(section) {
+  const items = section.observationJournal ?? [];
+  if (!items.length) return "";
+
+  return `
+    <section class="observation-journal">
+      <header class="observation-journal__header">
+        <div>
+          <span class="eyebrow">Market Observation Journal</span>
+          <h3>시장 의견 검증 일지</h3>
+        </div>
+        <p>전망을 점수에 선반영하지 않고 관측값으로 확인</p>
+      </header>
+      <div class="observation-journal__list">
+        ${items
+          .map(
+            (item) => `
+              <article class="observation-journal__item observation-journal__item--${item.tone ?? "muted"}">
+                <div class="observation-journal__summary">
+                  <div>
+                    <span>${item.decision}</span>
+                    <h4>${item.title}</h4>
+                  </div>
+                  <div>
+                    <span>${item.status}</span>
+                    <strong>${item.score == null ? "점수 보류" : `${formatNumber(item.score, 1)}점`}</strong>
+                  </div>
+                </div>
+                <div class="observation-journal__evidence">
+                  ${(item.evidence ?? []).map((evidence) => `<span>${evidence}</span>`).join("")}
+                </div>
+                ${renderNarrativeList(item.assessment, "narrative-list--compact")}
+                <footer><span>운영</span><strong>${item.operation}</strong></footer>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderSection(section, timeseries, backtest, stressEpisodes, marketIndexes, activeTab) {
   const isPlanned = section.status !== "active";
   const initiallySortedIndicators = sortedIndicators(section, timeseries);
@@ -3745,6 +3820,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
           : `
             ${renderModelPanel(section)}
             ${renderGroupScores(section, timeseries)}
+            ${section.id === "market" ? renderObservationJournal(section) : ""}
             ${
               section.id === "market"
                 ? `<div data-market-direction-slot>${renderMarketIndexTrendPanel(marketIndexes)}</div>`

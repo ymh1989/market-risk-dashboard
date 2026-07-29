@@ -20,7 +20,10 @@ SNAPSHOT_FILE = ROOT / "data" / "market-risk-snapshot.json"
 TIMESERIES_FILE = ROOT / "data" / "market-risk-timeseries.json"
 HISTORY_CACHE_FILE = ROOT / "data" / "market-history-cache.json"
 NAVER_MARKET_INDEX_CACHE_FILE = ROOT / "data" / "naver-marketindex-history.json"
-YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d"
+YAHOO_CHART_URLS = (
+    "https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d",
+    "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d",
+)
 FRED_GRAPH_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 NAVER_MARKET_INDEX_URL = "https://stock.naver.com/api/securityService/marketindex/{category}/{symbol}/prices"
 NAVER_MARKET_INDEX_DETAIL_URL = (
@@ -37,6 +40,8 @@ TICKERS = {
     "spx": {"symbol": "^GSPC", "label": "S&P 500"},
     "usdkrw": {"symbol": "KRW=X", "label": "USD/KRW"},
     "vix": {"symbol": "^VIX", "label": "VIX"},
+    "vix3m": {"symbol": "^VIX3M", "label": "Cboe 3-Month Volatility Index"},
+    "vvix": {"symbol": "^VVIX", "label": "Cboe VIX Volatility Index"},
     "us10y": {"symbol": "^TNX", "label": "US 10Y"},
     "kodex200": {"symbol": "069500.KS", "label": "KODEX 200"},
     "kodex_leverage": {"symbol": "122630.KS", "label": "KODEX Leverage"},
@@ -60,6 +65,12 @@ TICKERS = {
     "hyg": {"symbol": "HYG", "label": "iShares High Yield Corporate Bond ETF"},
     "lqd": {"symbol": "LQD", "label": "iShares Investment Grade Corporate Bond ETF"},
     "eem": {"symbol": "EEM", "label": "iShares MSCI Emerging Markets ETF"},
+    "rsp": {"symbol": "RSP", "label": "Invesco S&P 500 Equal Weight ETF"},
+    "spy": {"symbol": "SPY", "label": "SPDR S&P 500 ETF"},
+    "qqew": {"symbol": "QQEW", "label": "First Trust Nasdaq-100 Equal Weighted ETF"},
+    "qqq": {"symbol": "QQQ", "label": "Invesco QQQ Trust"},
+    "dbc": {"symbol": "DBC", "label": "Invesco DB Commodity Index Tracking Fund"},
+    "dba": {"symbol": "DBA", "label": "Invesco DB Agriculture Fund"},
 }
 
 NAVER_SYMBOLS = {
@@ -262,12 +273,22 @@ def round_score(value):
 
 def fetch_yahoo_chart(symbol, range_value="2y"):
     encoded_symbol = urllib.parse.quote(symbol, safe="")
-    request = urllib.request.Request(
-        YAHOO_CHART_URL.format(symbol=encoded_symbol, range_value=range_value),
-        headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
-    )
-    with urllib.request.urlopen(request, timeout=20) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+    errors = []
+    payload = None
+    for url_template in YAHOO_CHART_URLS:
+        request = urllib.request.Request(
+            url_template.format(symbol=encoded_symbol, range_value=range_value),
+            headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=20) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            break
+        except Exception as error:
+            errors.append(f"{urllib.parse.urlparse(url_template).netloc}: {error}")
+
+    if payload is None:
+        raise RuntimeError(f"{symbol}: Yahoo Finance 조회 실패 ({'; '.join(errors)})")
 
     chart = payload.get("chart", {})
     if chart.get("error"):
@@ -2091,6 +2112,144 @@ def japan_us_rate_spread_score(market_index_map):
     }
 
 
+def volatility_term_structure_component_points(series_map, limit=120, step=1):
+    vix_curve = make_ratio_series(series_map["vix"], series_map["vix3m"])
+    components = {
+        "vix_curve": {
+            "weight": 0.65,
+            "points": level_and_change_component_points(vix_curve, change_periods=5),
+        },
+        "vvix": {
+            "weight": 0.35,
+            "points": level_and_change_component_points(series_map["vvix"], change_periods=5),
+        },
+    }
+    return _weighted_asof_score_points(components, limit=limit, step=step)
+
+
+def volatility_term_structure_score(series_map):
+    points = volatility_term_structure_component_points(series_map, limit=504)
+    latest, trend = _latest_composite_score(
+        points, "옵션 헤지·변동성 기간구조 점수를 계산할 데이터가 없습니다.", 5
+    )
+    as_of = latest["date"]
+    vix_curve = [
+        point
+        for point in make_ratio_series(series_map["vix"], series_map["vix3m"])
+        if point["date"] <= as_of
+    ]
+    vvix = [point for point in series_map["vvix"] if point["date"] <= as_of]
+    curve_values = closes(vix_curve)
+    vvix_values = closes(vvix)
+    return {
+        "score": latest["value"],
+        "trend": trend,
+        "metrics": {
+            "asOf": as_of,
+            "vixLast": close_asof(series_map["vix"], as_of),
+            "vix3mLast": close_asof(series_map["vix3m"], as_of),
+            "vixToVix3mRatio": round(curve_values[-1], 4),
+            "vixCurveReturn5ObsPct": round(pct_change(curve_values, 5) * 100, 2),
+            "vvixLast": close_asof(series_map["vvix"], as_of),
+            "vvixReturn5ObsPct": round(pct_change(vvix_values, 5) * 100, 2),
+        },
+    }
+
+
+def us_market_breadth_component_points(series_map, limit=120, step=1):
+    rsp_spy = make_ratio_series(series_map["rsp"], series_map["spy"])
+    qqew_qqq = make_ratio_series(series_map["qqew"], series_map["qqq"])
+    components = {
+        "sp500_breadth": {
+            "weight": 0.55,
+            "points": change_pressure_component_points(
+                rsp_spy, change_periods=20, direction="down"
+            ),
+        },
+        "nasdaq_breadth": {
+            "weight": 0.45,
+            "points": change_pressure_component_points(
+                qqew_qqq, change_periods=20, direction="down"
+            ),
+        },
+    }
+    return _weighted_asof_score_points(components, limit=limit, step=step)
+
+
+def us_market_breadth_score(series_map):
+    points = us_market_breadth_component_points(series_map, limit=504)
+    latest, trend = _latest_composite_score(
+        points, "미국 증시 폭 악화 점수를 계산할 데이터가 없습니다."
+    )
+    as_of = latest["date"]
+    rsp_spy = [
+        point
+        for point in make_ratio_series(series_map["rsp"], series_map["spy"])
+        if point["date"] <= as_of
+    ]
+    qqew_qqq = [
+        point
+        for point in make_ratio_series(series_map["qqew"], series_map["qqq"])
+        if point["date"] <= as_of
+    ]
+    rsp_spy_values = closes(rsp_spy)
+    qqew_qqq_values = closes(qqew_qqq)
+    return {
+        "score": latest["value"],
+        "trend": trend,
+        "metrics": {
+            "asOf": as_of,
+            "rspSpyRatio": round(rsp_spy_values[-1], 4),
+            "rspSpyReturn20ObsPct": round(pct_change(rsp_spy_values, 20) * 100, 2),
+            "qqewQqqRatio": round(qqew_qqq_values[-1], 4),
+            "qqewQqqReturn20ObsPct": round(pct_change(qqew_qqq_values, 20) * 100, 2),
+        },
+    }
+
+
+def broad_reinflation_component_points(series_map, limit=120, step=1):
+    components = {
+        "broad_commodities": {
+            "weight": 0.55,
+            "points": level_and_change_component_points(
+                series_map["dbc"], change_periods=20
+            ),
+        },
+        "agriculture": {
+            "weight": 0.45,
+            "points": level_and_change_component_points(
+                series_map["dba"], change_periods=20
+            ),
+        },
+    }
+    return _weighted_asof_score_points(components, limit=limit, step=step)
+
+
+def broad_reinflation_score(series_map):
+    points = broad_reinflation_component_points(series_map, limit=504)
+    latest, trend = _latest_composite_score(
+        points, "원자재·농산물 재인플레이션 점수를 계산할 데이터가 없습니다."
+    )
+    as_of = latest["date"]
+    dbc = [point for point in series_map["dbc"] if point["date"] <= as_of]
+    dba = [point for point in series_map["dba"] if point["date"] <= as_of]
+    dbc_values = closes(dbc)
+    dba_values = closes(dba)
+    return {
+        "score": latest["value"],
+        "trend": trend,
+        "metrics": {
+            "asOf": as_of,
+            "dbcLast": dbc_values[-1],
+            "dbcReturn5ObsPct": round(pct_change(dbc_values, 5) * 100, 2),
+            "dbcReturn20ObsPct": round(pct_change(dbc_values, 20) * 100, 2),
+            "dbaLast": dba_values[-1],
+            "dbaReturn5ObsPct": round(pct_change(dba_values, 5) * 100, 2),
+            "dbaReturn20ObsPct": round(pct_change(dba_values, 20) * 100, 2),
+        },
+    }
+
+
 def energy_import_cost_series(series_map, market_index_map):
     return make_product_series(market_index_map["brent"], series_map["usdkrw"])
 
@@ -2364,6 +2523,15 @@ def build_timeseries(series_map, naver_map, fred_map, market_index_map=None, lim
         "emerging_market_stress": score_points_timeseries(
             equity_stress_component_points(series_map["eem"]), limit=limit, step=step
         ),
+        "volatility_term_structure_watch": volatility_term_structure_component_points(
+            series_map, limit=limit, step=step
+        ),
+        "us_market_breadth_watch": us_market_breadth_component_points(
+            series_map, limit=limit, step=step
+        ),
+        "broad_reinflation_watch": broad_reinflation_component_points(
+            series_map, limit=limit, step=step
+        ),
     }
     if market_index_map:
         timeseries.update(
@@ -2486,6 +2654,151 @@ def enrich_indicators(indicators):
     return enriched, sorted(group_scores, key=lambda group: group["contribution"], reverse=True)
 
 
+def build_observation_journal(indicators):
+    by_id = {indicator["id"]: indicator for indicator in indicators}
+
+    def score(indicator_id):
+        return float(by_id[indicator_id]["value"])
+
+    def tone(value):
+        if value >= 75:
+            return "danger"
+        if value >= 60:
+            return "caution"
+        if value >= 40:
+            return "watch"
+        return "good"
+
+    def status(value):
+        if value >= 75:
+            return "부담 높음"
+        if value >= 60:
+            return "주의"
+        if value >= 40:
+            return "관찰"
+        return "확산 미확인"
+
+    ai_score = score_from_metrics(
+        [
+            (score("bigtech_ai_demand_pressure"), 0.55),
+            (score("global_ai_semiconductor_stress"), 0.25),
+            (score("korea_ai_semiconductor_concentration"), 0.2),
+        ]
+    )
+    reinflation_score = score_from_metrics(
+        [
+            (score("energy_import_cost_pressure"), 0.45),
+            (score("broad_reinflation_watch"), 0.55),
+        ]
+    )
+    rates_score = score_from_metrics(
+        [
+            (score("rates_pressure"), 0.6),
+            (score("us_financial_conditions_stress"), 0.4),
+        ]
+    )
+    flow_score = score_from_metrics(
+        [
+            (score("volatility_term_structure_watch"), 0.45),
+            (score("us_market_breadth_watch"), 0.35),
+            (score("trading_activity_heat"), 0.2),
+        ]
+    )
+
+    return [
+        {
+            "id": "ai-roi",
+            "title": "AI 투자 ROI 회의론",
+            "status": status(ai_score),
+            "score": round_score(ai_score),
+            "tone": tone(ai_score),
+            "decision": "기존 가중지표 유지",
+            "evidence": [
+                f"빅테크 AI 수요 우려 {score('bigtech_ai_demand_pressure'):.1f}",
+                f"글로벌 AI 반도체 {score('global_ai_semiconductor_stress'):.1f}",
+                f"한국 AI 반도체 {score('korea_ai_semiconductor_concentration'):.1f}",
+            ],
+            "assessment": (
+                "반도체 가격 스트레스와 빅테크 수요 신호를 분리합니다. 반도체 조정이 크더라도 "
+                "빅테크 수요 신호가 동반 악화되지 않으면 ROI 붕괴로 단정하지 않습니다. "
+                "실적·CAPEX·매출 추정치 데이터가 없는 현재는 가중치를 늘리지 않습니다."
+            ),
+            "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검",
+        },
+        {
+            "id": "geopolitics-reinflation",
+            "title": "지정학·재인플레이션",
+            "status": status(reinflation_score),
+            "score": round_score(reinflation_score),
+            "tone": tone(reinflation_score),
+            "decision": "관찰지표 보강",
+            "evidence": [
+                f"원화 환산 에너지 비용 {score('energy_import_cost_pressure'):.1f}",
+                f"원자재·농산물 재인플레이션 {score('broad_reinflation_watch'):.1f}",
+            ],
+            "assessment": (
+                "유가 단일 상승과 광의 물가 확산을 분리합니다. 원자재·농산물의 5일 흐름이 꺾여도 "
+                "20일 누적압력이 높으면 즉시 해소로 보지 않습니다."
+            ),
+            "operation": "DBC·DBA 관찰카드 유지 · 기존 에너지 가중치 변경 없음",
+        },
+        {
+            "id": "macro-rates",
+            "title": "매크로 금리 불확실성",
+            "status": status(rates_score),
+            "score": round_score(rates_score),
+            "tone": tone(rates_score),
+            "decision": "기존 가중지표 유지",
+            "evidence": [
+                f"글로벌 금리 압력 {score('rates_pressure'):.1f}",
+                f"미국 금융여건 {score('us_financial_conditions_stress'):.1f}",
+            ],
+            "assessment": (
+                "시장금리 레벨과 금융여건을 함께 봅니다. 지정학 완화가 예상되더라도 실제 금리와 "
+                "금융여건 점수가 낮아지기 전에는 부담 완화를 선반영하지 않습니다."
+            ),
+            "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행",
+        },
+        {
+            "id": "flow-deleveraging",
+            "title": "옵션 헤지·디레버리징",
+            "status": status(flow_score),
+            "score": round_score(flow_score),
+            "tone": tone(flow_score),
+            "decision": "관찰지표 보강",
+            "evidence": [
+                f"옵션 기간구조 {score('volatility_term_structure_watch'):.1f}",
+                f"미국 증시 폭 악화 {score('us_market_breadth_watch'):.1f}",
+                f"거래 유동성 {score('trading_activity_heat'):.1f}",
+            ],
+            "assessment": (
+                "VIX 기간구조와 동일가중 상대성과로 공포와 하락 확산을 교차 확인합니다. "
+                "동일가중 상대성과가 강하면 대형 기술주 조정은 확인하되 시장 전반 디레버리징으로 "
+                "판정하지 않습니다. 딜러 델타·감마, 기관 포지션과 IPO 자금흡수의 직접 관측값은 아닙니다."
+            ),
+            "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지",
+        },
+        {
+            "id": "china-memory-capex",
+            "title": "중국 메모리 상장·CAPEX",
+            "status": "직접 데이터 부족",
+            "score": None,
+            "tone": "muted",
+            "decision": "직접 점수화 보류",
+            "evidence": [
+                "일별 공개 DRAM·NAND 현물가격 미연결",
+                "기업별 상장 조달액·설비투자 집행 시계열 미연결",
+                "반도체 주가카드는 간접 가격신호로만 사용",
+            ],
+            "assessment": (
+                "중국 공급 확대 가설은 중요하지만 주가 proxy를 다시 점수화하면 AI·반도체 그룹과 "
+                "중복됩니다. 신뢰 가능한 산업 데이터가 연결될 때까지 별도 리스크카드로 만들지 않습니다."
+            ),
+            "operation": "TrendForce·기업 공시·내부 산업자료 연결 후보로 관리",
+        },
+    ]
+
+
 def build_indicators(series_map, naver_map, fred_map, market_index_map):
     kospi = equity_stress_score(series_map["kospi"])
     kosdaq = equity_stress_score(series_map["kosdaq"])
@@ -2500,6 +2813,9 @@ def build_indicators(series_map, naver_map, fred_map, market_index_map):
     yen_carry_unwind = yen_carry_unwind_score(series_map, market_index_map)
     korea_us_rate_fx = korea_us_rate_fx_score(series_map, market_index_map)
     japan_us_rate_spread = japan_us_rate_spread_score(market_index_map)
+    volatility_term_structure = volatility_term_structure_score(series_map)
+    us_market_breadth = us_market_breadth_score(series_map)
+    broad_reinflation = broad_reinflation_score(series_map)
     global_ai = semiconductor_global_score(series_map)
     bigtech_demand = bigtech_ai_demand_pressure_score(series_map)
     korea_ai = korean_ai_semiconductor_score(series_map)
@@ -2744,6 +3060,66 @@ def build_indicators(series_map, naver_map, fred_map, market_index_map):
             "source": "Naver market index: US10YT=RR, JP10YT=RR",
         },
         {
+            "id": "volatility_term_structure_watch",
+            "name": "옵션 헤지·변동성 기간구조",
+            "category": "관찰/옵션·수급",
+            "group": "macro",
+            "role": "observation",
+            "value": volatility_term_structure["score"],
+            "unit": "score",
+            "weight": 0.0,
+            "trend": volatility_term_structure["trend"],
+            "detail": (
+                f"VIX {volatility_term_structure['metrics']['vixLast']:.2f}, VIX3M "
+                f"{volatility_term_structure['metrics']['vix3mLast']:.2f}, 단기/3개월 비율 "
+                f"{volatility_term_structure['metrics']['vixToVix3mRatio']:.3f}, VVIX "
+                f"{volatility_term_structure['metrics']['vvixLast']:.2f}·5개 관측치 "
+                f"{fmt_pct(volatility_term_structure['metrics']['vvixReturn5ObsPct'])}. "
+                "단기 변동성이 3개월 변동성을 웃돌고 VVIX가 함께 오를수록 옵션 헤지 수요와 "
+                "딜러 감마 부담이 커진 것으로 봅니다. 직접 델타 헷지 물량은 아니며 종합점수에는 반영하지 않습니다."
+            ),
+            "source": "Yahoo Finance chart: ^VIX, ^VIX3M, ^VVIX",
+        },
+        {
+            "id": "us_market_breadth_watch",
+            "name": "미국 증시 폭 악화",
+            "category": "관찰/시장 폭",
+            "group": "macro",
+            "role": "observation",
+            "value": us_market_breadth["score"],
+            "unit": "score",
+            "weight": 0.0,
+            "trend": us_market_breadth["trend"],
+            "detail": (
+                f"RSP/SPY 20개 관측치 상대성과 "
+                f"{fmt_pct(us_market_breadth['metrics']['rspSpyReturn20ObsPct'])}, "
+                f"QQEW/QQQ 상대성과 {fmt_pct(us_market_breadth['metrics']['qqewQqqReturn20ObsPct'])}. "
+                "동일가중 지수가 시가총액가중 지수보다 약해질 때 하락이 대형주 일부에서 시장 전반으로 "
+                "확산된 것으로 봅니다. IPO 자금흡수나 기계적 매도량을 직접 측정하는 값은 아닙니다."
+            ),
+            "source": "Yahoo Finance chart: RSP, SPY, QQEW, QQQ",
+        },
+        {
+            "id": "broad_reinflation_watch",
+            "name": "원자재·농산물 재인플레이션",
+            "category": "관찰/물가",
+            "group": "macro",
+            "role": "observation",
+            "value": broad_reinflation["score"],
+            "unit": "score",
+            "weight": 0.0,
+            "trend": broad_reinflation["trend"],
+            "detail": (
+                f"광의 원자재 DBC 20개 관측치 {fmt_pct(broad_reinflation['metrics']['dbcReturn20ObsPct'])}"
+                f"·최근 5개 {fmt_pct(broad_reinflation['metrics']['dbcReturn5ObsPct'])}, 농산물 DBA "
+                f"20개 관측치 {fmt_pct(broad_reinflation['metrics']['dbaReturn20ObsPct'])}"
+                f"·최근 5개 {fmt_pct(broad_reinflation['metrics']['dbaReturn5ObsPct'])}. "
+                "유가 단일 충격이 농산물과 광의 원자재로 번지는지 보는 선물 ETF proxy이며 "
+                "종합점수에는 반영하지 않습니다."
+            ),
+            "source": "Yahoo Finance chart: DBC, DBA",
+        },
+        {
             "id": "global_ai_semiconductor_stress",
             "name": "글로벌 AI 반도체 스트레스",
             "category": "AI 반도체",
@@ -2901,9 +3277,10 @@ def update_dashboard(series_map, fred_map, market_index_map, indicators):
         "외국인 보유비중, 거래량, "
         "대형 반도체 단일종목 레버리지성 스트레스, 빅테크 AI 수요 우려, "
         "AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다. 엔 캐리 청산, "
-        "한미 금리차·원화 압력과 미·일 10년 금리차 축소는 종합점수와 분리한 연구 관찰카드로 제공합니다."
+        "한미 금리차·원화 압력, 미·일 10년 금리차, 옵션 기간구조, 미국 증시 폭과 광의 "
+        "재인플레이션은 종합점수와 분리한 연구 관찰카드로 제공합니다."
     )
-    market["model"]["version"] = "market-risk-v7-observation-harness"
+    market["model"]["version"] = "market-risk-v8-narrative-observation-journal"
     market["model"]["methodology"] = (
         "각 시계열의 최대 2년 히스토리에서 레벨, 20개 관측치 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 "
         "분위수 점수, z-score 정규분포 변환 점수, median/MAD 기반 robust z-score 변환 점수로 "
@@ -2933,6 +3310,7 @@ def update_dashboard(series_map, fred_map, market_index_map, indicators):
         "Naver foreign ownership ratio and trading volume",
         "HYG/LQD credit proxy, EEM emerging market proxy",
         "SCFI, BDTI, BDI, Brent, iron ore, copper, gold, USD/KRW, USD/CNY, USD/JPY, US/JP/KR Treasury yields",
+        "VIX3M, VVIX, RSP/SPY, QQEW/QQQ, DBC/DBA observation proxies",
     ]
     market["model"]["references"] = [
         {
@@ -2941,7 +3319,7 @@ def update_dashboard(series_map, fred_map, market_index_map, indicators):
         },
         {
             "label": "Yahoo Finance chart endpoint",
-            "url": "https://query1.finance.yahoo.com/v8/finance/chart/%5EKS11?range=2y&interval=1d",
+            "url": "https://query2.finance.yahoo.com/v8/finance/chart/%5EKS11?range=2y&interval=1d",
         },
         {
             "label": "Naver Finance chart endpoint",
@@ -2979,13 +3357,31 @@ def update_dashboard(series_map, fred_map, market_index_map, indicators):
             "label": "FRED financial conditions and stress indices",
             "url": "https://fred.stlouisfed.org/series/NFCI",
         },
+        {
+            "label": "Cboe VIX product complex and volatility indexes",
+            "url": "https://www.cboe.com/tradable-products/vix/",
+        },
+        {
+            "label": "Cboe VIX3M index dashboard",
+            "url": "https://www.cboe.com/us/indices/dashboard/VIX3M/",
+        },
+        {
+            "label": "Invesco RSP equal-weight ETF",
+            "url": "https://www.invesco.com/us/financial-products/etfs/product-detail?productId=RSP",
+        },
+        {
+            "label": "Invesco commodity ETF overview",
+            "url": "https://www.invesco.com/us/en/solutions/invesco-etfs/commodity-investing.html",
+        },
     ]
     market["groupScores"] = group_scores
     market["indicators"] = enriched_indicators
+    market["observationJournal"] = build_observation_journal(enriched_indicators)
     market["actions"] = [
         "scripts/update_market_risk.py를 일 단위로 실행해 data/risk-dashboard.json과 market-risk-snapshot.json을 갱신합니다.",
         "점수 75 이상 또는 핵심 지표 2개 이상 경고 시 투자위원회 보고 대상을 자동 지정합니다.",
         "연구 관찰카드는 OOS 개선이 확인되기 전까지 종합점수와 고위험 지표 수에 포함하지 않습니다.",
+        "시장 의견의 완화·반등 전망은 점수에 선반영하지 않고 실제 가격·금리·기간구조의 확인 신호로 검증합니다.",
         "운영 배포에서는 Yahoo/Naver proxy를 KRX, 한국은행 ECOS, 금융투자협회, 내부 포지션/외국인 수급 데이터로 교체할 수 있습니다.",
     ]
 

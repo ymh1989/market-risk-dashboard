@@ -55,3 +55,76 @@ def test_pipeline_status_keeps_previous_run_history(tmp_path):
     assert payload["schedule"]["saturdayTimes"] == [{"time": "07:30", "mode": "full"}]
     assert payload["schedule"]["weekdaysOnly"] is False
     assert all(source["lastDate"] for source in payload["sources"])
+
+
+def test_research_log_copies_operational_fields_without_market_narrative():
+    module = load_pipeline_status_module()
+    dashboard = {
+        "sections": [
+            {
+                "id": "market",
+                "observationJournal": [
+                    {
+                        "id": "flow-deleveraging",
+                        "title": "옵션 헤지·디레버리징",
+                        "status": "주의",
+                        "score": 71.2,
+                        "tone": "caution",
+                        "decision": "관찰지표 보강",
+                        "assessment": "긴 시장 해석",
+                        "operation": "가중치 0 유지",
+                    }
+                ],
+            }
+        ]
+    }
+
+    log = module.research_log(dashboard)
+
+    assert log == [
+        {
+            "id": "flow-deleveraging",
+            "title": "옵션 헤지·디레버리징",
+            "status": "주의",
+            "score": 71.2,
+            "tone": "caution",
+            "decision": "관찰지표 보강",
+            "operation": "가중치 0 유지",
+        }
+    ]
+
+
+def test_pipeline_status_can_refresh_research_log_without_fabricating_a_run(tmp_path):
+    module = load_pipeline_status_module()
+    output = tmp_path / "pipeline-status.json"
+    previous = {
+        "current": {"runId": "scheduled-full", "mode": "full"},
+        "schedule": {"times": [{"time": "15:35", "mode": "full"}]},
+        "stages": [{"id": "ml", "status": "success"}],
+        "history": [{"runId": "scheduled-full"}],
+    }
+    output.write_text(json.dumps(previous), encoding="utf-8")
+    args = SimpleNamespace(
+        output=str(output),
+        mode="full",
+        times="07:30,12:30,15:35",
+        saturday_times="07:30",
+        full_times="07:30,15:35",
+        scheduled_time="",
+        run_id="",
+        started_at="2026-07-29 23:00:00 KST",
+        completed_at="2026-07-29 23:10:00 KST",
+        total_duration=600,
+        market_duration=590,
+        ml_duration=0,
+        validation_duration=10,
+        preserve_current=True,
+    )
+
+    payload = module.build_payload(args)
+
+    assert payload["current"] == previous["current"]
+    assert payload["schedule"] == previous["schedule"]
+    assert payload["stages"] == previous["stages"]
+    assert payload["history"] == previous["history"]
+    assert len(payload["researchLog"]) == 5

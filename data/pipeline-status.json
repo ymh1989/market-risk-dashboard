@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-29 15:55:25 KST",
+  "generatedAt": "2026-07-29 23:12:00 KST",
   "current": {
     "runId": "20260729T155525-15:35",
     "status": "success",
@@ -81,10 +81,10 @@
       "label": "Yahoo Finance",
       "status": "ok",
       "lastDate": "2026-07-29",
-      "seriesCount": 28,
-      "detail": "28/28개 수집 · 허용시차 내 28개",
-      "oldestLastDate": "2026-07-28",
-      "freshCount": 28,
+      "seriesCount": 36,
+      "detail": "36/36개 수집 · 허용시차 내 36개",
+      "oldestLastDate": "2026-07-29",
+      "freshCount": 36,
       "staleCount": 0,
       "fallbackCount": 0
     },
@@ -142,7 +142,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-07-29 15:35 KST"
+      "generatedAt": "2026-07-29 23:07 KST"
     },
     {
       "id": "ml",
@@ -166,33 +166,33 @@
       "id": "backtest",
       "label": "시장 백테스트",
       "status": "ok",
-      "generatedAt": "2026-07-29 15:35 KST"
+      "generatedAt": "2026-07-29 23:07 KST"
     },
     {
       "id": "stress",
       "label": "스트레스 이력",
       "status": "ok",
-      "generatedAt": "2026-07-29 15:37:38 KST"
+      "generatedAt": "2026-07-29 23:09:58 KST"
     },
     {
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-07-29 15:55:25 KST"
+      "generatedAt": "2026-07-29 23:11:36 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 99.2,
+    "score": 99.5,
     "referenceDate": "2026-07-29",
     "summary": {
-      "checks": 186,
-      "ok": 183,
-      "warning": 3,
+      "checks": 205,
+      "ok": 203,
+      "warning": 2,
       "error": 0,
-      "sourceSeriesExpected": 72,
-      "sourceSeriesPresent": 72,
-      "freshSeries": 70,
+      "sourceSeriesExpected": 80,
+      "sourceSeriesPresent": 80,
+      "freshSeries": 78,
       "staleSeries": 2,
       "fallbackSeries": 1
     },
@@ -218,16 +218,56 @@
         "lastDate": "2026-07-10",
         "observations": 1507,
         "fetchStatus": "live"
-      },
-      {
-        "id": "cross:naver-yahoo-domestic-values",
-        "category": "alignment",
-        "label": "국내주식 Yahoo·Naver 가격",
-        "status": "warning",
-        "detail": "동일 기준일 비교 7개 · 최대 kodex_leverage 3.25%"
       }
     ]
   },
+  "researchLog": [
+    {
+      "id": "ai-roi",
+      "title": "AI 투자 ROI 회의론",
+      "status": "주의",
+      "score": 62.4,
+      "tone": "caution",
+      "decision": "기존 가중지표 유지",
+      "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검"
+    },
+    {
+      "id": "geopolitics-reinflation",
+      "title": "지정학·재인플레이션",
+      "status": "부담 높음",
+      "score": 87.8,
+      "tone": "danger",
+      "decision": "관찰지표 보강",
+      "operation": "DBC·DBA 관찰카드 유지 · 기존 에너지 가중치 변경 없음"
+    },
+    {
+      "id": "macro-rates",
+      "title": "매크로 금리 불확실성",
+      "status": "부담 높음",
+      "score": 75.3,
+      "tone": "danger",
+      "decision": "기존 가중지표 유지",
+      "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
+    },
+    {
+      "id": "flow-deleveraging",
+      "title": "옵션 헤지·디레버리징",
+      "status": "관찰",
+      "score": 48.4,
+      "tone": "watch",
+      "decision": "관찰지표 보강",
+      "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
+    },
+    {
+      "id": "china-memory-capex",
+      "title": "중국 메모리 상장·CAPEX",
+      "status": "직접 데이터 부족",
+      "score": null,
+      "tone": "muted",
+      "decision": "직접 점수화 보류",
+      "operation": "TrendForce·기업 공시·내부 산업자료 연결 후보로 관리"
+    }
+  ],
   "history": [
     {
       "runId": "20260729T155525-15:35",

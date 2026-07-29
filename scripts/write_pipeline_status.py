@@ -154,6 +154,25 @@ def stage_status(args):
     ]
 
 
+def research_log(dashboard):
+    market = next(
+        (section for section in dashboard.get("sections", []) if section.get("id") == "market"),
+        {},
+    )
+    return [
+        {
+            "id": item.get("id"),
+            "title": item.get("title"),
+            "status": item.get("status"),
+            "score": item.get("score"),
+            "tone": item.get("tone", "muted"),
+            "decision": item.get("decision"),
+            "operation": item.get("operation"),
+        }
+        for item in market.get("observationJournal", [])
+    ]
+
+
 def build_payload(args):
     output = Path(args.output)
     previous = read_json(output)
@@ -197,7 +216,7 @@ def build_payload(args):
     history = [current]
     history.extend(item for item in previous.get("history", []) if item.get("runId") != run_id)
 
-    return {
+    payload = {
         "schemaVersion": 1,
         "generatedAt": args.completed_at,
         "current": current,
@@ -222,8 +241,14 @@ def build_payload(args):
             "summary": data["quality"].get("summary") or {},
             "issues": (data["quality"].get("issues") or [])[:8],
         },
+        "researchLog": research_log(data["dashboard"]),
         "history": history[:12],
     }
+    if getattr(args, "preserve_current", False) and previous.get("current"):
+        for key in ("current", "schedule", "stages", "history"):
+            if key in previous:
+                payload[key] = previous[key]
+    return payload
 
 
 def parse_args():
@@ -242,6 +267,11 @@ def parse_args():
     parser.add_argument("--market-duration", type=int, default=0)
     parser.add_argument("--ml-duration", type=int, default=0)
     parser.add_argument("--validation-duration", type=int, default=0)
+    parser.add_argument(
+        "--preserve-current",
+        action="store_true",
+        help="최근 성공 실행 이력은 유지하고 데이터·연구 운영정보만 갱신합니다.",
+    )
     return parser.parse_args()
 
 
