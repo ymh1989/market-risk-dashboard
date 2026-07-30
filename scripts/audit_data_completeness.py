@@ -394,7 +394,11 @@ def artifact_checks(
     return checks
 
 
-def cross_artifact_checks(data: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+def cross_artifact_checks(
+    data: dict[str, dict[str, Any]],
+    now: datetime | None = None,
+) -> list[dict[str, Any]]:
+    now = now or datetime.now(KST)
     checks = []
     dashboard = data.get("dashboard") or {}
     timeseries = data.get("timeseries") or {}
@@ -509,15 +513,33 @@ def cross_artifact_checks(data: dict[str, dict[str, Any]]) -> list[dict[str, Any
             continue
         deviation = abs(float(yahoo_item["lastClose"]) / float(naver_item["lastClose"]) - 1) * 100
         duplicate_deviations.append((item_id, deviation))
-    max_item, max_deviation = max(duplicate_deviations, key=lambda item: item[1], default=("-", 0.0))
-    duplicate_status = "error" if max_deviation > 5 else "warning" if max_deviation > 2 else "ok"
+    max_item, max_deviation = max(
+        duplicate_deviations,
+        key=lambda item: item[1],
+        default=("-", 0.0),
+    )
+    is_intraday_comparison = (
+        now.time() < datetime.strptime("16:10", "%H:%M").time()
+        and any(
+            parse_date(item.get("lastDate")) == now.date()
+            for item in [*naver_symbols.values(), *yahoo_symbols.values()]
+        )
+    )
+    if max_deviation > 5:
+        duplicate_status = "warning" if is_intraday_comparison else "error"
+    else:
+        duplicate_status = "warning" if max_deviation > 2 else "ok"
+    comparison_label = " · 장중 시차 감안" if is_intraday_comparison else ""
     checks.append(
         make_check(
             "cross:naver-yahoo-domestic-values",
             "alignment",
             "국내주식 Yahoo·Naver 가격",
             duplicate_status,
-            f"동일 기준일 비교 {len(duplicate_deviations)}개 · 최대 {max_item} {max_deviation:.2f}%",
+            (
+                f"동일 기준일 비교 {len(duplicate_deviations)}개"
+                f" · 최대 {max_item} {max_deviation:.2f}%{comparison_label}"
+            ),
         )
     )
 
@@ -746,7 +768,7 @@ def build_report(now: datetime | None = None) -> dict[str, Any]:
         checks.extend(ml_checks)
 
     checks.extend(artifact_checks(data, reference_date))
-    checks.extend(cross_artifact_checks(data))
+    checks.extend(cross_artifact_checks(data, now))
     checks.extend(cache_series_checks(data, reference_date))
 
     counts = {status: sum(item["status"] == status for item in checks) for status in STATUS_RANK}

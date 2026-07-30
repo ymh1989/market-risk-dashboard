@@ -111,6 +111,26 @@ def test_dashboard_contract():
     assert next(
         item for item in market["observationJournal"] if item["id"] == "china-memory-capex"
     )["score"] is None
+    timeseries_ids = set(timeseries["series"])
+    scored_journal_items = [
+        item for item in market["observationJournal"] if item["score"] is not None
+    ]
+    for item in scored_journal_items:
+        assert item["components"]
+        assert abs(sum(float(component["weight"]) for component in item["components"]) - 1.0) < 0.001
+        assert abs(
+            sum(float(component["contribution"]) for component in item["components"])
+            - float(item["score"])
+        ) < 0.06
+        assert all(component["id"] in timeseries_ids for component in item["components"])
+        assert all(
+            len(timeseries["series"][component["id"]]) >= 60
+            for component in item["components"]
+        )
+    china_capex = next(
+        item for item in market["observationJournal"] if item["id"] == "china-memory-capex"
+    )
+    assert china_capex["components"] == []
     assert market_index_cache["schemaVersion"] == 1
     assert set(market_index_cache.get("liveSnapshots") or {}).issubset(
         set(market_index_cache["series"])
@@ -223,8 +243,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260729-6" in html
-    assert "app.js?v=20260729-6" in html
+    assert "styles.css?v=20260730-1" in html
+    assert "app.js?v=20260730-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -374,7 +394,7 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert section_source.index("renderBacktestPanel") < section_source.index("renderStressEpisodesPanel")
     assert 'data-market-direction-slot' in section_source
     assert 'data-market-history-slot' in section_source
-    assert "renderObservationJournal(section)" in section_source
+    assert "renderObservationJournal(section, timeseries)" in section_source
     assert "시장 의견 검증 일지" in app_source
     assert ".observation-journal__item" in styles
 
@@ -432,6 +452,25 @@ def test_weighted_group_timeline_contract():
     assert "renderGroupScores(section, timeseries)" in app_source
     assert ".group-card__trend-line" in styles
     assert "grid-template-columns: repeat(5, 42px)" in styles
+
+
+def test_observation_journal_timeline_and_detail_contract():
+    app_source = APP_FILE.read_text(encoding="utf-8")
+    styles = STYLES_FILE.read_text(encoding="utf-8")
+
+    assert "function buildObservationJournalSeries" in app_source
+    assert ".filter((date) => dateWeights[date] >= totalWeight * 0.7)" in app_source
+    assert "function renderObservationJournalTrend" in app_source
+    assert "function renderObservationJournalDetail" in app_source
+    assert "renderObservationJournal(section, timeseries)" in app_source
+    assert "검증 점수 흐름" in app_source
+    assert "검증 점수 구성" in app_source
+    assert "일지 내부 비중 · 종합점수 가중치 0" in app_source
+    assert "data-observation-detail-toggle" in app_source
+    assert 'aria-expanded="false"' in app_source
+    assert "detail.hidden = expanded" in app_source
+    assert ".observation-journal__trend-line" in styles
+    assert ".observation-journal__detail[hidden]" in styles
 
 
 def test_snow_lab_easter_egg_contract():

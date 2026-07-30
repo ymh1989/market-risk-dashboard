@@ -4087,45 +4087,83 @@ a {
 }
 
 .observation-journal__item {
+  --journal-accent: var(--muted);
+
   display: grid;
   grid-template-columns: minmax(210px, 0.75fr) minmax(0, 1.25fr);
   gap: 10px 24px;
   border-bottom: 1px solid var(--line);
-  border-left: 4px solid var(--muted);
+  border-left: 4px solid var(--journal-accent);
   padding: 16px 18px;
 }
 
 .observation-journal__item--good,
 .research-operations-log__item--good {
+  --journal-accent: var(--green);
   border-left-color: var(--green);
 }
 
 .observation-journal__item--watch,
 .research-operations-log__item--watch {
+  --journal-accent: var(--blue);
   border-left-color: var(--blue);
 }
 
 .observation-journal__item--caution,
 .research-operations-log__item--caution {
+  --journal-accent: var(--amber);
   border-left-color: var(--amber);
 }
 
 .observation-journal__item--danger,
 .research-operations-log__item--danger {
+  --journal-accent: var(--red);
   border-left-color: var(--red);
 }
 
 .observation-journal__summary {
   display: grid;
-  grid-row: span 3;
+  grid-row: span 4;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 16px;
   align-items: start;
 }
 
+.observation-journal__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .observation-journal__summary h4 {
+  min-width: 0;
   margin: 4px 0 0;
   font-size: 0.98rem;
+}
+
+.observation-journal__info {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  margin-top: 4px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: Georgia, serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.observation-journal__info:hover,
+.observation-journal__info:focus-visible,
+.observation-journal__info[aria-expanded="true"] {
+  border-color: var(--journal-accent);
+  color: var(--journal-accent);
 }
 
 .observation-journal__summary > div > span,
@@ -4159,6 +4197,83 @@ a {
   margin: 0;
 }
 
+.observation-journal__trend {
+  min-width: 0;
+  position: relative;
+  border-top: 1px solid var(--line);
+  padding-top: 9px;
+}
+
+.observation-journal__trend-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.observation-journal__trend-heading small {
+  color: var(--journal-accent);
+  font-size: 0.69rem;
+}
+
+.observation-journal__trend svg {
+  display: none;
+  width: 100%;
+  height: 90px;
+  overflow: visible;
+}
+
+.observation-journal__trend svg.is-active {
+  display: block;
+}
+
+.observation-journal__trend-grid {
+  fill: none;
+  stroke: var(--line);
+  stroke-dasharray: 3 5;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.observation-journal__trend-line {
+  fill: none;
+  stroke: var(--journal-accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+  vector-effect: non-scaling-stroke;
+}
+
+.observation-journal__trend-end {
+  fill: var(--surface);
+  stroke: var(--journal-accent);
+  stroke-width: 2.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.observation-journal__trend .chart-month-label {
+  font-size: 9px;
+}
+
+.observation-journal__trend .chart-cursor-tooltip {
+  min-width: 185px;
+}
+
+.observation-journal__trend--empty {
+  display: grid;
+  min-height: 80px;
+  align-content: center;
+  gap: 4px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
 .observation-journal__item footer {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr);
@@ -4169,6 +4284,72 @@ a {
 .observation-journal__item footer strong {
   font-size: 0.78rem;
   line-height: 1.45;
+}
+
+.observation-journal__detail {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--journal-accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--journal-accent) 5%, transparent);
+  padding: 14px 16px;
+}
+
+.observation-journal__detail[hidden] {
+  display: none;
+}
+
+.observation-journal__detail-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.observation-journal__detail-heading strong {
+  font-size: 0.86rem;
+}
+
+.observation-journal__detail-heading span,
+.observation-journal__detail p {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.observation-journal__detail ul {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.observation-journal__detail li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 14px;
+  align-items: baseline;
+  border-top: 1px solid var(--line);
+  padding: 9px 0;
+  font-size: 0.78rem;
+}
+
+.observation-journal__detail li small {
+  color: var(--muted);
+  font-size: 0.71rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.observation-journal__detail li strong {
+  color: var(--journal-accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.observation-journal__detail p {
+  margin: 0;
 }
 
 .operations-page {
@@ -5313,6 +5494,20 @@ a {
   .observation-journal__summary > div:last-child {
     justify-items: start;
     text-align: left;
+  }
+
+  .observation-journal__detail-heading {
+    display: grid;
+    gap: 4px;
+  }
+
+  .observation-journal__detail li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 5px 10px;
+  }
+
+  .observation-journal__detail li strong {
+    grid-column: 2;
   }
 
   .els-comparison-row,

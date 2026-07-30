@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260729-6";
+const ASSET_VERSION = "20260730-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -390,6 +390,50 @@ function buildGroupCompositeSeries(section, groupId, timeseries) {
 
   const currentGroup = (section.groupScores ?? []).find((group) => group.id === groupId);
   const currentScore = Number(currentGroup?.score);
+  const currentDate = section.asOf;
+  if (Number.isFinite(currentScore) && currentDate) {
+    const latest = composite.at(-1);
+    if (latest.date === currentDate) {
+      latest.value = currentScore;
+    } else if (latest.date < currentDate) {
+      composite.push({ date: currentDate, value: currentScore });
+    }
+  }
+  return composite;
+}
+
+function buildObservationJournalSeries(section, item, timeseries) {
+  const components = (item?.components ?? []).filter(
+    (component) => Number(component.weight) > 0
+  );
+  const totalWeight = components.reduce(
+    (sum, component) => sum + Number(component.weight),
+    0
+  );
+  if (!totalWeight) return [];
+
+  const dateScores = {};
+  const dateWeights = {};
+  components.forEach((component) => {
+    const weight = Number(component.weight);
+    (timeseries?.series?.[component.id] ?? []).forEach((point) => {
+      if (!Number.isFinite(Number(point.value))) return;
+      dateScores[point.date] =
+        (dateScores[point.date] ?? 0) + clampScore(point.value) * weight;
+      dateWeights[point.date] = (dateWeights[point.date] ?? 0) + weight;
+    });
+  });
+
+  const composite = Object.keys(dateScores)
+    .sort()
+    .filter((date) => dateWeights[date] >= totalWeight * 0.7)
+    .map((date) => ({
+      date,
+      value: dateScores[date] / dateWeights[date]
+    }));
+  if (!composite.length) return composite;
+
+  const currentScore = Number(item.score);
   const currentDate = section.asOf;
   if (Number.isFinite(currentScore) && currentDate) {
     const latest = composite.at(-1);
@@ -3738,7 +3782,122 @@ function renderGroupScores(section, timeseries) {
   `;
 }
 
-function renderObservationJournal(section) {
+function renderObservationJournalTrend(section, item, timeseries) {
+  const points = buildObservationJournalSeries(section, item, timeseries);
+  if (points.length < 2) {
+    return `
+      <div class="observation-journal__trend observation-journal__trend--empty">
+        <span>검증 점수 흐름</span>
+        <small>${item.score == null ? "직접 데이터 연결 후 제공" : "시계열 준비중"}</small>
+      </div>
+    `;
+  }
+
+  const width = 420;
+  const chartId = registerInteractiveChart({
+    width,
+    tooltipMode: "all",
+    series: [
+      {
+        label: item.title,
+        points,
+        valueKey: "value",
+        color: "var(--journal-accent)",
+        format: (value) => `${Number(value).toFixed(1)}점`
+      }
+    ]
+  });
+  const layers = chartRangeOptions
+    .map((range) => {
+      const domain = chartRangeDomain([points], range.id);
+      const visible = pointsWithinDomain(points, domain, "value");
+      const rawValueDomain = numericChartDomain(visible, "value", 0.18);
+      const center = (rawValueDomain.min + rawValueDomain.max) / 2;
+      const halfSpan = Math.max((rawValueDomain.max - rawValueDomain.min) / 2, 10);
+      const valueDomain = {
+        min: Math.max(0, center - halfSpan),
+        max: Math.min(100, center + halfSpan)
+      };
+      const axis = renderMonthAxisFromDomain(domain, width, 8, 62, 82);
+      const latest = visible.at(-1);
+      const latestX = latest ? xFromDate(latest.date, domain, width) : 0;
+      const latestY = latest
+        ? 62 -
+          ((Number(latest.value) - valueDomain.min) /
+            Math.max(valueDomain.max - valueDomain.min, 1)) *
+            54
+        : 0;
+      return `
+        <svg
+          class="${chartRangeLayerClass(range.id)}"
+          data-chart-range-layer="${range.id}"
+          data-chart-svg
+          viewBox="0 0 ${width} 90"
+          role="img"
+          aria-label="${item.title} ${range.label} 검증 점수 흐름"
+        >
+          ${axis.grid}
+          <path class="observation-journal__trend-grid" d="M 0 35 L ${width} 35 M 0 62 L ${width} 62"></path>
+          <path
+            class="observation-journal__trend-line"
+            d="${datedValuePath(points, "value", domain, valueDomain, width, 8, 62)}"
+          ></path>
+          ${
+            latest
+              ? `<circle class="observation-journal__trend-end" cx="${latestX.toFixed(2)}" cy="${latestY.toFixed(2)}" r="3"></circle>`
+              : ""
+          }
+          ${renderChartCursorLine(8, 62)}
+          ${axis.labels}
+        </svg>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="observation-journal__trend" data-timeseries-chart="${chartId}">
+      <div class="observation-journal__trend-heading">
+        <span>검증 점수 흐름</span>
+        <small data-chart-active-range-label>${chartRangeOptions.find((option) => option.id === activeChartRange)?.label ?? "YTD"}</small>
+      </div>
+      ${layers}
+      ${renderChartTooltip()}
+    </div>
+  `;
+}
+
+function renderObservationJournalDetail(item) {
+  const components = item.components ?? [];
+  if (!components.length) {
+    return renderNarrativeList(
+      ["직접 점수화 보류", ...(item.evidence ?? [])],
+      "narrative-list--compact"
+    );
+  }
+
+  return `
+    <div class="observation-journal__detail-heading">
+      <strong>검증 점수 구성</strong>
+      <span>일지 내부 비중 · 종합점수 가중치 0</span>
+    </div>
+    <ul>
+      ${components
+        .map(
+          (component) => `
+            <li>
+              <span>${component.name}</span>
+              <small>${formatNumber(component.value, 1)} × ${(Number(component.weight) * 100).toFixed(0)}%</small>
+              <strong>+${formatNumber(component.contribution, 2)}점</strong>
+            </li>
+          `
+        )
+        .join("")}
+    </ul>
+    <p>구성 기여점수 합계 ${formatNumber(item.score, 1)}점 · 높을수록 해당 시장 의견을 지지</p>
+  `;
+}
+
+function renderObservationJournal(section, timeseries) {
   const items = section.observationJournal ?? [];
   if (!items.length) return "";
 
@@ -3753,27 +3912,43 @@ function renderObservationJournal(section) {
       </header>
       <div class="observation-journal__list">
         ${items
-          .map(
-            (item) => `
+          .map((item) => {
+            const detailId = `observation-detail-${item.id}`;
+            return `
               <article class="observation-journal__item observation-journal__item--${item.tone ?? "muted"}">
                 <div class="observation-journal__summary">
                   <div>
                     <span>${item.decision}</span>
-                    <h4>${item.title}</h4>
+                    <div class="observation-journal__title">
+                      <h4>${item.title}</h4>
+                      <button
+                        type="button"
+                        class="observation-journal__info"
+                        data-observation-detail-toggle="${item.id}"
+                        aria-label="${item.title} 구성 지표 보기"
+                        aria-controls="${detailId}"
+                        aria-expanded="false"
+                        title="${item.title} 구성 지표 보기"
+                      >i</button>
+                    </div>
                   </div>
                   <div>
                     <span>${item.status}</span>
                     <strong>${item.score == null ? "점수 보류" : `${formatNumber(item.score, 1)}점`}</strong>
                   </div>
                 </div>
+                ${renderObservationJournalTrend(section, item, timeseries)}
                 <div class="observation-journal__evidence">
                   ${(item.evidence ?? []).map((evidence) => `<span>${evidence}</span>`).join("")}
                 </div>
                 ${renderNarrativeList(item.assessment, "narrative-list--compact")}
                 <footer><span>운영</span><strong>${item.operation}</strong></footer>
+                <div class="observation-journal__detail" id="${detailId}" hidden>
+                  ${renderObservationJournalDetail(item)}
+                </div>
               </article>
-            `
-          )
+            `;
+          })
           .join("")}
       </div>
     </section>
@@ -3820,7 +3995,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
           : `
             ${renderModelPanel(section)}
             ${renderGroupScores(section, timeseries)}
-            ${section.id === "market" ? renderObservationJournal(section) : ""}
+            ${section.id === "market" ? renderObservationJournal(section, timeseries) : ""}
             ${
               section.id === "market"
                 ? `<div data-market-direction-slot>${renderMarketIndexTrendPanel(marketIndexes)}</div>`
@@ -4126,6 +4301,16 @@ function renderDashboard(
     </div>
   `;
   initializeInteractiveCharts(app);
+  app.querySelectorAll("[data-observation-detail-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const detail = document.getElementById(button.getAttribute("aria-controls"));
+      if (!detail) return;
+      const expanded = button.getAttribute("aria-expanded") === "true";
+      button.setAttribute("aria-expanded", expanded ? "false" : "true");
+      detail.hidden = expanded;
+      button.closest(".observation-journal__item")?.classList.toggle("is-expanded", !expanded);
+    });
+  });
 
   let marketDetailsStatus = "idle";
   const hydrateMarketDetails = async () => {

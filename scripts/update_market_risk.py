@@ -2678,32 +2678,49 @@ def build_observation_journal(indicators):
             return "관찰"
         return "확산 미확인"
 
-    ai_score = score_from_metrics(
-        [
-            (score("bigtech_ai_demand_pressure"), 0.55),
-            (score("global_ai_semiconductor_stress"), 0.25),
-            (score("korea_ai_semiconductor_concentration"), 0.2),
-        ]
-    )
-    reinflation_score = score_from_metrics(
-        [
-            (score("energy_import_cost_pressure"), 0.45),
-            (score("broad_reinflation_watch"), 0.55),
-        ]
-    )
-    rates_score = score_from_metrics(
-        [
-            (score("rates_pressure"), 0.6),
-            (score("us_financial_conditions_stress"), 0.4),
-        ]
-    )
-    flow_score = score_from_metrics(
-        [
-            (score("volatility_term_structure_watch"), 0.45),
-            (score("us_market_breadth_watch"), 0.35),
-            (score("trading_activity_heat"), 0.2),
-        ]
-    )
+    def components(specs):
+        return sorted(
+            [
+                {
+                    "id": indicator_id,
+                    "name": by_id[indicator_id]["name"],
+                    "value": round_score(score(indicator_id)),
+                    "weight": weight,
+                    "contribution": round(score(indicator_id) * weight, 2),
+                }
+                for indicator_id, weight in specs
+            ],
+            key=lambda item: item["contribution"],
+            reverse=True,
+        )
+
+    def composite_score(specs):
+        return score_from_metrics(
+            [(score(indicator_id), weight) for indicator_id, weight in specs]
+        )
+
+    ai_specs = [
+        ("bigtech_ai_demand_pressure", 0.55),
+        ("global_ai_semiconductor_stress", 0.25),
+        ("korea_ai_semiconductor_concentration", 0.2),
+    ]
+    reinflation_specs = [
+        ("energy_import_cost_pressure", 0.45),
+        ("broad_reinflation_watch", 0.55),
+    ]
+    rates_specs = [
+        ("rates_pressure", 0.6),
+        ("us_financial_conditions_stress", 0.4),
+    ]
+    flow_specs = [
+        ("volatility_term_structure_watch", 0.45),
+        ("us_market_breadth_watch", 0.35),
+        ("trading_activity_heat", 0.2),
+    ]
+    ai_score = composite_score(ai_specs)
+    reinflation_score = composite_score(reinflation_specs)
+    rates_score = composite_score(rates_specs)
+    flow_score = composite_score(flow_specs)
 
     return [
         {
@@ -2713,6 +2730,7 @@ def build_observation_journal(indicators):
             "score": round_score(ai_score),
             "tone": tone(ai_score),
             "decision": "기존 가중지표 유지",
+            "components": components(ai_specs),
             "evidence": [
                 f"빅테크 AI 수요 우려 {score('bigtech_ai_demand_pressure'):.1f}",
                 f"글로벌 AI 반도체 {score('global_ai_semiconductor_stress'):.1f}",
@@ -2732,6 +2750,7 @@ def build_observation_journal(indicators):
             "score": round_score(reinflation_score),
             "tone": tone(reinflation_score),
             "decision": "관찰지표 보강",
+            "components": components(reinflation_specs),
             "evidence": [
                 f"원화 환산 에너지 비용 {score('energy_import_cost_pressure'):.1f}",
                 f"원자재·농산물 재인플레이션 {score('broad_reinflation_watch'):.1f}",
@@ -2749,6 +2768,7 @@ def build_observation_journal(indicators):
             "score": round_score(rates_score),
             "tone": tone(rates_score),
             "decision": "기존 가중지표 유지",
+            "components": components(rates_specs),
             "evidence": [
                 f"글로벌 금리 압력 {score('rates_pressure'):.1f}",
                 f"미국 금융여건 {score('us_financial_conditions_stress'):.1f}",
@@ -2766,6 +2786,7 @@ def build_observation_journal(indicators):
             "score": round_score(flow_score),
             "tone": tone(flow_score),
             "decision": "관찰지표 보강",
+            "components": components(flow_specs),
             "evidence": [
                 f"옵션 기간구조 {score('volatility_term_structure_watch'):.1f}",
                 f"미국 증시 폭 악화 {score('us_market_breadth_watch'):.1f}",
@@ -2785,6 +2806,7 @@ def build_observation_journal(indicators):
             "score": None,
             "tone": "muted",
             "decision": "직접 점수화 보류",
+            "components": [],
             "evidence": [
                 "일별 공개 DRAM·NAND 현물가격 미연결",
                 "기업별 상장 조달액·설비투자 집행 시계열 미연결",
