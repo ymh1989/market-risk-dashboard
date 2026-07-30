@@ -243,8 +243,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260730-5" in html
-    assert "app.js?v=20260730-5" in html
+    assert "styles.css?v=20260730-6" in html
+    assert "app.js?v=20260730-6" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -463,6 +463,16 @@ def test_weighted_group_timeline_contract():
     assert "renderGroupScores(section, timeseries)" in app_source
     assert ".group-card__trend-line" in styles
     assert "grid-template-columns: repeat(5, 42px)" in styles
+    assert 'class="risk-color-legend"' in app_source
+    assert "그룹색" in app_source
+    assert "카드 추세" in app_source
+    assert "부담 상승" in app_source
+    assert "부담 하락" in app_source
+    assert "--group-liquidity: #8fb1c9;" in styles
+    assert "--group-accent: var(--group-liquidity);" in styles
+    assert "stroke: var(--trend-worsening);" in styles
+    assert "stroke: var(--trend-improving);" in styles
+    assert "stroke: var(--trend-flat);" in styles
 
 
 def test_observation_journal_timeline_and_detail_contract():

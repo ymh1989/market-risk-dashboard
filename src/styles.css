@@ -17,6 +17,15 @@
   --amber: #8c5f13;
   --red: #b63833;
   --blue: #2f6fbb;
+  --group-crash: #bd5d57;
+  --group-macro: #3d72ad;
+  --group-ai-semi: #1f837e;
+  --group-overheating: #956814;
+  --group-flow: #7563a3;
+  --group-liquidity: #577a95;
+  --trend-worsening: #b63833;
+  --trend-improving: #25784a;
+  --trend-flat: #64717c;
   --status-ink: #ffffff;
   --focus-ring: #2f6fbb;
   --shadow: 0 12px 32px rgba(23, 32, 38, 0.08);
@@ -40,6 +49,15 @@
   --amber: #d6a24a;
   --red: #e07169;
   --blue: #6fa1d9;
+  --group-crash: #e7837b;
+  --group-macro: #79a8df;
+  --group-ai-semi: #5dc2ba;
+  --group-overheating: #ddb35f;
+  --group-flow: #a894d4;
+  --group-liquidity: #8fb1c9;
+  --trend-worsening: #f07d74;
+  --trend-improving: #72c58d;
+  --trend-flat: #a3b2bb;
   --status-ink: #071014;
   --focus-ring: #8bb9eb;
   --shadow: 0 12px 34px rgba(0, 0, 0, 0.28);
@@ -3408,6 +3426,87 @@ a {
   margin: 0 0 20px;
 }
 
+.risk-color-legend {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 24px;
+  border-block: 1px solid var(--line);
+  padding: 10px 2px;
+}
+
+.risk-color-legend__set {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px 12px;
+}
+
+.risk-color-legend__set > strong {
+  color: var(--ink);
+  font-size: 0.72rem;
+}
+
+.risk-color-key {
+  --legend-color: var(--muted);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.69rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.risk-color-key i {
+  width: 15px;
+  height: 0;
+  border-top: 3px solid var(--legend-color);
+}
+
+.risk-color-key--crash {
+  --legend-color: var(--group-crash);
+}
+
+.risk-color-key--macro {
+  --legend-color: var(--group-macro);
+}
+
+.risk-color-key--ai_semi {
+  --legend-color: var(--group-ai-semi);
+}
+
+.risk-color-key--overheating {
+  --legend-color: var(--group-overheating);
+}
+
+.risk-color-key--flow {
+  --legend-color: var(--group-flow);
+}
+
+.risk-color-key--liquidity {
+  --legend-color: var(--group-liquidity);
+}
+
+.risk-color-key--trend-up {
+  --legend-color: var(--trend-worsening);
+}
+
+.risk-color-key--trend-down {
+  --legend-color: var(--trend-improving);
+}
+
+.risk-color-key--trend-flat {
+  --legend-color: var(--trend-flat);
+}
+
+.risk-color-key--trend-flat i {
+  border-top-style: dashed;
+}
+
 .group-card {
   --group-accent: var(--muted);
 
@@ -3434,37 +3533,37 @@ a {
 .group-card--crash,
 .indicator-card--group-crash,
 .indicator-group-tag--crash {
-  --group-accent: var(--red);
+  --group-accent: var(--group-crash);
 }
 
 .group-card--macro,
 .indicator-card--group-macro,
 .indicator-group-tag--macro {
-  --group-accent: var(--blue);
+  --group-accent: var(--group-macro);
 }
 
 .group-card--ai_semi,
 .indicator-card--group-ai_semi,
 .indicator-group-tag--ai_semi {
-  --group-accent: var(--teal);
+  --group-accent: var(--group-ai-semi);
 }
 
 .group-card--overheating,
 .indicator-card--group-overheating,
 .indicator-group-tag--overheating {
-  --group-accent: var(--amber);
+  --group-accent: var(--group-overheating);
 }
 
 .group-card--flow,
 .indicator-card--group-flow,
 .indicator-group-tag--flow {
-  --group-accent: var(--green);
+  --group-accent: var(--group-flow);
 }
 
 .group-card--liquidity,
 .indicator-card--group-liquidity,
 .indicator-group-tag--liquidity {
-  --group-accent: var(--navy);
+  --group-accent: var(--group-liquidity);
 }
 
 .group-card__heading {
@@ -4090,15 +4189,16 @@ a {
 }
 
 .sparkline--up .sparkline__line {
-  stroke: var(--red);
+  stroke: var(--trend-worsening);
 }
 
 .sparkline--down .sparkline__line {
-  stroke: var(--green);
+  stroke: var(--trend-improving);
 }
 
 .sparkline--flat .sparkline__line {
-  stroke: var(--blue);
+  stroke: var(--trend-flat);
+  stroke-dasharray: 4 3;
 }
 
 .sparkline--empty {

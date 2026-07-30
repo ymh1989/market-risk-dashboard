@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260730-4";
+const ASSET_VERSION = "20260730-6";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -58,36 +58,42 @@ const sentimentGroupDefinitions = [
 const riskGroupDefinitions = {
   crash: {
     label: "급락 스트레스",
+    legendLabel: "급락",
     shortLabel: "Crash",
     englishLabel: "Crash Stress",
     description: "KOSPI와 KOSDAQ의 가격 하락 충격"
   },
   macro: {
     label: "거시환경 부담",
+    legendLabel: "거시",
     shortLabel: "Macro",
     englishLabel: "Macro",
     description: "환율·변동성·금리·신용·원자재·운임의 거시 부담"
   },
   ai_semi: {
     label: "AI·반도체 부담",
+    legendLabel: "AI·반도체",
     shortLabel: "AI Semi",
     englishLabel: "AI Semi",
     description: "글로벌 AI 수요와 국내외 반도체 집중 위험"
   },
   overheating: {
     label: "과열·쏠림",
+    legendLabel: "과열",
     shortLabel: "Overheating",
     englishLabel: "Overheating",
     description: "레버리지와 신흥국 위험선호로 본 시장 과열"
   },
   flow: {
     label: "수급 압력",
+    legendLabel: "수급",
     shortLabel: "Flow",
     englishLabel: "Flow",
     description: "외국인 보유비중 변화로 본 수급 이탈 압력"
   },
   liquidity: {
     label: "거래 유동성",
+    legendLabel: "유동성",
     shortLabel: "Liquidity",
     englishLabel: "Liquidity",
     description: "거래량과 거래대금의 과열 또는 위축"
@@ -3687,6 +3693,29 @@ function renderGroupScores(section, timeseries) {
 
   return `
     <section class="group-panel">
+      <div class="risk-color-legend" aria-label="시장리스크 그래프 색상 기준">
+        <div class="risk-color-legend__set">
+          <strong>그룹색</strong>
+          ${groups
+            .map((group) => {
+              const definition = riskGroupDefinitions[group.id] ?? {
+                legendLabel: group.label
+              };
+              return `
+                <span class="risk-color-key risk-color-key--${group.id}">
+                  <i aria-hidden="true"></i>${definition.legendLabel ?? definition.label}
+                </span>
+              `;
+            })
+            .join("")}
+        </div>
+        <div class="risk-color-legend__set">
+          <strong>카드 추세</strong>
+          <span class="risk-color-key risk-color-key--trend-up"><i aria-hidden="true"></i>부담 상승</span>
+          <span class="risk-color-key risk-color-key--trend-down"><i aria-hidden="true"></i>부담 하락</span>
+          <span class="risk-color-key risk-color-key--trend-flat"><i aria-hidden="true"></i>보합</span>
+        </div>
+      </div>
       ${groups
         .map((group) => {
           const definition = riskGroupDefinitions[group.id] ?? {
