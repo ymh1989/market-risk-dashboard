@@ -243,8 +243,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260730-3" in html
-    assert "app.js?v=20260730-3" in html
+    assert "styles.css?v=20260730-4" in html
+    assert "app.js?v=20260730-4" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -421,6 +421,12 @@ def test_interactive_timeline_range_and_cursor_contract():
     assert "function initializeInteractiveCharts" in app_source
     assert "function updateChartCursor" in app_source
     assert "function nearestChartPoint" in app_source
+    assert "function renderChartRangeButtons" in app_source
+    assert "function renderMarketChartRangeDock" in app_source
+    assert 'class="market-chart-range-dock"' in app_source
+    assert 'renderChartRangeButtons("market-global"' in app_source
+    assert "시장리스크 전체 시계열 조회 기간" in app_source
+    assert 'section.id === "market" ? renderMarketChartRangeDock()' in app_source
     assert 'data-chart-range="${option.id}"' in app_source
     assert 'data-chart-range-layer="${range.id}"' in app_source
     assert "data-chart-cursor-line" in app_source
@@ -435,6 +441,8 @@ def test_interactive_timeline_range_and_cursor_contract():
     assert "renderHmmRegimeBands(visible, domain)" in app_source
     assert "market-trend-row__live-line" in app_source
     assert ".chart-range-control" in styles
+    assert "position: sticky;" in styles.split(".market-chart-range-dock {", 1)[1].split("}", 1)[0]
+    assert "grid-template-columns: repeat(5, minmax(0, 1fr));" in styles
     assert ".chart-range-layer.is-active" in styles
     assert ".chart-cursor-line.is-visible" in styles
     assert ".chart-cursor-tooltip.is-visible" in styles

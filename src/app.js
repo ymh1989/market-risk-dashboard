@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260730-3";
+const ASSET_VERSION = "20260730-4";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -1468,28 +1468,48 @@ function chartRangeLayerClass(rangeId) {
   return `chart-range-layer${rangeId === activeChartRange ? " is-active" : ""}`;
 }
 
+function renderChartRangeButtons(chartId, ariaLabel = "시계열 조회 기간") {
+  return `
+    <div class="chart-range-control" role="group" aria-label="${ariaLabel}">
+      ${chartRangeOptions
+        .map(
+          (option) => `
+            <button
+              type="button"
+              class="${option.id === activeChartRange ? "is-active" : ""}"
+              data-chart-range="${option.id}"
+              data-chart-id="${chartId}"
+              aria-pressed="${option.id === activeChartRange ? "true" : "false"}"
+            >${option.label}</button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderChartRangeControls(chartId, { hasProvisional = false } = {}) {
   return `
     <div class="chart-range-toolbar">
-      <div class="chart-range-control" role="group" aria-label="시계열 조회 기간">
-        ${chartRangeOptions
-          .map(
-            (option) => `
-              <button
-                type="button"
-                class="${option.id === activeChartRange ? "is-active" : ""}"
-                data-chart-range="${option.id}"
-                data-chart-id="${chartId}"
-                aria-pressed="${option.id === activeChartRange ? "true" : "false"}"
-              >${option.label}</button>
-            `
-          )
-          .join("")}
-      </div>
+      ${renderChartRangeButtons(chartId)}
       <span class="chart-value-status">
         <i class="chart-value-status__eod"></i>EOD
         ${hasProvisional ? `<i class="chart-value-status__provisional"></i>잠정` : ""}
       </span>
+    </div>
+  `;
+}
+
+function renderMarketChartRangeDock() {
+  const activeLabel =
+    chartRangeOptions.find((option) => option.id === activeChartRange)?.label ?? "YTD";
+  return `
+    <div class="market-chart-range-dock" role="region" aria-label="시장리스크 공통 그래프 기간">
+      <div class="market-chart-range-dock__label">
+        <span>전체 시계열</span>
+        <strong data-chart-active-range-label>${activeLabel}</strong>
+      </div>
+      ${renderChartRangeButtons("market-global", "시장리스크 전체 시계열 조회 기간")}
     </div>
   `;
 }
@@ -3991,6 +4011,8 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
           <strong>${formatScore(section.score)}</strong>
         </div>
       </div>
+
+      ${!isPlanned && section.id === "market" ? renderMarketChartRangeDock() : ""}
 
       ${
         isPlanned

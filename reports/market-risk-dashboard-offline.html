@@ -1050,6 +1050,45 @@ a {
   justify-content: flex-end;
 }
 
+.market-chart-range-dock {
+  z-index: 45;
+  position: sticky;
+  top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 18px;
+  border: 1px solid color-mix(in srgb, var(--teal) 34%, var(--line));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface) 93%, transparent);
+  box-shadow: 0 8px 22px rgba(2, 8, 23, 0.11);
+  padding: 8px 10px 8px 14px;
+  backdrop-filter: blur(14px);
+}
+
+.market-chart-range-dock__label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.market-chart-range-dock__label span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.market-chart-range-dock__label strong {
+  color: var(--teal);
+  font-size: 0.76rem;
+}
+
+.market-chart-range-dock .chart-range-control {
+  flex: 0 0 auto;
+}
+
 .chart-range-control {
   display: inline-grid;
   grid-template-columns: repeat(5, 42px);
@@ -5429,6 +5468,22 @@ a {
     flex-wrap: wrap;
   }
 
+  .market-chart-range-dock {
+    top: 6px;
+    display: grid;
+    gap: 7px;
+    padding: 8px;
+  }
+
+  .market-chart-range-dock__label {
+    padding: 0 2px;
+  }
+
+  .market-chart-range-dock .chart-range-control {
+    width: 100%;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
   .ml-risk-chart__header {
     align-items: flex-start;
     flex-direction: column;
@@ -5780,7 +5835,7 @@ function evaluateDashboard(data) {
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260730-3";
+const ASSET_VERSION = "20260730-4";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -7246,28 +7301,48 @@ function chartRangeLayerClass(rangeId) {
   return `chart-range-layer${rangeId === activeChartRange ? " is-active" : ""}`;
 }
 
+function renderChartRangeButtons(chartId, ariaLabel = "시계열 조회 기간") {
+  return `
+    <div class="chart-range-control" role="group" aria-label="${ariaLabel}">
+      ${chartRangeOptions
+        .map(
+          (option) => `
+            <button
+              type="button"
+              class="${option.id === activeChartRange ? "is-active" : ""}"
+              data-chart-range="${option.id}"
+              data-chart-id="${chartId}"
+              aria-pressed="${option.id === activeChartRange ? "true" : "false"}"
+            >${option.label}</button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderChartRangeControls(chartId, { hasProvisional = false } = {}) {
   return `
     <div class="chart-range-toolbar">
-      <div class="chart-range-control" role="group" aria-label="시계열 조회 기간">
-        ${chartRangeOptions
-          .map(
-            (option) => `
-              <button
-                type="button"
-                class="${option.id === activeChartRange ? "is-active" : ""}"
-                data-chart-range="${option.id}"
-                data-chart-id="${chartId}"
-                aria-pressed="${option.id === activeChartRange ? "true" : "false"}"
-              >${option.label}</button>
-            `
-          )
-          .join("")}
-      </div>
+      ${renderChartRangeButtons(chartId)}
       <span class="chart-value-status">
         <i class="chart-value-status__eod"></i>EOD
         ${hasProvisional ? `<i class="chart-value-status__provisional"></i>잠정` : ""}
       </span>
+    </div>
+  `;
+}
+
+function renderMarketChartRangeDock() {
+  const activeLabel =
+    chartRangeOptions.find((option) => option.id === activeChartRange)?.label ?? "YTD";
+  return `
+    <div class="market-chart-range-dock" role="region" aria-label="시장리스크 공통 그래프 기간">
+      <div class="market-chart-range-dock__label">
+        <span>전체 시계열</span>
+        <strong data-chart-active-range-label>${activeLabel}</strong>
+      </div>
+      ${renderChartRangeButtons("market-global", "시장리스크 전체 시계열 조회 기간")}
     </div>
   `;
 }
@@ -9769,6 +9844,8 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
           <strong>${formatScore(section.score)}</strong>
         </div>
       </div>
+
+      ${!isPlanned && section.id === "market" ? renderMarketChartRangeDock() : ""}
 
       ${
         isPlanned
