@@ -232,7 +232,9 @@ make run-news-bot
 - `scripts/analyze_stress_episodes.py`: 과거 스트레스 구간과 기여지표를 분석합니다.
 - `scripts/send_risk_news_digest.py`: 키워드별 최신 뉴스를 수집해 텔레그램 브리핑을 발송합니다.
 
-## 신용/유동성 리스크 추가 방법
+## 신용/유동성 리스크 확장 방법
+
+신용·유동성 리스크 스키마는 향후 확장용으로 데이터에 남아 있지만 홈페이지 탭에서는 숨깁니다. 다시 노출하려면 `src/app.js`의 `visibleBaseTabs` 제외 목록에서 해당 id를 제거한 뒤 아래 순서로 활성화합니다.
 
 1. `data/risk-dashboard.json`에서 `credit` 또는 `liquidity` 탭의 `enabled` 값을 `true`로 바꿉니다.
 2. 같은 id를 가진 section의 `status`를 `active`로 바꿉니다.
@@ -258,6 +260,8 @@ make run-news-bot
 
 - Hugging Face Spaces: 새 Space를 `Static` 타입으로 만들고 이 폴더를 push합니다.
 - GitHub Pages: 저장소에 push한 뒤 Pages source를 root로 지정합니다.
+
+브라우저의 `HTML만 저장` 기능은 권장하지 않습니다. 화면이 JavaScript 모듈, CSS와 여러 JSON 파일을 상대경로로 불러오므로 HTML 한 파일만 전달하면 브라우저 보안정책 때문에 데이터 로딩이나 상호작용이 실패할 수 있습니다. 오프라인 공유는 저장소 전체를 폴더로 전달해 로컬 정적 서버로 열거나, 상호작용이 필요 없는 경우 브라우저에서 PDF로 출력하는 방식이 안전합니다.
 - Netlify/Vercel: 빌드 명령 없이 publish directory를 프로젝트 루트로 지정합니다.
 
 실제 운영에서는 로컬 예약 갱신기가 화면에서 읽는 `data/*.json`을 갱신하고 commit·push하면, 화면 코드 수정 없이 최신 대시보드를 발행할 수 있습니다. GitHub Actions는 예약 실행이 아니라 수동 백업 실행용으로 남겨 둡니다.

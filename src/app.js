@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260730-1";
+const ASSET_VERSION = "20260730-2";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -4187,12 +4187,21 @@ function renderDashboard(
   interactiveChartRegistry.clear();
   interactiveChartSequence = 0;
   const data = evaluateDashboard(rawData);
-  const dashboardTabs = dashboardTabsWithElsTool(data.tabs);
+  const visibleBaseTabs = data.tabs.filter(
+    (tab) => !["credit", "liquidity"].includes(tab.id)
+  );
+  const dashboardTabs = dashboardTabsWithElsTool(visibleBaseTabs);
   const enabledTabs = dashboardTabs.filter((tab) => tab.enabled);
+  const visibleSections = data.sections.filter((section) =>
+    enabledTabs.some((tab) => tab.id === section.id)
+  );
   const requestedTab = decodeURIComponent(window.location.hash.replace(/^#/, ""));
   const activeTab = enabledTabs.some((tab) => tab.id === requestedTab) ? requestedTab : "summary";
   const indicatorSortStates = Object.fromEntries(
-    data.sections.map((section) => [section.id, { key: "score", direction: "desc", group: null }])
+    visibleSections.map((section) => [
+      section.id,
+      { key: "score", direction: "desc", group: null }
+    ])
   );
   const panelState = (id) => ({
     className: id === activeTab ? "is-active" : "",
@@ -4295,7 +4304,7 @@ function renderDashboard(
       >
         ${renderElsIssuanceHedgePage(elsRisk)}
       </section>
-          ${data.sections
+          ${visibleSections
             .map((section) => renderSection(section, timeseries, null, null, null, activeTab))
             .join("")}
     </div>
