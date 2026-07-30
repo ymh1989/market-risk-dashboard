@@ -319,6 +319,52 @@ def fetch_yahoo_chart(symbol, range_value="2y"):
     return series
 
 
+def load_history_yahoo_series_map():
+    if not HISTORY_CACHE_FILE.exists():
+        return {}
+    try:
+        payload = json.loads(HISTORY_CACHE_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        print(f"Yahoo 장기 캐시를 읽지 못했습니다: {error}", flush=True)
+        return {}
+    yahoo_map = payload.get("yahoo")
+    return yahoo_map if isinstance(yahoo_map, dict) else {}
+
+
+def fetch_yahoo_chart_with_fallback(symbol, cached_series=None, range_value="2y"):
+    cached_series = cached_series if isinstance(cached_series, list) else []
+    try:
+        live_series = fetch_yahoo_chart(symbol, range_value=range_value)
+    except Exception:
+        if len(cached_series) < 80:
+            raise
+        print(
+            f"Yahoo 저장값 대체: {symbol} (신규 조회 실패, 최신 {cached_series[-1]['date']})",
+            flush=True,
+        )
+        return cached_series, "history-cache"
+
+    if not cached_series or cached_series[-1].get("date", "") <= live_series[-1]["date"]:
+        return live_series, "yahoo"
+
+    live_start_date = live_series[0]["date"]
+    merged = {
+        point["date"]: point
+        for point in cached_series
+        if isinstance(point, dict)
+        and point.get("date", "") >= live_start_date
+        and isinstance(point.get("close"), (int, float))
+    }
+    merged.update({point["date"]: point for point in live_series})
+    merged_series = [merged[date] for date in sorted(merged)]
+    print(
+        "Yahoo 저장값 보강: "
+        f"{symbol} ({live_series[-1]['date']} -> {merged_series[-1]['date']})",
+        flush=True,
+    )
+    return merged_series, "yahoo+history-cache"
+
+
 def fetch_naver_chart(symbol, lookback_days=760, start_date=None, end_date=None):
     end_date = end_date or datetime.now(KST).strftime("%Y%m%d")
     start_date = start_date or (datetime.now(KST) - timedelta(days=lookback_days)).strftime("%Y%m%d")
@@ -3417,7 +3463,7 @@ def write_snapshot(
     market_index_map,
     market_index_statuses,
     indicators,
-    domestic_index_statuses,
+    yahoo_fetch_statuses,
 ):
     enriched_indicators, group_scores = enrich_indicators(indicators)
     snapshot = {
@@ -3430,11 +3476,19 @@ def write_snapshot(
                 "lastDate": series_map[key][-1]["date"],
                 "lastClose": round(series_map[key][-1]["close"], 4),
                 "observations": len(series_map[key]),
-                "fetchStatus": domestic_index_statuses.get(key, "yahoo"),
+                "fetchStatus": yahoo_fetch_statuses.get(key, "yahoo"),
                 "source": (
                     "Yahoo Finance + Naver Finance index"
-                    if domestic_index_statuses.get(key) == "yahoo+naver"
-                    else "Yahoo Finance"
+                    if yahoo_fetch_statuses.get(key) == "yahoo+naver"
+                    else (
+                        "Yahoo Finance + previous verified history cache"
+                        if yahoo_fetch_statuses.get(key) == "yahoo+history-cache"
+                        else (
+                            "Previous verified Yahoo Finance history cache"
+                            if yahoo_fetch_statuses.get(key) == "history-cache"
+                            else "Yahoo Finance"
+                        )
+                    )
                 ),
             }
             for key, config in TICKERS.items()
@@ -3499,10 +3553,23 @@ def write_timeseries(series_map, naver_map, fred_map, market_index_map):
 
 def main():
     print("Yahoo Finance 시계열을 조회합니다.", flush=True)
-    series_map = fetch_configured_series(
-        TICKERS, lambda config: fetch_yahoo_chart(config["symbol"]), max_workers=6
+    cached_yahoo_map = load_history_yahoo_series_map()
+    cached_yahoo_by_symbol = {
+        config["symbol"]: cached_yahoo_map.get(key, [])
+        for key, config in TICKERS.items()
+    }
+    yahoo_results = fetch_configured_series(
+        TICKERS,
+        lambda config: fetch_yahoo_chart_with_fallback(
+            config["symbol"],
+            cached_yahoo_by_symbol.get(config["symbol"]),
+        ),
+        max_workers=6,
     )
+    series_map = {key: result[0] for key, result in yahoo_results.items()}
+    yahoo_fetch_statuses = {key: result[1] for key, result in yahoo_results.items()}
     series_map, domestic_index_statuses = supplement_domestic_index_series(series_map)
+    yahoo_fetch_statuses.update(domestic_index_statuses)
     print("Naver 주식·시장지표 시계열을 조회합니다.", flush=True)
     naver_map = fetch_configured_series(
         NAVER_SYMBOLS, lambda config: fetch_naver_chart(config["symbol"]), max_workers=4
@@ -3521,7 +3588,7 @@ def main():
         market_index_map,
         market_index_statuses,
         indicators,
-        domestic_index_statuses,
+        yahoo_fetch_statuses,
     )
     write_timeseries(series_map, naver_map, fred_map, market_index_map)
 

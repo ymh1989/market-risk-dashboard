@@ -14,7 +14,8 @@ from update_market_risk import (
     build_timeseries,
     fetch_fred_series_with_fallback,
     fetch_naver_chart,
-    fetch_yahoo_chart,
+    fetch_yahoo_chart_with_fallback,
+    load_history_yahoo_series_map,
     load_naver_market_index_cache,
     supplement_domestic_index_series,
 )
@@ -190,10 +191,15 @@ def load_or_fetch_history():
     if cached:
         return cached
 
+    cached_yahoo_map = load_history_yahoo_series_map()
     series_map = fetch_source_map(
         "Yahoo",
         TICKERS,
-        lambda _key, config: fetch_yahoo_chart(config["symbol"], range_value="7y"),
+        lambda key, config: fetch_yahoo_chart_with_fallback(
+            config["symbol"],
+            cached_yahoo_map.get(key),
+            range_value="7y",
+        )[0],
     )
     series_map, _ = supplement_domestic_index_series(series_map)
     naver_map = fetch_source_map(

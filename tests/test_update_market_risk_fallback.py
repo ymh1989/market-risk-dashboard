@@ -40,3 +40,46 @@ def test_history_cache_supplies_dgs2_when_raw_csv_has_no_fred_columns(tmp_path, 
     assert source == "data/market-history-cache.json"
     assert len(series) == 120
     assert series[-1]["date"] == today.isoformat()
+
+
+def test_yahoo_history_cache_prevents_latest_date_regression(monkeypatch):
+    module = load_update_module()
+    live_series = [
+        {"date": f"2026-07-{day:02d}", "close": float(day), "volume": None}
+        for day in range(1, 18)
+    ]
+    live_series = [
+        {"date": f"2026-{month:02d}-{day:02d}", "close": float(month * 100 + day), "volume": None}
+        for month in range(1, 7)
+        for day in range(1, 15)
+    ] + live_series
+    cached_series = live_series + [
+        {"date": "2026-07-29", "close": 21.5, "volume": None}
+    ]
+    monkeypatch.setattr(module, "fetch_yahoo_chart", lambda _symbol, range_value="2y": live_series)
+
+    series, status = module.fetch_yahoo_chart_with_fallback("^VIX3M", cached_series)
+
+    assert status == "yahoo+history-cache"
+    assert series[-1] == {"date": "2026-07-29", "close": 21.5, "volume": None}
+    assert len({point["date"] for point in series}) == len(series)
+
+
+def test_yahoo_live_series_wins_when_it_is_newer(monkeypatch):
+    module = load_update_module()
+    cached_series = [
+        {"date": f"2026-06-{day:02d}", "close": float(day), "volume": None}
+        for day in range(1, 31)
+    ] * 3
+    live_series = [
+        {"date": f"2026-{month:02d}-{day:02d}", "close": float(month * 100 + day), "volume": None}
+        for month in range(1, 7)
+        for day in range(1, 15)
+    ] + [{"date": "2026-07-30", "close": 20.0, "volume": None}]
+    monkeypatch.setattr(module, "fetch_yahoo_chart", lambda _symbol, range_value="2y": live_series)
+
+    series, status = module.fetch_yahoo_chart_with_fallback("^VIX3M", cached_series)
+
+    assert status == "yahoo"
+    assert series is live_series
+    assert series[-1]["date"] == "2026-07-30"
