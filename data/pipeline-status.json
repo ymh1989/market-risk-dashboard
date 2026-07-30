@@ -1,20 +1,20 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-30 12:31:54 KST",
+  "generatedAt": "2026-07-30 16:27:44 KST",
   "current": {
-    "runId": "20260730T123154-12:30",
+    "runId": "20260730T162744-manual",
     "status": "success",
-    "mode": "fast",
-    "trigger": "scheduled",
-    "scheduledTime": "12:30",
-    "startedAt": "2026-07-30 12:30:00 KST",
-    "completedAt": "2026-07-30 12:31:54 KST",
-    "durationSeconds": 114,
+    "mode": "full",
+    "trigger": "manual",
+    "scheduledTime": null,
+    "startedAt": "2026-07-30 16:11:12 KST",
+    "completedAt": "2026-07-30 16:27:44 KST",
+    "durationSeconds": 992,
     "dataAsOf": "2026-07-30",
-    "dashboardGeneratedAt": "2026-07-30 12:30 KST",
-    "mlGeneratedAt": "2026-07-30 12:31 KST",
-    "qualityScore": 100.0,
-    "message": "데이터 생성과 완비성 검증을 통과했습니다."
+    "dashboardGeneratedAt": "2026-07-30 16:12 KST",
+    "mlGeneratedAt": "2026-07-30 16:27 KST",
+    "qualityScore": 99.5,
+    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
     "timezone": "Asia/Seoul",
@@ -50,21 +50,21 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 72,
+      "durationSeconds": 179,
       "detail": "시장 데이터 수집, 위험점수, ELS·HMM 산출"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
-      "durationSeconds": 38,
+      "durationSeconds": 810,
       "detail": "특성 생성, 모델 학습, 예측 및 OOS 검증"
     },
     {
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 1,
+      "durationSeconds": 0,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -115,13 +115,13 @@
     {
       "id": "fred",
       "label": "FRED",
-      "status": "ok",
-      "lastDate": "2026-07-29",
+      "status": "warning",
+      "lastDate": "2026-07-28",
       "seriesCount": 5,
-      "detail": "5/5개 수집 · 허용시차 내 5개",
-      "oldestLastDate": "2026-07-24",
-      "freshCount": 5,
-      "staleCount": 0,
+      "detail": "5/5개 수집 · 허용시차 내 3개",
+      "oldestLastDate": "2026-07-10",
+      "freshCount": 3,
+      "staleCount": 2,
       "fallbackCount": 0
     },
     {
@@ -142,68 +142,91 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-07-30 12:30 KST"
+      "generatedAt": "2026-07-30 16:12 KST"
     },
     {
       "id": "ml",
       "label": "ML 위험신호",
       "status": "ok",
-      "generatedAt": "2026-07-30 12:31 KST"
+      "generatedAt": "2026-07-30 16:27 KST"
     },
     {
       "id": "els",
       "label": "ELS 지수위험",
       "status": "ok",
-      "generatedAt": "2026-07-30 12:31 KST"
+      "generatedAt": "2026-07-30 16:14 KST"
     },
     {
       "id": "hmm",
       "label": "HMM 레짐",
       "status": "ok",
-      "generatedAt": "2026-07-30 12:31 KST"
+      "generatedAt": "2026-07-30 16:14 KST"
     },
     {
       "id": "backtest",
       "label": "시장 백테스트",
       "status": "ok",
-      "generatedAt": "2026-07-30 12:30 KST"
+      "generatedAt": "2026-07-30 16:12 KST"
     },
     {
       "id": "stress",
       "label": "스트레스 이력",
       "status": "ok",
-      "generatedAt": "2026-07-30 07:32:43 KST"
+      "generatedAt": "2026-07-30 16:13:57 KST"
     },
     {
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-07-30 12:31:53 KST"
+      "generatedAt": "2026-07-30 16:27:44 KST"
     }
   ],
   "quality": {
-    "status": "ok",
-    "score": 100.0,
+    "status": "warning",
+    "score": 99.5,
     "referenceDate": "2026-07-30",
     "summary": {
       "checks": 205,
-      "ok": 205,
-      "warning": 0,
+      "ok": 203,
+      "warning": 2,
       "error": 0,
       "sourceSeriesExpected": 80,
       "sourceSeriesPresent": 80,
-      "freshSeries": 80,
-      "staleSeries": 0,
+      "freshSeries": 78,
+      "staleSeries": 2,
       "fallbackSeries": 1
     },
-    "issues": []
+    "issues": [
+      {
+        "id": "source:fred:us_financial_stress_stlfsi",
+        "category": "source",
+        "label": "St. Louis Fed Financial Stress Index",
+        "status": "warning",
+        "detail": "최신 2026-07-10 · 영업일 시차 14일 · 관측치 1507개 · live",
+        "groupId": "fred",
+        "lastDate": "2026-07-10",
+        "observations": 1507,
+        "fetchStatus": "live"
+      },
+      {
+        "id": "source:fred:us_financial_conditions_nfci",
+        "category": "source",
+        "label": "Chicago Fed National Financial Conditions Index",
+        "status": "warning",
+        "detail": "최신 2026-07-10 · 영업일 시차 14일 · 관측치 1507개 · live",
+        "groupId": "fred",
+        "lastDate": "2026-07-10",
+        "observations": 1507,
+        "fetchStatus": "live"
+      }
+    ]
   },
   "researchLog": [
     {
       "id": "ai-roi",
       "title": "AI 투자 ROI 회의론",
       "status": "주의",
-      "score": 64.2,
+      "score": 64.1,
       "tone": "caution",
       "decision": "기존 가중지표 유지",
       "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검"
@@ -212,7 +235,7 @@
       "id": "geopolitics-reinflation",
       "title": "지정학·재인플레이션",
       "status": "부담 높음",
-      "score": 89.1,
+      "score": 88.9,
       "tone": "danger",
       "decision": "관찰지표 보강",
       "operation": "DBC·DBA 관찰카드 유지 · 기존 에너지 가중치 변경 없음"
@@ -221,7 +244,7 @@
       "id": "macro-rates",
       "title": "매크로 금리 불확실성",
       "status": "부담 높음",
-      "score": 76.0,
+      "score": 75.1,
       "tone": "danger",
       "decision": "기존 가중지표 유지",
       "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -230,7 +253,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "관찰",
-      "score": 42.4,
+      "score": 51.8,
       "tone": "watch",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -246,6 +269,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20260730T162744-manual",
+      "status": "success",
+      "mode": "full",
+      "trigger": "manual",
+      "scheduledTime": null,
+      "startedAt": "2026-07-30 16:11:12 KST",
+      "completedAt": "2026-07-30 16:27:44 KST",
+      "durationSeconds": 992,
+      "dataAsOf": "2026-07-30",
+      "dashboardGeneratedAt": "2026-07-30 16:12 KST",
+      "mlGeneratedAt": "2026-07-30 16:27 KST",
+      "qualityScore": 99.5,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20260730T123154-12:30",
       "status": "success",
@@ -408,21 +446,6 @@
       "dataAsOf": "2026-07-24",
       "dashboardGeneratedAt": "2026-07-25 07:30 KST",
       "mlGeneratedAt": "2026-07-25 07:50 KST",
-      "qualityScore": 100.0,
-      "message": "데이터 생성과 완비성 검증을 통과했습니다."
-    },
-    {
-      "runId": "20260724T155453-15:35",
-      "status": "success",
-      "mode": "full",
-      "trigger": "scheduled",
-      "scheduledTime": "15:35",
-      "startedAt": "2026-07-24 15:35:00 KST",
-      "completedAt": "2026-07-24 15:54:53 KST",
-      "durationSeconds": 1193,
-      "dataAsOf": "2026-07-24",
-      "dashboardGeneratedAt": "2026-07-24 15:35 KST",
-      "mlGeneratedAt": "2026-07-24 15:54 KST",
       "qualityScore": 100.0,
       "message": "데이터 생성과 완비성 검증을 통과했습니다."
     }
