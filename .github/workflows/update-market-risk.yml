@@ -48,12 +48,13 @@ jobs:
           python3 scripts/audit_data_completeness.py --strict
           make test
           python3 scripts/write_pipeline_status.py --mode full
+          python3 scripts/export_offline_dashboard.py --stable-only
 
       - name: Commit refreshed data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/risk-dashboard.json data/market-risk-snapshot.json data/market-risk-timeseries.json data/naver-marketindex-history.json data/market-risk-backtest.json data/market-stress-episodes.json data/market-history-cache.json data/els-index-risk.json data/hmm-regime.json data/ml-risk-signal.json data/data-quality.json data/pipeline-status.json
+          git add data/risk-dashboard.json data/market-risk-snapshot.json data/market-risk-timeseries.json data/naver-marketindex-history.json data/market-risk-backtest.json data/market-stress-episodes.json data/market-history-cache.json data/els-index-risk.json data/hmm-regime.json data/ml-risk-signal.json data/data-quality.json data/pipeline-status.json reports/market-risk-dashboard-offline.html
           if git diff --cached --quiet; then
             echo "No data changes to commit."
           else

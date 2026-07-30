@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260730-2";
+const ASSET_VERSION = "20260730-3";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -237,6 +237,16 @@ function updateThemeButton(theme = document.documentElement.dataset.theme) {
 
 function versioned(path) {
   return `${path}?v=${ASSET_VERSION}&request=${DATA_REQUEST_VERSION}`;
+}
+
+function offlineSnapshotFilename(data) {
+  const generatedAt = String(data?.metadata?.generatedAt ?? "");
+  const match = generatedAt.match(
+    /(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/
+  );
+  if (!match) return "market-risk-dashboard-offline.html";
+  const [, year, month, day, hour = "00", minute = "00"] = match;
+  return `market-risk-dashboard-${year}${month}${day}-${hour}${minute}-KST.html`;
 }
 
 applyTheme(getStoredTheme());
@@ -4222,6 +4232,15 @@ function renderDashboard(
       <div class="hero__aside">
         <span>기준일</span>
         <strong>${data.metadata.asOf}</strong>
+        <a
+          class="hero__download"
+          href="./reports/market-risk-dashboard-offline.html?v=${ASSET_VERSION}"
+          download="${offlineSnapshotFilename(data)}"
+          title="현재 데이터 오프라인 HTML 다운로드"
+        >
+          <span aria-hidden="true">↓</span>
+          <span>오프라인 HTML</span>
+        </a>
         <div class="hero__timestamp">
           <small>${data.metadata.generatedAt}</small>
           <a class="snow-lab-trigger" href="./snow-lab.html" aria-label="Field Lab 열기" title="Field Lab">❄</a>

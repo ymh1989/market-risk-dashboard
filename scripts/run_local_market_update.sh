@@ -297,6 +297,9 @@ RUN_COMPLETED_EPOCH="$(date +%s)"
   --ml-duration "$((ML_STAGE_COMPLETED_EPOCH - ML_STAGE_STARTED_EPOCH))" \
   --validation-duration "$((VALIDATION_STAGE_COMPLETED_EPOCH - VALIDATION_STAGE_STARTED_EPOCH))"
 
+echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 오프라인 HTML 스냅샷을 생성합니다."
+"$PYTHON_BIN" scripts/export_offline_dashboard.py --stable-only
+
 git config user.name "${LOCAL_MARKET_UPDATE_GIT_NAME:-local-market-risk-bot}"
 git config user.email "${LOCAL_MARKET_UPDATE_GIT_EMAIL:-local-market-risk-bot@users.noreply.github.com}"
 
@@ -312,7 +315,8 @@ git add \
   data/hmm-regime.json \
   data/ml-risk-signal.json \
   data/data-quality.json \
-  data/pipeline-status.json
+  data/pipeline-status.json \
+  reports/market-risk-dashboard-offline.html
 
 if git diff --cached --quiet; then
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 변경된 데이터가 없어 커밋하지 않습니다."

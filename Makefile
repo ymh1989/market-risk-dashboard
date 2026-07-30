@@ -1,4 +1,4 @@
-.PHONY: serve test audit-data update-market-risk backtest-market-risk analyze-stress-episodes send-news-digest install-news-digest
+.PHONY: serve test audit-data update-market-risk backtest-market-risk analyze-stress-episodes export-offline send-news-digest install-news-digest
 
 serve:
 	python3 -m http.server 5173 --bind 127.0.0.1
@@ -17,6 +17,9 @@ backtest-market-risk:
 
 analyze-stress-episodes:
 	python3 scripts/analyze_stress_episodes.py
+
+export-offline:
+	python3 scripts/export_offline_dashboard.py
 
 send-news-digest:
 	python3 scripts/send_risk_news_digest.py
