@@ -4155,8 +4155,7 @@ a {
   font-weight: 700;
 }
 
-.observation-journal__list,
-.research-operations-log__list {
+.observation-journal__list {
   display: grid;
   border-top: 1px solid var(--line);
 }
@@ -4172,26 +4171,22 @@ a {
   padding: 16px 18px;
 }
 
-.observation-journal__item--good,
-.research-operations-log__item--good {
+.observation-journal__item--good {
   --journal-accent: var(--green);
   border-left-color: var(--green);
 }
 
-.observation-journal__item--watch,
-.research-operations-log__item--watch {
+.observation-journal__item--watch {
   --journal-accent: var(--blue);
   border-left-color: var(--blue);
 }
 
-.observation-journal__item--caution,
-.research-operations-log__item--caution {
+.observation-journal__item--caution {
   --journal-accent: var(--amber);
   border-left-color: var(--amber);
 }
 
-.observation-journal__item--danger,
-.research-operations-log__item--danger {
+.observation-journal__item--danger {
   --journal-accent: var(--red);
   border-left-color: var(--red);
 }
@@ -4243,8 +4238,7 @@ a {
 
 .observation-journal__summary > div > span,
 .observation-journal__evidence span,
-.observation-journal__item footer span,
-.research-operations-log__item span {
+.observation-journal__item footer span {
   color: var(--muted);
   font-size: 0.74rem;
   font-weight: 700;
@@ -4636,34 +4630,6 @@ a {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 700;
-}
-
-.research-operations-log__item {
-  display: grid;
-  grid-template-columns: minmax(180px, 0.7fr) minmax(110px, 0.35fr) minmax(260px, 1fr);
-  gap: 18px;
-  align-items: center;
-  border-bottom: 1px solid var(--line);
-  border-left: 4px solid var(--muted);
-  padding: 13px 14px;
-}
-
-.research-operations-log__item > div {
-  display: grid;
-  gap: 3px;
-}
-
-.research-operations-log__item > div:nth-child(2) {
-  justify-items: end;
-  text-align: right;
-}
-
-.research-operations-log__item strong {
-  font-size: 0.84rem;
-}
-
-.research-operations-log__item .narrative-list {
-  margin: 0;
 }
 
 .pipeline-stage-list {
@@ -5247,14 +5213,6 @@ a {
     grid-row: auto;
   }
 
-  .research-operations-log__item {
-    grid-template-columns: minmax(160px, 0.7fr) minmax(100px, 0.3fr);
-  }
-
-  .research-operations-log__item .narrative-list {
-    grid-column: 1 / -1;
-  }
-
   .sentiment-hero {
     grid-template-columns: minmax(0, 1fr) 200px;
   }
@@ -5563,19 +5521,6 @@ a {
   .operations-section__heading,
   .observation-journal__header {
     display: grid;
-  }
-
-  .research-operations-log__item {
-    grid-template-columns: 1fr;
-  }
-
-  .research-operations-log__item > div:nth-child(2) {
-    justify-items: start;
-    text-align: left;
-  }
-
-  .research-operations-log__item .narrative-list {
-    grid-column: auto;
   }
 
   .observation-journal__summary {
@@ -6667,38 +6612,6 @@ function renderScheduleOverview(pipelineStatus) {
   `;
 }
 
-function renderResearchOperationsLog(items) {
-  if (!items?.length) return "";
-
-  return `
-    <section class="operations-section research-operations-log">
-      <div class="operations-section__heading">
-        <div><span class="eyebrow">Research Operations</span><h3>관찰지표 운영일지</h3></div>
-        <span>가중치 0 · OOS 검증 전</span>
-      </div>
-      <div class="research-operations-log__list">
-        ${items
-          .map(
-            (item) => `
-              <article class="research-operations-log__item research-operations-log__item--${item.tone ?? "muted"}">
-                <div>
-                  <span>${item.decision ?? "검토"}</span>
-                  <strong>${item.title}</strong>
-                </div>
-                <div>
-                  <span>${item.status ?? "확인 필요"}</span>
-                  <strong>${item.score == null ? "점수 보류" : `${formatNumber(item.score, 1)}점`}</strong>
-                </div>
-                ${renderNarrativeList(item.operation ?? "운영 조치 확인", "narrative-list--compact")}
-              </article>
-            `
-          )
-          .join("")}
-      </div>
-    </section>
-  `;
-}
-
 function renderOperationsPage(pipelineStatus) {
   const state = pipelineRuntimeState(pipelineStatus);
   if (!pipelineStatus?.current) {
@@ -6749,7 +6662,6 @@ function renderOperationsPage(pipelineStatus) {
       </section>
 
       ${renderScheduleOverview(pipelineStatus)}
-      ${renderResearchOperationsLog(pipelineStatus.researchLog)}
 
       <section class="operations-section">
         <div class="operations-section__heading">

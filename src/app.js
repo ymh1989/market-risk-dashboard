@@ -834,38 +834,6 @@ function renderScheduleOverview(pipelineStatus) {
   `;
 }
 
-function renderResearchOperationsLog(items) {
-  if (!items?.length) return "";
-
-  return `
-    <section class="operations-section research-operations-log">
-      <div class="operations-section__heading">
-        <div><span class="eyebrow">Research Operations</span><h3>관찰지표 운영일지</h3></div>
-        <span>가중치 0 · OOS 검증 전</span>
-      </div>
-      <div class="research-operations-log__list">
-        ${items
-          .map(
-            (item) => `
-              <article class="research-operations-log__item research-operations-log__item--${item.tone ?? "muted"}">
-                <div>
-                  <span>${item.decision ?? "검토"}</span>
-                  <strong>${item.title}</strong>
-                </div>
-                <div>
-                  <span>${item.status ?? "확인 필요"}</span>
-                  <strong>${item.score == null ? "점수 보류" : `${formatNumber(item.score, 1)}점`}</strong>
-                </div>
-                ${renderNarrativeList(item.operation ?? "운영 조치 확인", "narrative-list--compact")}
-              </article>
-            `
-          )
-          .join("")}
-      </div>
-    </section>
-  `;
-}
-
 function renderOperationsPage(pipelineStatus) {
   const state = pipelineRuntimeState(pipelineStatus);
   if (!pipelineStatus?.current) {
@@ -916,7 +884,6 @@ function renderOperationsPage(pipelineStatus) {
       </section>
 
       ${renderScheduleOverview(pipelineStatus)}
-      ${renderResearchOperationsLog(pipelineStatus.researchLog)}
 
       <section class="operations-section">
         <div class="operations-section__heading">

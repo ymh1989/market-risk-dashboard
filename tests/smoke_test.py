@@ -243,8 +243,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260730-4" in html
-    assert "app.js?v=20260730-4" in html
+    assert "styles.css?v=20260730-5" in html
+    assert "app.js?v=20260730-5" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -318,10 +318,9 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert 'statusLabel: delayed ? "지연" : "진행 중"' in app_source
     assert "최근 성공 중앙 소요시간" in app_source
     assert "${renderScheduleOverview(pipelineStatus)}" in app_source
-    assert "function renderResearchOperationsLog" in app_source
-    assert "${renderResearchOperationsLog(pipelineStatus.researchLog)}" in app_source
-    assert "관찰지표 운영일지" in app_source
-    assert ".research-operations-log__item" in styles
+    assert "function renderResearchOperationsLog" not in app_source
+    assert "관찰지표 운영일지" not in app_source
+    assert ".research-operations-log__item" not in styles
     assert ".operations-schedule-list" in styles
     assert ".operations-schedule-item--caution" in styles
     assert 'SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"' in run_script
