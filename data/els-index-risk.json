@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-07-31 15:37 KST",
+  "generatedAt": "2026-08-01 07:32 KST",
   "methodology": "각 지수별 20일 실현변동성, 252일 변동성 분위수, 20/60/252일 낙폭, 단기 하락 모멘텀, 고변동성 급등 신호를 0~100점으로 합성합니다. Basket 점수는 worst-of ELS 구조를 반영해 가장 높은 리스크 지수에 50% 가중합니다.",
   "basket": {
-    "score": 62.29,
+    "score": 62.26,
     "bucket": "주의",
     "tone": "caution",
     "worstIndex": "KOSPI200",
     "secondWorstIndex": "HSCEI",
-    "averageIndexScore": 49.18,
+    "averageIndexScore": 49.04,
     "correlationScore": 6.73,
     "interpretation": "KOSPI200가 basket 리스크를 가장 크게 끌어올리고, HSCEI가 두 번째 취약 지수입니다."
   },
@@ -24,8 +24,8 @@
     },
     "singleStockMethodology": "삼성전자·SK하이닉스는 지수와 같은 공개 종가 기반 좌표계에 참고용으로 표시합니다. 단일종목의 실적·수급 이벤트, 갭 위험, 종목별 발행 재고와 헤지 한도는 별도 확인 대상입니다.",
     "basket": {
-      "opportunityScore": 77.72,
-      "hedgeBurdenScore": 59.63,
+      "opportunityScore": 77.83,
+      "hedgeBurdenScore": 59.6,
       "stance": "헤지주의",
       "tone": "caution",
       "topOpportunityIndex": "KOSPI200",
@@ -2281,36 +2281,28 @@
         "assetType": "index",
         "includedInBasket": true,
         "includedInStressEpisodes": true,
-        "lastDate": "2026-07-30",
-        "opportunityScore": 34.13,
-        "hedgeBurdenScore": 9.04,
-        "balanceScore": 28.26,
+        "lastDate": "2026-07-31",
+        "opportunityScore": 35.77,
+        "hedgeBurdenScore": 7.76,
+        "balanceScore": 30.73,
         "stance": "선별발행",
         "tone": "watch",
         "components": {
-          "volPercentileScore": 53.4,
-          "volLevelScore": 10.0,
-          "volShockScore": 11.7,
-          "downsideMomentumScore": 3.0,
-          "drawdownScore": 7.5,
+          "volPercentileScore": 55.3,
+          "volLevelScore": 10.6,
+          "volShockScore": 14.4,
+          "downsideMomentumScore": 0.0,
+          "drawdownScore": 5.3,
           "gapShockScore": 20.8,
-          "correlationScore": 7.8
+          "correlationScore": 6.7
         },
         "interpretation": "헤지부담은 통제 가능하지만 쿠폰 여력이 제한적일 수 있습니다. 구조와 만기를 선별해 상대가치를 확인해야 합니다.",
         "metrics": {
-          "return20dPct": -0.61,
-          "realizedVol20dPct": 12.2,
-          "drawdown252dPct": -2.26
+          "return20dPct": 0.09,
+          "realizedVol20dPct": 12.47,
+          "drawdown252dPct": -1.58
         },
         "trajectory": [
-          {
-            "date": "2026-04-27",
-            "opportunityScore": 47.14,
-            "hedgeBurdenScore": 11.53,
-            "balanceScore": 39.65,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
           {
             "date": "2026-04-28",
             "opportunityScore": 48.63,
@@ -2830,6 +2822,14 @@
             "balanceScore": 28.26,
             "stance": "선별발행",
             "tone": "watch"
+          },
+          {
+            "date": "2026-07-31",
+            "opportunityScore": 35.77,
+            "hedgeBurdenScore": 7.76,
+            "balanceScore": 30.73,
+            "stance": "선별발행",
+            "tone": "watch"
           }
         ]
       }
@@ -2844,25 +2844,25 @@
         "includedInBasket": false,
         "includedInStressEpisodes": false,
         "lastDate": "2026-07-31",
-        "opportunityScore": 93.67,
-        "hedgeBurdenScore": 72.6,
-        "balanceScore": 46.48,
+        "opportunityScore": 93.46,
+        "hedgeBurdenScore": 73.94,
+        "balanceScore": 45.4,
         "stance": "헤지주의",
         "tone": "caution",
         "components": {
           "volPercentileScore": 100.0,
           "volLevelScore": 100.0,
-          "volShockScore": 57.8,
-          "downsideMomentumScore": 37.6,
-          "drawdownScore": 90.1,
+          "volShockScore": 56.4,
+          "downsideMomentumScore": 41.1,
+          "drawdownScore": 92.0,
           "gapShockScore": 100.0,
           "correlationScore": 6.7
         },
         "interpretation": "쿠폰 여력은 높지만 지수보다 큰 갭·집중 위험이 헤지비용을 키울 수 있습니다. 만기 분산과 종목별 재고 한도를 함께 확인해야 합니다.",
         "metrics": {
-          "return20dPct": -7.52,
-          "realizedVol20dPct": 141.98,
-          "drawdown252dPct": -27.03
+          "return20dPct": -8.22,
+          "realizedVol20dPct": 139.48,
+          "drawdown252dPct": -27.59
         },
         "trajectory": [
           {
@@ -3387,9 +3387,9 @@
           },
           {
             "date": "2026-07-31",
-            "opportunityScore": 93.67,
-            "hedgeBurdenScore": 72.6,
-            "balanceScore": 46.48,
+            "opportunityScore": 93.46,
+            "hedgeBurdenScore": 73.94,
+            "balanceScore": 45.4,
             "stance": "헤지주의",
             "tone": "caution"
           }
@@ -3961,16 +3961,16 @@
       "defaultEpisodeId": "2020-02-25_2020-05-15",
       "items": [
         {
-          "id": "2026-07-13_2026-07-23",
+          "id": "2026-07-13_2026-07-31",
           "label": "모델 스트레스 구간 2026-07",
           "startDate": "2026-07-13",
-          "peakDate": "2026-07-13",
-          "endDate": "2026-07-23",
-          "marketPeakScore": 68.0,
+          "peakDate": "2026-07-31",
+          "endDate": "2026-07-31",
+          "marketPeakScore": 69.9,
           "peakBurdenIndex": "KOSPI200",
-          "peakBurdenScore": 90.14,
+          "peakBurdenScore": 89.78,
           "peakOpportunityIndex": "KOSPI200",
-          "peakOpportunityScore": 88.92,
+          "peakOpportunityScore": 94.34,
           "interpretation": "시장 스트레스 정점에는 KOSPI200의 헤지부담이 가장 높았고, KOSPI200의 상대 발행기회가 가장 컸습니다.",
           "items": [
             {
@@ -3982,17 +3982,17 @@
                 "hedgeBurdenScore": 9.65
               },
               "peak": {
-                "date": "2026-07-13",
-                "opportunityScore": 38.65,
-                "hedgeBurdenScore": 9.65
+                "date": "2026-07-31",
+                "opportunityScore": 35.77,
+                "hedgeBurdenScore": 7.76
               },
               "end": {
-                "date": "2026-07-23",
-                "opportunityScore": 17.18,
-                "hedgeBurdenScore": 8.15
+                "date": "2026-07-31",
+                "opportunityScore": 35.77,
+                "hedgeBurdenScore": 7.76
               },
               "maxOpportunityScore": 38.65,
-              "maxHedgeBurdenScore": 9.65,
+              "maxHedgeBurdenScore": 11.35,
               "trajectory": [
                 {
                   "date": "2026-07-13",
@@ -4038,6 +4038,36 @@
                   "date": "2026-07-23",
                   "opportunityScore": 17.18,
                   "hedgeBurdenScore": 8.15
+                },
+                {
+                  "date": "2026-07-24",
+                  "opportunityScore": 16.96,
+                  "hedgeBurdenScore": 8.04
+                },
+                {
+                  "date": "2026-07-27",
+                  "opportunityScore": 16.73,
+                  "hedgeBurdenScore": 8.0
+                },
+                {
+                  "date": "2026-07-28",
+                  "opportunityScore": 12.21,
+                  "hedgeBurdenScore": 7.38
+                },
+                {
+                  "date": "2026-07-29",
+                  "opportunityScore": 18.25,
+                  "hedgeBurdenScore": 11.35
+                },
+                {
+                  "date": "2026-07-30",
+                  "opportunityScore": 34.13,
+                  "hedgeBurdenScore": 9.04
+                },
+                {
+                  "date": "2026-07-31",
+                  "opportunityScore": 35.77,
+                  "hedgeBurdenScore": 7.76
                 }
               ]
             },
@@ -4050,16 +4080,16 @@
                 "hedgeBurdenScore": 11.76
               },
               "peak": {
-                "date": "2026-07-13",
-                "opportunityScore": 45.06,
-                "hedgeBurdenScore": 11.76
+                "date": "2026-07-30",
+                "opportunityScore": 47.06,
+                "hedgeBurdenScore": 9.33
               },
               "end": {
-                "date": "2026-07-23",
-                "opportunityScore": 47.58,
-                "hedgeBurdenScore": 13.62
+                "date": "2026-07-30",
+                "opportunityScore": 47.06,
+                "hedgeBurdenScore": 9.33
               },
-              "maxOpportunityScore": 47.58,
+              "maxOpportunityScore": 49.38,
               "maxHedgeBurdenScore": 13.75,
               "trajectory": [
                 {
@@ -4106,6 +4136,31 @@
                   "date": "2026-07-23",
                   "opportunityScore": 47.58,
                   "hedgeBurdenScore": 13.62
+                },
+                {
+                  "date": "2026-07-24",
+                  "opportunityScore": 49.38,
+                  "hedgeBurdenScore": 11.67
+                },
+                {
+                  "date": "2026-07-27",
+                  "opportunityScore": 49.2,
+                  "hedgeBurdenScore": 11.64
+                },
+                {
+                  "date": "2026-07-28",
+                  "opportunityScore": 43.87,
+                  "hedgeBurdenScore": 11.54
+                },
+                {
+                  "date": "2026-07-29",
+                  "opportunityScore": 44.2,
+                  "hedgeBurdenScore": 10.71
+                },
+                {
+                  "date": "2026-07-30",
+                  "opportunityScore": 47.06,
+                  "hedgeBurdenScore": 9.33
                 }
               ]
             },
@@ -4118,17 +4173,17 @@
                 "hedgeBurdenScore": 35.89
               },
               "peak": {
-                "date": "2026-07-13",
-                "opportunityScore": 67.58,
-                "hedgeBurdenScore": 35.89
+                "date": "2026-07-31",
+                "opportunityScore": 71.5,
+                "hedgeBurdenScore": 42.01
               },
               "end": {
-                "date": "2026-07-23",
-                "opportunityScore": 73.79,
-                "hedgeBurdenScore": 39.71
+                "date": "2026-07-31",
+                "opportunityScore": 71.5,
+                "hedgeBurdenScore": 42.01
               },
               "maxOpportunityScore": 78.89,
-              "maxHedgeBurdenScore": 50.22,
+              "maxHedgeBurdenScore": 50.9,
               "trajectory": [
                 {
                   "date": "2026-07-13",
@@ -4169,6 +4224,36 @@
                   "date": "2026-07-23",
                   "opportunityScore": 73.79,
                   "hedgeBurdenScore": 39.71
+                },
+                {
+                  "date": "2026-07-24",
+                  "opportunityScore": 64.29,
+                  "hedgeBurdenScore": 47.12
+                },
+                {
+                  "date": "2026-07-27",
+                  "opportunityScore": 56.31,
+                  "hedgeBurdenScore": 39.47
+                },
+                {
+                  "date": "2026-07-28",
+                  "opportunityScore": 63.2,
+                  "hedgeBurdenScore": 48.62
+                },
+                {
+                  "date": "2026-07-29",
+                  "opportunityScore": 62.41,
+                  "hedgeBurdenScore": 50.9
+                },
+                {
+                  "date": "2026-07-30",
+                  "opportunityScore": 62.48,
+                  "hedgeBurdenScore": 50.32
+                },
+                {
+                  "date": "2026-07-31",
+                  "opportunityScore": 71.5,
+                  "hedgeBurdenScore": 42.01
                 }
               ]
             },
@@ -4181,14 +4266,14 @@
                 "hedgeBurdenScore": 37.36
               },
               "peak": {
-                "date": "2026-07-13",
-                "opportunityScore": 75.7,
-                "hedgeBurdenScore": 37.36
+                "date": "2026-07-31",
+                "opportunityScore": 68.79,
+                "hedgeBurdenScore": 27.6
               },
               "end": {
-                "date": "2026-07-23",
-                "opportunityScore": 75.17,
-                "hedgeBurdenScore": 32.47
+                "date": "2026-07-31",
+                "opportunityScore": 68.79,
+                "hedgeBurdenScore": 27.6
               },
               "maxOpportunityScore": 76.67,
               "maxHedgeBurdenScore": 38.25,
@@ -4237,6 +4322,36 @@
                   "date": "2026-07-23",
                   "opportunityScore": 75.17,
                   "hedgeBurdenScore": 32.47
+                },
+                {
+                  "date": "2026-07-24",
+                  "opportunityScore": 71.97,
+                  "hedgeBurdenScore": 32.5
+                },
+                {
+                  "date": "2026-07-27",
+                  "opportunityScore": 67.68,
+                  "hedgeBurdenScore": 30.79
+                },
+                {
+                  "date": "2026-07-28",
+                  "opportunityScore": 64.49,
+                  "hedgeBurdenScore": 29.73
+                },
+                {
+                  "date": "2026-07-29",
+                  "opportunityScore": 66.69,
+                  "hedgeBurdenScore": 27.07
+                },
+                {
+                  "date": "2026-07-30",
+                  "opportunityScore": 66.87,
+                  "hedgeBurdenScore": 26.92
+                },
+                {
+                  "date": "2026-07-31",
+                  "opportunityScore": 68.79,
+                  "hedgeBurdenScore": 27.6
                 }
               ]
             },
@@ -4249,17 +4364,17 @@
                 "hedgeBurdenScore": 90.14
               },
               "peak": {
-                "date": "2026-07-13",
-                "opportunityScore": 88.92,
-                "hedgeBurdenScore": 90.14
+                "date": "2026-07-31",
+                "opportunityScore": 94.34,
+                "hedgeBurdenScore": 89.78
               },
               "end": {
-                "date": "2026-07-23",
-                "opportunityScore": 85.68,
-                "hedgeBurdenScore": 81.23
+                "date": "2026-07-31",
+                "opportunityScore": 94.34,
+                "hedgeBurdenScore": 89.78
               },
-              "maxOpportunityScore": 91.91,
-              "maxHedgeBurdenScore": 90.34,
+              "maxOpportunityScore": 94.34,
+              "maxHedgeBurdenScore": 92.01,
               "trajectory": [
                 {
                   "date": "2026-07-13",
@@ -4295,6 +4410,36 @@
                   "date": "2026-07-23",
                   "opportunityScore": 85.68,
                   "hedgeBurdenScore": 81.23
+                },
+                {
+                  "date": "2026-07-24",
+                  "opportunityScore": 86.33,
+                  "hedgeBurdenScore": 90.97
+                },
+                {
+                  "date": "2026-07-27",
+                  "opportunityScore": 80.25,
+                  "hedgeBurdenScore": 90.15
+                },
+                {
+                  "date": "2026-07-28",
+                  "opportunityScore": 87.44,
+                  "hedgeBurdenScore": 92.01
+                },
+                {
+                  "date": "2026-07-29",
+                  "opportunityScore": 89.05,
+                  "hedgeBurdenScore": 90.77
+                },
+                {
+                  "date": "2026-07-30",
+                  "opportunityScore": 87.94,
+                  "hedgeBurdenScore": 90.78
+                },
+                {
+                  "date": "2026-07-31",
+                  "opportunityScore": 94.34,
+                  "hedgeBurdenScore": 89.78
                 }
               ]
             }
@@ -8141,20 +8286,20 @@
       "label": "SPX",
       "name": "S&P 500",
       "region": "미국",
-      "lastDate": "2026-07-30",
-      "lastClose": 7437.63,
-      "score": 22.93,
+      "lastDate": "2026-07-31",
+      "lastClose": 7489.72,
+      "score": 22.22,
       "bucket": "낮음",
       "tone": "good",
       "reading": "현재 점수는 중립권이며, 변동성 확대 여부를 중심으로 보면 됩니다.",
       "metrics": {
-        "return20dPct": -0.61,
-        "return60dPct": 3.29,
-        "realizedVol20dPct": 12.2,
-        "realizedVol60dPct": 13.65,
-        "volPercentile252d": 53.4,
-        "drawdown60dPct": -2.26,
-        "drawdown252dPct": -2.26,
+        "return20dPct": 0.09,
+        "return60dPct": 3.18,
+        "realizedVol20dPct": 12.47,
+        "realizedVol60dPct": 13.62,
+        "volPercentile252d": 55.3,
+        "drawdown60dPct": -1.58,
+        "drawdown252dPct": -1.58,
         "maxAbsDailyMove20dPct": 1.66
       },
       "ytdPriceSeries": [
@@ -8733,17 +8878,13 @@
         {
           "date": "2026-07-30",
           "close": 7437.63
+        },
+        {
+          "date": "2026-07-31",
+          "close": 7489.72
         }
       ],
       "series": [
-        {
-          "date": "2026-04-07",
-          "close": 6616.85,
-          "score": 40.79,
-          "return20dPct": -2.64,
-          "realizedVol20dPct": 18.09,
-          "drawdown252dPct": -5.18
-        },
         {
           "date": "2026-04-08",
           "close": 6782.81,
@@ -9375,6 +9516,14 @@
           "return20dPct": -0.61,
           "realizedVol20dPct": 12.2,
           "drawdown252dPct": -2.26
+        },
+        {
+          "date": "2026-07-31",
+          "close": 7489.72,
+          "score": 22.22,
+          "return20dPct": 0.09,
+          "realizedVol20dPct": 12.47,
+          "drawdown252dPct": -1.58
         }
       ]
     },
@@ -14324,20 +14473,20 @@
       "region": "한국 개별종목",
       "assetType": "single-stock",
       "lastDate": "2026-07-31",
-      "lastClose": 264500.0,
-      "score": 73.85,
+      "lastClose": 262500.0,
+      "score": 75.09,
       "bucket": "높음",
       "tone": "danger",
       "reading": "고점 대비 낙폭이 커져 쿠폰 매력도는 높아질 수 있지만, 순연 가능성과 헤지 비용 증가를 우선 점검해야 합니다.",
       "metrics": {
-        "return20dPct": -7.52,
-        "return60dPct": 13.76,
-        "realizedVol20dPct": 141.98,
-        "realizedVol60dPct": 112.46,
+        "return20dPct": -8.22,
+        "return60dPct": 12.9,
+        "realizedVol20dPct": 139.48,
+        "realizedVol60dPct": 111.47,
         "volPercentile252d": 100.0,
-        "drawdown60dPct": -27.03,
-        "drawdown252dPct": -27.03,
-        "maxAbsDailyMove20dPct": 27.78
+        "drawdown60dPct": -27.59,
+        "drawdown252dPct": -27.59,
+        "maxAbsDailyMove20dPct": 26.81
       },
       "ytdPriceSeries": [
         {
@@ -14906,7 +15055,7 @@
         },
         {
           "date": "2026-07-31",
-          "close": 264500.0
+          "close": 262500.0
         }
       ],
       "series": [
@@ -15544,11 +15693,11 @@
         },
         {
           "date": "2026-07-31",
-          "close": 264500.0,
-          "score": 73.85,
-          "return20dPct": -7.52,
-          "realizedVol20dPct": 141.98,
-          "drawdown252dPct": -27.03
+          "close": 262500.0,
+          "score": 75.09,
+          "return20dPct": -8.22,
+          "realizedVol20dPct": 139.48,
+          "drawdown252dPct": -27.59
         }
       ]
     },
