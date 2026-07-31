@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260731-1";
+const ASSET_VERSION = "20260731-2";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -3656,6 +3656,11 @@ function renderModelPanel(section) {
   const model = section.model ?? {};
   const normalization = model.normalization;
   const sources = model.dataSources ?? [];
+  const methodologyReference = (model.references ?? []).find(
+    (reference) =>
+      reference?.url?.includes("bok.or.kr") ||
+      reference?.label?.includes("FSI/FVI")
+  );
 
   return `
     <section class="model-panel">
@@ -3664,7 +3669,7 @@ function renderModelPanel(section) {
         <h3>${model.version ?? "risk-model"}</h3>
         ${renderNarrativeList(model.methodology ?? "지표별 점수의 가중평균 합성", "narrative-list--compact")}
       </article>
-      <article>
+      <article class="model-panel__normalization">
         <span class="eyebrow">Normalization</span>
         <h3>${normalization ? `${normalization.percentileWeight * 100}% 분위수 · ${normalization.zScoreWeight * 100}% z · ${normalization.robustZScoreWeight * 100}% robust z` : "Weighted score"}</h3>
         ${renderNarrativeList(
@@ -3673,6 +3678,19 @@ function renderModelPanel(section) {
             : "섹션 모델 설정 사용",
           "narrative-list--compact"
         )}
+        ${
+          methodologyReference
+            ? `
+              <footer class="model-reference">
+                <span>복수 지표를 표준화해 종합지수로 합성하는 접근 참고</span>
+                <a href="${methodologyReference.url}" target="_blank" rel="noopener noreferrer">
+                  한국은행 FSI·FVI 설명
+                  <span aria-hidden="true">↗</span>
+                </a>
+              </footer>
+            `
+            : ""
+        }
       </article>
       <article>
         <span class="eyebrow">Data</span>

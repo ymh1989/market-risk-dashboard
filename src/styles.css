@@ -4112,10 +4112,46 @@ a {
   border-right: 0;
 }
 
+.model-panel__normalization {
+  display: flex;
+  flex-direction: column;
+}
+
 .model-panel h3 {
   margin: 6px 0 8px;
   font-size: 1rem;
   line-height: 1.35;
+}
+
+.model-reference {
+  display: grid;
+  gap: 5px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.model-reference > span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.model-reference a {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 5px;
+  color: var(--blue);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.model-reference a:hover,
+.model-reference a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .source-chips {

@@ -79,6 +79,11 @@ def test_dashboard_contract():
     assert market["model"]["aggregation"] == "weightedAverage"
     assert market["model"]["normalization"]["zScoreMapping"] == "normalCDF"
     assert market["model"]["normalization"]["robustZScore"] == "median/MAD"
+    assert any(
+        reference["url"].startswith("https://www.bok.or.kr/")
+        and "FSI/FVI" in reference["label"]
+        for reference in market["model"]["references"]
+    )
     assert len(market.get("groupScores", [])) >= 5
     assert market_level["label"] in {"정상", "관심", "주의", "경고"}
     assert len(sorted(market["indicators"], key=lambda indicator: indicator["value"], reverse=True)[:3]) == 3
@@ -250,8 +255,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260731-1" in html
-    assert "app.js?v=20260731-1" in html
+    assert "styles.css?v=20260731-2" in html
+    assert "app.js?v=20260731-2" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -372,6 +377,10 @@ def test_dashboard_data_requests_bypass_stale_cache():
     )
     assert "변동성↑ 쿠폰↑" in app_source
     assert "하락위험↑ 부담↑" in app_source
+    assert "methodologyReference" in app_source
+    assert "한국은행 FSI·FVI 설명" in app_source
+    assert 'target="_blank" rel="noopener noreferrer"' in app_source
+    assert ".model-reference" in styles
     assert 'loadJson("./data/pipeline-status.json")' in app_source
     assert 'loadJson("./data/naver-marketindex-history.json")' in app_source
     assert "renderMarketIndexTrendPanel" in app_source
