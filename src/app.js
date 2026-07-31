@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260730-6";
+const ASSET_VERSION = "20260731-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -1781,6 +1781,62 @@ function renderElsStressEpisodeReview(stressEpisodes, plot) {
   `;
 }
 
+function renderElsSingleStockSection(items, methodology) {
+  if (!items?.length) return "";
+
+  return `
+    <section class="els-single-stock-section">
+      <header class="els-single-stock-section__header">
+        <div>
+          <span class="eyebrow">Single Stock Reference</span>
+          <h3>개별종목 참고</h3>
+        </div>
+        <div class="els-single-stock-section__scope" aria-label="개별종목 적용 범위">
+          <span>지도 동시 표시</span>
+          <span>Basket 제외</span>
+          <span>에피소드 제외</span>
+        </div>
+      </header>
+      ${renderNarrativeList(methodology, "narrative-list--compact els-single-stock-section__note")}
+      <div class="els-single-stock-grid">
+        ${items
+          .map(
+            (item) => `
+              <article class="els-single-stock-card els-single-stock-card--${item.id}">
+                <header>
+                  <div>
+                    <span>${item.region} · ${item.lastDate}</span>
+                    <strong>${item.name}</strong>
+                  </div>
+                  <em class="els-single-stock-card__stance els-single-stock-card__stance--${item.tone}">${item.stance}</em>
+                </header>
+                <div class="els-single-stock-card__scores">
+                  <div>
+                    <span>발행기회</span>
+                    <strong>${Number(item.opportunityScore).toFixed(1)}</strong>
+                    <i><b class="els-score-bar--opportunity" style="width:${clampScore(item.opportunityScore)}%"></b></i>
+                  </div>
+                  <div>
+                    <span>헤지부담</span>
+                    <strong>${Number(item.hedgeBurdenScore).toFixed(1)}</strong>
+                    <i><b class="els-score-bar--burden" style="width:${clampScore(item.hedgeBurdenScore)}%"></b></i>
+                  </div>
+                </div>
+                <dl>
+                  <div><dt>20D 수익률</dt><dd>${formatSignedPct(item.metrics.return20dPct)}</dd></div>
+                  <div><dt>20D 변동성</dt><dd>${Number(item.metrics.realizedVol20dPct).toFixed(1)}%</dd></div>
+                  <div><dt>252D 낙폭</dt><dd>${formatSignedPct(item.metrics.drawdown252dPct)}</dd></div>
+                </dl>
+                ${renderNarrativeList(item.interpretation, "narrative-list--compact")}
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderElsIssuanceHedgePage(elsRisk) {
   const map = elsRisk?.issuanceHedgeMap;
   if (!map?.items?.length || !map?.basket) {
@@ -1794,26 +1850,45 @@ function renderElsIssuanceHedgePage(elsRisk) {
     `;
   }
 
+  const singleStockItems = map.singleStocks ?? [];
+  const mapItems = [...map.items, ...singleStockItems];
   const plot = { left: 66, top: 24, width: 654, height: 310 };
   const markerOffsets = {
     spx: { dx: 10, dy: -10, anchor: "start" },
     sx5e: { dx: 10, dy: -10, anchor: "start" },
     nky: { dx: 10, dy: 20, anchor: "start" },
     hscei: { dx: 10, dy: 20, anchor: "start" },
-    kospi200: { dx: -10, dy: 20, anchor: "end" }
+    kospi200: { dx: -10, dy: 20, anchor: "end" },
+    samsung: { dx: -11, dy: 22, anchor: "end" },
+    hynix: { dx: 11, dy: 22, anchor: "start" }
   };
-  const points = map.items
+  const markerNudges = {
+    hynix: { dx: 12, dy: -10 }
+  };
+  const points = mapItems
     .map((item) => {
       const opportunity = clampScore(item.opportunityScore);
       const burden = clampScore(item.hedgeBurdenScore);
       const x = plot.left + (opportunity / 100) * plot.width;
       const y = plot.top + ((100 - burden) / 100) * plot.height;
       const offset = markerOffsets[item.id] ?? { dx: 10, dy: -10, anchor: "start" };
+      const nudge = markerNudges[item.id] ?? { dx: 0, dy: 0 };
+      const markerX = x + nudge.dx;
+      const markerY = y + nudge.dy;
+      const isSingleStock = item.assetType === "single-stock";
+      const marker = isSingleStock
+        ? `<path d="M ${markerX.toFixed(1)} ${(markerY - 8).toFixed(1)} L ${(markerX + 8).toFixed(1)} ${markerY.toFixed(1)} L ${markerX.toFixed(1)} ${(markerY + 8).toFixed(1)} L ${(markerX - 8).toFixed(1)} ${markerY.toFixed(1)} Z" class="els-map-stock-marker"></path>`
+        : `<circle cx="${markerX.toFixed(1)}" cy="${markerY.toFixed(1)}" r="7"></circle>`;
+      const leader =
+        nudge.dx || nudge.dy
+          ? `<path d="M ${x.toFixed(1)} ${y.toFixed(1)} L ${markerX.toFixed(1)} ${markerY.toFixed(1)}" class="els-map-point-leader"></path>`
+          : "";
       return `
-        <g class="els-map-point els-map-point--${item.id}">
+        <g class="els-map-point els-map-point--${item.id}${isSingleStock ? " els-map-point--single-stock" : ""}">
           <title>${item.label}: 발행기회 ${opportunity.toFixed(1)}, 헤지부담 ${burden.toFixed(1)}</title>
-          <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="7"></circle>
-          <text x="${(x + offset.dx).toFixed(1)}" y="${(y + offset.dy).toFixed(1)}" text-anchor="${offset.anchor}">${item.label}</text>
+          ${leader}
+          ${marker}
+          <text x="${(markerX + offset.dx).toFixed(1)}" y="${(markerY + offset.dy).toFixed(1)}" text-anchor="${offset.anchor}">${item.label}</text>
         </g>
       `;
     })
@@ -1830,7 +1905,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
   ];
   const trajectoryLayers = trajectoryWindows
     .map((window) => {
-      const tracks = map.items
+      const tracks = mapItems
         .map((item) => {
           const history = (item.trajectory ?? [])
             .filter(
@@ -1850,7 +1925,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
           const end = coordinates[coordinates.length - 1];
 
           return `
-            <g class="els-map-trajectory-series els-map-trajectory-series--${item.id}">
+            <g class="els-map-trajectory-series els-map-trajectory-series--${item.id}${item.assetType === "single-stock" ? " els-map-trajectory-series--single-stock" : ""}">
               <path d="${path}" class="els-map-trajectory"${window.momentum ? ` marker-end="url(#els-map-arrow-${item.id})"` : ""}>
                 <title>${item.label} ${start.date}~${end.date}: 발행기회 ${Number(start.opportunityScore).toFixed(1)}→${Number(end.opportunityScore).toFixed(1)} (${formatPointDelta(Number(end.opportunityScore) - Number(start.opportunityScore))}), 헤지부담 ${Number(start.hedgeBurdenScore).toFixed(1)}→${Number(end.hedgeBurdenScore).toFixed(1)} (${formatPointDelta(Number(end.hedgeBurdenScore) - Number(start.hedgeBurdenScore))})</title>
               </path>
@@ -1864,7 +1939,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
       return `<g class="els-map-trajectories ${window.momentum ? "els-map-trajectories--momentum is-visible" : ""}" data-els-trajectory="${window.id}">${tracks}</g>`;
     })
     .join("");
-  const trajectoryArrowMarkers = map.items
+  const trajectoryArrowMarkers = mapItems
     .map(
       (item) => `
         <marker id="els-map-arrow-${item.id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -1899,7 +1974,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
           ], "narrative-list--compact")}
         </div>
         <div class="els-basket-state els-basket-state--${map.basket.tone}">
-          <span>Basket 판단</span>
+          <span>5개 지수 Basket 판단</span>
           <strong>${map.basket.stance}</strong>
           <small>기회 ${Number(map.basket.opportunityScore).toFixed(1)} · 부담 ${Number(map.basket.hedgeBurdenScore).toFixed(1)}</small>
         </div>
@@ -1916,7 +1991,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
         <div class="els-opportunity-map__header">
           <div>
             <span class="eyebrow">Current Positioning</span>
-            <h3>현재 기초지수 포지셔닝</h3>
+            <h3>현재 기초자산 포지셔닝</h3>
           </div>
           <div class="els-opportunity-map__aside">
             ${renderNarrativeList(map.basket.interpretation, "narrative-list--compact")}
@@ -1935,11 +2010,15 @@ function renderElsIssuanceHedgePage(elsRisk) {
                 <span><i class="els-trajectory-legend__current"></i>현재</span>
                 <span data-els-momentum-legend><i class="els-trajectory-legend__momentum"></i>1주 방향</span>
               </div>
+              <div class="els-asset-type-legend" aria-label="기초자산 유형 범례">
+                <span><i class="els-asset-type-legend__index"></i>지수</span>
+                <span><i class="els-asset-type-legend__stock"></i>개별종목</span>
+              </div>
             </div>
           </div>
         </div>
         <div class="els-opportunity-map__scroll">
-          <svg viewBox="0 0 760 410" role="img" aria-label="기초지수별 상대 발행기회와 헤지부담 분포">
+          <svg viewBox="0 0 760 410" role="img" aria-label="기초자산별 상대 발행기회와 헤지부담 분포">
             <defs>${trajectoryArrowMarkers}</defs>
             <rect x="${plot.left}" y="${plot.top}" width="${plot.width}" height="${plot.height}" class="els-map-zone els-map-zone--selective"></rect>
             <rect x="${plot.left + plot.width * 0.65}" y="${plot.top + plot.height * 0.55}" width="${plot.width * 0.35}" height="${plot.height * 0.45}" class="els-map-zone els-map-zone--opportunity"></rect>
@@ -2010,6 +2089,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
         <article><span>판단 기준</span>${renderNarrativeList(map.methodology.classification, "narrative-list--compact")}</article>
       </section>
       <aside class="els-limitations"><strong>운영 적용 전 확인</strong>${renderNarrativeList(map.limitations, "narrative-list--compact")}</aside>
+      ${renderElsSingleStockSection(singleStockItems, map.singleStockMethodology)}
       ${renderElsStressEpisodeReview(map.stressEpisodes, plot)}
     </section>
   `;

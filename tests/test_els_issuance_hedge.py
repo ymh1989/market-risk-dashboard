@@ -13,6 +13,25 @@ def load_els_module():
     return module
 
 
+def sample_asset(asset_id, label, asset_type="index", stressed=False):
+    return {
+        "id": asset_id,
+        "label": label,
+        "name": f"{label} test asset",
+        "region": "테스트",
+        "assetType": asset_type,
+        "lastDate": "2026-07-20",
+        "metrics": {
+            "return20dPct": -18.0 if stressed else -2.0,
+            "realizedVol20dPct": 52.0 if stressed else 24.0,
+            "realizedVol60dPct": 25.0 if stressed else 22.0,
+            "volPercentile252d": 99.0 if stressed else 62.0,
+            "drawdown252dPct": -26.0 if stressed else -5.0,
+            "maxAbsDailyMove20dPct": 7.5 if stressed else 2.5,
+        },
+    }
+
+
 def test_issuance_stance_covers_four_operating_zones():
     module = load_els_module()
 
@@ -56,6 +75,34 @@ def test_trajectory_windows_include_one_week_momentum_period():
     }
 
 
+def test_single_stock_specs_use_korean_common_stock_tickers():
+    module = load_els_module()
+
+    assert {(item["id"], item["symbol"], item["assetType"]) for item in module.SINGLE_STOCKS} == {
+        ("samsung", "005930.KS", "single-stock"),
+        ("hynix", "000660.KS", "single-stock"),
+    }
+
+
+def test_cached_price_history_includes_single_stocks(tmp_path):
+    module = load_els_module()
+    cache_file = tmp_path / "els-index-risk.json"
+    cache_file.write_text(
+        """
+        {
+          "indices": [{"id": "spx", "ytdPriceSeries": [{"date": "2026-01-02", "close": 100}]}],
+          "singleStocks": [{"id": "samsung", "ytdPriceSeries": [{"date": "2026-01-02", "close": 90000}]}]
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    cached = module._load_cached_price_history(cache_file)
+
+    assert set(cached) == {"spx", "samsung"}
+    assert cached["samsung"].iloc[-1]["close"] == 90000
+
+
 def test_issuance_hedge_item_is_bounded_and_explainable():
     module = load_els_module()
     item = module._issuance_hedge_item(
@@ -90,6 +137,29 @@ def test_issuance_hedge_item_is_bounded_and_explainable():
         "gapShockScore",
         "correlationScore",
     }
+
+
+def test_single_stocks_are_mapped_but_do_not_change_index_basket():
+    module = load_els_module()
+    indices = [sample_asset(spec["id"], spec["label"]) for spec in module.INDICES]
+    stocks = [
+        sample_asset("samsung", "삼성전자", "single-stock", stressed=True),
+        sample_asset("hynix", "SK하이닉스", "single-stock", stressed=True),
+    ]
+
+    index_only = module._issuance_hedge_map(indices, correlation_score=55.0)
+    with_stocks = module._issuance_hedge_map(
+        indices,
+        correlation_score=55.0,
+        single_stocks=stocks,
+    )
+
+    assert with_stocks["basket"] == index_only["basket"]
+    assert len(with_stocks["items"]) == 5
+    assert {item["id"] for item in with_stocks["singleStocks"]} == {"samsung", "hynix"}
+    assert all(item["assetType"] == "single-stock" for item in with_stocks["singleStocks"])
+    assert all(not item["includedInBasket"] for item in with_stocks["singleStocks"])
+    assert all(not item["includedInStressEpisodes"] for item in with_stocks["singleStocks"])
 
 
 def test_historical_correlation_score_does_not_use_future_returns():
@@ -186,7 +256,7 @@ def test_stress_episode_history_covers_all_five_underlyings():
     dates = pd.bdate_range("2024-01-02", periods=360).strftime("%Y-%m-%d")
     close = 100 * np.cumprod(1 + 0.003 * np.sin(np.arange(len(dates)) / 5))
     frame = module._features(pd.DataFrame({"date": dates, "close": close}))
-    frames = {spec["id"]: frame for spec in module.INDICES}
+    frames = {spec["id"]: frame for spec in [*module.INDICES, *module.SINGLE_STOCKS]}
     correlation_scores = {date: 60.0 for date in dates}
     episode = {
         "id": "sample-stress",

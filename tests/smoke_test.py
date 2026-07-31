@@ -194,6 +194,8 @@ def test_dashboard_contract():
     assert issuance_map["basket"]["stance"] in {"발행기회", "선별발행", "헤지주의", "발행부담"}
     assert 0 <= issuance_map["basket"]["opportunityScore"] <= 100
     assert 0 <= issuance_map["basket"]["hedgeBurdenScore"] <= 100
+    assert len(issuance_map["singleStocks"]) == 2
+    assert {item["id"] for item in issuance_map["singleStocks"]} == {"samsung", "hynix"}
     for item in issuance_map["items"]:
         assert item["stance"] in {"발행기회", "선별발행", "헤지주의", "발행부담"}
         assert 0 <= item["opportunityScore"] <= 100
@@ -205,6 +207,11 @@ def test_dashboard_contract():
         )
         assert item["trajectory"][-1]["opportunityScore"] == item["opportunityScore"]
         assert item["trajectory"][-1]["hedgeBurdenScore"] == item["hedgeBurdenScore"]
+    for item in issuance_map["singleStocks"]:
+        assert item["assetType"] == "single-stock"
+        assert item["includedInBasket"] is False
+        assert item["includedInStressEpisodes"] is False
+        assert 22 <= len(item["trajectory"]) <= 66
 
     stress_replay = issuance_map["stressEpisodes"]
     assert stress_replay["defaultEpisodeId"]
@@ -243,8 +250,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260730-6" in html
-    assert "app.js?v=20260730-6" in html
+    assert "styles.css?v=20260731-1" in html
+    assert "app.js?v=20260731-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -346,11 +353,21 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert 'marker-end="url(#els-map-arrow-${item.id})"' in app_source
     assert "1주 방향" in app_source
     assert "renderElsStressEpisodeReview" in app_source
+    assert "renderElsSingleStockSection" in app_source
+    assert "map.singleStocks" in app_source
+    assert "개별종목 참고" in app_source
+    assert "els-map-point--single-stock" in app_source
+    assert "els-map-trajectory-series--single-stock" in app_source
     assert 'data-els-episode="${episode.id}"' in app_source
     assert "스트레스 에피소드 리플레이" in app_source
     assert "keyTrajectoryPath(keyCoordinates)" in app_source
-    assert "현재 기초지수 포지셔닝" in app_source
+    assert "현재 기초자산 포지셔닝" in app_source
     assert app_source.index('<aside class="els-limitations">') < app_source.index(
+        "${renderElsSingleStockSection(singleStockItems, map.singleStockMethodology)}"
+    )
+    assert app_source.index(
+        "${renderElsSingleStockSection(singleStockItems, map.singleStockMethodology)}"
+    ) < app_source.index(
         "${renderElsStressEpisodeReview(map.stressEpisodes, plot)}"
     )
     assert "변동성↑ 쿠폰↑" in app_source

@@ -28,6 +28,25 @@ INDICES = [
     {"id": "kospi200", "symbol": "^KS200", "label": "KOSPI200", "name": "KOSPI 200", "region": "한국"},
 ]
 
+SINGLE_STOCKS = [
+    {
+        "id": "samsung",
+        "symbol": "005930.KS",
+        "label": "삼성전자",
+        "name": "삼성전자 보통주",
+        "region": "한국 개별종목",
+        "assetType": "single-stock",
+    },
+    {
+        "id": "hynix",
+        "symbol": "000660.KS",
+        "label": "SK하이닉스",
+        "name": "SK하이닉스 보통주",
+        "region": "한국 개별종목",
+        "assetType": "single-stock",
+    },
+]
+
 
 def _clamp(value: float, low: float = 0.0, high: float = 100.0) -> float:
     return max(low, min(high, value))
@@ -102,15 +121,16 @@ def _load_cached_price_history(path: Path = OUTPUT_FILE) -> dict[str, pd.DataFra
         return {}
 
     cached = {}
-    for index in payload.get("indices", []):
-        rows = index.get("ytdPriceSeries") or index.get("series") or []
+    assets = [*payload.get("indices", []), *payload.get("singleStocks", [])]
+    for asset in assets:
+        rows = asset.get("ytdPriceSeries") or asset.get("series") or []
         valid_rows = [
             {"date": row.get("date"), "close": row.get("close")}
             for row in rows
             if row.get("date") and row.get("close") is not None
         ]
-        if valid_rows and index.get("id"):
-            cached[index["id"]] = pd.DataFrame(valid_rows)
+        if valid_rows and asset.get("id"):
+            cached[asset["id"]] = pd.DataFrame(valid_rows)
     return cached
 
 
@@ -295,8 +315,18 @@ def _issuance_scores(metrics: dict, correlation_score: float) -> dict:
 def _issuance_hedge_item(index: dict, correlation_score: float) -> dict:
     metrics = index["metrics"]
     scores = _issuance_scores(metrics, correlation_score)
+    asset_type = index.get("assetType", "index")
 
-    if scores["stance"] == "발행기회":
+    if asset_type == "single-stock":
+        if scores["stance"] == "발행부담":
+            interpretation = "변동성에 따른 쿠폰 여력보다 하락·갭 위험과 기존 북의 헤지부담이 더 큰 구간입니다. 신규 발행 한도보다 재고·감마·이벤트 익스포저 점검이 우선입니다."
+        elif scores["stance"] == "헤지주의":
+            interpretation = "쿠폰 여력은 높지만 지수보다 큰 갭·집중 위험이 헤지비용을 키울 수 있습니다. 만기 분산과 종목별 재고 한도를 함께 확인해야 합니다."
+        elif scores["stance"] == "발행기회":
+            interpretation = "상대적 쿠폰 여력이 높고 현재 하락 부담은 제한적입니다. 다만 실적·수급 이벤트와 단일종목 한도를 반영한 별도 가격 검증이 필요합니다."
+        else:
+            interpretation = "현재 쿠폰 여력은 제한적입니다. 단일종목 특유의 갭·집중 위험을 감안해 구조와 만기를 선별할 구간입니다."
+    elif scores["stance"] == "발행기회":
         interpretation = "상대적 쿠폰 여력이 높고 현재 낙폭·방향성 부담은 제한적입니다. 신규 발행 후보군으로 우선 검토할 수 있습니다."
     elif scores["stance"] == "헤지주의":
         interpretation = "발행 조건 개선 여지는 크지만 변동성과 하락 경로가 헤지비용을 높입니다. 한도·만기·기초자산 집중을 함께 관리해야 합니다."
@@ -310,6 +340,9 @@ def _issuance_hedge_item(index: dict, correlation_score: float) -> dict:
         "label": index["label"],
         "name": index["name"],
         "region": index["region"],
+        "assetType": asset_type,
+        "includedInBasket": asset_type == "index",
+        "includedInStressEpisodes": asset_type == "index",
         "lastDate": index["lastDate"],
         **scores,
         "interpretation": interpretation,
@@ -510,10 +543,14 @@ def _issuance_hedge_map(
     feature_frames: dict[str, pd.DataFrame] | None = None,
     correlation_scores: dict[str, float] | None = None,
     stress_episodes: list[dict] | None = None,
+    single_stocks: list[dict] | None = None,
+    single_stock_feature_frames: dict[str, pd.DataFrame] | None = None,
 ) -> dict:
     feature_frames = feature_frames or {}
     correlation_scores = correlation_scores or {}
     stress_episodes = stress_episodes or []
+    single_stocks = single_stocks or []
+    single_stock_feature_frames = single_stock_feature_frames or {}
     items = []
     for index in indices:
         item_correlation = _correlation_score_at(correlation_scores, index["lastDate"], correlation_score)
@@ -526,6 +563,18 @@ def _issuance_hedge_map(
                 fallback_correlation_score=correlation_score,
             )
         items.append(item)
+    single_stock_items = []
+    for stock in single_stocks:
+        item_correlation = _correlation_score_at(correlation_scores, stock["lastDate"], correlation_score)
+        item = _issuance_hedge_item(stock, item_correlation)
+        frame = single_stock_feature_frames.get(stock["id"])
+        if frame is not None:
+            item["trajectory"] = _issuance_trajectory(
+                frame,
+                correlation_scores,
+                fallback_correlation_score=correlation_score,
+            )
+        single_stock_items.append(item)
     opportunity_ranked = sorted(items, key=lambda item: item["opportunityScore"], reverse=True)
     burden_ranked = sorted(items, key=lambda item: item["hedgeBurdenScore"], reverse=True)
     average_opportunity = float(np.mean([item["opportunityScore"] for item in items]))
@@ -550,6 +599,7 @@ def _issuance_hedge_map(
             "classification": "헤지부담 80점 이상은 발행부담, 발행기회 65점 이상이면서 헤지부담 45점 이상은 헤지주의, 발행기회 65점 이상이면서 부담이 낮으면 발행기회, 나머지는 선별발행입니다.",
         },
         "trajectoryWindows": TRAJECTORY_WINDOWS,
+        "singleStockMethodology": "삼성전자·SK하이닉스는 지수와 같은 공개 종가 기반 좌표계에 참고용으로 표시합니다. 단일종목의 실적·수급 이벤트, 갭 위험, 종목별 발행 재고와 헤지 한도는 별도 확인 대상입니다.",
         "basket": {
             "opportunityScore": _round(basket_opportunity, 2),
             "hedgeBurdenScore": _round(basket_burden, 2),
@@ -560,6 +610,7 @@ def _issuance_hedge_map(
             "interpretation": f"{opportunity_ranked[0]['label']}의 변동성에서 발행 조건 개선 여지가 가장 크고, {burden_ranked[0]['label']}가 기존 북의 헤지부담을 가장 크게 높입니다.",
         },
         "items": sorted(items, key=lambda item: item["balanceScore"], reverse=True),
+        "singleStocks": sorted(single_stock_items, key=lambda item: item["balanceScore"], reverse=True),
         "stressEpisodes": _stress_episode_history(
             stress_episodes,
             feature_frames,
@@ -572,14 +623,21 @@ def _issuance_hedge_map(
 
 def build_payload() -> dict:
     indices = []
+    single_stocks = []
     feature_frames = []
     feature_frames_by_id = {}
+    single_stock_feature_frames_by_id = {}
     cached_price_history = _load_cached_price_history()
     for spec in INDICES:
         index_payload, features = _index_payload(spec, cached_price_history.get(spec["id"]))
         indices.append(index_payload)
         feature_frames.append(features)
         feature_frames_by_id[spec["id"]] = features
+
+    for spec in SINGLE_STOCKS:
+        stock_payload, features = _index_payload(spec, cached_price_history.get(spec["id"]))
+        single_stocks.append(stock_payload)
+        single_stock_feature_frames_by_id[spec["id"]] = features
 
     ranked = sorted(indices, key=lambda item: item["score"], reverse=True)
     average_score = float(np.mean([item["score"] for item in indices]))
@@ -593,6 +651,8 @@ def build_payload() -> dict:
         feature_frames=feature_frames_by_id,
         correlation_scores=correlation_scores,
         stress_episodes=_load_stress_episodes(),
+        single_stocks=single_stocks,
+        single_stock_feature_frames=single_stock_feature_frames_by_id,
     )
 
     payload = {
@@ -610,6 +670,7 @@ def build_payload() -> dict:
         },
         "issuanceHedgeMap": issuance_hedge_map,
         "indices": indices,
+        "singleStocks": single_stocks,
     }
     return payload
 

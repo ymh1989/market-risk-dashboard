@@ -23,6 +23,8 @@
   --group-overheating: #956814;
   --group-flow: #7563a3;
   --group-liquidity: #577a95;
+  --els-samsung: #705a9f;
+  --els-hynix: #3f7891;
   --trend-worsening: #b63833;
   --trend-improving: #25784a;
   --trend-flat: #64717c;
@@ -55,6 +57,8 @@
   --group-overheating: #ddb35f;
   --group-flow: #a894d4;
   --group-liquidity: #8fb1c9;
+  --els-samsung: #aa96d4;
+  --els-hynix: #78aec5;
   --trend-worsening: #f07d74;
   --trend-improving: #72c58d;
   --trend-flat: #a3b2bb;
@@ -1662,7 +1666,8 @@ a {
 }
 
 .els-opportunity-map__tools,
-.els-trajectory-legend {
+.els-trajectory-legend,
+.els-asset-type-legend {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1754,6 +1759,36 @@ a {
   transform: rotate(45deg);
 }
 
+.els-asset-type-legend {
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.els-asset-type-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.els-asset-type-legend i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--muted);
+}
+
+.els-asset-type-legend__index {
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.els-asset-type-legend .els-asset-type-legend__stock {
+  background: var(--surface-raised);
+  transform: rotate(45deg);
+}
+
 .els-opportunity-map__scroll {
   overflow-x: auto;
   background: var(--surface-raised);
@@ -1833,6 +1868,22 @@ a {
   vector-effect: non-scaling-stroke;
 }
 
+.els-map-point .els-map-stock-marker {
+  fill: var(--els-samsung);
+  stroke: var(--surface);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.els-map-point-leader {
+  fill: none;
+  stroke: var(--muted);
+  stroke-dasharray: 2 2;
+  stroke-width: 1;
+  opacity: 0.8;
+  vector-effect: non-scaling-stroke;
+}
+
 .els-map-point text {
   fill: var(--ink);
   font-size: 12px;
@@ -1852,6 +1903,10 @@ a {
 
 .els-map-point--kospi200 circle {
   fill: var(--green);
+}
+
+.els-map-point--hynix .els-map-stock-marker {
+  fill: var(--els-hynix);
 }
 
 .els-map-trajectories {
@@ -1882,6 +1937,14 @@ a {
   color: var(--green);
 }
 
+.els-map-trajectory-series--samsung {
+  color: var(--els-samsung);
+}
+
+.els-map-trajectory-series--hynix {
+  color: var(--els-hynix);
+}
+
 .els-map-trajectory {
   fill: none;
   stroke: currentColor;
@@ -1890,6 +1953,10 @@ a {
   stroke-width: 2;
   opacity: 0.72;
   vector-effect: non-scaling-stroke;
+}
+
+.els-map-trajectory-series--single-stock .els-map-trajectory {
+  stroke-dasharray: 7 5;
 }
 
 .els-map-trajectories--momentum .els-map-trajectory {
@@ -1915,6 +1982,14 @@ a {
 
 .els-map-arrowhead--kospi200 {
   fill: var(--green);
+}
+
+.els-map-arrowhead--samsung {
+  fill: var(--els-samsung);
+}
+
+.els-map-arrowhead--hynix {
+  fill: var(--els-hynix);
 }
 
 .els-map-trajectory-start {
@@ -2333,6 +2408,186 @@ a {
 
 .els-limitations strong {
   margin: 0;
+}
+
+.els-single-stock-section {
+  display: grid;
+  gap: 14px;
+  padding: 20px 0 6px;
+  border-top: 1px solid var(--line);
+}
+
+.els-single-stock-section__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.els-single-stock-section__header h3 {
+  margin: 5px 0 0;
+  font-size: 1.08rem;
+}
+
+.els-single-stock-section__scope {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.els-single-stock-section__scope span {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.els-single-stock-section__note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.els-single-stock-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.els-single-stock-card {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--els-samsung);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.els-single-stock-card--hynix {
+  border-top-color: var(--els-hynix);
+}
+
+.els-single-stock-card > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.els-single-stock-card > header div {
+  display: grid;
+  gap: 3px;
+}
+
+.els-single-stock-card > header span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.els-single-stock-card > header strong {
+  font-size: 1rem;
+}
+
+.els-single-stock-card__stance {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.els-single-stock-card__stance--good {
+  color: var(--green);
+}
+
+.els-single-stock-card__stance--caution {
+  color: var(--amber);
+}
+
+.els-single-stock-card__stance--danger {
+  color: var(--red);
+}
+
+.els-single-stock-card__scores {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.els-single-stock-card__scores > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+}
+
+.els-single-stock-card__scores span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.els-single-stock-card__scores strong {
+  font-size: 1rem;
+}
+
+.els-single-stock-card__scores i {
+  grid-column: 1 / -1;
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.els-single-stock-card__scores b {
+  display: block;
+  height: 100%;
+}
+
+.els-single-stock-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.els-single-stock-card dl div {
+  display: grid;
+  gap: 2px;
+  padding: 9px 10px;
+  background: var(--surface-raised);
+}
+
+.els-single-stock-card dt,
+.els-single-stock-card dd {
+  margin: 0;
+}
+
+.els-single-stock-card dt {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.els-single-stock-card dd {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.els-single-stock-card .narrative-list {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.55;
 }
 
 .hmm-regime-panel {
@@ -5377,6 +5632,7 @@ a {
   .els-index-panel__header,
   .els-issuance-heading,
   .els-opportunity-map__header,
+  .els-single-stock-section__header,
   .els-episode-review__header,
   .els-index-summary,
   .hmm-regime-panel__header,
@@ -5639,6 +5895,14 @@ a {
   .els-comparison-row,
   .els-limitations {
     grid-template-columns: 1fr;
+  }
+
+  .els-single-stock-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .els-single-stock-section__scope {
+    justify-content: flex-start;
   }
 
   .els-comparison-row p,
