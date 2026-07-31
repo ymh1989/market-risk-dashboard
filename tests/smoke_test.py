@@ -103,6 +103,7 @@ def test_dashboard_contract():
         "volatility_term_structure_watch",
         "us_market_breadth_watch",
         "broad_reinflation_watch",
+        "m7_credit_stress_proxy",
     }
     assert all(float(indicator["weight"]) == 0 for indicator in observations)
     assert len(market["observationJournal"]) == 5
@@ -676,18 +677,19 @@ def test_pipeline_status_contract():
     assert {source["id"] for source in status["sources"]} == {
         "yahoo",
         "naver-equity",
-        "naver-market-index",
-        "fred",
-        "ml-input",
-    }
+            "naver-market-index",
+            "fred",
+            "ml-input",
+            "m7-credit",
+        }
     assert len(status["artifacts"]) >= 6
     assert status["quality"]["score"] >= 0
     assert len(status["researchLog"]) == 5
     assert all(item["decision"] and item["operation"] for item in status["researchLog"])
     assert status["history"]
     assert quality["schemaVersion"] == 1
-    assert quality["summary"]["sourceSeriesExpected"] == 80
-    assert quality["summary"]["sourceSeriesPresent"] == 80
+    assert quality["summary"]["sourceSeriesExpected"] == 94
+    assert quality["summary"]["sourceSeriesPresent"] == 94
     assert quality["summary"]["error"] == 0
 
 

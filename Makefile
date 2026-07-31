@@ -1,4 +1,4 @@
-.PHONY: serve test audit-data update-market-risk backtest-market-risk analyze-stress-episodes export-offline send-news-digest install-news-digest
+.PHONY: serve test audit-data update-m7-credit-proxy update-market-risk backtest-market-risk analyze-stress-episodes export-offline send-news-digest install-news-digest
 
 serve:
 	python3 -m http.server 5173 --bind 127.0.0.1
@@ -8,6 +8,9 @@ test:
 
 audit-data:
 	python3 scripts/audit_data_completeness.py --strict
+
+update-m7-credit-proxy:
+	python3 -m m7_credit_proxy.pipeline --update-latest
 
 update-market-risk:
 	python3 scripts/update_market_risk.py

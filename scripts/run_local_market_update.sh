@@ -217,6 +217,7 @@ export PYTHONUNBUFFERED=1
 export PYTHONPATH="$WORKTREE/src"
 export PYTHONWARNINGS="${PYTHONWARNINGS:-ignore:Skipping features without any observed values:UserWarning}"
 export MPLCONFIGDIR="${MPLCONFIGDIR:-$WORKTREE/.cache/matplotlib}"
+export M7_CREDIT_RAW_DIR="${M7_CREDIT_RAW_DIR:-$ROOT/data/raw/m7_credit_proxy}"
 mkdir -p "$MPLCONFIGDIR"
 
 seed_local_data_cache() {
@@ -245,6 +246,8 @@ persist_local_data_cache() {
 seed_local_data_cache
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 갱신 모드: $UPDATE_MODE"
+echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] M7 공개시장 신용스트레스 프록시를 갱신합니다."
+"$PYTHON_BIN" -m m7_credit_proxy.pipeline --update-latest
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 시장리스크 데이터를 갱신합니다."
 MARKET_STAGE_STARTED_EPOCH="$(date +%s)"
 make update-market-risk
@@ -316,6 +319,7 @@ git add \
   data/ml-risk-signal.json \
   data/data-quality.json \
   data/pipeline-status.json \
+  data/m7-credit-proxy.json \
   reports/market-risk-dashboard-offline.html
 
 if git diff --cached --quiet; then

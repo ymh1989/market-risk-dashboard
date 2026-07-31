@@ -1,0 +1,100 @@
+version: 1
+
+price:
+  history_range: 5y
+  primary_source: stooq
+  fallback_source: dashboard_yahoo
+  max_workers: 6
+  symbols:
+    AAPL: aapl.us
+    MSFT: msft.us
+    GOOGL: googl.us
+    AMZN: amzn.us
+    META: meta.us
+    NVDA: nvda.us
+    TSLA: tsla.us
+    QQQ: qqq.us
+    IGIB: igib.us
+    LQD: lqd.us
+    HYG: hyg.us
+    IEF: ief.us
+
+calculation:
+  beta_window: 120
+  beta_min_observations: 60
+  residual_window: 5
+  drawdown_window: 60
+  percentile_window: 756
+  percentile_min_observations: 252
+  minimum_member_coverage: 6
+  minimum_score_coverage: 0.70
+  macro_forward_fill_days: 3
+  ofr_max_stale_business_days: 5
+
+weights:
+  m7_idio_loss_5d: 0.30
+  worst_member_loss_5d: 0.15
+  m7_median_drawdown_60d: 0.10
+  ig_credit_loss_5d: 0.20
+  hy_ig_relative_5d: 0.10
+  ofr_fsi: 0.15
+
+bands:
+  - {min: 0, max: 40, id: Low, label: 낮음}
+  - {min: 40, max: 60, id: Normal, label: 보통}
+  - {min: 60, max: 75, id: Watch, label: 관찰}
+  - {min: 75, max: 90, id: High, label: 높음}
+  - {min: 90, max: 101, id: Severe, label: 심각}
+
+sources:
+  stooq:
+    source_name: Stooq daily prices
+    domain: stooq.com
+    access_type: public_csv
+    api_key_required: false
+    paid_subscription_required: false
+    redistribution_status: derived_only
+    raw_data_publish_allowed: false
+    attribution: Stooq
+    enabled: true
+  dashboard_yahoo:
+    source_name: Existing dashboard price feed
+    domain: query2.finance.yahoo.com
+    access_type: existing_public_chart
+    api_key_required: false
+    paid_subscription_required: false
+    redistribution_status: derived_only
+    raw_data_publish_allowed: false
+    attribution: Existing market-risk dashboard price pipeline
+    enabled: true
+    quality_note: Stooq 자동 CSV가 차단될 때만 사용하며 운영 데이터 계약 검토가 필요합니다.
+  treasury:
+    source_name: U.S. Treasury daily par yield curve
+    domain: home.treasury.gov
+    access_type: official_xml
+    api_key_required: false
+    paid_subscription_required: false
+    redistribution_status: derived_only
+    raw_data_publish_allowed: false
+    attribution: U.S. Department of the Treasury
+    enabled: true
+  ofr:
+    source_name: OFR Financial Stress Index
+    domain: financialresearch.gov
+    access_type: official_csv
+    api_key_required: false
+    paid_subscription_required: false
+    redistribution_status: derived_only
+    raw_data_publish_allowed: false
+    attribution: Office of Financial Research
+    enabled: true
+  sec:
+    source_name: SEC EDGAR Company Facts
+    domain: data.sec.gov
+    access_type: official_json
+    api_key_required: false
+    paid_subscription_required: false
+    redistribution_status: derived_only
+    raw_data_publish_allowed: false
+    attribution: U.S. Securities and Exchange Commission
+    enabled: true

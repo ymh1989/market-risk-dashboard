@@ -6,7 +6,7 @@ app_file: index.html
 
 # 통합 리스크 모니터링 대시보드
 
-시장리스크와 ELS 발행·헤지 환경을 함께 점검하는 정적 대시보드입니다. 시장 종합점수에 반영되는 18개 가중지표와 연구용 관찰지표 6개, 스트레스 사례, KOSPI ML risk-off 신호, SPX·SX5E·NKY·HSCEI·KOSPI200 ELS 리스크를 한 화면에서 확인할 수 있습니다. 별도 프런트엔드 빌드 도구 없이 `index.html`, `src/*`, `data/*.json`으로 실행되며, 신용리스크와 유동성리스크를 같은 구조로 확장할 수 있습니다.
+시장리스크와 ELS 발행·헤지 환경을 함께 점검하는 정적 대시보드입니다. 시장 종합점수에 반영되는 18개 가중지표와 연구용 관찰지표 7개, 스트레스 사례, KOSPI ML risk-off 신호, SPX·SX5E·NKY·HSCEI·KOSPI200 ELS 리스크를 한 화면에서 확인할 수 있습니다. 별도 프런트엔드 빌드 도구 없이 `index.html`, `src/*`, `data/*.json`으로 실행됩니다.
 
 운영 페이지: [https://ymh1989.github.io/market-risk-dashboard/](https://ymh1989.github.io/market-risk-dashboard/)
 
@@ -34,6 +34,7 @@ pytest -q
 ## 시장리스크 데이터 갱신
 
 ```bash
+make update-m7-credit-proxy
 make update-market-risk
 make backtest-market-risk
 make analyze-stress-episodes
@@ -51,7 +52,38 @@ make export-els-index-risk
 - 글로벌 proxy: HYG/LQD 신용스프레드 proxy, EEM 신흥국 위험선호 proxy
 - 교차자산 전이: SCFI·BDTI 비용압력과 BDI 실물수요의 괴리, 브렌트유의 원화 환산 비용, USD/CNY·철광석을 결합한 중국 경기 압력
 - 보조 원자재: 구리/금 상대가격을 중국 경기 카드의 상세값으로 제공하되 별도 점수는 부여하지 않습니다.
-- 연구 관찰카드: USD/JPY·VIX·SPX의 엔 캐리 청산 압력, 한국 3년-미국 2년 금리차·USD/KRW의 원화 압력, 미국 10년-일본 10년 금리차의 축소 압력, VIX/VIX3M·VVIX의 옵션 헤지 압력, RSP/SPY·QQEW/QQQ의 미국 증시 폭, DBC·DBA의 광의 재인플레이션을 0~100점으로 표시합니다. 여섯 카드는 가중치 0으로 종합점수·위험군 점수·고위험 지표 수에서 제외합니다.
+- 연구 관찰카드: 엔 캐리, 한미·미일 금리차, 옵션 기간구조, 미국 증시 폭, 광의 재인플레이션과 `M7 Credit Stress Proxy`를 0~100점으로 표시합니다. 일곱 카드는 가중치 0으로 종합점수·위험군 점수·고위험 지표 수에서 제외합니다.
+
+## M7 Credit Stress Proxy
+
+`M7 Credit Stress Proxy`는 Magnificent 7의 실제 CDS를 추정하지 않습니다. 공개 가격과 금융시장 자료로 아래 변화를 표준화한 관찰지표입니다.
+
+- M7 종목의 QQQ 대비 5일 고유손실
+- 최약 구성종목의 QQQ 대비 5일 고유손실
+- M7 구성종목의 60일 고점 대비 중간 낙폭
+- IGIB·LQD의 IEF 대비 5일 금리중립 약세
+- HYG의 LQD 대비 5일 상대약세
+- OFR Financial Stress Index
+
+각 구성요소는 당일까지의 최대 756거래일 안에서 rolling percentile로 0~100점화합니다. 최소 252개 관측치와 원래 가중치의 70% 이상이 확보될 때만 종합점수를 산출합니다.
+
+```bash
+PYTHONPATH=src python3 -m m7_credit_proxy.pipeline --backfill
+PYTHONPATH=src python3 -m m7_credit_proxy.pipeline --update-latest
+PYTHONPATH=src python3 -m m7_credit_proxy.pipeline --asof 2026-07-31
+```
+
+- 공개 산출물: `data/m7-credit-proxy.json`
+- 로컬 시계열: `data/processed/m7_credit_proxy_daily.csv`
+- 로컬 구성종목: `data/processed/m7_credit_members_latest.json`
+- 로컬 품질현황: `data/quality/m7_credit_source_status.json`
+- 원천 캐시: `data/raw/m7_credit_proxy/` · Git 제외
+
+가격 수집은 Stooq 공개 CSV를 먼저 확인합니다. Stooq가 자동요청 검증 화면을 반환하면 현재 대시보드가 이미 사용하는 가격 수집 경로를 대체값으로 사용하고 품질을 `partial`로 표시합니다. OFR과 미국 국채금리는 정부 공식 CSV·XML을 사용합니다. SEC 재무 오버레이는 `.env`의 `SEC_USER_AGENT`가 설정된 경우에만 수집하며 일별 점수에는 포함하지 않습니다.
+
+**본 지표는 CDS 스프레드가 아니며, 공개 시장자료를 이용해 산출한 상대적 신용 스트레스 프록시입니다.**
+
+상세 산식과 운영 제한은 [M7 프록시 방법론](docs/m7_credit_proxy_methodology.md)에 정리했습니다.
 
 시장 페이지의 `시장 의견 검증 일지`는 AI ROI, 지정학·물가, 금리, 옵션 헤지·디레버리징, 중국 메모리 CAPEX 가설을 관측 근거·판정·운영 조치로 나눕니다. 점수가 있는 일지는 구성 지표를 같은 내부 비중으로 날짜별 재합성한 스파크라인을 표시하며, 정보 버튼을 누르면 현재점수·내부 비중·기여점수를 확인할 수 있습니다. 일지 내부 비중은 시장 종합점수 가중치와 분리되며 모든 일지는 검증 단계에서 종합점수 가중치 0을 유지합니다. 전망의 방향을 점수에 선반영하지 않으며, 직접 일별 데이터가 없는 중국 메모리 상장·CAPEX는 별도 점수화를 보류하고 데이터 공백을 그대로 표시합니다.
 
@@ -220,10 +252,12 @@ make run-news-bot
 - `data/ml-risk-signal.json`: 최신 ML risk-off 신호, 성능지표와 최근 흐름을 저장합니다.
 - `data/data-quality.json`: 원천별 완비성·최신성, 캐시 상태와 산출물 정렬 검사 결과를 저장합니다.
 - `data/pipeline-status.json`: 예약 스케줄, 최근 성공, 단계별 소요시간, 데이터 소스 신선도와 실행 이력을 저장합니다.
+- `data/m7-credit-proxy.json`: M7 신용스트레스 프록시의 공개 점수·구성종목·품질 메타데이터를 저장합니다.
 - `src/risk-model.js`: 점수 계산과 등급 판정 로직입니다.
 - `src/app.js`: JSON 데이터를 읽어 화면을 렌더링합니다.
 - `src/styles.css`: 대시보드 레이아웃과 시각 스타일입니다.
 - `scripts/update_market_risk.py`: 외부 데이터를 가져와 시장리스크 지표를 재계산합니다.
+- `src/m7_credit_proxy/pipeline.py`: M7·회사채 ETF·OFR·미 국채·SEC 자료를 검증하고 프록시를 산출합니다.
 - `scripts/export_els_index_risk.py`: ELS 5개 기초지수 및 basket 리스크를 계산합니다.
 - `scripts/export_ml_risk_signal.py`: 연구용 ML 결과를 홈페이지용 JSON으로 변환합니다.
 - `scripts/audit_data_completeness.py`: 원천·캐시·산출물의 완비성과 최신성을 검사하고 오류 시 배포를 차단합니다.

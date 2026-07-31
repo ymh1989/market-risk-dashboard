@@ -41,6 +41,7 @@ ARTIFACTS = {
     "els": ("ELS 지수위험", ROOT / "data" / "els-index-risk.json"),
     "hmm": ("HMM 레짐", ROOT / "data" / "hmm-regime.json"),
     "ml": ("ML 위험신호", ROOT / "data" / "ml-risk-signal.json"),
+    "m7": ("M7 신용스트레스 프록시", ROOT / "data" / "m7-credit-proxy.json"),
     "marketHistory": ("장기 시장 캐시", ROOT / "data" / "market-history-cache.json"),
     "naverMarketHistory": ("Naver 시장지표 캐시", ROOT / "data" / "naver-marketindex-history.json"),
 }
@@ -325,6 +326,89 @@ def assess_ml_source_group(
     return group, checks
 
 
+def assess_m7_source_group(
+    payload: dict[str, Any],
+    reference_date: date,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    required = {
+        *{f"price:{ticker}" for ticker in ("AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA")},
+        *{f"price:{ticker}" for ticker in ("QQQ", "IGIB", "LQD", "HYG", "IEF")},
+        "ofr_fsi",
+        "treasury_yield_curve",
+    }
+    sources = {
+        item.get("source"): item
+        for item in payload.get("sources", [])
+        if item.get("source")
+    }
+    checks = []
+    fresh_count = 0
+    fallback_count = 0
+    last_dates = []
+    for source_id in sorted(required):
+        item = sources.get(source_id)
+        if not item:
+            checks.append(
+                make_check(
+                    f"source:m7:{source_id}",
+                    "source",
+                    source_id,
+                    "error",
+                    "M7 공개 산출물에 필수 원천 상태가 없습니다.",
+                    groupId="m7-credit",
+                )
+            )
+            continue
+        last_date = parse_date(item.get("last_value_date"))
+        provider = str(item.get("provider") or "")
+        fallback = provider in {"dashboard_yahoo", "local_cache"}
+        fallback_count += int(fallback)
+        if last_date:
+            last_dates.append(last_date)
+        allowed_lag = 5 if source_id == "ofr_fsi" else 3
+        lag = business_day_lag(last_date, reference_date) if last_date else 999
+        if not last_date or lag > max(allowed_lag + 3, 7):
+            status = "error"
+        elif lag > allowed_lag or fallback or item.get("status") != "ok":
+            status = "warning"
+        else:
+            status = "ok"
+        fresh_count += int(last_date is not None and lag <= allowed_lag)
+        checks.append(
+            make_check(
+                f"source:m7:{source_id}",
+                "source",
+                source_id,
+                status,
+                (
+                    f"최신 {item.get('last_value_date', '-')} · 영업일 시차 {lag}일 · "
+                    f"{provider or '-'}"
+                ),
+                groupId="m7-credit",
+                lastDate=item.get("last_value_date"),
+                fetchStatus=provider,
+            )
+        )
+    present_count = sum(source_id in sources for source_id in required)
+    statuses = [item["status"] for item in checks]
+    return {
+        "id": "m7-credit",
+        "label": "M7 Credit Stress Proxy",
+        "status": worst_status(statuses),
+        "seriesExpected": len(required),
+        "seriesPresent": present_count,
+        "freshCount": fresh_count,
+        "staleCount": max(0, present_count - fresh_count),
+        "fallbackCount": fallback_count,
+        "oldestLastDate": min(last_dates).isoformat() if last_dates else None,
+        "latestLastDate": max(last_dates).isoformat() if last_dates else None,
+        "detail": (
+            f"{present_count}/{len(required)}개 수집 · 허용시차 내 {fresh_count}개"
+            + (f" · 대체값 {fallback_count}개" if fallback_count else "")
+        ),
+    }, checks
+
+
 def validate_series_rows(
     check_id: str,
     label: str,
@@ -417,6 +501,55 @@ def cross_artifact_checks(
             "error" if missing_trends else "ok",
             f"지표 {len(indicator_ids)}개 · 추이 {len(timeseries_ids)}개"
             + (f" · 누락 {', '.join(missing_trends)}" if missing_trends else " · 누락 없음"),
+        )
+    )
+
+    m7 = data.get("m7") or {}
+    m7_latest = m7.get("latest") or {}
+    m7_rows = m7.get("series") or []
+    checks.append(
+        validate_series_rows(
+            "series:m7:combined-score",
+            "M7 신용스트레스 점수",
+            m7_rows,
+            min_rows=252,
+            value_key="combined_score",
+        )
+    )
+    m7_score = m7_latest.get("score")
+    m7_indicator = next(
+        (
+            item
+            for item in market_section.get("indicators", [])
+            if item.get("id") == "m7_credit_stress_proxy"
+        ),
+        {},
+    )
+    m7_trend = (timeseries.get("series") or {}).get("m7_credit_stress_proxy") or []
+    aligned = (
+        isinstance(m7_score, (int, float))
+        and 0 <= float(m7_score) <= 100
+        and m7_rows
+        and m7_latest.get("as_of") == m7_rows[-1].get("date")
+        and m7_indicator
+        and math.isclose(float(m7_indicator.get("value")), float(m7_score), abs_tol=0.11)
+        and m7_trend
+        and m7_trend[-1].get("date") == m7_latest.get("as_of")
+        and math.isclose(
+            float(m7_trend[-1].get("value")), float(m7_score), abs_tol=0.11
+        )
+    )
+    checks.append(
+        make_check(
+            "cross:m7-dashboard",
+            "alignment",
+            "M7 프록시·시장카드·시계열",
+            "ok" if aligned else "error",
+            (
+                f"프록시 {m7_latest.get('as_of', '-')} {m7_score if m7_score is not None else '-'}점 · "
+                f"카드 {m7_indicator.get('value', '-')}점 · "
+                f"시계열 {m7_trend[-1].get('date', '-') if m7_trend else '-'}"
+            ),
         )
     )
 
@@ -766,6 +899,11 @@ def build_report(now: datetime | None = None) -> dict[str, Any]:
         ml_group, ml_checks = assess_ml_source_group(ml_source_metadata, reference_date)
         groups.append(ml_group)
         checks.extend(ml_checks)
+
+    if data.get("m7"):
+        m7_group, m7_checks = assess_m7_source_group(data["m7"], reference_date)
+        groups.append(m7_group)
+        checks.extend(m7_checks)
 
     checks.extend(artifact_checks(data, reference_date))
     checks.extend(cross_artifact_checks(data, now))

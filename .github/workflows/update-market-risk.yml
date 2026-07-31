@@ -25,6 +25,7 @@ jobs:
 
       - name: Refresh market risk data
         run: |
+          python3 -m m7_credit_proxy.pipeline --update-latest
           make update-market-risk
           make backtest-market-risk
           REFRESH_STRESS_CACHE=1 make analyze-stress-episodes
@@ -54,7 +55,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/risk-dashboard.json data/market-risk-snapshot.json data/market-risk-timeseries.json data/naver-marketindex-history.json data/market-risk-backtest.json data/market-stress-episodes.json data/market-history-cache.json data/els-index-risk.json data/hmm-regime.json data/ml-risk-signal.json data/data-quality.json data/pipeline-status.json reports/market-risk-dashboard-offline.html
+          git add data/risk-dashboard.json data/market-risk-snapshot.json data/market-risk-timeseries.json data/naver-marketindex-history.json data/market-risk-backtest.json data/market-stress-episodes.json data/market-history-cache.json data/els-index-risk.json data/hmm-regime.json data/ml-risk-signal.json data/data-quality.json data/pipeline-status.json data/m7-credit-proxy.json reports/market-risk-dashboard-offline.html
           if git diff --cached --quiet; then
             echo "No data changes to commit."
           else

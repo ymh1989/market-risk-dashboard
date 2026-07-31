@@ -20,6 +20,7 @@ SNAPSHOT_FILE = ROOT / "data" / "market-risk-snapshot.json"
 TIMESERIES_FILE = ROOT / "data" / "market-risk-timeseries.json"
 HISTORY_CACHE_FILE = ROOT / "data" / "market-history-cache.json"
 NAVER_MARKET_INDEX_CACHE_FILE = ROOT / "data" / "naver-marketindex-history.json"
+M7_CREDIT_FILE = ROOT / "data" / "m7-credit-proxy.json"
 YAHOO_CHART_URLS = (
     "https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d",
     "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d",
@@ -262,6 +263,15 @@ RISK_GROUPS = {
     "ai_semi": {"label": "AI Semi", "weight": 0.26},
 }
 
+M7_COMPONENT_LABELS = {
+    "m7_idio_loss_5d": "M7 시장대비 고유손실",
+    "worst_member_loss_5d": "최약 종목 고유손실",
+    "m7_median_drawdown_60d": "M7 중간 낙폭",
+    "ig_credit_loss_5d": "투자등급 금리중립 약세",
+    "hy_ig_relative_5d": "하이일드-투자등급 약세",
+    "ofr_fsi": "OFR 금융시스템 스트레스",
+}
+
 
 def clamp(value, low=0.0, high=100.0):
     return max(low, min(high, value))
@@ -269,6 +279,80 @@ def clamp(value, low=0.0, high=100.0):
 
 def round_score(value):
     return round(clamp(value), 1)
+
+
+def load_m7_credit_proxy():
+    if not M7_CREDIT_FILE.exists():
+        print(
+            f"{M7_CREDIT_FILE.relative_to(ROOT)} 파일이 없어 M7 관찰카드를 생략합니다.",
+            flush=True,
+        )
+        return None
+    try:
+        payload = json.loads(M7_CREDIT_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        print(f"M7 프록시 파일을 읽지 못했습니다: {error}", flush=True)
+        return None
+    latest = payload.get("latest") or {}
+    score = latest.get("score")
+    if not isinstance(score, (int, float)) or not 0 <= score <= 100:
+        print("M7 프록시 최신 점수가 없거나 0~100 범위를 벗어났습니다.", flush=True)
+        return None
+    if not isinstance(payload.get("series"), list):
+        print("M7 프록시 시계열이 없어 관찰카드를 생략합니다.", flush=True)
+        return None
+    return payload
+
+
+def m7_credit_indicator(payload):
+    latest = payload["latest"]
+    top_driver = latest.get("top_driver") or {}
+    top_driver_label = M7_COMPONENT_LABELS.get(
+        top_driver.get("id"), top_driver.get("id") or "가용 구성요소"
+    )
+    member_coverage = int(latest.get("member_coverage") or 0)
+    coverage_pct = float(latest.get("coverage") or 0) * 100
+    idio_loss_pct = float(latest.get("m7_idio_loss_5d") or 0) * 100
+    worst_loss_pct = float(latest.get("worst_member_residual_5d") or 0) * 100
+    ig_loss_pct = float(latest.get("ig_credit_loss_5d") or 0) * 100
+    change_1d = float(latest.get("change_1d") or 0)
+    trend = "up" if change_1d > 0.5 else "down" if change_1d < -0.5 else "flat"
+    quality_label = {
+        "complete": "정상",
+        "partial": "대체 가격원",
+        "stale": "지연",
+        "unavailable": "산출불가",
+    }.get(latest.get("quality"), latest.get("quality") or "-")
+    return {
+        "id": "m7_credit_stress_proxy",
+        "name": "M7 Credit Stress Proxy",
+        "category": "관찰/기업신용",
+        "group": "macro",
+        "role": "observation",
+        "value": round_score(float(latest["score"])),
+        "unit": "score",
+        "weight": 0.0,
+        "trend": trend,
+        "asOf": latest.get("as_of"),
+        "quality": latest.get("quality"),
+        "detail": [
+            (
+                f"주도요인 {top_driver_label} "
+                f"{float(top_driver.get('score') or 0):.1f}점"
+            ),
+            (
+                f"M7 중간 잔차 5D {-idio_loss_pct:+.2f}% · "
+                f"최약 {latest.get('worst_member') or '-'} {worst_loss_pct:+.2f}%"
+            ),
+            f"IG 금리중립 손실 5D {ig_loss_pct:+.2f}% · OFR FSI {float(latest.get('ofr_fsi') or 0):.2f}",
+            (
+                f"구성종목 {member_coverage}/7 · 점수 커버리지 {coverage_pct:.0f}% · "
+                f"품질 {quality_label} · 기준일 {latest.get('as_of') or '-'}"
+            ),
+            latest.get("disclaimer"),
+        ],
+        "source": "기존 대시보드 가격 피드 · OFR FSI · U.S. Treasury",
+    }
 
 
 def fetch_yahoo_chart(symbol, range_value="2y"):
@@ -2521,7 +2605,15 @@ def korea_ai_timeseries(series_map, limit=120, step=1):
     return points
 
 
-def build_timeseries(series_map, naver_map, fred_map, market_index_map=None, limit=120, step=1):
+def build_timeseries(
+    series_map,
+    naver_map,
+    fred_map,
+    market_index_map=None,
+    m7_credit_proxy=None,
+    limit=120,
+    step=1,
+):
     timeseries = {
         "kospi_price_stress": score_points_timeseries(
             equity_stress_component_points(series_map["kospi"]), limit=limit, step=step
@@ -2606,6 +2698,16 @@ def build_timeseries(series_map, naver_map, fred_map, market_index_map=None, lim
                 ),
             }
         )
+    if m7_credit_proxy:
+        timeseries["m7_credit_stress_proxy"] = [
+            {
+                "date": point["date"],
+                "value": round_score(float(point["combined_score"])),
+            }
+            for point in m7_credit_proxy.get("series", [])
+            if point.get("date")
+            and isinstance(point.get("combined_score"), (int, float))
+        ][-limit::step]
     return timeseries
 
 
@@ -2867,7 +2969,13 @@ def build_observation_journal(indicators):
     ]
 
 
-def build_indicators(series_map, naver_map, fred_map, market_index_map):
+def build_indicators(
+    series_map,
+    naver_map,
+    fred_map,
+    market_index_map,
+    m7_credit_proxy=None,
+):
     kospi = equity_stress_score(series_map["kospi"])
     kosdaq = equity_stress_score(series_map["kosdaq"])
     usdkrw = level_and_change_score(series_map["usdkrw"])
@@ -2896,7 +3004,7 @@ def build_indicators(series_map, naver_map, fred_map, market_index_map):
     global_credit = equity_stress_score(make_ratio_series(series_map["hyg"], series_map["lqd"]))
     emerging_market = equity_stress_score(series_map["eem"])
 
-    return [
+    indicators = [
         {
             "id": "kospi_price_stress",
             "name": "KOSPI 가격 스트레스",
@@ -3320,9 +3428,18 @@ def build_indicators(series_map, naver_map, fred_map, market_index_map):
             "source": "Yahoo Finance chart: EEM",
         },
     ]
+    if m7_credit_proxy:
+        indicators.append(m7_credit_indicator(m7_credit_proxy))
+    return indicators
 
 
-def update_dashboard(series_map, fred_map, market_index_map, indicators):
+def update_dashboard(
+    series_map,
+    fred_map,
+    market_index_map,
+    indicators,
+    m7_credit_proxy=None,
+):
     dashboard = json.loads(DASHBOARD_FILE.read_text(encoding="utf-8"))
     generated_at = datetime.now(KST).strftime("%Y-%m-%d %H:%M KST")
     as_of = max(
@@ -3345,10 +3462,11 @@ def update_dashboard(series_map, fred_map, market_index_map, indicators):
         "외국인 보유비중, 거래량, "
         "대형 반도체 단일종목 레버리지성 스트레스, 빅테크 AI 수요 우려, "
         "AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다. 엔 캐리 청산, "
-        "한미 금리차·원화 압력, 미·일 10년 금리차, 옵션 기간구조, 미국 증시 폭과 광의 "
+        "한미 금리차·원화 압력, 미·일 10년 금리차, 옵션 기간구조, 미국 증시 폭, M7 공개시장 "
+        "신용스트레스 프록시와 광의 "
         "재인플레이션은 종합점수와 분리한 연구 관찰카드로 제공합니다."
     )
-    market["model"]["version"] = "market-risk-v8-narrative-observation-journal"
+    market["model"]["version"] = "market-risk-v9-m7-credit-observation"
     market["model"]["methodology"] = (
         "각 시계열의 최대 2년 히스토리에서 레벨, 20개 관측치 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 "
         "분위수 점수, z-score 정규분포 변환 점수, median/MAD 기반 robust z-score 변환 점수로 "
@@ -3379,6 +3497,7 @@ def update_dashboard(series_map, fred_map, market_index_map, indicators):
         "HYG/LQD credit proxy, EEM emerging market proxy",
         "SCFI, BDTI, BDI, Brent, iron ore, copper, gold, USD/KRW, USD/CNY, USD/JPY, US/JP/KR Treasury yields",
         "VIX3M, VVIX, RSP/SPY, QQEW/QQQ, DBC/DBA observation proxies",
+        "M7 adjusted prices, IGIB/LQD/HYG/IEF, OFR FSI, U.S. Treasury yield curve",
     ]
     market["model"]["references"] = [
         {
@@ -3441,7 +3560,26 @@ def update_dashboard(series_map, fred_map, market_index_map, indicators):
             "label": "Invesco commodity ETF overview",
             "url": "https://www.invesco.com/us/en/solutions/invesco-etfs/commodity-investing.html",
         },
+        {
+            "label": "OFR Financial Stress Index",
+            "url": "https://www.financialresearch.gov/financial-stress-index/",
+        },
+        {
+            "label": "U.S. Treasury daily yield curve XML feed",
+            "url": "https://home.treasury.gov/treasury-daily-interest-rate-xml-feed",
+        },
     ]
+    market["m7CreditProxy"] = (
+        {
+            "name": m7_credit_proxy.get("name"),
+            "latest": m7_credit_proxy.get("latest"),
+            "members": m7_credit_proxy.get("members"),
+            "methodology": m7_credit_proxy.get("methodology"),
+            "disclaimer": m7_credit_proxy.get("disclaimer"),
+        }
+        if m7_credit_proxy
+        else None
+    )
     market["groupScores"] = group_scores
     market["indicators"] = enriched_indicators
     market["observationJournal"] = build_observation_journal(enriched_indicators)
@@ -3449,6 +3587,7 @@ def update_dashboard(series_map, fred_map, market_index_map, indicators):
         "scripts/update_market_risk.py를 일 단위로 실행해 data/risk-dashboard.json과 market-risk-snapshot.json을 갱신합니다.",
         "점수 75 이상 또는 핵심 지표 2개 이상 경고 시 투자위원회 보고 대상을 자동 지정합니다.",
         "연구 관찰카드는 OOS 개선이 확인되기 전까지 종합점수와 고위험 지표 수에 포함하지 않습니다.",
+        "M7 Credit Stress Proxy는 실제 CDS가 아니며 데이터 품질과 선행성을 검증한 뒤에만 가중 승격합니다.",
         "시장 의견의 완화·반등 전망은 점수에 선반영하지 않고 실제 가격·금리·기간구조의 확인 신호로 검증합니다.",
         "운영 배포에서는 Yahoo/Naver proxy를 KRX, 한국은행 ECOS, 금융투자협회, 내부 포지션/외국인 수급 데이터로 교체할 수 있습니다.",
     ]
@@ -3464,6 +3603,7 @@ def write_snapshot(
     market_index_statuses,
     indicators,
     yahoo_fetch_statuses,
+    m7_credit_proxy=None,
 ):
     enriched_indicators, group_scores = enrich_indicators(indicators)
     snapshot = {
@@ -3534,24 +3674,45 @@ def write_snapshot(
                 fred_map["us2y"], market_index_map["us2y_naver"]
             )
         },
+        "m7CreditProxy": (
+            {
+                "latest": m7_credit_proxy.get("latest"),
+                "sources": m7_credit_proxy.get("sources"),
+            }
+            if m7_credit_proxy
+            else None
+        ),
         "groupScores": group_scores,
         "indicators": enriched_indicators,
     }
     SNAPSHOT_FILE.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def write_timeseries(series_map, naver_map, fred_map, market_index_map):
+def write_timeseries(
+    series_map,
+    naver_map,
+    fred_map,
+    market_index_map,
+    m7_credit_proxy=None,
+):
     timeseries = {
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
         "source": "Yahoo Finance, Naver Finance equity/market-index, and FRED endpoints",
         "window": "recent 120 observations per indicator",
         "unit": "risk score",
-        "series": build_timeseries(series_map, naver_map, fred_map, market_index_map),
+        "series": build_timeseries(
+            series_map,
+            naver_map,
+            fred_map,
+            market_index_map,
+            m7_credit_proxy=m7_credit_proxy,
+        ),
     }
     TIMESERIES_FILE.write_text(json.dumps(timeseries, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def main():
+    m7_credit_proxy = load_m7_credit_proxy()
     print("Yahoo Finance 시계열을 조회합니다.", flush=True)
     cached_yahoo_map = load_history_yahoo_series_map()
     cached_yahoo_by_symbol = {
@@ -3579,8 +3740,20 @@ def main():
     fred_map = fetch_configured_series(
         FRED_SERIES, fetch_fred_series_with_fallback, max_workers=3
     )
-    indicators = build_indicators(series_map, naver_map, fred_map, market_index_map)
-    update_dashboard(series_map, fred_map, market_index_map, indicators)
+    indicators = build_indicators(
+        series_map,
+        naver_map,
+        fred_map,
+        market_index_map,
+        m7_credit_proxy=m7_credit_proxy,
+    )
+    update_dashboard(
+        series_map,
+        fred_map,
+        market_index_map,
+        indicators,
+        m7_credit_proxy=m7_credit_proxy,
+    )
     write_snapshot(
         series_map,
         naver_map,
@@ -3589,8 +3762,15 @@ def main():
         market_index_statuses,
         indicators,
         yahoo_fetch_statuses,
+        m7_credit_proxy,
     )
-    write_timeseries(series_map, naver_map, fred_map, market_index_map)
+    write_timeseries(
+        series_map,
+        naver_map,
+        fred_map,
+        market_index_map,
+        m7_credit_proxy=m7_credit_proxy,
+    )
 
     total_weight = sum(indicator["weight"] for indicator in indicators)
     weighted_score = sum(indicator["value"] * indicator["weight"] for indicator in indicators) / total_weight

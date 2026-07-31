@@ -112,6 +112,57 @@ def test_ml_source_audit_surfaces_supplement_failure(monkeypatch):
     assert checks[0]["status"] == "warning"
 
 
+def test_m7_source_audit_marks_dashboard_price_fallback_as_warning():
+    required_prices = (
+        "AAPL",
+        "MSFT",
+        "GOOGL",
+        "AMZN",
+        "META",
+        "NVDA",
+        "TSLA",
+        "QQQ",
+        "IGIB",
+        "LQD",
+        "HYG",
+        "IEF",
+    )
+    payload = {
+        "sources": [
+            *[
+                {
+                    "source": f"price:{ticker}",
+                    "provider": "dashboard_yahoo",
+                    "status": "warning",
+                    "last_value_date": "2026-07-30",
+                }
+                for ticker in required_prices
+            ],
+            {
+                "source": "ofr_fsi",
+                "provider": "ofr",
+                "status": "ok",
+                "last_value_date": "2026-07-28",
+            },
+            {
+                "source": "treasury_yield_curve",
+                "provider": "treasury",
+                "status": "ok",
+                "last_value_date": "2026-07-30",
+            },
+        ]
+    }
+
+    group, checks = audit_data_completeness.assess_m7_source_group(
+        payload, date(2026, 7, 31)
+    )
+
+    assert group["status"] == "warning"
+    assert group["seriesPresent"] == 14
+    assert group["fallbackCount"] == 12
+    assert not any(check["status"] == "error" for check in checks)
+
+
 def test_issue_log_lines_include_failed_check_identity_and_detail():
     lines = issue_log_lines(
         {

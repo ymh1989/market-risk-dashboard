@@ -113,6 +113,7 @@ def artifact_status(data):
         ("hmm", "HMM 레짐", data["hmm"].get("generatedAt")),
         ("backtest", "시장 백테스트", data["backtest"].get("generatedAt")),
         ("stress", "스트레스 이력", data["stress"].get("generatedAt")),
+        ("m7", "M7 신용스트레스 프록시", data["m7"].get("generatedAt")),
         ("quality", "데이터 완비성", data["quality"].get("generatedAt")),
     ]
     return [
@@ -128,7 +129,7 @@ def stage_status(args):
             "label": "시장데이터·지표",
             "status": "success",
             "durationSeconds": args.market_duration,
-            "detail": "시장 데이터 수집, 위험점수, ELS·HMM 산출",
+            "detail": "시장 데이터 수집, 위험점수, M7 프록시, ELS·HMM 산출",
         },
         {
             "id": "ml",
@@ -184,6 +185,7 @@ def build_payload(args):
         "hmm": read_json(ROOT / "data" / "hmm-regime.json"),
         "backtest": read_json(ROOT / "data" / "market-risk-backtest.json"),
         "stress": read_json(ROOT / "data" / "market-stress-episodes.json"),
+        "m7": read_json(ROOT / "data" / "m7-credit-proxy.json"),
         "quality": read_json(DATA_QUALITY_FILE),
     }
     dashboard_metadata = data["dashboard"].get("metadata") or {}

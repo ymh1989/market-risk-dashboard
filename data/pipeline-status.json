@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-31 12:31:58 KST",
+  "generatedAt": "2026-07-31 14:25:16 KST",
   "current": {
     "runId": "20260731T123158-12:30",
     "status": "success",
@@ -116,7 +116,7 @@
       "id": "fred",
       "label": "FRED",
       "status": "ok",
-      "lastDate": "2026-07-30",
+      "lastDate": "2026-07-29",
       "seriesCount": 5,
       "detail": "5/5개 수집 · 허용시차 내 5개",
       "oldestLastDate": "2026-07-24",
@@ -135,6 +135,18 @@
       "staleCount": 0,
       "fallbackCount": 1,
       "detail": "17/17개 수집 · 사용 가능 17개 · 보강/대체 1개"
+    },
+    {
+      "id": "m7-credit",
+      "label": "M7 Credit Stress Proxy",
+      "status": "warning",
+      "lastDate": "2026-07-30",
+      "oldestLastDate": "2026-07-28",
+      "seriesCount": 14,
+      "freshCount": 14,
+      "staleCount": 0,
+      "fallbackCount": 12,
+      "detail": "14/14개 수집 · 허용시차 내 14개 · 대체값 12개"
     }
   ],
   "artifacts": [
@@ -142,7 +154,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-07-31 12:30 KST"
+      "generatedAt": "2026-07-31 14:23 KST"
     },
     {
       "id": "ml",
@@ -175,28 +187,115 @@
       "generatedAt": "2026-07-31 07:32:08 KST"
     },
     {
+      "id": "m7",
+      "label": "M7 신용스트레스 프록시",
+      "status": "ok",
+      "generatedAt": "2026-07-31T14:22:31+09:00"
+    },
+    {
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-07-31 12:31:58 KST"
+      "generatedAt": "2026-07-31 14:24:02 KST"
     }
   ],
   "quality": {
-    "status": "ok",
-    "score": 100.0,
+    "status": "warning",
+    "score": 96.9,
     "referenceDate": "2026-07-31",
     "summary": {
-      "checks": 205,
-      "ok": 205,
-      "warning": 0,
+      "checks": 223,
+      "ok": 209,
+      "warning": 14,
       "error": 0,
-      "sourceSeriesExpected": 80,
-      "sourceSeriesPresent": 80,
-      "freshSeries": 80,
+      "sourceSeriesExpected": 94,
+      "sourceSeriesPresent": 94,
+      "freshSeries": 94,
       "staleSeries": 0,
-      "fallbackSeries": 1
+      "fallbackSeries": 13
     },
-    "issues": []
+    "issues": [
+      {
+        "id": "source:m7:price:AAPL",
+        "category": "source",
+        "label": "price:AAPL",
+        "status": "warning",
+        "detail": "최신 2026-07-30 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-07-30",
+        "fetchStatus": "dashboard_yahoo"
+      },
+      {
+        "id": "source:m7:price:AMZN",
+        "category": "source",
+        "label": "price:AMZN",
+        "status": "warning",
+        "detail": "최신 2026-07-30 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-07-30",
+        "fetchStatus": "dashboard_yahoo"
+      },
+      {
+        "id": "source:m7:price:GOOGL",
+        "category": "source",
+        "label": "price:GOOGL",
+        "status": "warning",
+        "detail": "최신 2026-07-30 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-07-30",
+        "fetchStatus": "dashboard_yahoo"
+      },
+      {
+        "id": "source:m7:price:HYG",
+        "category": "source",
+        "label": "price:HYG",
+        "status": "warning",
+        "detail": "최신 2026-07-30 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-07-30",
+        "fetchStatus": "dashboard_yahoo"
+      },
+      {
+        "id": "source:m7:price:IEF",
+        "category": "source",
+        "label": "price:IEF",
+        "status": "warning",
+        "detail": "최신 2026-07-30 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-07-30",
+        "fetchStatus": "dashboard_yahoo"
+      },
+      {
+        "id": "source:m7:price:IGIB",
+        "category": "source",
+        "label": "price:IGIB",
+        "status": "warning",
+        "detail": "최신 2026-07-30 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-07-30",
+        "fetchStatus": "dashboard_yahoo"
+      },
+      {
+        "id": "source:m7:price:LQD",
+        "category": "source",
+        "label": "price:LQD",
+        "status": "warning",
+        "detail": "최신 2026-07-30 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-07-30",
+        "fetchStatus": "dashboard_yahoo"
+      },
+      {
+        "id": "source:m7:price:META",
+        "category": "source",
+        "label": "price:META",
+        "status": "warning",
+        "detail": "최신 2026-07-30 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-07-30",
+        "fetchStatus": "dashboard_yahoo"
+      }
+    ]
   },
   "researchLog": [
     {
@@ -221,7 +320,7 @@
       "id": "macro-rates",
       "title": "매크로 금리 불확실성",
       "status": "부담 높음",
-      "score": 75.6,
+      "score": 76.1,
       "tone": "danger",
       "decision": "기존 가중지표 유지",
       "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -230,7 +329,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "확산 미확인",
-      "score": 24.1,
+      "score": 29.6,
       "tone": "good",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
