@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260731-3";
+const ASSET_VERSION = "20260731-4";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -678,7 +678,7 @@ function buildScheduleOverview(pipelineStatus) {
         status: "upcoming",
         tone: "muted",
         statusLabel: "예정",
-        detail: `${formatCountdownSeconds(item.timestamp - now)} 후 시작`
+        detail: `${formatCountdownSeconds((item.timestamp - now) / 1000)} 후 시작`
       };
     }
     const elapsedSeconds = Math.max(0, Math.floor((now - item.timestamp) / 1000));

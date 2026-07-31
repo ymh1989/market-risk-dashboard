@@ -255,8 +255,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260731-3" in html
-    assert "app.js?v=20260731-3" in html
+    assert "styles.css?v=20260731-4" in html
+    assert "app.js?v=20260731-4" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -328,6 +328,8 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert "candidate.completedTimestamp >= scheduleItem.timestamp" in app_source
     assert 'scheduleItem.mode === "full"' in app_source
     assert "function medianRunDuration" in app_source
+    assert "formatCountdownSeconds((item.timestamp - now) / 1000)" in app_source
+    assert "formatCountdownSeconds(item.timestamp - now)" not in app_source
     assert "오늘의 예약 실행" in app_source
     assert "다음 예약" in app_source
     assert "schedule.saturdayTimes ?? []" in app_source
