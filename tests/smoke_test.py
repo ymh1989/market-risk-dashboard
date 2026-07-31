@@ -255,8 +255,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260731-2" in html
-    assert "app.js?v=20260731-2" in html
+    assert "styles.css?v=20260731-3" in html
+    assert "app.js?v=20260731-3" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -281,8 +281,6 @@ def test_korean_copy_uses_structured_lists_and_contextual_wrapping():
     app_source = APP_FILE.read_text(encoding="utf-8")
 
     assert "function renderNarrativeList" in app_source
-    assert '.replace(/입니다$/, "임")' in app_source
-    assert '.replace(/입니다$/, "")' not in app_source
     assert 'class="decision-cockpit"' in app_source
     assert 'class="attribution-list attribution-list--${direction}"' in app_source
     assert "formatAttributionDelta(totalChange)" in app_source
@@ -291,6 +289,14 @@ def test_korean_copy_uses_structured_lists_and_contextual_wrapping():
     assert 'narrative-list--compact indicator-detail-list' in app_source
     assert "현재 시장리스크는 ${market.level.label} 단계입니다." not in app_source
     assert ".narrative-list {" in styles
+    assert '.replace(/입니다$/, "")' in app_source
+    assert '.replace(/입니다$/, "임")' not in app_source
+    assert "const labeledItem = item.match" in app_source
+    assert "상승형 고변동성과 위험회피 분리" in app_source
+    assert "${basket.worstIndex} 주도 · ${basket.bucket}" in app_source
+    assert "group-card__description" in app_source
+    assert "관측창: 최대 2년" in app_source
+    assert "핵심: 주가지수 · 환율 · 변동성 · 금리 · 크레딧 · 수급" in app_source
     assert ".attribution-panel {" in styles
     assert "word-break: keep-all;" in styles
     assert "text-wrap: pretty;" in styles

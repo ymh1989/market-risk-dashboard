@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260731-2";
+const ASSET_VERSION = "20260731-3";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -188,10 +188,10 @@ function compactNarrativeItem(value) {
     .replace(/없습니다$/, " 없음")
     .replace(/확인됐습니다$/, "확인")
     .replace(/확인되었습니다$/, "확인")
-    .replace(/됐습니다$/, "됨")
-    .replace(/되었습니다$/, "됨")
-    .replace(/됩니다$/, "됨")
-    .replace(/입니다$/, "임")
+    .replace(/됐습니다$/, "")
+    .replace(/되었습니다$/, "")
+    .replace(/됩니다$/, "")
+    .replace(/입니다$/, "")
     .replace(/합니다$/, "")
     .trim();
 }
@@ -208,7 +208,14 @@ function renderNarrativeList(value, extraClass = "") {
   const items = toNarrativeItems(value);
   if (!items.length) return "";
   const className = ["narrative-list", extraClass].filter(Boolean).join(" ");
-  return `<ul class="${className}">${items.map((item) => `<li>${item}</li>`).join("")}</ul>`;
+  return `<ul class="${className}">${items
+    .map((item) => {
+      const labeledItem = item.match(/^([^:：]{1,24})[:：]\s+(.+)$/);
+      return labeledItem
+        ? `<li><strong>${labeledItem[1]}</strong><span>${labeledItem[2]}</span></li>`
+        : `<li>${item}</li>`;
+    })
+    .join("")}</ul>`;
 }
 
 function getStoredTheme() {
@@ -1565,8 +1572,10 @@ function renderElsIndexRiskPanel(elsRisk) {
       <div class="els-index-summary">
         <article>
           <span class="eyebrow">Basket 해석</span>
-          <h3>${compactNarrativeItem(basket.interpretation)}</h3>
+          <h3>${basket.worstIndex} 주도 · ${basket.bucket}</h3>
           ${renderNarrativeList([
+            `${basket.worstIndex}: Basket 리스크 1순위`,
+            `${basket.secondWorstIndex}: 취약도 2순위`,
             "평균이 아닌 worst-of 구조",
             "최고 위험지수 50% · 차순위 취약지수 20%",
             "평균 점수 15% · 동조화 점수 15%"
@@ -1994,7 +2003,10 @@ function renderElsIssuanceHedgePage(elsRisk) {
             <h3>현재 기초자산 포지셔닝</h3>
           </div>
           <div class="els-opportunity-map__aside">
-            ${renderNarrativeList(map.basket.interpretation, "narrative-list--compact")}
+            ${renderNarrativeList([
+              "5개 지수만 Basket 점수에 반영",
+              "삼성전자·SK하이닉스는 지도 참고 · Basket 미반영"
+            ], "narrative-list--compact")}
             <div class="els-opportunity-map__tools">
               <div class="els-trajectory-toggle" role="group" aria-label="궤적 조회 기간">
                 ${trajectoryWindows
@@ -2225,16 +2237,17 @@ function renderHmmRegimePanel(hmmRegime) {
       <div class="hmm-regime-summary">
         <article>
           <span class="eyebrow">개선 포인트</span>
-          <h3>고변동성을 모두 주의로 보지 않습니다</h3>
+          <h3>상승형 고변동성과 위험회피 분리</h3>
           ${renderNarrativeList(hmmRegime.designNote, "narrative-list--compact")}
         </article>
         <article>
           <span class="eyebrow">Basket 해석</span>
-          <h3>${compactNarrativeItem(basket.interpretation)}</h3>
+          <h3>${basket.regime}</h3>
           ${renderNarrativeList([
-            `최근 상태 ${basket.regime}`,
+            `${basket.highestRiskOffIndex}: 위험회피 확률 최고`,
+            `${basket.highestIssuerScoreIndex}: 발행·헤지 부담 최고`,
             `평균 발행·헤지 부담 ${Number(basket.averageIssuerScore).toFixed(1)}`,
-            `위험회피 확률 최고 ${basket.highestRiskOffIndex}`
+            `상태 구성 위험회피 ${basket.riskOffCount} · 활황 ${basket.highVolBullCount} · 안정 ${basket.stableCount}`
           ], "narrative-list--compact")}
         </article>
       </div>
@@ -3656,6 +3669,16 @@ function renderModelPanel(section) {
   const model = section.model ?? {};
   const normalization = model.normalization;
   const sources = model.dataSources ?? [];
+  const methodologyItems =
+    section.id === "market"
+      ? [
+          "관측창: 최대 2년",
+          "입력: 레벨 · 20개 관측치 변화율 · 20일 실현변동성 · 252일 낙폭",
+          "주간 SCFI: 4개 관측치 변화",
+          "시계열 정렬: 직전 가용값 결합 · 미래값 미사용",
+          "관찰카드: 가중치 0 · 종합점수 미반영"
+        ]
+      : model.methodology ?? "지표별 점수의 가중평균 합성";
   const methodologyReference = (model.references ?? []).find(
     (reference) =>
       reference?.url?.includes("bok.or.kr") ||
@@ -3667,7 +3690,7 @@ function renderModelPanel(section) {
       <article>
         <span class="eyebrow">Model</span>
         <h3>${model.version ?? "risk-model"}</h3>
-        ${renderNarrativeList(model.methodology ?? "지표별 점수의 가중평균 합성", "narrative-list--compact")}
+        ${renderNarrativeList(methodologyItems, "narrative-list--compact")}
       </article>
       <article class="model-panel__normalization">
         <span class="eyebrow">Normalization</span>
@@ -3866,7 +3889,7 @@ function renderGroupScores(section, timeseries) {
               >이 그룹만 보기</button>
               <div class="group-card__tooltip" id="${tooltipId}" role="tooltip">
                 <strong>${definition.label} 구성</strong>
-                <p>${definition.description}</p>
+                ${renderNarrativeList(definition.description, "narrative-list--compact group-card__description")}
                 <span>가중 반영 · 기여도 높은 순</span>
                 <ul>
                   ${weightedIndicators
@@ -4083,6 +4106,14 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
   const isPlanned = section.status !== "active";
   const initiallySortedIndicators = sortedIndicators(section, timeseries);
   const isActive = section.id === activeTab;
+  const sectionDescription =
+    section.id === "market"
+      ? [
+          "핵심: 주가지수 · 환율 · 변동성 · 금리 · 크레딧 · 수급",
+          "확장: 운임 · 에너지 · 중국 수요 · AI 반도체",
+          "관찰 전용: 엔 캐리 · 금리차 · 옵션 기간구조 · 시장 폭 · 재인플레이션"
+        ]
+      : section.description;
 
   return `
     <section
@@ -4098,7 +4129,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
         <div>
           <span class="eyebrow">${section.owner}</span>
           <h2>${section.label}</h2>
-          ${renderNarrativeList(section.description, "narrative-list--compact")}
+          ${renderNarrativeList(sectionDescription, "narrative-list--compact")}
         </div>
         <div class="section-score">
           <span class="status-pill status-pill--${section.level.tone}">${section.level.label}</span>
