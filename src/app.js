@@ -1081,21 +1081,33 @@ function pearsonCorrelation(pairs) {
 
 function buildLeadLagComparison(mlRisk, elsRisk, horizon = 5) {
   const kospi200 = elsRisk?.indices?.find((item) => item.id === "kospi200");
-  const prices = (kospi200?.ytdPriceSeries ?? []).filter((point) => Number.isFinite(Number(point.close)));
+  const modelPrices = (mlRisk?.series ?? [])
+    .filter((point) => Number.isFinite(Number(point.kospi)))
+    .map((point) => ({ date: point.date, close: Number(point.kospi) }));
+  const referencePrices = (kospi200?.ytdPriceSeries ?? [])
+    .filter((point) => Number.isFinite(Number(point.close)))
+    .map((point) => ({ date: point.date, close: Number(point.close) }));
   const oosSignals = (mlRisk?.walkForwardSeries ?? []).filter((point) => Number.isFinite(Number(point.crash5d5pctProbabilityPct)));
-  if (prices.length < horizon + 2 || oosSignals.length < 3) return null;
+  if (modelPrices.length < horizon + 2 || oosSignals.length < 3) return null;
 
-  const base = Number(prices[0].close);
-  const indexedPrices = prices.map((point) => ({
+  const modelBase = modelPrices[0].close;
+  const indexedModelPrices = modelPrices.map((point) => ({
     date: point.date,
-    kospi200YtdIndex: (Number(point.close) / base) * 100
+    indexValue: (point.close / modelBase) * 100
   }));
+  const referenceBase = referencePrices[0]?.close;
+  const indexedReferencePrices = Number.isFinite(referenceBase)
+    ? referencePrices.map((point) => ({
+        date: point.date,
+        indexValue: (point.close / referenceBase) * 100
+      }))
+    : [];
   const signalByDate = new Map(oosSignals.map((point) => [point.date, Number(point.crash5d5pctProbabilityPct)]));
   const pairs = [];
-  prices.forEach((point, index) => {
+  modelPrices.forEach((point, index) => {
     const probability = signalByDate.get(point.date);
-    if (probability === undefined || index + horizon >= prices.length) return;
-    const forwardReturn = Number(prices[index + horizon].close) / Number(point.close) - 1;
+    if (probability === undefined || index + horizon >= modelPrices.length) return;
+    const forwardReturn = modelPrices[index + horizon].close / point.close - 1;
     pairs.push([probability, forwardReturn]);
   });
   const signalEndDate = oosSignals[oosSignals.length - 1].date;
@@ -1113,24 +1125,21 @@ function buildLeadLagComparison(mlRisk, elsRisk, horizon = 5) {
     min: Math.max(0, Math.min(...signalValues) - 3),
     max: Math.min(100, Math.max(...signalValues) + 3)
   };
-  const chartStart = Date.parse(`${indexedPrices[0].date}T00:00:00Z`);
-  const chartEnd = Date.parse(`${indexedPrices[indexedPrices.length - 1].date}T00:00:00Z`);
-  const signalEndX = ((Date.parse(`${signalEndDate}T00:00:00Z`) - chartStart) / (chartEnd - chartStart || 1)) * 760;
 
   return {
     signalSeries: oosSignals,
     pendingSignalSeries: pendingSignals,
-    priceSeries: indexedPrices,
-    startDate: indexedPrices[0].date,
-    endDate: indexedPrices[indexedPrices.length - 1].date,
+    modelPriceSeries: indexedModelPrices,
+    referencePriceSeries: indexedReferencePrices,
+    startDate: indexedModelPrices[0].date,
+    endDate: indexedModelPrices[indexedModelPrices.length - 1].date,
     currentSignalDate: liveSignals.length ? liveSignals[liveSignals.length - 1].date : signalEndDate,
     correlation: pearsonCorrelation(pairs),
     observations: pairs.length,
     horizon,
     signalEndDate,
     resultKnownThroughDate,
-    signalDomain,
-    signalEndX: Math.max(0, Math.min(760, signalEndX))
+    signalDomain
   };
 }
 
@@ -2367,10 +2376,17 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
             status: (point) => (point.date > comparison.signalEndDate ? "잠정" : "EOD")
           },
           {
-            label: "KOSPI200",
-            points: comparison.priceSeries,
-            valueKey: "kospi200YtdIndex",
+            label: "KOSPI · 모델 대상",
+            points: comparison.modelPriceSeries,
+            valueKey: "indexValue",
             color: "var(--green)",
+            format: (value) => `${Number(value).toFixed(1)}`
+          },
+          {
+            label: "KOSPI200 · ELS 참고",
+            points: comparison.referencePriceSeries,
+            valueKey: "indexValue",
+            color: "var(--blue)",
             format: (value) => `${Number(value).toFixed(1)}`
           }
         ]
@@ -2387,7 +2403,12 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
   const mlRangeLayers = chartRangeOptions
     .map((range) => {
       const sourceSeries = comparison
-        ? [comparison.signalSeries, comparison.pendingSignalSeries, comparison.priceSeries]
+        ? [
+            comparison.signalSeries,
+            comparison.pendingSignalSeries,
+            comparison.modelPriceSeries,
+            comparison.referencePriceSeries
+          ]
         : [series];
       const domain = chartRangeDomain(sourceSeries, range.id);
       const monthAxis = renderMonthAxisFromDomain(domain);
@@ -2401,8 +2422,11 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
             "crash5d5pctProbabilityPct"
           )
         : [];
-      const visiblePrices = comparison
-        ? pointsWithinDomain(comparison.priceSeries, domain, "kospi200YtdIndex")
+      const visibleModelPrices = comparison
+        ? pointsWithinDomain(comparison.modelPriceSeries, domain, "indexValue")
+        : [];
+      const visibleReferencePrices = comparison
+        ? pointsWithinDomain(comparison.referencePriceSeries, domain, "indexValue")
         : [];
       const signalValueKey = comparison
         ? "crash5d5pctProbabilityPct"
@@ -2413,8 +2437,8 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
         0.06
       );
       const priceValueDomain = numericChartDomain(
-        visiblePrices,
-        "kospi200YtdIndex",
+        [...visibleModelPrices, ...visibleReferencePrices],
+        "indexValue",
         0.06
       );
       const riskPath = datedValuePath(
@@ -2431,10 +2455,18 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
             signalValueDomain
           )
         : "";
+      const kospiPath = comparison
+        ? datedValuePath(
+            visibleModelPrices,
+            "indexValue",
+            domain,
+            priceValueDomain
+          )
+        : "";
       const kospi200Path = comparison
         ? datedValuePath(
-            visiblePrices,
-            "kospi200YtdIndex",
+            visibleReferencePrices,
+            "indexValue",
             domain,
             priceValueDomain
           )
@@ -2453,6 +2485,7 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
           <path class="trend-chart__grid" d="M 0 42 L 760 42 M 0 84 L 760 84 M 0 126 L 760 126 M 0 168 L 760 168"></path>
           <path class="ml-risk-chart__risk" d="${riskPath}"></path>
           <path class="ml-risk-chart__risk-pending" d="${pendingRiskPath}"></path>
+          <path class="ml-risk-chart__kospi" d="${kospiPath}"></path>
           <path class="ml-risk-chart__kospi200" d="${kospi200Path}"></path>
           ${renderChartCursorLine(18, 190)}
           ${monthAxis.labels}
@@ -2493,7 +2526,7 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
   const leadReading = !Number.isFinite(leadCorrelation)
     ? "워크포워드 관측치 누적 후 선행성 산출"
     : leadCorrelation <= -0.2
-      ? "확률 상승 뒤 KOSPI200 수익률 하락 패턴 관찰"
+      ? "확률 상승 뒤 KOSPI 수익률 하락 패턴 관찰"
       : leadCorrelation >= 0.2
         ? "YTD 표본에서 기대한 역방향 선행 패턴 미확인"
         : "YTD 표본의 선행 관계 약함";
@@ -2518,7 +2551,7 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
       <div class="ml-risk-panel__header">
         <div>
           <span class="eyebrow">Current Stress vs Forward Risk</span>
-          <h2>현재 스트레스와 향후 5일 급락 전망</h2>
+          <h2>현재 스트레스와 KOSPI 향후 5일 급락 전망</h2>
         </div>
         <div class="ml-risk-state ml-risk-state--${marketLevel.tone}">
           <span>현재 시장 스트레스</span>
@@ -2535,10 +2568,10 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
         </article>
         <div class="ml-risk-horizons__divider" aria-hidden="true"></div>
         <article>
-          <span class="eyebrow">미래 · 5D -5% 도달 전망</span>
+          <span class="eyebrow">미래 · KOSPI 5D -5% 도달 전망</span>
           <strong>${crash5pct.toFixed(1)}%</strong>
           ${renderNarrativeList([
-            "향후 5거래일 중 현재가 대비 -5% 이하 도달확률",
+            "KOSPI가 향후 5거래일 중 현재가 대비 -5% 이하 도달할 확률",
             crash5pctValidated ? "OOS 선별력 확인" : "OOS 선별력 미확인 · 연구 참고값"
           ], "narrative-list--compact")}
         </article>
@@ -2546,25 +2579,25 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
 
       <div class="ml-risk-grid">
         ${createMetricCard({
-          label: "5D -5% 도달확률",
+          label: "KOSPI 5D -5% 도달확률",
           value: `${crash5pct.toFixed(1)}%`,
           meta: `5일 내 최저수익률 -5% 이하 · ${crash5pctValidated ? "선별력 통과" : "연구 참고값"} · ${crash5pctCalibrated ? "확률 보정 양호" : "확률 보정 주의"}`,
           tone: crashTone(crash5pct, crash5pctMetrics)
         })}
         ${createMetricCard({
-          label: "5D -10% 도달확률",
+          label: "KOSPI 5D -10% 도달확률",
           value: `${crash10pct.toFixed(1)}%`,
           meta: `5일 내 최저수익률 -10% 이하 · ${crash10pctValidated ? "선별력 통과" : "희소사건 참고값"} · ${crash10pctCalibrated ? "확률 보정 양호" : "확률 보정 주의"}`,
           tone: crashTone(crash10pct, crash10pctMetrics)
         })}
         ${createMetricCard({
-          label: "20D 레짐 Risk-off",
+          label: "KOSPI 20D 레짐 Risk-off",
           value: `${Number(latest.riskOffProbabilityPct).toFixed(1)}%`,
           meta: `${decisionText} · 변동성·낙폭 포함`,
           tone: riskTone
         })}
         ${createMetricCard({
-          label: "현재 20D 변동성",
+          label: "KOSPI 20D 변동성",
           value: `${Number(latest.realizedVol20dPct).toFixed(1)}%`,
           meta: latest.baselineRiskOffSignal ? "현재 기준모델 risk-off" : "현재 기준모델 중립",
           tone: latest.realizedVol20dPct >= 35 ? "caution" : "watch"
@@ -2572,11 +2605,11 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
       </div>
 
       <div class="ml-risk-body">
-        <div class="ml-risk-chart" data-timeseries-chart="${chartId}" aria-label="워크포워드 5일 -5% 급락확률과 KOSPI200 선행성 비교">
+        <div class="ml-risk-chart" data-timeseries-chart="${chartId}" aria-label="KOSPI 5일 -5% 급락확률과 KOSPI·KOSPI200 흐름 비교">
           <div class="ml-risk-chart__header">
             <div class="ml-risk-chart__heading">
-              <strong>5일 급락신호 → KOSPI200</strong>
-              <span>현재 신호 ${formatShortDate(comparison?.currentSignalDate)} · OOS 결과 ${formatShortDate(comparison?.resultKnownThroughDate)}까지 확인</span>
+              <strong>KOSPI 5일 급락신호와 지수 흐름</strong>
+              <span>모델 평가 KOSPI · ELS 참고 KOSPI200 · 현재 신호 ${formatShortDate(comparison?.currentSignalDate)} · OOS 결과 ${formatShortDate(comparison?.resultKnownThroughDate)}까지</span>
             </div>
             ${renderChartRangeControls(chartId, {
               hasProvisional: Boolean(comparison?.pendingSignalSeries?.length > 1)
@@ -2584,14 +2617,16 @@ function renderMlRiskSignalPanel(mlRisk, market, elsRisk) {
           </div>
           ${mlRangeLayers}
           <div class="ml-risk-chart__legend">
-            <span><i class="legend-risk"></i>ML 5D -5% 도달확률 · OOS 확인</span>
+            <span><i class="legend-risk"></i>ML KOSPI 5D -5% 도달확률 · OOS</span>
             <span><i class="legend-risk-pending"></i>현재까지의 최신 예측</span>
-            <span><i class="legend-kospi200"></i>KOSPI200 · 연초=100</span>
+            <span><i class="legend-kospi"></i>KOSPI · 모델 평가대상 · 연초=100</span>
+            <span><i class="legend-kospi200"></i>KOSPI200 · ELS 참고선 · 연초=100</span>
             <span><i class="legend-pending"></i>향후 5거래일 결과 대기</span>
           </div>
           ${renderNarrativeList([
-            `5D 선행상관 ${leadCorrelationText} · ${comparison?.observations ?? 0}개 표본`,
+            `KOSPI 5D 선행상관 ${leadCorrelationText} · ${comparison?.observations ?? 0}개 표본`,
             leadReading,
+            "KOSPI200은 ELS 기초자산 참고선 · 모델 적중률·상관 산정 제외",
             "점선 구간: 최신 예측 · 향후 5거래일 결과 대기 · OOS 평가 제외"
           ], "narrative-list--compact ml-risk-chart__note")}
           ${renderChartTooltip()}

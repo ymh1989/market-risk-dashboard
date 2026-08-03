@@ -952,6 +952,7 @@ a {
 .ml-risk-chart__risk-pending,
 .ml-risk-chart__vol,
 .ml-risk-chart__return,
+.ml-risk-chart__kospi,
 .ml-risk-chart__kospi200 {
   fill: none;
   stroke-linecap: round;
@@ -993,9 +994,15 @@ a {
   stroke-width: 2.4;
 }
 
-.ml-risk-chart__kospi200 {
+.ml-risk-chart__kospi {
   stroke: var(--green);
-  stroke-width: 2.6;
+  stroke-width: 2.8;
+}
+
+.ml-risk-chart__kospi200 {
+  stroke: var(--blue);
+  stroke-dasharray: 5 4;
+  stroke-width: 2.2;
 }
 
 .ml-risk-chart__legend {
@@ -1037,6 +1044,10 @@ a {
 }
 
 .legend-kospi200 {
+  background: repeating-linear-gradient(90deg, var(--blue) 0 6px, transparent 6px 10px);
+}
+
+.legend-kospi {
   background: var(--green);
 }
 

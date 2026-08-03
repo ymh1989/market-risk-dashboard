@@ -12,6 +12,7 @@ STRESS_FILE = ROOT / "data" / "market-stress-episodes.json"
 ELS_FILE = ROOT / "data" / "els-index-risk.json"
 STYLES_FILE = ROOT / "src" / "styles.css"
 APP_FILE = ROOT / "src" / "app.js"
+TARGETS_FILE = ROOT / "src" / "kospi_risk" / "targets.py"
 PIPELINE_STATUS_FILE = ROOT / "data" / "pipeline-status.json"
 DATA_QUALITY_FILE = ROOT / "data" / "data-quality.json"
 SNOW_LAB_FILE = ROOT / "snow-lab.html"
@@ -256,8 +257,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260731-4" in html
-    assert "app.js?v=20260731-4" in html
+    assert "styles.css?v=20260803-1" in html
+    assert "app.js?v=20260803-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -481,6 +482,23 @@ def test_interactive_timeline_range_and_cursor_contract():
     assert ".chart-cursor-line.is-visible" in styles
     assert ".chart-cursor-tooltip.is-visible" in styles
     assert ".chart-value-status__provisional" in styles
+
+
+def test_ml_crash_chart_distinguishes_model_target_and_els_reference():
+    app_source = APP_FILE.read_text(encoding="utf-8")
+    styles = STYLES_FILE.read_text(encoding="utf-8")
+    targets_source = TARGETS_FILE.read_text(encoding="utf-8")
+
+    assert 'out["fwd_min_ret_5d"] = _future_min_return(out["KOSPI"], crash_horizon)' in targets_source
+    assert "KOSPI 5일 급락신호와 지수 흐름" in app_source
+    assert "KOSPI · 모델 평가대상 · 연초=100" in app_source
+    assert "KOSPI200 · ELS 참고선 · 연초=100" in app_source
+    assert "KOSPI200은 ELS 기초자산 참고선 · 모델 적중률·상관 산정 제외" in app_source
+    assert "5일 급락신호 → KOSPI200" not in app_source
+    assert "modelPriceSeries: indexedModelPrices" in app_source
+    assert "referencePriceSeries: indexedReferencePrices" in app_source
+    assert ".ml-risk-chart__kospi" in styles
+    assert ".legend-kospi200" in styles
 
 
 def test_weighted_group_timeline_contract():
