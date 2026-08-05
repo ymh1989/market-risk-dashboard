@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-05 12:31:58 KST",
+  "generatedAt": "2026-08-05 15:54:56 KST",
   "current": {
-    "runId": "20260805T123158-12:30",
+    "runId": "20260805T155456-15:35",
     "status": "success",
-    "mode": "fast",
+    "mode": "full",
     "trigger": "scheduled",
-    "scheduledTime": "12:30",
-    "startedAt": "2026-08-05 12:30:02 KST",
-    "completedAt": "2026-08-05 12:31:58 KST",
-    "durationSeconds": 116,
+    "scheduledTime": "15:35",
+    "startedAt": "2026-08-05 15:35:00 KST",
+    "completedAt": "2026-08-05 15:54:56 KST",
+    "durationSeconds": 1196,
     "dataAsOf": "2026-08-05",
-    "dashboardGeneratedAt": "2026-08-05 12:30 KST",
-    "mlGeneratedAt": "2026-08-05 12:31 KST",
+    "dashboardGeneratedAt": "2026-08-05 15:35 KST",
+    "mlGeneratedAt": "2026-08-05 15:54 KST",
     "qualityScore": 96.6,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
@@ -50,21 +50,21 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 75,
+      "durationSeconds": 145,
       "detail": "시장 데이터 수집, 위험점수, M7 프록시, ELS·HMM 산출"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
-      "durationSeconds": 37,
+      "durationSeconds": 1047,
       "detail": "특성 생성, 모델 학습, 예측 및 OOS 검증"
     },
     {
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 1,
+      "durationSeconds": 0,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -154,37 +154,37 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-08-05 12:30 KST"
+      "generatedAt": "2026-08-05 15:35 KST"
     },
     {
       "id": "ml",
       "label": "ML 위험신호",
       "status": "ok",
-      "generatedAt": "2026-08-05 12:31 KST"
+      "generatedAt": "2026-08-05 15:54 KST"
     },
     {
       "id": "els",
       "label": "ELS 지수위험",
       "status": "ok",
-      "generatedAt": "2026-08-05 12:31 KST"
+      "generatedAt": "2026-08-05 15:37 KST"
     },
     {
       "id": "hmm",
       "label": "HMM 레짐",
       "status": "ok",
-      "generatedAt": "2026-08-05 12:31 KST"
+      "generatedAt": "2026-08-05 15:37 KST"
     },
     {
       "id": "backtest",
       "label": "시장 백테스트",
       "status": "ok",
-      "generatedAt": "2026-08-05 12:30 KST"
+      "generatedAt": "2026-08-05 15:35 KST"
     },
     {
       "id": "stress",
       "label": "스트레스 이력",
       "status": "ok",
-      "generatedAt": "2026-08-05 07:32:11 KST"
+      "generatedAt": "2026-08-05 15:37:07 KST"
     },
     {
       "id": "m7",
@@ -196,7 +196,7 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-08-05 12:31:57 KST"
+      "generatedAt": "2026-08-05 15:54:56 KST"
     }
   ],
   "quality": {
@@ -302,7 +302,7 @@
       "id": "ai-roi",
       "title": "AI 투자 ROI 회의론",
       "status": "주의",
-      "score": 65.5,
+      "score": 65.4,
       "tone": "caution",
       "decision": "기존 가중지표 유지",
       "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검"
@@ -328,9 +328,9 @@
     {
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
-      "status": "관찰",
-      "score": 43.1,
-      "tone": "watch",
+      "status": "확산 미확인",
+      "score": 38.5,
+      "tone": "good",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
     },
@@ -345,6 +345,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20260805T155456-15:35",
+      "status": "success",
+      "mode": "full",
+      "trigger": "scheduled",
+      "scheduledTime": "15:35",
+      "startedAt": "2026-08-05 15:35:00 KST",
+      "completedAt": "2026-08-05 15:54:56 KST",
+      "durationSeconds": 1196,
+      "dataAsOf": "2026-08-05",
+      "dashboardGeneratedAt": "2026-08-05 15:35 KST",
+      "mlGeneratedAt": "2026-08-05 15:54 KST",
+      "qualityScore": 96.6,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20260805T123158-12:30",
       "status": "success",
@@ -509,21 +524,6 @@
       "mlGeneratedAt": "2026-07-31 12:31 KST",
       "qualityScore": 100.0,
       "message": "데이터 생성과 완비성 검증을 통과했습니다."
-    },
-    {
-      "runId": "20260731T074938-07:30",
-      "status": "success",
-      "mode": "full",
-      "trigger": "scheduled",
-      "scheduledTime": "07:30",
-      "startedAt": "2026-07-31 07:30:00 KST",
-      "completedAt": "2026-07-31 07:49:38 KST",
-      "durationSeconds": 1178,
-      "dataAsOf": "2026-07-30",
-      "dashboardGeneratedAt": "2026-07-31 07:30 KST",
-      "mlGeneratedAt": "2026-07-31 07:49 KST",
-      "qualityScore": 99.0,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     }
   ]
 }
