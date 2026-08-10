@@ -231,3 +231,43 @@ def test_supplement_source_extends_and_overrides_primary_dates():
     kospi_source = next(item for item in metadata["sources"] if item["column"] == "KOSPI")
     assert kospi_source["provider"] == "yahoo+naver"
     assert kospi_source["status"] == "supplemented"
+
+
+def test_rebased_supplement_only_appends_after_primary_history():
+    config = fake_source_config()
+    config["optional"]["VIX"]["supplements"] = [
+        {
+            "provider": "yahoo",
+            "symbol": "VIX-PROXY",
+            "label": "VIX proxy",
+            "rebase_to_primary": True,
+            "append_after_primary": True,
+        }
+    ]
+
+    def supplementing_fetcher(column, spec, fetch_config, range_value, start, end):
+        if column == "VIX" and spec["symbol"] == "^VIX":
+            dates = pd.to_datetime(["2024-01-01", "2024-01-02", "2024-01-03"])
+            values = [100.0, 102.0, 104.0]
+        elif column == "VIX":
+            dates = pd.to_datetime(["2024-01-02", "2024-01-03", "2024-01-04"])
+            values = [10.2, 10.4, 10.6]
+        else:
+            dates = pd.bdate_range("2024-01-01", periods=4)
+            values = list(range(100, 104))
+        return SourceFetchResult(
+            column=column,
+            provider=str(spec.get("provider", "yahoo")),
+            symbol=spec["symbol"],
+            label=spec["label"],
+            frame=pd.DataFrame({"date": dates, column: values}),
+            status="ok",
+        )
+
+    df, metadata = fetch_market_data(config, fetcher=supplementing_fetcher)
+
+    assert df.loc[df["date"] == pd.Timestamp("2024-01-03"), "VIX"].item() == 104.0
+    assert df.loc[df["date"] == pd.Timestamp("2024-01-04"), "VIX"].item() == pytest.approx(106.0)
+    source = next(item for item in metadata["sources"] if item["column"] == "VIX")
+    assert source["status"] == "supplemented"
+    assert source["lastDate"] == "2024-01-04"

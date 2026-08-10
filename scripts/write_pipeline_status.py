@@ -190,6 +190,7 @@ def build_payload(args):
     }
     dashboard_metadata = data["dashboard"].get("metadata") or {}
     schedule_times = split_times(args.times)
+    monday_times = split_times(args.monday_times)
     saturday_times = split_times(args.saturday_times)
     full_times = set(split_times(args.full_times))
     trigger = "scheduled" if args.scheduled_time else "manual"
@@ -229,9 +230,13 @@ def build_payload(args):
                 {"time": item, "mode": "full" if item in full_times else "fast"}
                 for item in schedule_times
             ],
+            "mondayTimes": [
+                {"time": item, "mode": "full" if item in full_times else "fast"}
+                for item in monday_times
+            ],
             "saturdayTimes": [{"time": item, "mode": "full"} for item in saturday_times],
             "expectedDurationMinutes": {"fast": 5, "full": 25},
-            "delayGraceMinutes": 5,
+            "delayGraceMinutes": args.schedule_grace_minutes,
         },
         "stages": stage_status(args),
         "sources": source_status(data["snapshot"], data["quality"]),
@@ -259,8 +264,10 @@ def parse_args():
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
     parser.add_argument("--mode", choices=["fast", "full"], default="full")
     parser.add_argument("--times", default="07:30,12:30,15:35")
+    parser.add_argument("--monday-times", default="12:30,15:35")
     parser.add_argument("--saturday-times", default="07:30")
-    parser.add_argument("--full-times", default="07:30,15:35")
+    parser.add_argument("--full-times", default="15:35")
+    parser.add_argument("--schedule-grace-minutes", type=int, default=10)
     parser.add_argument("--scheduled-time", default="")
     parser.add_argument("--run-id", default="")
     parser.add_argument("--started-at", default=now)

@@ -109,8 +109,10 @@ GitHub Actions의 `schedule` 트리거는 트래픽과 큐 상태에 따라 정�
 
 ```bash
 LOCAL_MARKET_UPDATE_TIMES=07:30,12:30,15:35
+LOCAL_MARKET_UPDATE_MONDAY_TIMES=12:30,15:35
 LOCAL_MARKET_UPDATE_SATURDAY_TIMES=07:30
-LOCAL_MARKET_UPDATE_FULL_TIMES=07:30,15:35
+LOCAL_MARKET_UPDATE_FULL_TIMES=15:35
+LOCAL_MARKET_UPDATE_SCHEDULE_GRACE_MINUTES=10
 LOCAL_MARKET_UPDATE_REMOTE=origin
 LOCAL_MARKET_UPDATE_BRANCH=main
 ```
@@ -121,7 +123,9 @@ LOCAL_MARKET_UPDATE_BRANCH=main
 make install-local-market-update
 ```
 
-설치 후 LaunchAgent는 지정된 분마다 스크립트를 깨우고, 스크립트가 KST 기준 평일 `07:30`, `12:30`, `15:35` 또는 토요일 `07:30`일 때만 실제 갱신을 수행합니다. 토요일 작업은 미국 금요일 정규장 마감 후 데이터를 반영하는 전체 갱신이며, 일요일에는 실행하지 않습니다. 현재 작업 폴더에 README나 설정 파일 변경이 남아 있어도 예약 작업이 막히지 않도록, 스크립트는 `origin/main` 기준의 깨끗한 임시 worktree에서 데이터 갱신, ML 재학습, 테스트, JSON 커밋·푸시를 처리합니다.
+설치 후 LaunchAgent는 실제 예약 요일과 시각에만 스크립트를 실행합니다. 월요일은 토요일 전체 갱신과 같은 금요일 종가를 다시 계산하지 않도록 `12:30`, `15:35`만 실행하고, 화~금은 `07:30`, `12:30`, `15:35`, 토요일은 `07:30`에 실행합니다. `07:30`과 `12:30`은 최신 데이터·모델 신호만 빠르게 갱신하고, 평일 `15:35`와 토요일 `07:30`은 OOS 백테스트와 스트레스 이력까지 다시 계산합니다. 일요일에는 실행하지 않습니다. 예약 직후 일시적인 시스템 지연은 기본 10분까지 같은 실행으로 인정합니다. 현재 작업 폴더에 README나 설정 파일 변경이 남아 있어도 예약 작업이 막히지 않도록, 스크립트는 `origin/main` 기준의 깨끗한 임시 worktree에서 데이터 갱신, ML 재학습, 테스트, JSON 커밋·푸시를 처리합니다.
+
+CSI300 원지수의 Yahoo 종가가 지연될 때는 `510300.SS` 추종 ETF를 보강값으로 사용합니다. 보강 구간은 마지막 공통 관측일의 가격비율로 원지수 레벨에 연결하고, 원지수의 마지막 유효일 이후에만 덧붙여 수익률 단절을 막습니다. 보강 사용 여부는 ML 입력 원천 메타데이터에 `supplemented`로 남습니다.
 
 수동으로 같은 갱신을 실행하려면 아래 명령을 사용합니다.
 

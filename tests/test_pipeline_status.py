@@ -33,8 +33,10 @@ def test_pipeline_status_keeps_previous_run_history(tmp_path):
         output=str(output),
         mode="full",
         times="07:30,12:30,15:35",
+        monday_times="12:30,15:35",
         saturday_times="07:30",
-        full_times="07:30,15:35",
+        full_times="15:35",
+        schedule_grace_minutes=10,
         scheduled_time="15:35",
         run_id="2026-07-20-15:35",
         started_at="2026-07-20 15:35:00 KST",
@@ -51,9 +53,14 @@ def test_pipeline_status_keeps_previous_run_history(tmp_path):
         "2026-07-20-15:35",
         "2026-07-20-12:30",
     ]
-    assert [item["mode"] for item in payload["schedule"]["times"]] == ["full", "fast", "full"]
+    assert [item["mode"] for item in payload["schedule"]["times"]] == ["fast", "fast", "full"]
+    assert payload["schedule"]["mondayTimes"] == [
+        {"time": "12:30", "mode": "fast"},
+        {"time": "15:35", "mode": "full"},
+    ]
     assert payload["schedule"]["saturdayTimes"] == [{"time": "07:30", "mode": "full"}]
     assert payload["schedule"]["weekdaysOnly"] is False
+    assert payload["schedule"]["delayGraceMinutes"] == 10
     assert all(source["lastDate"] for source in payload["sources"])
 
 
@@ -108,8 +115,10 @@ def test_pipeline_status_can_refresh_research_log_without_fabricating_a_run(tmp_
         output=str(output),
         mode="full",
         times="07:30,12:30,15:35",
+        monday_times="12:30,15:35",
         saturday_times="07:30",
-        full_times="07:30,15:35",
+        full_times="15:35",
+        schedule_grace_minutes=10,
         scheduled_time="",
         run_id="",
         started_at="2026-07-29 23:00:00 KST",

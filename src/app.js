@@ -612,13 +612,15 @@ function buildScheduleInstances(pipelineStatus) {
     const day = new Date(baseDate + offset * dayMs);
     const weekday = day.getUTCDay();
     const scheduleItems =
-      weekday >= 1 && weekday <= 5
-        ? schedule.times
-        : weekday === 6
-          ? schedule.saturdayTimes ?? []
-          : !schedule.weekdaysOnly && !schedule.saturdayTimes
-            ? schedule.times
-            : [];
+      weekday === 1
+        ? schedule.mondayTimes ?? schedule.times
+        : weekday >= 2 && weekday <= 5
+          ? schedule.times
+          : weekday === 6
+            ? schedule.saturdayTimes ?? []
+            : !schedule.weekdaysOnly && !schedule.saturdayTimes
+              ? schedule.times
+              : [];
     if (!scheduleItems.length) continue;
     const year = day.getUTCFullYear();
     const month = day.getUTCMonth();
@@ -873,6 +875,9 @@ function renderOperationsPage(pipelineStatus) {
   const saturdayScheduleText = (pipelineStatus.schedule?.saturdayTimes ?? [])
     .map((item) => `${item.time} ${pipelineModeLabel(item.mode)}`)
     .join(" · ");
+  const mondayScheduleText = (pipelineStatus.schedule?.mondayTimes ?? pipelineStatus.schedule?.times ?? [])
+    .map((item) => `${item.time} ${pipelineModeLabel(item.mode)}`)
+    .join(" · ");
 
   return `
     <section class="operations-page">
@@ -892,7 +897,7 @@ function renderOperationsPage(pipelineStatus) {
       <section class="operations-facts" aria-label="운영 요약">
         <div><small>마지막 성공</small><strong>${state.latestSuccess?.completedAt ?? "-"}</strong></div>
         <div><small>다음 예약</small><strong>${state.nextRun ? `${state.nextRun.label} · ${pipelineModeLabel(state.nextRun.mode)}` : "-"}</strong></div>
-        <div><small>예약 스케줄</small><strong>평일 ${scheduleText || "-"}${saturdayScheduleText ? ` · 토 ${saturdayScheduleText}` : ""}</strong></div>
+        <div><small>예약 스케줄</small><strong>월 ${mondayScheduleText || "-"} · 화~금 ${scheduleText || "-"}${saturdayScheduleText ? ` · 토 ${saturdayScheduleText}` : ""}</strong></div>
         <div><small>데이터 기준일</small><strong>${current.dataAsOf ?? "-"}</strong></div>
       </section>
 

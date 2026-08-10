@@ -19,41 +19,47 @@ set +a
 
 LABEL="${LOCAL_MARKET_UPDATE_LABEL:-com.marketlab.market-risk-update}"
 TIMES="${LOCAL_MARKET_UPDATE_TIMES:-07:30,12:30,15:35}"
+MONDAY_TIMES="${LOCAL_MARKET_UPDATE_MONDAY_TIMES:-12:30,15:35}"
 SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 CALENDAR_INTERVALS=""
-UNIQUE_MINUTES=""
 
-ALL_TIMES="$TIMES,$SATURDAY_TIMES"
-IFS=',' read -ra schedule_times <<< "$ALL_TIMES"
-for schedule_time in "${schedule_times[@]}"; do
-  schedule_time="${schedule_time//[[:space:]]/}"
-  [[ -z "$schedule_time" ]] && continue
-  schedule_minute="${schedule_time#*:}"
-  if [[ "$schedule_minute" == "$schedule_time" || ! "$schedule_minute" =~ ^[0-9]{1,2}$ ]]; then
-    echo "시장리스크 예약 시각 값이 올바르지 않습니다: $schedule_time" >&2
-    exit 1
-  fi
-  if (( schedule_minute < 0 || schedule_minute > 59 )); then
-    echo "시장리스크 예약 분 값이 올바르지 않습니다: $schedule_time" >&2
-    exit 1
-  fi
-  if [[ " $UNIQUE_MINUTES " != *" $schedule_minute "* ]]; then
-    UNIQUE_MINUTES="$UNIQUE_MINUTES $schedule_minute"
-  fi
-done
-
-for calendar_minute in $UNIQUE_MINUTES; do
-  for calendar_hour in $(seq 0 23); do
-    CALENDAR_INTERVALS="$CALENDAR_INTERVALS
-    <dict>
-      <key>Hour</key>
-      <integer>$calendar_hour</integer>
-      <key>Minute</key>
-      <integer>$calendar_minute</integer>
-    </dict>"
+append_calendar_intervals() {
+  local times="$1"
+  shift
+  local weekdays=("$@") schedule_time calendar_hour calendar_minute weekday
+  IFS=',' read -ra schedule_times <<< "$times"
+  for schedule_time in "${schedule_times[@]}"; do
+    schedule_time="${schedule_time//[[:space:]]/}"
+    [[ -z "$schedule_time" ]] && continue
+    calendar_hour="${schedule_time%:*}"
+    calendar_minute="${schedule_time#*:}"
+    if [[ "$calendar_hour" == "$schedule_time" || ! "$calendar_hour" =~ ^[0-9]{1,2}$ || ! "$calendar_minute" =~ ^[0-9]{1,2}$ ]]; then
+      echo "시장리스크 예약 시각 값이 올바르지 않습니다: $schedule_time" >&2
+      exit 1
+    fi
+    if (( 10#$calendar_hour > 23 || 10#$calendar_minute > 59 )); then
+      echo "시장리스크 예약 시각 값이 올바르지 않습니다: $schedule_time" >&2
+      exit 1
+    fi
+    for weekday in "${weekdays[@]}"; do
+      CALENDAR_INTERVALS="$CALENDAR_INTERVALS
+      <dict>
+        <key>Weekday</key>
+        <integer>$weekday</integer>
+        <key>Hour</key>
+        <integer>$((10#$calendar_hour))</integer>
+        <key>Minute</key>
+        <integer>$((10#$calendar_minute))</integer>
+      </dict>"
+    done
   done
-done
+}
+
+# launchd Weekday: 1=월요일, 6=토요일. 일요일 일정은 만들지 않습니다.
+append_calendar_intervals "$MONDAY_TIMES" 1
+append_calendar_intervals "$TIMES" 2 3 4 5
+append_calendar_intervals "$SATURDAY_TIMES" 6
 
 mkdir -p "$HOME/Library/LaunchAgents" "$LOG_DIR"
 
@@ -93,7 +99,8 @@ launchctl bootstrap "gui/$(id -u)" "$PLIST"
 launchctl enable "gui/$(id -u)/$LABEL"
 
 echo "$LABEL LaunchAgent를 설치했습니다."
-echo "평일 목표 시각: $TIMES KST"
+echo "월요일 목표 시각: $MONDAY_TIMES KST"
+echo "화~금 목표 시각: $TIMES KST"
 echo "토요일 목표 시각: $SATURDAY_TIMES KST"
 echo "일요일은 실행하지 않습니다."
 echo "plist: $PLIST"

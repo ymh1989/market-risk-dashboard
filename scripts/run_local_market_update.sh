@@ -9,6 +9,7 @@ STATE_DIR="$ROOT/logs/local-market-update-state"
 BRANCH="${LOCAL_MARKET_UPDATE_BRANCH:-main}"
 REMOTE="${LOCAL_MARKET_UPDATE_REMOTE:-origin}"
 TIMES="${LOCAL_MARKET_UPDATE_TIMES:-07:30,12:30,15:35}"
+MONDAY_TIMES="${LOCAL_MARKET_UPDATE_MONDAY_TIMES:-12:30,15:35}"
 SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"
 LABEL="${LOCAL_MARKET_UPDATE_LABEL:-com.marketlab.market-risk-update}"
 PYTHON_BIN="${LOCAL_MARKET_UPDATE_PYTHON:-}"
@@ -17,7 +18,8 @@ PAGES_VERIFY_ATTEMPTS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_ATTEMPTS:-12}"
 PAGES_VERIFY_INTERVAL_SECONDS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_INTERVAL_SECONDS:-10}"
 PAGES_DEPLOY_RETRIES="${LOCAL_MARKET_UPDATE_PAGES_DEPLOY_RETRIES:-2}"
 MODE="${LOCAL_MARKET_UPDATE_MODE:-auto}"
-FULL_TIMES="${LOCAL_MARKET_UPDATE_FULL_TIMES:-07:30,15:35}"
+FULL_TIMES="${LOCAL_MARKET_UPDATE_FULL_TIMES:-15:35}"
+SCHEDULE_GRACE_MINUTES="${LOCAL_MARKET_UPDATE_SCHEDULE_GRACE_MINUTES:-10}"
 ONLY_AT_SCHEDULED_KST=0
 SCHEDULE_STATE_FILE=""
 SCHEDULED_TIME=""
@@ -30,6 +32,7 @@ if [[ -f "$ENV_FILE" ]]; then
   BRANCH="${LOCAL_MARKET_UPDATE_BRANCH:-$BRANCH}"
   REMOTE="${LOCAL_MARKET_UPDATE_REMOTE:-$REMOTE}"
   TIMES="${LOCAL_MARKET_UPDATE_TIMES:-$TIMES}"
+  MONDAY_TIMES="${LOCAL_MARKET_UPDATE_MONDAY_TIMES:-$MONDAY_TIMES}"
   SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-$SATURDAY_TIMES}"
   LABEL="${LOCAL_MARKET_UPDATE_LABEL:-$LABEL}"
   PYTHON_BIN="${LOCAL_MARKET_UPDATE_PYTHON:-$PYTHON_BIN}"
@@ -39,6 +42,7 @@ if [[ -f "$ENV_FILE" ]]; then
   PAGES_DEPLOY_RETRIES="${LOCAL_MARKET_UPDATE_PAGES_DEPLOY_RETRIES:-$PAGES_DEPLOY_RETRIES}"
   MODE="${LOCAL_MARKET_UPDATE_MODE:-$MODE}"
   FULL_TIMES="${LOCAL_MARKET_UPDATE_FULL_TIMES:-$FULL_TIMES}"
+  SCHEDULE_GRACE_MINUTES="${LOCAL_MARKET_UPDATE_SCHEDULE_GRACE_MINUTES:-$SCHEDULE_GRACE_MINUTES}"
 fi
 
 for arg in "$@"; do
@@ -75,14 +79,21 @@ kst_now() {
 }
 
 is_scheduled_now() {
-  local now_time now_weekday scheduled_time state_file state_key active_times schedule_label
+  local now_time now_weekday now_minutes scheduled_time scheduled_minutes elapsed_minutes
+  local state_file state_key active_times schedule_label
   now_time="$(kst_now +%H:%M)"
   now_weekday="$(kst_now +%u)"
+  now_minutes="$((10#${now_time%:*} * 60 + 10#${now_time#*:}))"
 
   case "$now_weekday" in
-    1|2|3|4|5)
+    1)
+      active_times="$MONDAY_TIMES"
+      schedule_label="월요일"
+      SCHEDULED_DAY_TYPE="weekday"
+      ;;
+    2|3|4|5)
       active_times="$TIMES"
-      schedule_label="평일"
+      schedule_label="화~금"
       SCHEDULED_DAY_TYPE="weekday"
       ;;
     6)
@@ -99,7 +110,9 @@ is_scheduled_now() {
   IFS=',' read -ra schedule_times <<< "$active_times"
   for scheduled_time in "${schedule_times[@]}"; do
     scheduled_time="${scheduled_time//[[:space:]]/}"
-    if [[ "$now_time" == "$scheduled_time" ]]; then
+    scheduled_minutes="$((10#${scheduled_time%:*} * 60 + 10#${scheduled_time#*:}))"
+    elapsed_minutes="$((now_minutes - scheduled_minutes))"
+    if (( elapsed_minutes >= 0 && elapsed_minutes <= SCHEDULE_GRACE_MINUTES )); then
       mkdir -p "$STATE_DIR"
       state_key="$(kst_now +%Y-%m-%d)-$scheduled_time"
       state_file="$STATE_DIR/$state_key.done"
@@ -290,8 +303,10 @@ RUN_COMPLETED_EPOCH="$(date +%s)"
 "$PYTHON_BIN" scripts/write_pipeline_status.py \
   --mode "$UPDATE_MODE" \
   --times "$TIMES" \
+  --monday-times "$MONDAY_TIMES" \
   --saturday-times "$SATURDAY_TIMES" \
   --full-times "$FULL_TIMES" \
+  --schedule-grace-minutes "$SCHEDULE_GRACE_MINUTES" \
   --scheduled-time "$SCHEDULED_TIME" \
   --started-at "$RUN_STARTED_AT" \
   --completed-at "$RUN_COMPLETED_AT" \

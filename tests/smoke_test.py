@@ -335,6 +335,7 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert "오늘의 예약 실행" in app_source
     assert "다음 예약" in app_source
     assert "schedule.saturdayTimes ?? []" in app_source
+    assert "schedule.mondayTimes ?? schedule.times" in app_source
     assert "토 ${saturdayScheduleText}" in app_source
     assert 'statusLabel: matched.replacement ? "보완 완료" : "완료"' in app_source
     assert 'statusLabel: delayed ? "지연" : "진행 중"' in app_source
@@ -346,10 +347,13 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert ".operations-schedule-list" in styles
     assert ".operations-schedule-item--caution" in styles
     assert 'SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"' in run_script
+    assert 'MONDAY_TIMES="${LOCAL_MARKET_UPDATE_MONDAY_TIMES:-12:30,15:35}"' in run_script
     assert 'SCHEDULED_DAY_TYPE="saturday"' in run_script
     assert 'if [[ "$SCHEDULED_DAY_TYPE" == "saturday" ]]' in run_script
     assert '--saturday-times "$SATURDAY_TIMES"' in run_script
     assert 'SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"' in installer
+    assert 'append_calendar_intervals "$MONDAY_TIMES" 1' in installer
+    assert 'append_calendar_intervals "$TIMES" 2 3 4 5' in installer
 
 
 def test_dashboard_data_requests_bypass_stale_cache():
@@ -688,6 +692,7 @@ def test_pipeline_status_contract():
     assert status["current"]["status"] == "success"
     assert status["current"]["dataAsOf"]
     assert {item["time"] for item in status["schedule"]["times"]} == {"07:30", "12:30", "15:35"}
+    assert {item["time"] for item in status["schedule"]["mondayTimes"]} == {"12:30", "15:35"}
     assert status["schedule"]["saturdayTimes"] == [{"time": "07:30", "mode": "full"}]
     assert status["schedule"]["weekdaysOnly"] is False
     assert {stage["id"] for stage in status["stages"]} == {"market", "ml", "validation", "deployment"}

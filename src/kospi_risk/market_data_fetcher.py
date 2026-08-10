@@ -339,7 +339,30 @@ def fetch_source_with_supplements(
         except Exception as exc:
             warnings.append(f"{supplement.get('provider', '보강 원천')} 조회 실패: {exc}")
             continue
-        frames.append(result.frame)
+        supplement_frame = result.frame.copy()
+        if supplement.get("rebase_to_primary"):
+            overlap = primary.frame.merge(
+                supplement_frame,
+                on="date",
+                how="inner",
+                suffixes=("_primary", "_supplement"),
+            ).dropna()
+            if overlap.empty:
+                warnings.append(f"{result.symbol} 보강값은 기준 시계열과 겹치는 날짜가 없어 제외")
+                continue
+            ratios = overlap[f"{column}_primary"] / overlap[f"{column}_supplement"]
+            valid_ratios = ratios.replace([float("inf"), float("-inf")], pd.NA).dropna().tail(20)
+            if valid_ratios.empty:
+                warnings.append(f"{result.symbol} 보강값의 가격 레벨을 연결할 수 없어 제외")
+                continue
+            supplement_frame[column] = supplement_frame[column] * float(valid_ratios.median())
+        if supplement.get("append_after_primary"):
+            supplement_frame = supplement_frame.loc[
+                supplement_frame["date"] > primary.frame["date"].max()
+            ].copy()
+            if supplement_frame.empty:
+                continue
+        frames.append(supplement_frame)
         providers.append(result.provider)
         symbols.append(result.symbol)
         if result.error:
