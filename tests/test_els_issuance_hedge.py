@@ -1,4 +1,5 @@
 import importlib.util
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -63,6 +64,38 @@ def test_long_history_is_merged_with_fresher_recent_prices(monkeypatch):
     assert merged["date"].tolist() == ["2020-01-02", "2026-07-16", "2026-07-21", "2026-07-22"]
     assert merged.loc[merged["date"] == "2026-07-16", "close"].iloc[0] == 201.0
     assert merged.loc[merged["date"] == "2026-07-21", "close"].iloc[0] == 210.0
+
+
+def test_yahoo_daily_rows_exclude_incomplete_exchange_session():
+    module = load_els_module()
+    session_start = int(datetime(2026, 8, 10, 0, 0, tzinfo=timezone.utc).timestamp())
+    session_end = int(datetime(2026, 8, 10, 6, 0, tzinfo=timezone.utc).timestamp())
+    previous_bar = int(datetime(2026, 8, 7, 0, 0, tzinfo=timezone.utc).timestamp())
+    result = {
+        "meta": {
+            "exchangeTimezoneName": "Asia/Tokyo",
+            "currentTradingPeriod": {"regular": {"start": session_start, "end": session_end}},
+        },
+        "timestamp": [previous_bar, session_start],
+        "indicators": {"quote": [{"close": [65000.0, 66000.0]}]},
+    }
+
+    rows, excluded_date = module._yahoo_daily_rows(result, now_timestamp=session_start + 60)
+
+    assert rows == [{"date": "2026-08-07", "close": 65000.0}]
+    assert excluded_date == "2026-08-10"
+
+
+def test_cached_incomplete_session_is_not_reintroduced(monkeypatch):
+    module = load_els_module()
+    completed = pd.DataFrame({"date": ["2026-08-07"], "close": [65000.0]})
+    completed.attrs["excludedIncompleteSessionDate"] = "2026-08-10"
+    cached = pd.DataFrame({"date": ["2026-08-10"], "close": [66000.0]})
+    monkeypatch.setattr(module, "_fetch_yahoo", lambda _symbol, _range: completed.copy())
+
+    merged = module._fetch_price_history("^N225", cached)
+
+    assert merged["date"].tolist() == ["2026-08-07"]
 
 
 def test_trajectory_windows_include_one_week_momentum_period():

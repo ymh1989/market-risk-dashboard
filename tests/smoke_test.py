@@ -365,6 +365,8 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert 'id: "operations", label: "운영현황"' in app_source
     assert 'id: "els-issuance", label: "ELS 발행·헤지"' in app_source
     assert "renderElsIssuanceHedgePage" in app_source
+    assert 'class="els-index-card__asof"' in app_source
+    assert '${item.label}<small>${item.lastDate ?? "-"}</small>' in app_source
     assert 'data-els-window="${window.id}"' in app_source
     assert 'data-els-trajectory="${window.id}"' in app_source
     assert "curvedTrajectoryPath(coordinates)" in app_source

@@ -70,6 +70,43 @@ def _round(value: float | int | None, digits: int = 2) -> float | None:
     return round(float(value), digits)
 
 
+def _yahoo_daily_rows(result: dict, now_timestamp: float | None = None) -> tuple[list[dict], str | None]:
+    meta = result.get("meta") or {}
+    timezone_name = str(meta.get("exchangeTimezoneName") or "UTC")
+    try:
+        exchange_timezone = ZoneInfo(timezone_name)
+    except Exception:
+        exchange_timezone = timezone.utc
+
+    regular_session = ((meta.get("currentTradingPeriod") or {}).get("regular") or {})
+    session_start = regular_session.get("start")
+    session_end = regular_session.get("end")
+    now_value = datetime.now(timezone.utc).timestamp() if now_timestamp is None else float(now_timestamp)
+    incomplete_session = (
+        isinstance(session_start, (int, float))
+        and isinstance(session_end, (int, float))
+        and now_value < float(session_end)
+    )
+    incomplete_date = (
+        datetime.fromtimestamp(float(session_start), exchange_timezone).date().isoformat()
+        if incomplete_session
+        else None
+    )
+
+    timestamps = result.get("timestamp", [])
+    closes = ((result.get("indicators") or {}).get("quote") or [{}])[0].get("close", [])
+    rows = []
+    for index, timestamp in enumerate(timestamps):
+        close = closes[index] if index < len(closes) else None
+        if close is None:
+            continue
+        point_date = datetime.fromtimestamp(timestamp, exchange_timezone).date().isoformat()
+        if incomplete_date and point_date == incomplete_date:
+            continue
+        rows.append({"date": point_date, "close": float(close)})
+    return rows, incomplete_date
+
+
 def _fetch_yahoo(symbol: str, range_value: str = "10y") -> pd.DataFrame:
     encoded_symbol = urllib.parse.quote(symbol, safe="")
     request = urllib.request.Request(
@@ -83,15 +120,9 @@ def _fetch_yahoo(symbol: str, range_value: str = "10y") -> pd.DataFrame:
     if chart.get("error"):
         raise RuntimeError(f"{symbol}: {chart['error']}")
     result = chart["result"][0]
-    timestamps = result.get("timestamp", [])
-    closes = result["indicators"]["quote"][0].get("close", [])
-    rows = []
-    for index, timestamp in enumerate(timestamps):
-        close = closes[index] if index < len(closes) else None
-        if close is None:
-            continue
-        rows.append({"date": datetime.fromtimestamp(timestamp, timezone.utc).date().isoformat(), "close": float(close)})
+    rows, incomplete_date = _yahoo_daily_rows(result)
     frame = pd.DataFrame(rows).drop_duplicates("date").sort_values("date").reset_index(drop=True)
+    frame.attrs["excludedIncompleteSessionDate"] = incomplete_date
     if len(frame) < 260:
         raise RuntimeError(f"{symbol}: ELS index risk needs at least 260 observations, got {len(frame)}")
     return frame
@@ -104,12 +135,20 @@ def _fetch_price_history(symbol: str, cached_prices: pd.DataFrame | None = None)
     if cached_prices is not None and not cached_prices.empty:
         frames.append(cached_prices[["date", "close"]])
     frames.append(recent)
-    return (
+    merged = (
         pd.concat(frames, ignore_index=True)
         .drop_duplicates("date", keep="last")
         .sort_values("date")
         .reset_index(drop=True)
     )
+    excluded_dates = {
+        frame.attrs.get("excludedIncompleteSessionDate")
+        for frame in (historical, recent)
+        if frame.attrs.get("excludedIncompleteSessionDate")
+    }
+    if excluded_dates:
+        merged = merged.loc[~merged["date"].isin(excluded_dates)].reset_index(drop=True)
+    return merged
 
 
 def _load_cached_price_history(path: Path = OUTPUT_FILE) -> dict[str, pd.DataFrame]:

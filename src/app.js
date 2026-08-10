@@ -1614,6 +1614,7 @@ function renderElsIndexRiskPanel(elsRisk) {
                   <div>
                     <span class="eyebrow">${item.region}</span>
                     <h3>${item.label}</h3>
+                    <small class="els-index-card__asof">EOD ${item.lastDate ?? "-"}</small>
                   </div>
                   <strong>${Number(item.score).toFixed(1)}</strong>
                 </header>
@@ -1637,7 +1638,7 @@ function renderElsIndexRiskPanel(elsRisk) {
         ${rangeLayers}
         <div class="els-index-legend">
           ${elsRisk.indices
-            .map((item) => `<span><i class="${colorClass[item.id] ?? ""}"></i>${item.label}</span>`)
+            .map((item) => `<span><i class="${colorClass[item.id] ?? ""}"></i>${item.label}<small>${item.lastDate ?? "-"}</small></span>`)
             .join("")}
         </div>
         ${renderChartTooltip()}
