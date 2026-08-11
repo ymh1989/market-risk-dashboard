@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from kospi_risk.models import predict_bundle
+from kospi_risk.model_monitoring import build_model_monitoring, enrich_walk_forward_results
 from kospi_risk.scoring import add_els_scores
 
 
@@ -97,6 +98,12 @@ def build_payload() -> dict:
                 "riskOffProbabilityPct": _pct(row["prob_risk_off"]),
                 "crash5d5pctProbabilityPct": _pct(row.get("prob_crash_5d_5pct")),
                 "crash5d10pctProbabilityPct": _pct(row.get("prob_crash_5d_10pct")),
+                "baselineCrash5d5pctProbabilityPct": _pct(row.get("baseline_prob_crash_5d_5pct")),
+                "baselineCrash5d10pctProbabilityPct": _pct(row.get("baseline_prob_crash_5d_10pct")),
+                "targetCrash5d5pct": None if pd.isna(row.get("target_crash_5d_5pct")) else int(row["target_crash_5d_5pct"]),
+                "targetCrash5d10pct": None if pd.isna(row.get("target_crash_5d_10pct")) else int(row["target_crash_5d_10pct"]),
+                "forwardReturn5dPct": _pct(row.get("fwd_ret_5d")),
+                "forwardMinReturn5dPct": _pct(row.get("fwd_min_ret_5d")),
                 "fold": int(row["fold"]),
             }
             for row in walk_forward.to_dict(orient="records")
@@ -189,6 +196,9 @@ def build_payload() -> dict:
     if metrics.empty and previous_payload.get("metrics"):
         metrics_payload = previous_payload["metrics"]
 
+    walk_forward_series = enrich_walk_forward_results(walk_forward_series, series)
+    monitoring_payload = build_model_monitoring(walk_forward_series, series)
+
     payload = {
         "generatedAt": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M KST"),
         "source": {
@@ -238,6 +248,7 @@ def build_payload() -> dict:
             "장기 OOS에서 순위 선별력이 확인되더라도 Brier score가 기준모델보다 나쁘면 확률값 자체보다 위험 순위와 변화 방향을 우선 해석해야 합니다.",
         ],
         "walkForwardSeries": walk_forward_series,
+        "monitoring": monitoring_payload,
         "series": series,
     }
     return payload

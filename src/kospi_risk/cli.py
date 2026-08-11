@@ -21,7 +21,11 @@ from .transformer_lab import (
     run_transformer_lab,
     write_transformer_lab_outputs,
 )
-from .validation import run_crash_walk_forward_backtest, run_walk_forward_backtest
+from .validation import (
+    crash_baseline_predictions,
+    run_crash_walk_forward_backtest,
+    run_walk_forward_backtest,
+)
 from .visualization import create_backtest_visualizations
 
 
@@ -122,6 +126,17 @@ def cmd_backtest(args: argparse.Namespace) -> None:
         .drop_duplicates("date", keep="last")[crash_prediction_columns]
         .reset_index(drop=True)
     )
+    crash_baseline = crash_baseline_predictions(
+        crash_scored.sort_values(["date", "fold"])
+        .drop_duplicates("date", keep="last")
+        .reset_index(drop=True)
+    ).rename(
+        columns={
+            "prob_crash_5d_5pct": "baseline_prob_crash_5d_5pct",
+            "prob_crash_5d_10pct": "baseline_prob_crash_5d_10pct",
+        }
+    )
+    crash_predictions = crash_predictions.merge(crash_baseline, on="date", how="left")
     walk_forward_predictions = crash_predictions.merge(broad_predictions, on="date", how="left")
     walk_forward_predictions.to_csv(predictions_path, index=False)
     bucket = score_bucket_analysis(scored)

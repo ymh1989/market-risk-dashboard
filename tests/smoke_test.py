@@ -257,8 +257,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260803-1" in html
-    assert "app.js?v=20260803-1" in html
+    assert "styles.css?v=20260811-1" in html
+    assert "app.js?v=20260811-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -268,6 +268,11 @@ def test_ui_hierarchy_and_accessibility_contract():
     assert "${visibleSections" in app_source
     assert 'tab.setAttribute("aria-selected"' in app_source
     assert 'history.replaceState(null, "", `#${target}`)' in app_source
+    assert 'id: "model-monitoring"' in app_source
+    assert 'id: "replay"' in app_source
+    assert "function renderModelMonitoringPage" in app_source
+    assert "function renderReplayPage" in app_source
+    assert "data-source-detail-toggle" in app_source
     assert "font-weight: 800;" not in styles
     assert "font-weight: 900;" not in styles
     assert "text-transform: uppercase;" not in styles

@@ -57,6 +57,8 @@ def test_cli_pipeline_smoke(tmp_path):
     assert walk_forward["prob_risk_off"].dropna().between(0, 1).all()
     assert walk_forward["prob_crash_5d_5pct"].between(0, 1).all()
     assert walk_forward["prob_crash_5d_10pct"].between(0, 1).all()
+    assert walk_forward["baseline_prob_crash_5d_5pct"].between(0, 1).all()
+    assert walk_forward["baseline_prob_crash_5d_10pct"].between(0, 1).all()
     assert walk_forward["date"].max() > walk_forward.loc[walk_forward["prob_risk_off"].notna(), "date"].max()
     assert signal.loc[0, "els_risk_score"] >= 0
     assert signal.loc[0, "els_risk_score"] <= 100

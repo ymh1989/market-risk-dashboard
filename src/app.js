@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260731-4";
+const ASSET_VERSION = "20260811-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -507,11 +507,21 @@ function dashboardTabsWithOperations(tabs) {
 
 function dashboardTabsWithElsTool(tabs) {
   const withOperations = dashboardTabsWithOperations(tabs);
-  if (withOperations.some((tab) => tab.id === "els-issuance")) return withOperations;
   const operationsIndex = withOperations.findIndex((tab) => tab.id === "operations");
-  const insertAt = operationsIndex >= 0 ? operationsIndex + 1 : 2;
+  const researchTabs = [
+    { id: "model-monitoring", label: "모델 검증", enabled: true },
+    { id: "replay", label: "시점 비교", enabled: true }
+  ];
+  const withResearch = researchTabs.reduce((current, tab, index) => {
+    if (current.some((item) => item.id === tab.id)) return current;
+    const insertAt = operationsIndex >= 0 ? operationsIndex + 1 + index : 2 + index;
+    return [...current.slice(0, insertAt), tab, ...current.slice(insertAt)];
+  }, withOperations);
+  if (withResearch.some((tab) => tab.id === "els-issuance")) return withResearch;
+  const replayIndex = withResearch.findIndex((tab) => tab.id === "replay");
+  const insertAt = replayIndex >= 0 ? replayIndex + 1 : 2;
   const elsToolTab = { id: "els-issuance", label: "ELS 발행·헤지", enabled: true };
-  return [...withOperations.slice(0, insertAt), elsToolTab, ...withOperations.slice(insertAt)];
+  return [...withResearch.slice(0, insertAt), elsToolTab, ...withResearch.slice(insertAt)];
 }
 
 function formatDurationSeconds(value) {
@@ -3229,7 +3239,130 @@ function renderGauge(score, level, thresholds) {
   `;
 }
 
-function renderIndicator(indicator, thresholds, timeseries) {
+function sourceCatalog(snapshot) {
+  if (!snapshot) return [];
+  const catalogs = [
+    ["Yahoo", snapshot.yahooSymbols],
+    ["Naver Finance", snapshot.naverSymbols],
+    ["FRED", snapshot.fredSeries],
+    ["Naver Market Index", snapshot.naverMarketIndexes]
+  ];
+  return catalogs.flatMap(([provider, records]) =>
+    Object.entries(records ?? {}).map(([id, record]) => ({ id, provider, ...record }))
+  );
+}
+
+function indicatorSourceRecords(indicator, snapshot) {
+  const source = String(indicator.source ?? "").toLowerCase();
+  const matches = sourceCatalog(snapshot).filter((record) => {
+    const tokens = [record.symbol, record.seriesId, record.label, record.id]
+      .filter(Boolean)
+      .map((token) => String(token).toLowerCase());
+    return tokens.some((token) => token.length >= 3 && source.includes(token));
+  });
+  if (indicator.id === "m7_credit_stress_proxy" && snapshot?.m7CreditProxy?.latest) {
+    matches.push({
+      id: "m7-credit-proxy",
+      provider: "M7 공개시장 프록시",
+      label: "M7 Credit Stress Proxy",
+      lastDate: snapshot.m7CreditProxy.latest.date,
+      coveragePct: snapshot.m7CreditProxy.latest.coveragePct,
+      fetchStatus: snapshot.m7CreditProxy.latest.qualityStatus
+    });
+  }
+  return matches.filter(
+    (record, index, all) =>
+      all.findIndex((candidate) => `${candidate.provider}:${candidate.symbol ?? candidate.seriesId ?? candidate.id}` === `${record.provider}:${record.symbol ?? record.seriesId ?? record.id}`) === index
+  );
+}
+
+function sourceValueState(record) {
+  const status = String(record.fetchStatus ?? "").toLowerCase();
+  if (status.includes("live")) return "잠정 · 실시간";
+  if (status.includes("fallback") || status.includes("cached") || status.includes("대체")) return "대체값";
+  if (status.includes("naver") && status.includes("yahoo")) return "EOD · 이중 확인";
+  return "EOD";
+}
+
+function sourceEnhancementNote(indicator) {
+  if (["kospi_price_stress", "kosdaq_growth_stress"].includes(indicator.id)) {
+    return "Yahoo·Naver 종가 이중 확인";
+  }
+  if (["rates_pressure", "us_financial_conditions_stress", "korea_us_rate_fx_watch"].includes(indicator.id)) {
+    return "라이브 시세와 공공 EOD 시계열 병행";
+  }
+  if (indicator.id === "m7_credit_stress_proxy") {
+    return "OFR FSI·미 국채금리·회사채 ETF 보강";
+  }
+  return "소스 변경 이력 없음";
+}
+
+function indicatorQualityNotes(indicator, quality) {
+  const source = String(indicator.source ?? "").toLowerCase();
+  return (quality?.issues ?? [])
+    .filter((issue) => {
+      if (indicator.id === "m7_credit_stress_proxy" && issue.groupId === "m7-credit") return true;
+      const label = String(issue.label ?? "").toLowerCase();
+      return label.length >= 3 && source.includes(label.replace(/^price:/, ""));
+    })
+    .slice(0, 3);
+}
+
+function renderIndicatorSourceDetail(indicator, provenance) {
+  const records = indicatorSourceRecords(indicator, provenance?.snapshot);
+  const qualityNotes = indicatorQualityNotes(indicator, provenance?.quality);
+  const details = Array.isArray(indicator.detail) ? indicator.detail : [indicator.detail].filter(Boolean);
+  const normalization = provenance?.model?.normalization;
+  const normalizationText = normalization
+    ? `최대 2년 · 분위수 ${Number(normalization.percentileWeight) * 100}% · z ${Number(normalization.zScoreWeight) * 100}% · robust z ${Number(normalization.robustZScoreWeight) * 100}%`
+    : "최대 2년 · 가용 관측치 기준";
+  const detailId = `source-detail-${indicator.id}`;
+  return `
+    <button
+      type="button"
+      class="source-detail-toggle"
+      data-source-detail-toggle
+      aria-expanded="false"
+      aria-controls="${detailId}"
+    >원천·산식</button>
+    <div class="source-detail" id="${detailId}" hidden>
+      <dl class="source-detail__summary">
+        <div><dt>원천·티커</dt><dd>${indicator.source}</dd></div>
+        <div><dt>조회시각</dt><dd>${provenance?.snapshot?.generatedAt ?? "확인 대기"}</dd></div>
+        <div><dt>정규화</dt><dd>${normalizationText}</dd></div>
+        <div><dt>현재 보강</dt><dd>${sourceEnhancementNote(indicator)}</dd></div>
+        <div><dt>가중·기여</dt><dd>${Number(indicator.weight ?? 0) > 0 ? `${(Number(indicator.weight) * 100).toFixed(1)}% · +${Number(indicator.contribution ?? 0).toFixed(2)}점` : "관찰 전용 · 종합점수 미반영"}</dd></div>
+      </dl>
+      <div class="source-detail__records">
+        ${
+          records.length
+            ? records
+                .map(
+                  (record) => `
+                    <div>
+                      <strong>${record.provider} · ${record.symbol ?? record.seriesId ?? record.label ?? record.id}</strong>
+                      <span>${record.lastDate ?? "관측일 확인 대기"} · ${sourceValueState(record)} · ${Number.isFinite(Number(record.observations)) ? `${Number(record.observations).toLocaleString()}개 관측` : Number.isFinite(Number(record.coveragePct)) ? `커버리지 ${Number(record.coveragePct).toFixed(0)}%` : "관측수 확인 대기"}</span>
+                    </div>
+                  `
+                )
+                .join("")
+            : `<div><strong>${indicator.source}</strong><span>카드 산출 결과에 기록된 원천</span></div>`
+        }
+      </div>
+      <div class="source-detail__components">
+        <strong>현재 원점수 구성</strong>
+        ${renderNarrativeList(details, "narrative-list--compact")}
+      </div>
+      ${
+        qualityNotes.length
+          ? `<div class="source-detail__components"><strong>완비성 확인</strong>${renderNarrativeList(qualityNotes.map((issue) => issue.detail), "narrative-list--compact")}</div>`
+          : ""
+      }
+    </div>
+  `;
+}
+
+function renderIndicator(indicator, thresholds, timeseries, provenance = null) {
   const level = thresholds.find((threshold) => indicator.value >= threshold.min && indicator.value < threshold.max);
   const tone = level?.tone ?? "muted";
   const indicatorPoints = timeseries?.series?.[indicator.id] ?? [];
@@ -3271,6 +3404,7 @@ function renderIndicator(indicator, thresholds, timeseries) {
         <span>${indicator.source}</span>
         <span>추세 ${trendLabel[indicator.trend] ?? "-"}</span>
       </footer>
+      ${renderIndicatorSourceDetail(indicator, provenance)}
     </article>
   `;
 }
@@ -4143,7 +4277,7 @@ function renderObservationJournal(section, timeseries) {
   `;
 }
 
-function renderSection(section, timeseries, backtest, stressEpisodes, marketIndexes, activeTab) {
+function renderSection(section, timeseries, backtest, stressEpisodes, marketIndexes, activeTab, provenance = null) {
   const isPlanned = section.status !== "active";
   const initiallySortedIndicators = sortedIndicators(section, timeseries);
   const isActive = section.id === activeTab;
@@ -4208,7 +4342,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
             }
             <div class="indicator-grid" data-indicator-grid="${section.id}">
               ${initiallySortedIndicators
-                .map((indicator) => renderIndicator(indicator, section.model.thresholds, timeseries))
+                .map((indicator) => renderIndicator(indicator, section.model.thresholds, timeseries, { ...provenance, model: section.model }))
                 .join("")}
             </div>
           `
@@ -4374,13 +4508,399 @@ function initializeInteractiveCharts(scope = app) {
   activateChartRange(activeChartRange);
 }
 
+const monitoringTaskView = {
+  crash5d5pct: {
+    probabilityKey: "crash5d5pctProbabilityPct",
+    targetKey: "targetCrash5d5pct",
+    label: "5일 중 -5% 도달"
+  },
+  crash5d10pct: {
+    probabilityKey: "crash5d10pctProbabilityPct",
+    targetKey: "targetCrash5d10pct",
+    label: "5일 중 -10% 도달"
+  }
+};
+
+function formatModelMetric(value, digits = 3) {
+  return Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : "표본 부족";
+}
+
+function renderMonitoringMetricCard(label, metrics, field, { percent = false } = {}) {
+  const value = Number(metrics?.[field]);
+  const display = Number.isFinite(value)
+    ? percent
+      ? `${(value * 100).toFixed(1)}%`
+      : value.toFixed(3)
+    : "산출 대기";
+  return `
+    <div class="monitoring-metric">
+      <span>${label}</span>
+      <strong>${display}</strong>
+      <small>${Number(metrics?.observations ?? 0)}개 · 급락 ${Number(metrics?.eventCount ?? 0)}건</small>
+    </div>
+  `;
+}
+
+function renderMonitoringTimeline(taskId, task, series) {
+  const view = monitoringTaskView[taskId];
+  const valid = (series ?? []).filter(
+    (row) => Number.isFinite(Number(row[view.probabilityKey])) && row[view.targetKey] !== null && row[view.targetKey] !== undefined
+  );
+  if (valid.length < 2) return `<div class="empty-state"><h3>OOS 결과 누적 중</h3><span>실제 5거래일 결과가 확정되면 표시</span></div>`;
+  const chartId = registerInteractiveChart({
+    series: [
+      {
+        label: "도달확률",
+        points: valid,
+        valueKey: view.probabilityKey,
+        color: "var(--red)",
+        format: (value) => `${Number(value).toFixed(1)}%`
+      },
+      {
+        label: "5D 최저수익률",
+        points: valid,
+        valueKey: "forwardMinReturn5dPct",
+        color: "var(--blue)",
+        format: (value) => `${Number(value).toFixed(1)}%`
+      }
+    ]
+  });
+  const threshold = Number(task?.cases?.alertThresholdPct ?? 50);
+  const rangeLayers = chartRangeOptions
+    .map((range) => {
+      const domain = chartRangeDomain([valid], range.id);
+      const visible = pointsWithinDomain(valid, domain, view.probabilityKey);
+      const axis = renderMonthAxisFromDomain(domain, 760, 18, 150, 174);
+      const probabilityPath = datedValuePath(visible, view.probabilityKey, domain, { min: 0, max: 100 }, 760, 18, 150);
+      const eventMarks = visible
+        .filter((row) => Number(row[view.targetKey]) === 1)
+        .map((row) => {
+          const x = xFromDate(row.date, domain, 760);
+          return `<line class="monitoring-chart__event" x1="${x.toFixed(2)}" x2="${x.toFixed(2)}" y1="18" y2="150"></line>`;
+        })
+        .join("");
+      const thresholdY = 150 - (threshold / 100) * 132;
+      return `
+        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 760 180" role="img" aria-label="${view.label} 경보와 실제 결과 비교">
+          ${axis.grid}
+          <path class="trend-chart__grid" d="M 0 51 L 760 51 M 0 84 L 760 84 M 0 117 L 760 117 M 0 150 L 760 150"></path>
+          <line class="monitoring-chart__threshold" x1="0" x2="760" y1="${thresholdY.toFixed(2)}" y2="${thresholdY.toFixed(2)}"></line>
+          ${eventMarks}
+          <path class="monitoring-chart__probability" d="${probabilityPath}"></path>
+          ${renderChartCursorLine(18, 150)}
+          ${axis.labels}
+        </svg>
+      `;
+    })
+    .join("");
+  return `
+    <div class="monitoring-chart" data-timeseries-chart="${chartId}">
+      <div class="monitoring-chart__header">
+        <div><strong>경보와 실제 결과</strong><span>붉은 세로선: 이후 5일 내 실제 도달이 확인된 예측일 · 점선: 경보 임계 ${threshold.toFixed(0)}%</span></div>
+        ${renderChartRangeControls(chartId)}
+      </div>
+      ${rangeLayers}
+      ${renderChartTooltip()}
+    </div>
+  `;
+}
+
+function renderMonitoringCases(title, rows, emptyText) {
+  return `
+    <section class="monitoring-cases">
+      <h4>${title}</h4>
+      <div>
+        ${
+          rows?.length
+            ? rows
+                .slice(0, 6)
+                .map(
+                  (row) => `<span><b>${row.date}</b><strong>${Number(row.probabilityPct).toFixed(1)}%</strong><small>5D 최저 ${Number(row.forwardMinReturn5dPct).toFixed(1)}%</small></span>`
+                )
+                .join("")
+            : `<p>${emptyText}</p>`
+        }
+      </div>
+    </section>
+  `;
+}
+
+function renderMonitoringTask(taskId, task, series, active) {
+  const metrics3m = task?.metrics?.["3m"] ?? {};
+  const metrics6m = task?.metrics?.["6m"] ?? {};
+  const cases = task?.cases ?? {};
+  return `
+    <div class="monitoring-task ${active ? "is-active" : ""}" data-monitoring-task-panel="${taskId}" ${active ? "" : "hidden"}>
+      <div class="monitoring-status monitoring-status--${task?.status?.tone ?? "watch"}">
+        <div><span>최근 운영판정</span><strong>${task?.status?.label ?? "산출 대기"}</strong></div>
+        <p>${task?.status?.reason ?? "OOS 결과 누적 중"}</p>
+      </div>
+      <section class="monitoring-window-grid">
+        <div class="monitoring-window">
+          <header><strong>최근 3개월</strong><span>${metrics3m.startDate ?? "-"} ~ ${metrics3m.endDate ?? "-"}</span></header>
+          <div class="monitoring-metrics">
+            ${renderMonitoringMetricCard("AUC", metrics3m, "auc")}
+            ${renderMonitoringMetricCard("AP", metrics3m, "averagePrecision")}
+            ${renderMonitoringMetricCard("Brier", metrics3m, "brier")}
+            ${renderMonitoringMetricCard("기준 대비 일별 승률", metrics3m, "dailyWinRate", { percent: true })}
+            ${renderMonitoringMetricCard("기준 대비 fold 승률", metrics3m, "foldWinRate", { percent: true })}
+          </div>
+        </div>
+        <div class="monitoring-window">
+          <header><strong>최근 6개월</strong><span>${metrics6m.startDate ?? "-"} ~ ${metrics6m.endDate ?? "-"}</span></header>
+          <div class="monitoring-metrics">
+            ${renderMonitoringMetricCard("AUC", metrics6m, "auc")}
+            ${renderMonitoringMetricCard("AP", metrics6m, "averagePrecision")}
+            ${renderMonitoringMetricCard("Brier", metrics6m, "brier")}
+            ${renderMonitoringMetricCard("기준 Brier", metrics6m, "baselineBrier")}
+            ${renderMonitoringMetricCard("기준 대비 fold 승률", metrics6m, "foldWinRate", { percent: true })}
+          </div>
+        </div>
+      </section>
+      ${renderMonitoringTimeline(taskId, task, series)}
+      <section class="monitoring-calibration">
+        <div><span class="eyebrow">Calibration</span><h3>확률구간별 실제 급락 빈도</h3></div>
+        <div class="monitoring-calibration__rows">
+          ${(task?.calibrationBuckets ?? [])
+            .map(
+              (bucket) => `
+                <div>
+                  <span>${bucket.label}%</span>
+                  <div class="monitoring-calibration__track"><i style="width:${Math.max(0, Math.min(100, Number(bucket.actualFrequencyPct ?? 0)))}%"></i></div>
+                  <strong>${bucket.actualFrequencyPct == null ? "-" : `${Number(bucket.actualFrequencyPct).toFixed(1)}%`}</strong>
+                  <small>${bucket.observations}개 · 평균예측 ${bucket.averageProbabilityPct == null ? "-" : `${Number(bucket.averageProbabilityPct).toFixed(1)}%`}</small>
+                </div>
+              `
+            )
+            .join("")}
+        </div>
+      </section>
+      <div class="monitoring-case-grid">
+        ${renderMonitoringCases("적중", cases.hitDates, "적중 사례 없음")}
+        ${renderMonitoringCases("오경보", cases.falsePositiveDates, "오경보 없음")}
+        ${renderMonitoringCases("미탐", cases.missedDates, "미탐 없음")}
+      </div>
+      <div class="monitoring-footnote">
+        <strong>운영 판정 기준</strong>
+        <span>최근 3개월 · 급락 3건 이상 · AUC/AP/Brier/기준모델 fold 승률 동시 확인</span>
+        <span>표본 부족은 자동 강등하지 않고, 명확한 성능 저하만 연구용 전환 경고</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderModelMonitoringPage(mlRisk) {
+  const monitoring = mlRisk?.monitoring;
+  if (!monitoring?.tasks) {
+    return `<div class="empty-state"><h3>모델 운영 모니터링 산출 대기</h3><span>다음 full 검증에서 OOS 실제 결과를 연결합니다</span></div>`;
+  }
+  return `
+    <section class="research-page model-monitoring-page">
+      <div class="section-heading research-page__heading">
+        <div><span class="eyebrow">Model Operations</span><h2>ML 최근 성능 검증</h2>${renderNarrativeList(["누적 성능과 최근 성능 분리", "실제 급락·경보·오경보·미탐 확인", "기준모델 대비 성능 저하 감시"], "narrative-list--compact")}</div>
+        <span class="status-pill status-pill--${monitoring.status?.tone ?? "watch"}">${monitoring.status?.label ?? "산출 대기"}</span>
+      </div>
+      <div class="monitoring-task-toggle" role="group" aria-label="급락 모델 선택">
+        ${Object.entries(monitoringTaskView)
+          .map(([taskId, view], index) => `<button type="button" class="${index === 0 ? "is-active" : ""}" data-monitoring-task="${taskId}" aria-pressed="${index === 0 ? "true" : "false"}">${view.label}</button>`)
+          .join("")}
+      </div>
+      ${Object.entries(monitoring.tasks)
+        .map(([taskId, task], index) => renderMonitoringTask(taskId, task, mlRisk.walkForwardSeries, index === 0))
+        .join("")}
+    </section>
+  `;
+}
+
+function nearestDatedRow(rows, targetDate) {
+  return [...(rows ?? [])]
+    .filter((row) => row.date && row.date <= targetDate)
+    .sort((left, right) => left.date.localeCompare(right.date))
+    .at(-1) ?? null;
+}
+
+function replayDates(timeseries, mlRisk) {
+  return [...new Set([
+    ...Object.values(timeseries?.series ?? {}).flat().map((row) => row.date),
+    ...(mlRisk?.series ?? []).map((row) => row.date)
+  ].filter(Boolean))].sort();
+}
+
+function marketReplaySnapshot(market, timeseries, targetDate) {
+  const indicators = (market?.indicators ?? [])
+    .map((indicator) => {
+      const row = nearestDatedRow(timeseries?.series?.[indicator.id], targetDate);
+      const value = Number(row?.value);
+      return Number.isFinite(value) ? { ...indicator, value, observedDate: row.date } : null;
+    })
+    .filter(Boolean);
+  const scored = indicators.filter(isScoredIndicator);
+  const totalWeight = scored.reduce((sum, indicator) => sum + Number(indicator.weight ?? 0), 0);
+  const score = totalWeight
+    ? scored.reduce((sum, indicator) => sum + indicator.value * Number(indicator.weight ?? 0), 0) / totalWeight
+    : null;
+  return { date: targetDate, score, indicators };
+}
+
+function replaySnapshot(data, timeseries, mlRisk, elsRisk, hmmRegime, targetDate) {
+  const market = data.sections.find((section) => section.id === "market");
+  const marketSnapshot = marketReplaySnapshot(market, timeseries, targetDate);
+  const ml = nearestDatedRow(mlRisk?.series, targetDate);
+  const hmm = (hmmRegime?.indices ?? []).map((item) => ({ ...item, point: nearestDatedRow(item.series, targetDate) }));
+  const els = (elsRisk?.indices ?? []).map((item) => ({ ...item, point: nearestDatedRow(item.series, targetDate) }));
+  const elsMap = (elsRisk?.issuanceHedgeMap?.items ?? [])
+    .filter((item) => item.assetType === "index")
+    .map((item) => ({ ...item, point: nearestDatedRow(item.trajectory, targetDate) }));
+  return { targetDate, market: marketSnapshot, ml, hmm, els, elsMap };
+}
+
+function signedDifference(current, previous, suffix = "") {
+  const value = Number(current) - Number(previous);
+  if (!Number.isFinite(value)) return "-";
+  return `${value > 0 ? "+" : ""}${value.toFixed(1)}${suffix}`;
+}
+
+function renderReplayElsMap(current, previous) {
+  const items = current.elsMap.filter((item) => item.point);
+  if (!items.length) {
+    return `<div class="replay-els-map replay-els-map--empty"><strong>ELS 맵 복원 대기</strong><span>선택일의 발행기회·헤지부담 궤적 없음</span></div>`;
+  }
+  const previousById = new Map(previous.elsMap.map((item) => [item.id, item.point]));
+  const colors = ["var(--blue)", "var(--teal)", "var(--amber)", "var(--red)", "var(--green)"];
+  const pointMarkup = items
+    .map((item, index) => {
+      const currentPoint = item.point;
+      const previousPoint = previousById.get(item.id);
+      const currentX = 42 + clampScore(currentPoint.opportunityScore) * 4.7;
+      const currentY = 232 - clampScore(currentPoint.hedgeBurdenScore) * 1.9;
+      if (!previousPoint) {
+        return `<circle cx="${currentX.toFixed(1)}" cy="${currentY.toFixed(1)}" r="6" fill="${colors[index % colors.length]}"></circle><text x="${(currentX + 9).toFixed(1)}" y="${(currentY + 4).toFixed(1)}">${item.label}</text>`;
+      }
+      const previousX = 42 + clampScore(previousPoint.opportunityScore) * 4.7;
+      const previousY = 232 - clampScore(previousPoint.hedgeBurdenScore) * 1.9;
+      return `
+        <line class="replay-els-map__path" x1="${previousX.toFixed(1)}" y1="${previousY.toFixed(1)}" x2="${currentX.toFixed(1)}" y2="${currentY.toFixed(1)}" stroke="${colors[index % colors.length]}"></line>
+        <circle class="replay-els-map__before" cx="${previousX.toFixed(1)}" cy="${previousY.toFixed(1)}" r="5" stroke="${colors[index % colors.length]}"></circle>
+        <circle cx="${currentX.toFixed(1)}" cy="${currentY.toFixed(1)}" r="6" fill="${colors[index % colors.length]}"></circle>
+        <text x="${(currentX + 9).toFixed(1)}" y="${(currentY + 4).toFixed(1)}">${item.label}</text>
+      `;
+    })
+    .join("");
+  return `
+    <section class="replay-els-map">
+      <div><span class="eyebrow">ELS Positioning</span><h3>발행기회·헤지부담 이동</h3><small>빈 원: 기준 · 채운 원: 비교</small></div>
+      <svg viewBox="0 0 540 260" role="img" aria-label="두 날짜의 ELS 기초지수 발행기회와 헤지부담 비교">
+        <rect class="replay-els-map__quadrant" x="42" y="42" width="235" height="95"></rect>
+        <rect class="replay-els-map__quadrant replay-els-map__quadrant--alternate" x="277" y="137" width="235" height="95"></rect>
+        <path class="replay-els-map__axis" d="M 42 42 L 42 232 L 512 232 M 277 42 L 277 232 M 42 137 L 512 137"></path>
+        <text class="replay-els-map__axis-label" x="277" y="254" text-anchor="middle">발행기회 →</text>
+        <text class="replay-els-map__axis-label" x="14" y="137" text-anchor="middle" transform="rotate(-90 14 137)">헤지부담 →</text>
+        ${pointMarkup}
+      </svg>
+    </section>
+  `;
+}
+
+function renderReplayContent(data, timeseries, mlRisk, elsRisk, hmmRegime, currentDate, previousDate) {
+  const current = replaySnapshot(data, timeseries, mlRisk, elsRisk, hmmRegime, currentDate);
+  const previous = replaySnapshot(data, timeseries, mlRisk, elsRisk, hmmRegime, previousDate);
+  const currentWorstEls = [...current.els].filter((item) => item.point).sort((a, b) => Number(b.point.score) - Number(a.point.score))[0];
+  const previousWorstEls = previous.els.find((item) => item.id === currentWorstEls?.id);
+  const currentRiskOff = current.hmm.filter((item) => item.point?.regime === "위험회피").length;
+  const previousRiskOff = previous.hmm.filter((item) => item.point?.regime === "위험회피").length;
+  const previousByIndicator = new Map(previous.market.indicators.map((item) => [item.id, item]));
+  const movers = current.market.indicators
+    .map((item) => ({ ...item, change: item.value - Number(previousByIndicator.get(item.id)?.value) }))
+    .filter((item) => Number.isFinite(item.change))
+    .sort((left, right) => Math.abs(right.change) - Math.abs(left.change))
+    .slice(0, 8);
+  return `
+    <div class="replay-content">
+      <div class="replay-date-banner"><span>기준 ${previousDate}</span><strong>→</strong><span>비교 ${currentDate}</span></div>
+      <section class="replay-summary-grid">
+        <article><span>시장 종합점수</span><strong>${formatScore(current.market.score)}</strong><small>${signedDifference(current.market.score, previous.market.score, "점")}</small></article>
+        <article><span>ML 5D -5%</span><strong>${Number(current.ml?.crash5d5pctProbabilityPct ?? 0).toFixed(1)}%</strong><small>${signedDifference(current.ml?.crash5d5pctProbabilityPct, previous.ml?.crash5d5pctProbabilityPct, "%p")}</small></article>
+        <article><span>ELS 최고 부담</span><strong>${currentWorstEls?.label ?? "-"} ${Number(currentWorstEls?.point?.score ?? 0).toFixed(1)}</strong><small>${signedDifference(currentWorstEls?.point?.score, previousWorstEls?.point?.score, "점")}</small></article>
+        <article><span>HMM 위험회피</span><strong>${currentRiskOff}/${current.hmm.length}</strong><small>${signedDifference(currentRiskOff, previousRiskOff, "개")}</small></article>
+      </section>
+      ${renderReplayElsMap(current, previous)}
+      <section class="replay-comparison-grid">
+        <div class="replay-table">
+          <div><span class="eyebrow">First Movers</span><h3>먼저 움직인 시장지표</h3></div>
+          ${movers.map((item) => `<p><span>${item.name}</span><strong class="${item.change > 0 ? "is-worse" : "is-better"}">${item.change > 0 ? "+" : ""}${item.change.toFixed(1)}점</strong></p>`).join("")}
+        </div>
+        <div class="replay-table">
+          <div><span class="eyebrow">HMM</span><h3>지수별 레짐</h3></div>
+          ${current.hmm.map((item) => {
+            const before = previous.hmm.find((candidate) => candidate.id === item.id);
+            return `<p><span>${item.label}</span><strong>${before?.point?.regime ?? "-"} → ${item.point?.regime ?? "-"}</strong></p>`;
+          }).join("")}
+        </div>
+        <div class="replay-table">
+          <div><span class="eyebrow">ELS</span><h3>기초자산 부담점수</h3></div>
+          ${current.els.map((item) => {
+            const before = previous.els.find((candidate) => candidate.id === item.id);
+            return `<p><span>${item.label}</span><strong>${Number(before?.point?.score ?? 0).toFixed(1)} → ${Number(item.point?.score ?? 0).toFixed(1)}</strong></p>`;
+          }).join("")}
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderReplayPage(data, timeseries, mlRisk, elsRisk, hmmRegime, stressEpisodes) {
+  const dates = replayDates(timeseries, mlRisk);
+  if (!dates.length) return `<div class="empty-state"><h3>재생 가능한 날짜 없음</h3></div>`;
+  const currentDate = dates.at(-1);
+  const previousDate = dates[Math.max(0, dates.length - 6)];
+  const recentEpisodes = (stressEpisodes?.episodes ?? []).filter(
+    (episode) => episode.startDate >= dates[0] && episode.peakDate <= dates.at(-1)
+  );
+  const alertThreshold = Number(mlRisk?.monitoring?.tasks?.crash5d5pct?.cases?.alertThresholdPct ?? 50);
+  const oosRows = (mlRisk?.walkForwardSeries ?? []).filter((row) => row.date >= dates[0] && row.date <= dates.at(-1));
+  const episodePresets = recentEpisodes.map((episode) => {
+    const firstAlert = oosRows.find(
+      (row) =>
+        row.date >= episode.startDate &&
+        row.date <= episode.endDate &&
+        Number(row.crash5d5pctProbabilityPct) >= alertThreshold
+    );
+    return { ...episode, replayStartDate: firstAlert?.date ?? episode.startDate, hasFirstAlert: Boolean(firstAlert) };
+  });
+  const worstForwardRow = [...oosRows]
+    .filter((row) => Number.isFinite(Number(row.forwardMinReturn5dPct)))
+    .sort((left, right) => Number(left.forwardMinReturn5dPct) - Number(right.forwardMinReturn5dPct))[0];
+  return `
+    <section class="research-page replay-page">
+      <div class="section-heading research-page__heading">
+        <div><span class="eyebrow">Historical Replay</span><h2>날짜 재생·비교</h2>${renderNarrativeList(["같은 날짜의 시장지표 · ML · HMM · ELS 동시 복원", "저장된 시계열 범위 안에서 직전 가용값 사용", "미래값 없이 당시 관측 상태 비교"], "narrative-list--compact")}</div>
+        <span class="status-pill status-pill--watch">${dates[0]} ~ ${dates.at(-1)}</span>
+      </div>
+      <div class="replay-controls">
+        <label><span>기준 시점</span><input type="date" data-replay-previous min="${dates[0]}" max="${dates.at(-1)}" value="${previousDate}"></label>
+        <label><span>비교 시점</span><input type="date" data-replay-current min="${dates[0]}" max="${dates.at(-1)}" value="${currentDate}"></label>
+        <button type="button" data-replay-preset="week">현재 vs 1주 전</button>
+        ${worstForwardRow ? `<button type="button" data-replay-start="${worstForwardRow.date}" data-replay-end="${worstForwardRow.resultKnownThroughDate}">급락 직전 vs 이후</button>` : ""}
+      </div>
+      <div class="replay-episodes">
+        <span>스트레스 에피소드</span>
+        ${episodePresets.map((episode) => `<button type="button" data-replay-start="${episode.replayStartDate}" data-replay-end="${episode.peakDate}">${episode.label}${episode.hasFirstAlert ? " · 첫 경보" : ""}</button>`).join("") || `<small>현재 저장구간과 겹치는 에피소드 없음</small>`}
+      </div>
+      <div data-replay-content>${renderReplayContent(data, timeseries, mlRisk, elsRisk, hmmRegime, currentDate, previousDate)}</div>
+    </section>
+  `;
+}
+
 function renderDashboard(
   rawData,
   timeseries,
   mlRisk,
   elsRisk,
   hmmRegime,
-  pipelineStatus
+  pipelineStatus,
+  sourceSnapshot,
+  dataQuality,
+  stressEpisodes
 ) {
   interactiveChartRegistry.clear();
   interactiveChartSequence = 0;
@@ -4408,6 +4928,8 @@ function renderDashboard(
   const summaryState = panelState("summary");
   const sentimentState = panelState("sentiment");
   const operationsState = panelState("operations");
+  const modelMonitoringState = panelState("model-monitoring");
+  const replayState = panelState("replay");
   const elsIssuanceState = panelState("els-issuance");
 
   app.innerHTML = `
@@ -4501,6 +5023,28 @@ function renderDashboard(
         ${renderOperationsPage(pipelineStatus)}
       </section>
       <section
+        class="tab-panel ${modelMonitoringState.className}"
+        id="panel-model-monitoring"
+        data-panel="model-monitoring"
+        role="tabpanel"
+        aria-labelledby="tab-model-monitoring"
+        tabindex="0"
+        ${modelMonitoringState.hidden}
+      >
+        ${renderModelMonitoringPage(mlRisk)}
+      </section>
+      <section
+        class="tab-panel ${replayState.className}"
+        id="panel-replay"
+        data-panel="replay"
+        role="tabpanel"
+        aria-labelledby="tab-replay"
+        tabindex="0"
+        ${replayState.hidden}
+      >
+        ${renderReplayPage(data, timeseries, mlRisk, elsRisk, hmmRegime, stressEpisodes)}
+      </section>
+      <section
         class="tab-panel ${elsIssuanceState.className}"
         id="panel-els-issuance"
         data-panel="els-issuance"
@@ -4512,7 +5056,7 @@ function renderDashboard(
         ${renderElsIssuanceHedgePage(elsRisk)}
       </section>
           ${visibleSections
-            .map((section) => renderSection(section, timeseries, null, null, null, activeTab))
+            .map((section) => renderSection(section, timeseries, null, null, null, activeTab, { snapshot: sourceSnapshot, quality: dataQuality }))
             .join("")}
     </div>
   `;
@@ -4525,6 +5069,67 @@ function renderDashboard(
       button.setAttribute("aria-expanded", expanded ? "false" : "true");
       detail.hidden = expanded;
       button.closest(".observation-journal__item")?.classList.toggle("is-expanded", !expanded);
+    });
+  });
+
+  app.addEventListener("click", (event) => {
+    const button = event.target.closest?.("[data-source-detail-toggle]");
+    if (!button || !app.contains(button)) return;
+    const detail = document.getElementById(button.getAttribute("aria-controls"));
+    if (!detail) return;
+    const expanded = button.getAttribute("aria-expanded") === "true";
+    button.setAttribute("aria-expanded", expanded ? "false" : "true");
+    detail.hidden = expanded;
+    button.textContent = expanded ? "원천·산식" : "상세 닫기";
+  });
+
+  app.querySelectorAll("[data-monitoring-task]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = button.dataset.monitoringTask;
+      app.querySelectorAll("[data-monitoring-task]").forEach((option) => {
+        const selected = option === button;
+        option.classList.toggle("is-active", selected);
+        option.setAttribute("aria-pressed", selected ? "true" : "false");
+      });
+      app.querySelectorAll("[data-monitoring-task-panel]").forEach((panel) => {
+        const selected = panel.dataset.monitoringTaskPanel === target;
+        panel.classList.toggle("is-active", selected);
+        panel.hidden = !selected;
+      });
+      initializeInteractiveCharts(app.querySelector(`[data-monitoring-task-panel="${target}"]`) ?? app);
+    });
+  });
+
+  const replayPrevious = app.querySelector("[data-replay-previous]");
+  const replayCurrent = app.querySelector("[data-replay-current]");
+  const replayContent = app.querySelector("[data-replay-content]");
+  const updateReplay = () => {
+    if (!replayPrevious || !replayCurrent || !replayContent) return;
+    replayContent.innerHTML = renderReplayContent(
+      data,
+      timeseries,
+      mlRisk,
+      elsRisk,
+      hmmRegime,
+      replayCurrent.value,
+      replayPrevious.value
+    );
+  };
+  replayPrevious?.addEventListener("change", updateReplay);
+  replayCurrent?.addEventListener("change", updateReplay);
+  app.querySelector('[data-replay-preset="week"]')?.addEventListener("click", () => {
+    const dates = replayDates(timeseries, mlRisk);
+    if (!dates.length || !replayPrevious || !replayCurrent) return;
+    replayCurrent.value = dates.at(-1);
+    replayPrevious.value = dates[Math.max(0, dates.length - 6)];
+    updateReplay();
+  });
+  app.querySelectorAll("[data-replay-start][data-replay-end]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!replayPrevious || !replayCurrent) return;
+      replayPrevious.value = button.dataset.replayStart;
+      replayCurrent.value = button.dataset.replayEnd;
+      updateReplay();
     });
   });
 
@@ -4631,7 +5236,7 @@ function renderDashboard(
       (indicator) => !state.group || indicator.group === state.group
     );
     grid.innerHTML = indicators
-      .map((indicator) => renderIndicator(indicator, section.model.thresholds, timeseries))
+      .map((indicator) => renderIndicator(indicator, section.model.thresholds, timeseries, { snapshot: sourceSnapshot, quality: dataQuality, model: section.model }))
       .join("");
 
     const definition = state.group ? riskGroupDefinitions[state.group] : null;
@@ -4759,16 +5364,22 @@ Promise.all([
   loadJson("./data/ml-risk-signal.json"),
   loadJson("./data/els-index-risk.json"),
   loadJson("./data/hmm-regime.json"),
-  loadJson("./data/pipeline-status.json")
+  loadJson("./data/pipeline-status.json"),
+  loadJson("./data/market-risk-snapshot.json"),
+  loadJson("./data/data-quality.json"),
+  loadJson("./data/market-stress-episodes.json")
 ])
-  .then(([dashboard, timeseries, mlRisk, elsRisk, hmmRegime, pipelineStatus]) =>
+  .then(([dashboard, timeseries, mlRisk, elsRisk, hmmRegime, pipelineStatus, sourceSnapshot, dataQuality, stressEpisodes]) =>
     renderDashboard(
       dashboard,
       timeseries,
       mlRisk,
       elsRisk,
       hmmRegime,
-      pipelineStatus
+      pipelineStatus,
+      sourceSnapshot,
+      dataQuality,
+      stressEpisodes
     )
   )
   .catch((error) => {
