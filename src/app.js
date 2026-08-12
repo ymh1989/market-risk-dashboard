@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260813-1";
+const ASSET_VERSION = "20260813-2";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -156,6 +156,11 @@ const formatSignedPct = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
   const number = Number(value);
   return `${number > 0 ? "+" : ""}${number.toFixed(2)}%`;
+};
+const formatSignedThousands = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
+  const number = Number(value) / 1000;
+  return `${number > 0 ? "+" : ""}${formatNumber(number, 1)}천 종목`;
 };
 const formatPointDelta = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
@@ -3853,9 +3858,9 @@ function renderBreadthSummaryPanel(breadthData) {
         <p>상승 ${formatNumber(latest.up)} · 하락 ${formatNumber(latest.down)} · 보합 ${formatNumber(latest.flat)}</p>
       </div>
       <dl>
-        <div><dt>일간 확산도</dt><dd>${formatSignedPct(latest.breadthPct)}</dd></div>
-        <div><dt>20일 평균</dt><dd>${formatSignedPct(latest.breadthMa20Pct)}</dd></div>
-        <div><dt>AD vs 20일선</dt><dd>${latest.adDistance20 >= 0 ? "+" : ""}${formatNumber(latest.adDistance20)}</dd></div>
+        <div><dt>일간 확산도</dt><dd>${formatSignedPct(latest.breadthPct)}</dd><small>-100~+100%</small></div>
+        <div><dt>20일 평균</dt><dd>${formatSignedPct(latest.breadthMa20Pct)}</dd><small>확산도 평균</small></div>
+        <div><dt>AD-20일선</dt><dd>${formatSignedThousands(latest.adDistance20)}</dd><small>누적 순확산</small></div>
       </dl>
       <button type="button" data-open-tab="market-breadth">내부 흐름 보기</button>
     </section>
@@ -3875,14 +3880,14 @@ function renderBreadthPriceChart(breadthData) {
         format: (value) => formatNumber(value, 2)
       },
       {
-        label: "Breadth",
+        label: "일간 확산도",
         points,
         valueKey: "breadthPct",
         color: "var(--teal)",
         format: (value) => formatSignedPct(value)
       },
       {
-        label: "Breadth 20D",
+        label: "확산도 20일 평균",
         points,
         valueKey: "breadthMa20Pct",
         color: "var(--amber)",
@@ -3917,7 +3922,7 @@ function renderBreadthPriceChart(breadthData) {
   return `
     <article class="breadth-chart-card">
       <header>
-        <div><span class="eyebrow">Price & Participation</span><h3>KOSPI와 상승 참여도</h3></div>
+        <div><span class="eyebrow">Price & Participation</span><h3>KOSPI와 일간 확산도 (%)</h3></div>
         <div class="breadth-chart-legend"><span><i class="is-kospi"></i>KOSPI</span><span><i class="is-breadth"></i>일간 확산</span><span><i class="is-ma"></i>20일 평균</span></div>
       </header>
       <div class="breadth-chart" data-timeseries-chart="${chartId}">
@@ -3932,40 +3937,45 @@ function renderBreadthPriceChart(breadthData) {
 function renderBreadthAdChart(breadthData) {
   const points = breadthData?.series ?? [];
   if (points.length < 2) return "";
+  const chartPoints = points.map((point) => ({
+    ...point,
+    adLineThousands: point.adLine == null ? null : Number(point.adLine) / 1000,
+    adMa20Thousands: point.adMa20 == null ? null : Number(point.adMa20) / 1000
+  }));
   const chartId = registerInteractiveChart({
     series: [
       {
-        label: "AD Line",
-        points,
-        valueKey: "adLine",
+        label: "AD 누적선",
+        points: chartPoints,
+        valueKey: "adLineThousands",
         color: "var(--green)",
-        format: (value) => formatNumber(value)
+        format: (value) => `${value > 0 ? "+" : ""}${formatNumber(value, 1)}천 종목`
       },
       {
-        label: "AD 20D",
-        points,
-        valueKey: "adMa20",
+        label: "AD 20일선",
+        points: chartPoints,
+        valueKey: "adMa20Thousands",
         color: "var(--amber)",
-        format: (value) => formatNumber(value)
+        format: (value) => `${value > 0 ? "+" : ""}${formatNumber(value, 1)}천 종목`
       }
     ]
   });
   const layers = chartRangeOptions
     .map((range) => {
-      const domain = chartRangeDomain([points], range.id);
-      const visible = pointsWithinDomain(points, domain, "adLine");
+      const domain = chartRangeDomain([chartPoints], range.id);
+      const visible = pointsWithinDomain(chartPoints, domain, "adLineThousands");
       const combined = [
-        ...visible.filter((point) => point.adLine != null).map((point) => ({ value: point.adLine })),
-        ...visible.filter((point) => point.adMa20 != null).map((point) => ({ value: point.adMa20 }))
+        ...visible.filter((point) => point.adLineThousands != null).map((point) => ({ value: point.adLineThousands })),
+        ...visible.filter((point) => point.adMa20Thousands != null).map((point) => ({ value: point.adMa20Thousands }))
       ];
       const valueDomain = numericChartDomain(combined, "value", 0.12);
       const axis = renderMonthAxisFromDomain(domain, 760, 18, 190, 207);
       return `
-        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 760 210" role="img" aria-label="Advance Decline Line과 20일 이동평균">
+        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 760 210" role="img" aria-label="천 종목 단위 Advance Decline 누적선과 20일 이동평균">
           ${axis.grid}
           <path class="breadth-chart__grid" d="M 0 61 L 760 61 M 0 104 L 760 104 M 0 147 L 760 147 M 0 190 L 760 190"></path>
-          <path class="breadth-chart__ad-ma" d="${datedValuePath(points, "adMa20", domain, valueDomain, 760, 18, 190)}"></path>
-          <path class="breadth-chart__ad" d="${datedValuePath(points, "adLine", domain, valueDomain, 760, 18, 190)}"></path>
+          <path class="breadth-chart__ad-ma" d="${datedValuePath(chartPoints, "adMa20Thousands", domain, valueDomain, 760, 18, 190)}"></path>
+          <path class="breadth-chart__ad" d="${datedValuePath(chartPoints, "adLineThousands", domain, valueDomain, 760, 18, 190)}"></path>
           ${renderChartCursorLine(18, 190)}
           ${axis.labels}
         </svg>
@@ -3976,15 +3986,15 @@ function renderBreadthAdChart(breadthData) {
   return `
     <article class="breadth-chart-card">
       <header>
-        <div><span class="eyebrow">Cumulative Breadth</span><h3>AD Line과 20일선</h3></div>
-        <div class="breadth-chart-legend"><span><i class="is-ad"></i>AD Line</span><span><i class="is-ma"></i>20일선</span></div>
+        <div><span class="eyebrow">Cumulative Breadth</span><h3>AD 누적선 (천 종목)</h3></div>
+        <div class="breadth-chart-legend"><span><i class="is-ad"></i>AD 누적선</span><span><i class="is-ma"></i>20일선</span></div>
       </header>
       <div class="breadth-chart" data-timeseries-chart="${chartId}">
         ${renderChartRangeControls(chartId)}
         ${layers}
         ${renderChartTooltip()}
       </div>
-      <p class="breadth-chart-card__note">절대값은 ${breadthData.period.adLineBaseDate} 시작점에 종속 · 같은 시계열 안의 방향과 20일선 비교</p>
+      <p class="breadth-chart-card__note">${breadthData.period.adLineBaseDate}부터 일별 상승-하락 종목 수 누계 · 화면은 1,000종목 단위 · 방향과 20일선 비교 중심</p>
     </article>
   `;
 }
@@ -4021,11 +4031,18 @@ function renderMarketBreadthPage(breadthData) {
       </div>
 
       <div class="breadth-metrics">
-        <article><span>일간 확산도</span><strong>${formatSignedPct(latest.breadthPct)}</strong><small>20일 평균 ${formatSignedPct(latest.breadthMa20Pct)}</small></article>
+        <article><span>일간 확산도 (%)</span><strong>${formatSignedPct(latest.breadthPct)}</strong><small>범위 -100~+100 · 0=균형</small></article>
         <article><span>상승 / 하락</span><strong>${formatNumber(latest.up)} / ${formatNumber(latest.down)}</strong><small>보합 ${formatNumber(latest.flat)} · 전체 ${formatNumber(latest.total)}</small></article>
-        <article><span>Net Breadth</span><strong>${latest.netBreadth > 0 ? "+" : ""}${formatNumber(latest.netBreadth)}</strong><small>AD Ratio ${formatNumber(latest.adRatio, 2)}</small></article>
-        <article><span>AD Line vs 20D</span><strong>${latest.adDistance20 >= 0 ? "+" : ""}${formatNumber(latest.adDistance20)}</strong><small>AD ${formatNumber(latest.adLine)} · 20D ${formatNumber(latest.adMa20)}</small></article>
+        <article><span>당일 순확산 (Net)</span><strong>${latest.netBreadth > 0 ? "+" : ""}${formatNumber(latest.netBreadth)}종목</strong><small>상승-하락 · 비율 ${formatNumber(latest.adRatio, 2)}</small></article>
+        <article><span>AD 누적선-20일선</span><strong>${formatSignedThousands(latest.adDistance20)}</strong><small>AD ${formatSignedThousands(latest.adLine)} · 20D ${formatSignedThousands(latest.adMa20)}</small></article>
       </div>
+
+      <section class="breadth-unit-guide" aria-label="시장 내부강도 단위 읽는 법">
+        <strong>단위 읽는 법</strong>
+        <div><span>일간 확산도</span><p>-100~+100% · 0은 상승·하락 균형</p></div>
+        <div><span>당일 순확산</span><p>상승 종목 수 - 하락 종목 수</p></div>
+        <div><span>AD 누적선</span><p>순확산 누계 · 화면은 천 종목 단위</p></div>
+      </section>
 
       <div class="breadth-reading">
         ${renderNarrativeList(latest.interpretation, "narrative-list--compact")}
