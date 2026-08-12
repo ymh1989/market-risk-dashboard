@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260811-1";
+const ASSET_VERSION = "20260813-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -496,11 +496,20 @@ function dashboardTabsWithSentiment(tabs) {
   return [...tabs.slice(0, insertAt), sentimentTab, ...tabs.slice(insertAt)];
 }
 
-function dashboardTabsWithOperations(tabs) {
+function dashboardTabsWithBreadth(tabs) {
   const withSentiment = dashboardTabsWithSentiment(tabs);
-  if (withSentiment.some((tab) => tab.id === "operations")) return withSentiment;
+  if (withSentiment.some((tab) => tab.id === "market-breadth")) return withSentiment;
   const sentimentIndex = withSentiment.findIndex((tab) => tab.id === "sentiment");
   const insertAt = sentimentIndex >= 0 ? sentimentIndex + 1 : 1;
+  const breadthTab = { id: "market-breadth", label: "시장 내부강도", enabled: true };
+  return [...withSentiment.slice(0, insertAt), breadthTab, ...withSentiment.slice(insertAt)];
+}
+
+function dashboardTabsWithOperations(tabs) {
+  const withSentiment = dashboardTabsWithBreadth(tabs);
+  if (withSentiment.some((tab) => tab.id === "operations")) return withSentiment;
+  const breadthIndex = withSentiment.findIndex((tab) => tab.id === "market-breadth");
+  const insertAt = breadthIndex >= 0 ? breadthIndex + 1 : 2;
   const operationsTab = { id: "operations", label: "운영현황", enabled: true };
   return [...withSentiment.slice(0, insertAt), operationsTab, ...withSentiment.slice(insertAt)];
 }
@@ -1358,7 +1367,11 @@ function pointsWithinDomain(points, domain, valueKey = null) {
   return (points ?? [])
     .filter((point) => {
       const time = dateMs(point.date);
-      const validValue = valueKey ? Number.isFinite(Number(point[valueKey])) : true;
+      const validValue = valueKey
+        ? point[valueKey] !== null &&
+          point[valueKey] !== undefined &&
+          Number.isFinite(Number(point[valueKey]))
+        : true;
       return validValue && Number.isFinite(time) && time >= domain.start && time <= domain.end;
     })
     .sort((left, right) => dateMs(left.date) - dateMs(right.date));
@@ -3827,13 +3840,237 @@ function renderScoreAttribution(market, timeseries) {
   `;
 }
 
-function renderSummary(data, timeseries, mlRisk, elsRisk, hmmRegime) {
+function renderBreadthSummaryPanel(breadthData) {
+  const latest = breadthData?.latest;
+  if (!latest) return "";
+
+  const state = latest.state ?? { label: "확인 필요", tone: "watch" };
+  return `
+    <section class="breadth-summary breadth-summary--${state.tone}">
+      <div>
+        <span class="eyebrow">Market Breadth · KRX EOD ${latest.date}</span>
+        <h2>시장 내부강도 <strong>${state.label}</strong></h2>
+        <p>상승 ${formatNumber(latest.up)} · 하락 ${formatNumber(latest.down)} · 보합 ${formatNumber(latest.flat)}</p>
+      </div>
+      <dl>
+        <div><dt>일간 확산도</dt><dd>${formatSignedPct(latest.breadthPct)}</dd></div>
+        <div><dt>20일 평균</dt><dd>${formatSignedPct(latest.breadthMa20Pct)}</dd></div>
+        <div><dt>AD vs 20일선</dt><dd>${latest.adDistance20 >= 0 ? "+" : ""}${formatNumber(latest.adDistance20)}</dd></div>
+      </dl>
+      <button type="button" data-open-tab="market-breadth">내부 흐름 보기</button>
+    </section>
+  `;
+}
+
+function renderBreadthPriceChart(breadthData) {
+  const points = breadthData?.series ?? [];
+  if (points.length < 2) return "";
+  const chartId = registerInteractiveChart({
+    series: [
+      {
+        label: "KOSPI",
+        points,
+        valueKey: "kospiClose",
+        color: "var(--blue)",
+        format: (value) => formatNumber(value, 2)
+      },
+      {
+        label: "Breadth",
+        points,
+        valueKey: "breadthPct",
+        color: "var(--teal)",
+        format: (value) => formatSignedPct(value)
+      },
+      {
+        label: "Breadth 20D",
+        points,
+        valueKey: "breadthMa20Pct",
+        color: "var(--amber)",
+        format: (value) => formatSignedPct(value)
+      }
+    ]
+  });
+  const layers = chartRangeOptions
+    .map((range) => {
+      const domain = chartRangeDomain([points], range.id);
+      const visible = pointsWithinDomain(points, domain, "kospiClose");
+      const kospiDomain = numericChartDomain(visible, "kospiClose", 0.1);
+      const breadthDomain = { min: -100, max: 100 };
+      const axis = renderMonthAxisFromDomain(domain, 760, 18, 190, 207);
+      return `
+        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 760 210" role="img" aria-label="KOSPI와 시장 확산도 비교">
+          ${axis.grid}
+          <path class="breadth-chart__grid" d="M 0 90 L 760 90 M 0 115 L 760 115 M 0 152.5 L 760 152.5 M 0 190 L 760 190"></path>
+          <path class="breadth-chart__kospi" d="${datedValuePath(points, "kospiClose", domain, kospiDomain, 760, 18, 90)}"></path>
+          <path class="breadth-chart__ma" d="${datedValuePath(points, "breadthMa20Pct", domain, breadthDomain, 760, 115, 190)}"></path>
+          <path class="breadth-chart__daily" d="${datedValuePath(points, "breadthPct", domain, breadthDomain, 760, 115, 190)}"></path>
+          <text class="breadth-chart__label" x="7" y="30">KOSPI</text>
+          <text class="breadth-chart__label" x="7" y="128">확산도</text>
+          <text class="breadth-chart__zero" x="753" y="148" text-anchor="end">0</text>
+          ${renderChartCursorLine(18, 190)}
+          ${axis.labels}
+        </svg>
+      `;
+    })
+    .join("");
+
+  return `
+    <article class="breadth-chart-card">
+      <header>
+        <div><span class="eyebrow">Price & Participation</span><h3>KOSPI와 상승 참여도</h3></div>
+        <div class="breadth-chart-legend"><span><i class="is-kospi"></i>KOSPI</span><span><i class="is-breadth"></i>일간 확산</span><span><i class="is-ma"></i>20일 평균</span></div>
+      </header>
+      <div class="breadth-chart" data-timeseries-chart="${chartId}">
+        ${renderChartRangeControls(chartId)}
+        ${layers}
+        ${renderChartTooltip()}
+      </div>
+    </article>
+  `;
+}
+
+function renderBreadthAdChart(breadthData) {
+  const points = breadthData?.series ?? [];
+  if (points.length < 2) return "";
+  const chartId = registerInteractiveChart({
+    series: [
+      {
+        label: "AD Line",
+        points,
+        valueKey: "adLine",
+        color: "var(--green)",
+        format: (value) => formatNumber(value)
+      },
+      {
+        label: "AD 20D",
+        points,
+        valueKey: "adMa20",
+        color: "var(--amber)",
+        format: (value) => formatNumber(value)
+      }
+    ]
+  });
+  const layers = chartRangeOptions
+    .map((range) => {
+      const domain = chartRangeDomain([points], range.id);
+      const visible = pointsWithinDomain(points, domain, "adLine");
+      const combined = [
+        ...visible.filter((point) => point.adLine != null).map((point) => ({ value: point.adLine })),
+        ...visible.filter((point) => point.adMa20 != null).map((point) => ({ value: point.adMa20 }))
+      ];
+      const valueDomain = numericChartDomain(combined, "value", 0.12);
+      const axis = renderMonthAxisFromDomain(domain, 760, 18, 190, 207);
+      return `
+        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 760 210" role="img" aria-label="Advance Decline Line과 20일 이동평균">
+          ${axis.grid}
+          <path class="breadth-chart__grid" d="M 0 61 L 760 61 M 0 104 L 760 104 M 0 147 L 760 147 M 0 190 L 760 190"></path>
+          <path class="breadth-chart__ad-ma" d="${datedValuePath(points, "adMa20", domain, valueDomain, 760, 18, 190)}"></path>
+          <path class="breadth-chart__ad" d="${datedValuePath(points, "adLine", domain, valueDomain, 760, 18, 190)}"></path>
+          ${renderChartCursorLine(18, 190)}
+          ${axis.labels}
+        </svg>
+      `;
+    })
+    .join("");
+
+  return `
+    <article class="breadth-chart-card">
+      <header>
+        <div><span class="eyebrow">Cumulative Breadth</span><h3>AD Line과 20일선</h3></div>
+        <div class="breadth-chart-legend"><span><i class="is-ad"></i>AD Line</span><span><i class="is-ma"></i>20일선</span></div>
+      </header>
+      <div class="breadth-chart" data-timeseries-chart="${chartId}">
+        ${renderChartRangeControls(chartId)}
+        ${layers}
+        ${renderChartTooltip()}
+      </div>
+      <p class="breadth-chart-card__note">절대값은 ${breadthData.period.adLineBaseDate} 시작점에 종속 · 같은 시계열 안의 방향과 20일선 비교</p>
+    </article>
+  `;
+}
+
+function renderMarketBreadthPage(breadthData) {
+  if (!breadthData?.latest || !breadthData?.series?.length) {
+    return `
+      <section class="breadth-page">
+        <div class="empty-state">
+          <h3>시장 내부강도 데이터 준비중</h3>
+          ${renderNarrativeList(["KRX 로그인 기반 EOD 집계", "다음 운영 갱신에서 데이터 생성"], "narrative-list--compact")}
+        </div>
+      </section>
+    `;
+  }
+
+  const latest = breadthData.latest;
+  const quality = breadthData.quality ?? {};
+  const state = latest.state ?? { label: "확인 필요", tone: "watch" };
+  const qualityLabel = quality.status === "ok" ? "정상" : quality.status === "warning" ? "주의" : "확인 필요";
+  return `
+    <section class="breadth-page">
+      <div class="section-heading breadth-page__heading">
+        <div>
+          <span class="eyebrow">KOSPI Market Breadth</span>
+          <h2>시장 내부강도</h2>
+          ${renderNarrativeList(["지수 방향과 상승·하락 종목 확산을 함께 확인", "장 마감 EOD 기준 · 지수만으로 보이지 않는 내부 체력 관찰"], "narrative-list--compact")}
+        </div>
+        <div class="breadth-state breadth-state--${state.tone}">
+          <span>현재 판독</span>
+          <strong>${state.label}</strong>
+          <small>${latest.date} · KRX EOD</small>
+        </div>
+      </div>
+
+      <div class="breadth-metrics">
+        <article><span>일간 확산도</span><strong>${formatSignedPct(latest.breadthPct)}</strong><small>20일 평균 ${formatSignedPct(latest.breadthMa20Pct)}</small></article>
+        <article><span>상승 / 하락</span><strong>${formatNumber(latest.up)} / ${formatNumber(latest.down)}</strong><small>보합 ${formatNumber(latest.flat)} · 전체 ${formatNumber(latest.total)}</small></article>
+        <article><span>Net Breadth</span><strong>${latest.netBreadth > 0 ? "+" : ""}${formatNumber(latest.netBreadth)}</strong><small>AD Ratio ${formatNumber(latest.adRatio, 2)}</small></article>
+        <article><span>AD Line vs 20D</span><strong>${latest.adDistance20 >= 0 ? "+" : ""}${formatNumber(latest.adDistance20)}</strong><small>AD ${formatNumber(latest.adLine)} · 20D ${formatNumber(latest.adMa20)}</small></article>
+      </div>
+
+      <div class="breadth-reading">
+        ${renderNarrativeList(latest.interpretation, "narrative-list--compact")}
+      </div>
+
+      <div class="breadth-chart-grid">
+        ${renderBreadthPriceChart(breadthData)}
+        ${renderBreadthAdChart(breadthData)}
+      </div>
+
+      <section class="breadth-trust">
+        <div>
+          <span class="eyebrow">Data Quality</span>
+          <h3>운영 신뢰도 <em class="status-pill status-pill--${quality.status === "ok" ? "good" : "watch"}">${qualityLabel}</em></h3>
+          <dl>
+            <div><dt>관측기간</dt><dd>${breadthData.period.startDate} ~ ${breadthData.period.endDate}</dd></div>
+            <div><dt>거래일</dt><dd>${formatNumber(breadthData.period.observations)}개</dd></div>
+            <div><dt>최근 종목 수</dt><dd>${formatNumber(quality.minRecentTotal)}~${formatNumber(quality.maxRecentTotal)}개</dd></div>
+            <div><dt>수집 실패</dt><dd>${formatNumber(quality.failedDates?.length ?? 0)}일</dd></div>
+          </dl>
+        </div>
+        <div>
+          <span class="eyebrow">Source & Limits</span>
+          <h3>KRX 원천 · pykrx</h3>
+          ${renderNarrativeList([
+            "stock.get_market_ohlcv(date, market=KOSPI)",
+            "우선주·SPAC·REIT 포함 가능 · ETF·ETN 제외",
+            "화면 집계와 종목 분류·기준시각에 따라 차이 가능",
+            "VKOSPI 미결합 · risk-on·panic 확정 판정 보류"
+          ], "narrative-list--compact")}
+        </div>
+      </section>
+    </section>
+  `;
+}
+
+
+function renderSummary(data, timeseries, mlRisk, elsRisk, hmmRegime, breadthData) {
   const market = data.sections.find((section) => section.id === "market");
   market.asOf = data.metadata.asOf;
 
   return `
     ${renderDecisionCockpit(data, timeseries, mlRisk, hmmRegime)}
     ${renderScoreAttribution(market, timeseries)}
+    ${renderBreadthSummaryPanel(breadthData)}
     ${renderMlRiskSignalPanel(mlRisk, market, elsRisk)}
     ${renderElsIndexRiskPanel(elsRisk)}
     ${renderHmmRegimePanel(hmmRegime)}
@@ -4900,7 +5137,8 @@ function renderDashboard(
   pipelineStatus,
   sourceSnapshot,
   dataQuality,
-  stressEpisodes
+  stressEpisodes,
+  breadthData
 ) {
   interactiveChartRegistry.clear();
   interactiveChartSequence = 0;
@@ -4927,6 +5165,7 @@ function renderDashboard(
   });
   const summaryState = panelState("summary");
   const sentimentState = panelState("sentiment");
+  const breadthState = panelState("market-breadth");
   const operationsState = panelState("operations");
   const modelMonitoringState = panelState("model-monitoring");
   const replayState = panelState("replay");
@@ -4998,7 +5237,7 @@ function renderDashboard(
         tabindex="0"
         ${summaryState.hidden}
       >
-        ${renderSummary(data, timeseries, mlRisk, elsRisk, hmmRegime)}
+        ${renderSummary(data, timeseries, mlRisk, elsRisk, hmmRegime, breadthData)}
       </section>
       <section
         class="tab-panel ${sentimentState.className}"
@@ -5010,6 +5249,17 @@ function renderDashboard(
         ${sentimentState.hidden}
       >
         ${renderSentimentPage(data, timeseries, mlRisk, elsRisk, hmmRegime)}
+      </section>
+      <section
+        class="tab-panel ${breadthState.className}"
+        id="panel-market-breadth"
+        data-panel="market-breadth"
+        role="tabpanel"
+        aria-labelledby="tab-market-breadth"
+        tabindex="0"
+        ${breadthState.hidden}
+      >
+        ${renderMarketBreadthPage(breadthData)}
       </section>
       <section
         class="tab-panel ${operationsState.className}"
@@ -5367,9 +5617,10 @@ Promise.all([
   loadJson("./data/pipeline-status.json"),
   loadJson("./data/market-risk-snapshot.json"),
   loadJson("./data/data-quality.json"),
-  loadJson("./data/market-stress-episodes.json")
+  loadJson("./data/market-stress-episodes.json"),
+  loadJson("./data/kospi-breadth.json")
 ])
-  .then(([dashboard, timeseries, mlRisk, elsRisk, hmmRegime, pipelineStatus, sourceSnapshot, dataQuality, stressEpisodes]) =>
+  .then(([dashboard, timeseries, mlRisk, elsRisk, hmmRegime, pipelineStatus, sourceSnapshot, dataQuality, stressEpisodes, breadthData]) =>
     renderDashboard(
       dashboard,
       timeseries,
@@ -5379,7 +5630,8 @@ Promise.all([
       pipelineStatus,
       sourceSnapshot,
       dataQuality,
-      stressEpisodes
+      stressEpisodes,
+      breadthData
     )
   )
   .catch((error) => {

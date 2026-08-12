@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import logging
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -10,6 +12,7 @@ from .data_loader import load_frame, make_sample_market_data, save_frame
 from .ensemble_lab import EnsembleLabConfig, run_ensemble_lab, write_ensemble_lab_outputs
 from .feature_engineering import build_features
 from .market_data_fetcher import fetch_and_save_market_data
+from .market_breadth import plot_breadth_dashboard, update_breadth_data
 from .models import load_bundle, predict_bundle, save_bundle, train_bundle
 from .reporting import write_backtest_report
 from .scoring import add_els_scores, score_bucket_analysis
@@ -55,6 +58,57 @@ def cmd_fetch_market_data(args: argparse.Namespace) -> None:
     print(f"Wrote source metadata: {args.metadata}")
     if optional_warnings:
         print(f"Optional source warnings: {len(optional_warnings)}")
+
+
+def cmd_update_kospi_breadth(args: argparse.Namespace) -> None:
+    env_path = Path(__file__).resolve().parents[2] / ".env"
+    if env_path.exists():
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper()),
+        format="%(asctime)s %(levelname)s %(message)s",
+    )
+    try:
+        frame = update_breadth_data(
+            args.output,
+            start_date=args.start,
+            end_date=args.end,
+            vkospi=args.vkospi,
+            raw_output_dir=args.raw_dir,
+            metadata_path=args.metadata,
+            refresh_from_start=args.refresh_from_start,
+            sleep_seconds=args.sleep,
+            retries=args.retries,
+        )
+    except (RuntimeError, ValueError) as error:
+        raise SystemExit(str(error)) from None
+
+    figure_paths = [] if args.skip_plots else plot_breadth_dashboard(frame, args.figures)
+    columns = [
+        "date",
+        "kospi_close",
+        "up",
+        "down",
+        "flat",
+        "total",
+        "breadth_pct",
+        "AD_line",
+    ]
+    if "vkospi" in frame.columns:
+        columns.append("vkospi")
+    print(f"KOSPI breadth 저장: {args.output} ({len(frame)}개 거래일)")
+    print(f"품질 판정: {frame.attrs.get('quality', {}).get('status', '확인 필요')}")
+    print(frame[columns].tail(10).to_string(index=False))
+    for path in figure_paths:
+        print(f"차트 저장: {path}")
 
 
 def cmd_build_features(args: argparse.Namespace) -> None:
@@ -373,6 +427,25 @@ def build_parser() -> argparse.ArgumentParser:
     fetch.add_argument("--end", default=None, help="YYYY-MM-DD. --start와 함께 사용")
     fetch.add_argument("--min-rows", type=int, default=1500)
     fetch.set_defaults(func=cmd_fetch_market_data)
+
+    breadth = subparsers.add_parser("update-kospi-breadth")
+    breadth.add_argument("--start", default=None, help="최초 조회 시작일 YYYY-MM-DD")
+    breadth.add_argument("--end", default=None, help="조회 종료일 YYYY-MM-DD, 기본값 오늘")
+    breadth.add_argument("--output", default="data/processed/kospi_breadth.parquet")
+    breadth.add_argument("--vkospi", default=None, help="선택 VKOSPI CSV 또는 Parquet")
+    breadth.add_argument("--raw-dir", default=None, help="선택 일별 종목 원자료 Parquet 디렉터리")
+    breadth.add_argument("--metadata", default="data/quality/kospi_breadth_update.json")
+    breadth.add_argument("--figures", default="reports/figures/kospi_breadth")
+    breadth.add_argument("--sleep", type=float, default=0.4, help="거래일 조회 사이 대기 초")
+    breadth.add_argument("--retries", type=int, default=3)
+    breadth.add_argument("--skip-plots", action="store_true")
+    breadth.add_argument(
+        "--refresh-from-start",
+        action="store_true",
+        help="지정 시작일부터 다시 조회해 덮어쓰기",
+    )
+    breadth.add_argument("--log-level", choices=["DEBUG", "INFO", "WARNING"], default="INFO")
+    breadth.set_defaults(func=cmd_update_kospi_breadth)
 
     sample = subparsers.add_parser("make-sample-data")
     sample.add_argument("--output", default="data/raw/market_data.csv")

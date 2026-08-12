@@ -10,6 +10,7 @@ MARKET_INDEX_CACHE_FILE = ROOT / "data" / "naver-marketindex-history.json"
 BACKTEST_FILE = ROOT / "data" / "market-risk-backtest.json"
 STRESS_FILE = ROOT / "data" / "market-stress-episodes.json"
 ELS_FILE = ROOT / "data" / "els-index-risk.json"
+BREADTH_FILE = ROOT / "data" / "kospi-breadth.json"
 STYLES_FILE = ROOT / "src" / "styles.css"
 APP_FILE = ROOT / "src" / "app.js"
 TARGETS_FILE = ROOT / "src" / "kospi_risk" / "targets.py"
@@ -257,8 +258,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260811-1" in html
-    assert "app.js?v=20260811-1" in html
+    assert "styles.css?v=20260813-1" in html
+    assert "app.js?v=20260813-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -512,6 +513,31 @@ def test_ml_crash_chart_distinguishes_model_target_and_els_reference():
     assert ".legend-kospi200" in styles
 
 
+def test_market_breadth_dashboard_contract():
+    breadth = json.loads(BREADTH_FILE.read_text(encoding="utf-8"))
+    app_source = APP_FILE.read_text(encoding="utf-8")
+    styles = STYLES_FILE.read_text(encoding="utf-8")
+
+    latest = breadth["latest"]
+    quality = breadth["quality"]
+    assert breadth["source"]["provider"] == "KRX"
+    assert breadth["source"]["frequency"] == "EOD"
+    assert breadth["source"]["vkospiStatus"] in {"merged", "not_available"}
+    assert breadth["period"]["observations"] >= 500
+    assert latest["up"] + latest["down"] + latest["flat"] == latest["total"]
+    assert quality["status"] in {"ok", "warning"}
+    assert len(breadth["series"]) == breadth["period"]["observations"]
+    assert "function renderMarketBreadthPage" in app_source
+    assert "function renderBreadthPriceChart" in app_source
+    assert "function renderBreadthAdChart" in app_source
+    assert 'id: "market-breadth", label: "시장 내부강도"' in app_source
+    assert 'loadJson("./data/kospi-breadth.json")' in app_source
+    assert "VKOSPI 미결합 · risk-on·panic 확정 판정 보류" in app_source
+    assert "renderChartRangeControls(chartId)" in app_source
+    assert ".breadth-chart__daily" in styles
+    assert ".breadth-chart__ad" in styles
+
+
 def test_weighted_group_timeline_contract():
     app_source = APP_FILE.read_text(encoding="utf-8")
     styles = STYLES_FILE.read_text(encoding="utf-8")
@@ -711,8 +737,10 @@ def test_pipeline_status_contract():
             "fred",
             "ml-input",
             "m7-credit",
+            "krx-breadth",
         }
-    assert len(status["artifacts"]) >= 6
+    assert len(status["artifacts"]) >= 9
+    assert any(item["id"] == "breadth" and item["status"] == "ok" for item in status["artifacts"])
     assert status["quality"]["score"] >= 0
     assert len(status["researchLog"]) == 5
     assert all(item["decision"] and item["operation"] for item in status["researchLog"])

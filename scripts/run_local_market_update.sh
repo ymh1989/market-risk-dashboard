@@ -13,6 +13,7 @@ MONDAY_TIMES="${LOCAL_MARKET_UPDATE_MONDAY_TIMES:-12:30,15:35}"
 SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"
 LABEL="${LOCAL_MARKET_UPDATE_LABEL:-com.marketlab.market-risk-update}"
 PYTHON_BIN="${LOCAL_MARKET_UPDATE_PYTHON:-}"
+KOSPI_BREADTH_PYTHON="${KOSPI_BREADTH_PYTHON:-}"
 PAGES_URL="${LOCAL_MARKET_UPDATE_PAGES_URL:-https://ymh1989.github.io/market-risk-dashboard}"
 PAGES_VERIFY_ATTEMPTS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_ATTEMPTS:-12}"
 PAGES_VERIFY_INTERVAL_SECONDS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_INTERVAL_SECONDS:-10}"
@@ -36,6 +37,7 @@ if [[ -f "$ENV_FILE" ]]; then
   SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-$SATURDAY_TIMES}"
   LABEL="${LOCAL_MARKET_UPDATE_LABEL:-$LABEL}"
   PYTHON_BIN="${LOCAL_MARKET_UPDATE_PYTHON:-$PYTHON_BIN}"
+  KOSPI_BREADTH_PYTHON="${KOSPI_BREADTH_PYTHON:-$KOSPI_BREADTH_PYTHON}"
   PAGES_URL="${LOCAL_MARKET_UPDATE_PAGES_URL:-$PAGES_URL}"
   PAGES_VERIFY_ATTEMPTS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_ATTEMPTS:-$PAGES_VERIFY_ATTEMPTS}"
   PAGES_VERIFY_INTERVAL_SECONDS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_INTERVAL_SECONDS:-$PAGES_VERIFY_INTERVAL_SECONDS}"
@@ -72,6 +74,15 @@ if [[ -z "$PYTHON_BIN" ]]; then
   else
     PYTHON_BIN="$(command -v python3)"
   fi
+fi
+
+if [[ -z "$KOSPI_BREADTH_PYTHON" ]]; then
+  KOSPI_BREADTH_PYTHON="$ROOT/.venv-breadth/bin/python"
+fi
+if [[ ! -x "$KOSPI_BREADTH_PYTHON" ]]; then
+  echo "KOSPI Market Breadth용 Python을 찾지 못했습니다: $KOSPI_BREADTH_PYTHON" >&2
+  echo ".venv-breadth에 pykrx를 설치하거나 KOSPI_BREADTH_PYTHON을 지정하세요." >&2
+  exit 1
 fi
 
 kst_now() {
@@ -243,6 +254,14 @@ seed_local_data_cache() {
       echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 로컬 원시 데이터 캐시를 사용합니다: $filename"
     fi
   done
+  mkdir -p "$WORKTREE/data/processed" "$WORKTREE/data/quality"
+  if [[ -f "$ROOT/data/processed/kospi_breadth.parquet" ]]; then
+    cp -p "$ROOT/data/processed/kospi_breadth.parquet" "$WORKTREE/data/processed/kospi_breadth.parquet"
+    echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 로컬 Market Breadth 캐시를 사용합니다."
+  fi
+  if [[ -f "$ROOT/data/quality/kospi_breadth_update.json" ]]; then
+    cp -p "$ROOT/data/quality/kospi_breadth_update.json" "$WORKTREE/data/quality/kospi_breadth_update.json"
+  fi
 }
 
 persist_local_data_cache() {
@@ -254,9 +273,31 @@ persist_local_data_cache() {
       cp -p "$source_file" "$ROOT/data/raw/$filename"
     fi
   done
+  mkdir -p "$ROOT/data/processed" "$ROOT/data/quality"
+  if [[ -f "$WORKTREE/data/processed/kospi_breadth.parquet" ]]; then
+    cp -p "$WORKTREE/data/processed/kospi_breadth.parquet" "$ROOT/data/processed/kospi_breadth.parquet"
+  fi
+  if [[ -f "$WORKTREE/data/quality/kospi_breadth_update.json" ]]; then
+    cp -p "$WORKTREE/data/quality/kospi_breadth_update.json" "$ROOT/data/quality/kospi_breadth_update.json"
+  fi
 }
 
 seed_local_data_cache
+
+BREADTH_END_DATE="$("$PYTHON_BIN" -c 'from datetime import datetime, timedelta; from zoneinfo import ZoneInfo; now=datetime.now(ZoneInfo("Asia/Seoul")); target=now if now.strftime("%H:%M") >= "15:35" else now-timedelta(days=1); print(target.date().isoformat())')"
+echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] KOSPI Market Breadth를 갱신합니다: EOD $BREADTH_END_DATE까지"
+"$KOSPI_BREADTH_PYTHON" -m kospi_risk.cli update-kospi-breadth \
+  --start 2024-01-01 \
+  --end "$BREADTH_END_DATE" \
+  --output data/processed/kospi_breadth.parquet \
+  --metadata data/quality/kospi_breadth_update.json \
+  --raw-dir "$ROOT/data/raw/kospi_breadth" \
+  --skip-plots
+"$KOSPI_BREADTH_PYTHON" scripts/export_kospi_breadth.py \
+  --input data/processed/kospi_breadth.parquet \
+  --metadata data/quality/kospi_breadth_update.json \
+  --output data/kospi-breadth.json
+persist_local_data_cache
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 갱신 모드: $UPDATE_MODE"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] M7 공개시장 신용스트레스 프록시를 갱신합니다."
@@ -335,6 +376,7 @@ git add \
   data/data-quality.json \
   data/pipeline-status.json \
   data/m7-credit-proxy.json \
+  data/kospi-breadth.json \
   reports/market-risk-dashboard-offline.html
 
 if git diff --cached --quiet; then

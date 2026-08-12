@@ -26,7 +26,7 @@ def latest_date(items):
     return max(dates) if dates else None
 
 
-def source_status(snapshot, quality=None):
+def source_status(snapshot, quality=None, breadth=None):
     yahoo = list((snapshot.get("yahooSymbols") or {}).values())
     naver = list((snapshot.get("naverSymbols") or {}).values())
     fred = list((snapshot.get("fredSeries") or {}).values())
@@ -67,6 +67,19 @@ def source_status(snapshot, quality=None):
             "detail": f"금리·크레딧·금융여건 {len(fred)}개 시계열 · 저장값 대체 경로 포함",
         },
     ]
+    if breadth:
+        breadth_quality = breadth.get("quality") or {}
+        breadth_period = breadth.get("period") or {}
+        sources.append(
+            {
+                "id": "krx-breadth",
+                "label": "KRX Market Breadth",
+                "status": "ok" if breadth_quality.get("status") == "ok" else "warning",
+                "lastDate": breadth_period.get("endDate"),
+                "seriesCount": breadth_period.get("observations"),
+                "detail": "KOSPI 상승·하락·보합 종목 수 · pykrx EOD",
+            }
+        )
     quality_groups = {item.get("id"): item for item in (quality or {}).get("sourceGroups", [])}
     for source in sources:
         group = quality_groups.get(source["id"])
@@ -114,6 +127,7 @@ def artifact_status(data):
         ("backtest", "시장 백테스트", data["backtest"].get("generatedAt")),
         ("stress", "스트레스 이력", data["stress"].get("generatedAt")),
         ("m7", "M7 신용스트레스 프록시", data["m7"].get("generatedAt")),
+        ("breadth", "KOSPI 시장 내부강도", data["breadth"].get("generatedAt")),
         ("quality", "데이터 완비성", data["quality"].get("generatedAt")),
     ]
     return [
@@ -186,6 +200,7 @@ def build_payload(args):
         "backtest": read_json(ROOT / "data" / "market-risk-backtest.json"),
         "stress": read_json(ROOT / "data" / "market-stress-episodes.json"),
         "m7": read_json(ROOT / "data" / "m7-credit-proxy.json"),
+        "breadth": read_json(ROOT / "data" / "kospi-breadth.json"),
         "quality": read_json(DATA_QUALITY_FILE),
     }
     dashboard_metadata = data["dashboard"].get("metadata") or {}
@@ -239,7 +254,7 @@ def build_payload(args):
             "delayGraceMinutes": args.schedule_grace_minutes,
         },
         "stages": stage_status(args),
-        "sources": source_status(data["snapshot"], data["quality"]),
+        "sources": source_status(data["snapshot"], data["quality"], data["breadth"]),
         "artifacts": artifact_status(data),
         "quality": {
             "status": data["quality"].get("status", "warning"),

@@ -1,4 +1,6 @@
-.PHONY: serve test audit-data update-m7-credit-proxy update-market-risk backtest-market-risk analyze-stress-episodes export-offline send-news-digest install-news-digest
+.PHONY: serve test audit-data update-m7-credit-proxy update-market-risk update-kospi-breadth backtest-market-risk analyze-stress-episodes export-offline send-news-digest install-news-digest
+
+KOSPI_BREADTH_START ?= 2024-01-01
 
 serve:
 	python3 -m http.server 5173 --bind 127.0.0.1
@@ -14,6 +16,9 @@ update-m7-credit-proxy:
 
 update-market-risk:
 	python3 scripts/update_market_risk.py
+
+update-kospi-breadth:
+	PYTHONPATH=src .venv-breadth/bin/python -m kospi_risk.cli update-kospi-breadth --start $(KOSPI_BREADTH_START)
 
 backtest-market-risk:
 	python3 scripts/backtest_market_risk.py

@@ -23,6 +23,7 @@ DATA_FILES = [
     "data/naver-marketindex-history.json",
     "data/market-risk-backtest.json",
     "data/market-stress-episodes.json",
+    "data/kospi-breadth.json",
 ]
 
 
