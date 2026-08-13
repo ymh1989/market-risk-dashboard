@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260813-5";
+const ASSET_VERSION = "20260813-6";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -3867,7 +3867,7 @@ function renderBreadthSummaryPanel(breadthData) {
       </div>
       <dl>
         <div><dt>일간 확산도</dt><dd>${formatSignedPct(latest.breadthPct)}</dd><small>-100~+100%</small></div>
-        <div><dt>20일 평균</dt><dd>${formatSignedPct(latest.breadthMa20Pct)}</dd><small>확산도 평균</small></div>
+        <div><dt>5일 평균</dt><dd>${formatSignedPct(latest.breadthMa5Pct)}</dd><small>20일 ${formatSignedPct(latest.breadthMa20Pct)}</small></div>
         <div><dt>AD-20일선</dt><dd>${formatSignedThousands(latest.adDistance20)}</dd><small>누적 순확산</small></div>
       </dl>
       <button type="button" data-open-tab="market-breadth">내부 흐름 보기</button>
@@ -3904,6 +3904,13 @@ function renderBreadthPriceChart(breadthData) {
         format: (value) => formatSignedPct(value)
       },
       {
+        label: "확산도 5일 평균",
+        points,
+        valueKey: "breadthMa5Pct",
+        color: "var(--green)",
+        format: (value) => formatSignedPct(value)
+      },
+      {
         label: "확산도 20일 평균",
         points,
         valueKey: "breadthMa20Pct",
@@ -3935,6 +3942,7 @@ function renderBreadthPriceChart(breadthData) {
             <path class="breadth-chart__grid" d="M 0 ${plotTop} L ${plotWidth} ${plotTop} M 0 ${(plotTop + plotBottom) / 2} L ${plotWidth} ${(plotTop + plotBottom) / 2} M 0 ${plotBottom} L ${plotWidth} ${plotBottom}"></path>
             <path class="breadth-chart__zero-line" d="M 0 ${(plotTop + plotBottom) / 2} L ${plotWidth} ${(plotTop + plotBottom) / 2}"></path>
             <path class="breadth-chart__daily" d="${datedValuePath(points, "breadthPct", domain, breadthDomain, plotWidth, plotTop, plotBottom)}"></path>
+            <path class="breadth-chart__ma5" d="${datedValuePath(points, "breadthMa5Pct", domain, breadthDomain, plotWidth, plotTop, plotBottom)}"></path>
             <path class="breadth-chart__ma" d="${datedValuePath(points, "breadthMa20Pct", domain, breadthDomain, plotWidth, plotTop, plotBottom)}"></path>
             <path class="breadth-chart__kospi-halo" d="${datedValuePath(points, "kospiClose", domain, kospiDomain, plotWidth, plotTop, plotBottom)}"></path>
             <path class="breadth-chart__kospi" d="${datedValuePath(points, "kospiClose", domain, kospiDomain, plotWidth, plotTop, plotBottom)}"></path>
@@ -3954,14 +3962,14 @@ function renderBreadthPriceChart(breadthData) {
     <article class="breadth-chart-card breadth-chart-card--dual-axis">
       <header>
         <div><span class="eyebrow">Price & Participation</span><h3>KOSPI와 일간 확산도</h3></div>
-        <div class="breadth-chart-legend"><span><i class="is-kospi"></i>KOSPI · 왼쪽</span><span><i class="is-breadth"></i>일간 확산 · 오른쪽 · 옅은 선</span><span><i class="is-ma"></i>20일 평균</span></div>
+        <div class="breadth-chart-legend"><span><i class="is-kospi"></i>KOSPI · 왼쪽</span><span><i class="is-breadth"></i>일간 확산 · 오른쪽 · 옅은 선</span><span><i class="is-ma5"></i>5일 평균</span><span><i class="is-ma"></i>20일 평균</span></div>
       </header>
       <div class="breadth-chart" data-timeseries-chart="${chartId}">
         ${renderChartRangeControls(chartId)}
         ${layers}
         ${renderChartTooltip()}
       </div>
-      <p class="breadth-chart-card__note">오른쪽 확산도 축은 항상 -100~+100% · 0 위는 상승 종목 우위, 0 아래는 하락 종목 우위</p>
+      <p class="breadth-chart-card__note">일간은 옅은 원자료 · 5일은 단기 방향 · 20일은 중기 추세 · 오른쪽 확산도 축은 항상 -100~+100%</p>
     </article>
   `;
 }
@@ -4063,7 +4071,7 @@ function renderMarketBreadthPage(breadthData) {
       </div>
 
       <div class="breadth-metrics">
-        <article><span>일간 확산도 (%)</span><strong>${formatSignedPct(latest.breadthPct)}</strong><small>범위 -100~+100 · 0=균형</small></article>
+        <article><span>일간 확산도 (%)</span><strong>${formatSignedPct(latest.breadthPct)}</strong><small>5일 ${formatSignedPct(latest.breadthMa5Pct)} · 20일 ${formatSignedPct(latest.breadthMa20Pct)}</small></article>
         <article><span>상승 / 하락</span><strong>${formatNumber(latest.up)} / ${formatNumber(latest.down)}</strong><small>보합 ${formatNumber(latest.flat)} · 전체 ${formatNumber(latest.total)}</small></article>
         <article><span>당일 순확산 (Net)</span><strong>${latest.netBreadth > 0 ? "+" : ""}${formatNumber(latest.netBreadth)}종목</strong><small>상승-하락 · 비율 ${formatNumber(latest.adRatio, 2)}</small></article>
         <article><span>AD 누적선-20일선</span><strong>${formatSignedThousands(latest.adDistance20)}</strong><small>AD ${formatSignedThousands(latest.adLine)} · 20D ${formatSignedThousands(latest.adMa20)}</small></article>
@@ -4071,7 +4079,7 @@ function renderMarketBreadthPage(breadthData) {
 
       <section class="breadth-unit-guide" aria-label="시장 내부강도 단위 읽는 법">
         <strong>단위 읽는 법</strong>
-        <div><span>일간 확산도</span><p>-100~+100% · 0은 상승·하락 균형</p></div>
+        <div><span>일간 확산도</span><p>범위 -100~+100 · 0=균형</p></div>
         <div><span>당일 순확산</span><p>상승 종목 수 - 하락 종목 수</p></div>
         <div><span>AD 누적선</span><p>순확산 누계 · 화면은 천 종목 단위</p></div>
       </section>

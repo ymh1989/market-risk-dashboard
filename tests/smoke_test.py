@@ -258,8 +258,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260813-5" in html
-    assert "app.js?v=20260813-5" in html
+    assert "styles.css?v=20260813-6" in html
+    assert "app.js?v=20260813-6" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -555,6 +555,11 @@ def test_market_breadth_dashboard_contract():
     assert "font-size: 11.5px;" in styles
     assert "font-size: 10.5px;" in styles
     assert "min-width: 620px;" in styles
+    assert "valueKey: \"breadthMa5Pct\"" in app_source
+    assert "breadth-chart__ma5" in app_source
+    assert "5일은 단기 방향" in app_source
+    assert ".breadth-chart__ma5" in styles
+    assert ".is-ma5" in styles
     assert ".breadth-chart__daily" in styles
     assert ".breadth-chart__ad" in styles
 
