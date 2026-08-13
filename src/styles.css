@@ -6925,6 +6925,52 @@ a {
   line-height: 1.45;
 }
 
+.breadth-interpretation-guide {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.55fr) repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.breadth-interpretation-guide > header,
+.breadth-interpretation-guide > div {
+  padding: 16px 18px;
+}
+
+.breadth-interpretation-guide > div {
+  border-left: 1px solid var(--line);
+}
+
+.breadth-interpretation-guide h3 {
+  margin: 5px 0 0;
+  font-size: 0.95rem;
+}
+
+.breadth-interpretation-guide > div > strong {
+  font-size: 0.78rem;
+}
+
+.breadth-interpretation-guide ul {
+  display: grid;
+  gap: 7px;
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breadth-interpretation-guide li {
+  display: grid;
+  grid-template-columns: minmax(72px, auto) 1fr;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.breadth-interpretation-guide li b {
+  color: var(--ink);
+}
+
 .breadth-reading {
   border-left: 4px solid var(--teal);
   background: var(--surface-soft);
@@ -7020,6 +7066,36 @@ a {
   fill: var(--muted);
   font-size: 9px;
   font-weight: 700;
+}
+
+.breadth-chart__zero-line {
+  fill: none;
+  stroke: var(--muted);
+  stroke-dasharray: 3 4;
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.breadth-chart__axis-title,
+.breadth-chart__axis-value {
+  font-weight: 700;
+}
+
+.breadth-chart__axis-title {
+  font-size: 8px;
+}
+
+.breadth-chart__axis-value {
+  fill: var(--muted);
+  font-size: 7.5px;
+}
+
+.breadth-chart__axis-title.is-kospi {
+  fill: var(--blue);
+}
+
+.breadth-chart__axis-title.is-breadth {
+  fill: var(--teal);
 }
 
 .breadth-chart-legend {
@@ -7195,6 +7271,35 @@ a {
 
   .breadth-unit-guide > div,
   .breadth-unit-guide > div:nth-of-type(2) {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .breadth-interpretation-guide {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .breadth-interpretation-guide > header {
+    grid-column: 1 / -1;
+  }
+
+  .breadth-interpretation-guide > div:first-of-type {
+    border-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .breadth-interpretation-guide {
+    grid-template-columns: 1fr;
+  }
+
+  .breadth-interpretation-guide > header {
+    grid-column: auto;
+  }
+
+  .breadth-interpretation-guide > div {
     border-top: 1px solid var(--line);
     border-left: 0;
   }

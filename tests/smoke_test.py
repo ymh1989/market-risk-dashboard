@@ -258,8 +258,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260813-2" in html
-    assert "app.js?v=20260813-2" in html
+    assert "styles.css?v=20260813-3" in html
+    assert "app.js?v=20260813-3" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -540,6 +540,12 @@ def test_market_breadth_dashboard_contract():
     assert "AD 누적선 (천 종목)" in app_source
     assert "formatSignedThousands" in app_source
     assert ".breadth-unit-guide" in styles
+    assert "plotLeft = 0" in app_source
+    assert "일간 확산 · 오른쪽" in app_source
+    assert "오른쪽 확산도 축은 항상 -100~+100%" in app_source
+    assert "어떻게 읽나요" in app_source
+    assert ".breadth-chart__axis-title" in styles
+    assert ".breadth-interpretation-guide" in styles
     assert ".breadth-chart__daily" in styles
     assert ".breadth-chart__ad" in styles
 

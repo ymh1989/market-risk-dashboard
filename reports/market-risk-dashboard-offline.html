@@ -6935,6 +6935,52 @@ a {
   line-height: 1.45;
 }
 
+.breadth-interpretation-guide {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.55fr) repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.breadth-interpretation-guide > header,
+.breadth-interpretation-guide > div {
+  padding: 16px 18px;
+}
+
+.breadth-interpretation-guide > div {
+  border-left: 1px solid var(--line);
+}
+
+.breadth-interpretation-guide h3 {
+  margin: 5px 0 0;
+  font-size: 0.95rem;
+}
+
+.breadth-interpretation-guide > div > strong {
+  font-size: 0.78rem;
+}
+
+.breadth-interpretation-guide ul {
+  display: grid;
+  gap: 7px;
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breadth-interpretation-guide li {
+  display: grid;
+  grid-template-columns: minmax(72px, auto) 1fr;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.breadth-interpretation-guide li b {
+  color: var(--ink);
+}
+
 .breadth-reading {
   border-left: 4px solid var(--teal);
   background: var(--surface-soft);
@@ -7030,6 +7076,36 @@ a {
   fill: var(--muted);
   font-size: 9px;
   font-weight: 700;
+}
+
+.breadth-chart__zero-line {
+  fill: none;
+  stroke: var(--muted);
+  stroke-dasharray: 3 4;
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.breadth-chart__axis-title,
+.breadth-chart__axis-value {
+  font-weight: 700;
+}
+
+.breadth-chart__axis-title {
+  font-size: 8px;
+}
+
+.breadth-chart__axis-value {
+  fill: var(--muted);
+  font-size: 7.5px;
+}
+
+.breadth-chart__axis-title.is-kospi {
+  fill: var(--blue);
+}
+
+.breadth-chart__axis-title.is-breadth {
+  fill: var(--teal);
 }
 
 .breadth-chart-legend {
@@ -7210,6 +7286,35 @@ a {
   }
 }
 
+@media (max-width: 900px) {
+  .breadth-interpretation-guide {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .breadth-interpretation-guide > header {
+    grid-column: 1 / -1;
+  }
+
+  .breadth-interpretation-guide > div:first-of-type {
+    border-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .breadth-interpretation-guide {
+    grid-template-columns: 1fr;
+  }
+
+  .breadth-interpretation-guide > header {
+    grid-column: auto;
+  }
+
+  .breadth-interpretation-guide > div {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+}
+
 
 /* 독립형 스냅샷에서는 온라인 전용 기능을 숨깁니다. */
 .snow-lab-trigger,
@@ -7305,7 +7410,7 @@ function evaluateDashboard(data) {
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260813-2";
+const ASSET_VERSION = "20260813-3";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -8775,12 +8880,20 @@ function renderMonthAxisFromDomain(
   };
 }
 
-function registerInteractiveChart({ series, width = 760, tooltipMode = "all" }) {
+function registerInteractiveChart({
+  series,
+  width = 760,
+  tooltipMode = "all",
+  plotLeft = 0,
+  plotRight = width
+}) {
   interactiveChartSequence += 1;
   const id = `timeline-chart-${interactiveChartSequence}`;
   interactiveChartRegistry.set(id, {
     width,
     tooltipMode,
+    plotLeft,
+    plotRight,
     series: series.map((item) => ({
       ...item,
       points: [...(item.points ?? [])].sort((left, right) => dateMs(left.date) - dateMs(right.date))
@@ -11173,7 +11286,16 @@ function renderBreadthSummaryPanel(breadthData) {
 function renderBreadthPriceChart(breadthData) {
   const points = breadthData?.series ?? [];
   if (points.length < 2) return "";
+  const chartWidth = 760;
+  const plotLeft = 54;
+  const plotRight = 706;
+  const plotWidth = plotRight - plotLeft;
+  const plotTop = 20;
+  const plotBottom = 184;
   const chartId = registerInteractiveChart({
+    width: chartWidth,
+    plotLeft,
+    plotRight,
     series: [
       {
         label: "KOSPI",
@@ -11204,35 +11326,49 @@ function renderBreadthPriceChart(breadthData) {
       const visible = pointsWithinDomain(points, domain, "kospiClose");
       const kospiDomain = numericChartDomain(visible, "kospiClose", 0.1);
       const breadthDomain = { min: -100, max: 100 };
-      const axis = renderMonthAxisFromDomain(domain, 760, 18, 190, 207);
+      const axis = renderMonthAxisFromDomain(domain, plotWidth, plotTop, plotBottom, 207);
+      const kospiTicks = [
+        { value: kospiDomain.max, y: plotTop },
+        { value: (kospiDomain.max + kospiDomain.min) / 2, y: (plotTop + plotBottom) / 2 },
+        { value: kospiDomain.min, y: plotBottom }
+      ];
+      const breadthTicks = [100, 50, 0, -50, -100].map((value) => ({
+        value,
+        y: plotBottom - ((value - breadthDomain.min) / (breadthDomain.max - breadthDomain.min)) * (plotBottom - plotTop)
+      }));
       return `
-        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 760 210" role="img" aria-label="KOSPI와 시장 확산도 비교">
-          ${axis.grid}
-          <path class="breadth-chart__grid" d="M 0 90 L 760 90 M 0 115 L 760 115 M 0 152.5 L 760 152.5 M 0 190 L 760 190"></path>
-          <path class="breadth-chart__kospi" d="${datedValuePath(points, "kospiClose", domain, kospiDomain, 760, 18, 90)}"></path>
-          <path class="breadth-chart__ma" d="${datedValuePath(points, "breadthMa20Pct", domain, breadthDomain, 760, 115, 190)}"></path>
-          <path class="breadth-chart__daily" d="${datedValuePath(points, "breadthPct", domain, breadthDomain, 760, 115, 190)}"></path>
-          <text class="breadth-chart__label" x="7" y="30">KOSPI</text>
-          <text class="breadth-chart__label" x="7" y="128">확산도</text>
-          <text class="breadth-chart__zero" x="753" y="148" text-anchor="end">0</text>
-          ${renderChartCursorLine(18, 190)}
-          ${axis.labels}
+        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 ${chartWidth} 210" role="img" aria-label="왼쪽 KOSPI 축과 오른쪽 일간 확산도 축 비교">
+          <g transform="translate(${plotLeft} 0)">
+            ${axis.grid}
+            <path class="breadth-chart__grid" d="M 0 ${plotTop} L ${plotWidth} ${plotTop} M 0 ${(plotTop + plotBottom) / 2} L ${plotWidth} ${(plotTop + plotBottom) / 2} M 0 ${plotBottom} L ${plotWidth} ${plotBottom}"></path>
+            <path class="breadth-chart__zero-line" d="M 0 ${(plotTop + plotBottom) / 2} L ${plotWidth} ${(plotTop + plotBottom) / 2}"></path>
+            <path class="breadth-chart__kospi" d="${datedValuePath(points, "kospiClose", domain, kospiDomain, plotWidth, plotTop, plotBottom)}"></path>
+            <path class="breadth-chart__ma" d="${datedValuePath(points, "breadthMa20Pct", domain, breadthDomain, plotWidth, plotTop, plotBottom)}"></path>
+            <path class="breadth-chart__daily" d="${datedValuePath(points, "breadthPct", domain, breadthDomain, plotWidth, plotTop, plotBottom)}"></path>
+            ${axis.labels}
+          </g>
+          <text class="breadth-chart__axis-title is-kospi" x="4" y="11">KOSPI</text>
+          ${kospiTicks.map((tick) => `<text class="breadth-chart__axis-value is-kospi" x="4" y="${tick.y + 3}">${formatNumber(tick.value)}</text>`).join("")}
+          <text class="breadth-chart__axis-title is-breadth" x="756" y="11" text-anchor="end">확산도</text>
+          ${breadthTicks.map((tick) => `<text class="breadth-chart__axis-value is-breadth" x="756" y="${tick.y + 3}" text-anchor="end">${tick.value > 0 ? "+" : ""}${tick.value}%</text>`).join("")}
+          ${renderChartCursorLine(plotTop, plotBottom)}
         </svg>
       `;
     })
     .join("");
 
   return `
-    <article class="breadth-chart-card">
+    <article class="breadth-chart-card breadth-chart-card--dual-axis">
       <header>
-        <div><span class="eyebrow">Price & Participation</span><h3>KOSPI와 일간 확산도 (%)</h3></div>
-        <div class="breadth-chart-legend"><span><i class="is-kospi"></i>KOSPI</span><span><i class="is-breadth"></i>일간 확산</span><span><i class="is-ma"></i>20일 평균</span></div>
+        <div><span class="eyebrow">Price & Participation</span><h3>KOSPI와 일간 확산도</h3></div>
+        <div class="breadth-chart-legend"><span><i class="is-kospi"></i>KOSPI · 왼쪽</span><span><i class="is-breadth"></i>일간 확산 · 오른쪽</span><span><i class="is-ma"></i>20일 평균</span></div>
       </header>
       <div class="breadth-chart" data-timeseries-chart="${chartId}">
         ${renderChartRangeControls(chartId)}
         ${layers}
         ${renderChartTooltip()}
       </div>
+      <p class="breadth-chart-card__note">오른쪽 확산도 축은 항상 -100~+100% · 0 위는 상승 종목 우위, 0 아래는 하락 종목 우위</p>
     </article>
   `;
 }
@@ -11345,6 +11481,26 @@ function renderMarketBreadthPage(breadthData) {
         <div><span>일간 확산도</span><p>-100~+100% · 0은 상승·하락 균형</p></div>
         <div><span>당일 순확산</span><p>상승 종목 수 - 하락 종목 수</p></div>
         <div><span>AD 누적선</span><p>순확산 누계 · 화면은 천 종목 단위</p></div>
+      </section>
+
+      <section class="breadth-interpretation-guide" aria-label="시장 내부강도 해석 기준">
+        <header><span class="eyebrow">Reading Guide</span><h3>어떻게 읽나요</h3></header>
+        <div>
+          <strong>일간 확산도</strong>
+          <ul>
+            <li><b>0 위</b><span>상승 종목 우위 · 높을수록 상승 참여 확대</span></li>
+            <li><b>0 아래</b><span>하락 종목 우위 · 낮을수록 매도 확산</span></li>
+            <li><b>지수와 반대</b><span>대형주 편중 또는 업종 순환 가능성</span></li>
+          </ul>
+        </div>
+        <div>
+          <strong>AD 누적선</strong>
+          <ul>
+            <li><b>상승·20일선 위</b><span>시장 내부 체력 개선 누적</span></li>
+            <li><b>하락·20일선 아래</b><span>시장 내부 약화 누적</span></li>
+            <li><b>절대값보다</b><span>기울기·20일선·지수와의 괴리 중심</span></li>
+          </ul>
+        </div>
       </section>
 
       <div class="breadth-reading">
@@ -11952,7 +12108,10 @@ function updateChartCursor(chart, svg, event) {
 
   const svgRect = svg.getBoundingClientRect();
   if (!svgRect.width) return;
-  const ratio = Math.max(0, Math.min(1, (event.clientX - svgRect.left) / svgRect.width));
+  const viewBoxWidth = svg.viewBox?.baseVal?.width || model.width;
+  const pointerX = ((event.clientX - svgRect.left) / svgRect.width) * viewBoxWidth;
+  const plotSpan = Math.max(model.plotRight - model.plotLeft, 1);
+  const ratio = Math.max(0, Math.min(1, (pointerX - model.plotLeft) / plotSpan));
   const requestedTime = domain.start + ratio * domain.span;
   const hoveredIndex = Number(svg.dataset.chartSeriesIndex);
   const hasHoveredSeries = Number.isInteger(hoveredIndex) && model.series[hoveredIndex];
@@ -11972,9 +12131,7 @@ function updateChartCursor(chart, svg, event) {
       `[data-chart-range-layer="${activeChartRange}"] [data-chart-cursor-line]`
     )
     .forEach((line) => {
-      const ownerSvg = line.ownerSVGElement;
-      const width = ownerSvg?.viewBox?.baseVal?.width || model.width;
-      const x = cursorRatio * width;
+      const x = model.plotLeft + cursorRatio * (model.plotRight - model.plotLeft);
       line.setAttribute("x1", x.toFixed(2));
       line.setAttribute("x2", x.toFixed(2));
       line.classList.add("is-visible");
