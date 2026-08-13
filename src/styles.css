@@ -7028,6 +7028,7 @@ a {
   vector-effect: non-scaling-stroke;
 }
 
+.breadth-chart__kospi-halo,
 .breadth-chart__kospi,
 .breadth-chart__daily,
 .breadth-chart__ma,
@@ -7039,14 +7040,21 @@ a {
   vector-effect: non-scaling-stroke;
 }
 
+.breadth-chart__kospi-halo {
+  stroke: var(--surface);
+  stroke-width: 6.5;
+  opacity: 0.92;
+}
+
 .breadth-chart__kospi {
   stroke: var(--blue);
-  stroke-width: 2.2;
+  stroke-width: 3.2;
 }
 
 .breadth-chart__daily {
   stroke: var(--teal);
-  stroke-width: 1.7;
+  stroke-width: 1.15;
+  opacity: 0.32;
 }
 
 .breadth-chart__ma,
@@ -7054,6 +7062,10 @@ a {
   stroke: var(--amber);
   stroke-dasharray: 6 5;
   stroke-width: 1.6;
+}
+
+.breadth-chart-card--dual-axis .breadth-chart__ma {
+  opacity: 0.78;
 }
 
 .breadth-chart__ad {

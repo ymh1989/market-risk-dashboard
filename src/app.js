@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260813-3";
+const ASSET_VERSION = "20260813-4";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -3934,9 +3934,10 @@ function renderBreadthPriceChart(breadthData) {
             ${axis.grid}
             <path class="breadth-chart__grid" d="M 0 ${plotTop} L ${plotWidth} ${plotTop} M 0 ${(plotTop + plotBottom) / 2} L ${plotWidth} ${(plotTop + plotBottom) / 2} M 0 ${plotBottom} L ${plotWidth} ${plotBottom}"></path>
             <path class="breadth-chart__zero-line" d="M 0 ${(plotTop + plotBottom) / 2} L ${plotWidth} ${(plotTop + plotBottom) / 2}"></path>
-            <path class="breadth-chart__kospi" d="${datedValuePath(points, "kospiClose", domain, kospiDomain, plotWidth, plotTop, plotBottom)}"></path>
-            <path class="breadth-chart__ma" d="${datedValuePath(points, "breadthMa20Pct", domain, breadthDomain, plotWidth, plotTop, plotBottom)}"></path>
             <path class="breadth-chart__daily" d="${datedValuePath(points, "breadthPct", domain, breadthDomain, plotWidth, plotTop, plotBottom)}"></path>
+            <path class="breadth-chart__ma" d="${datedValuePath(points, "breadthMa20Pct", domain, breadthDomain, plotWidth, plotTop, plotBottom)}"></path>
+            <path class="breadth-chart__kospi-halo" d="${datedValuePath(points, "kospiClose", domain, kospiDomain, plotWidth, plotTop, plotBottom)}"></path>
+            <path class="breadth-chart__kospi" d="${datedValuePath(points, "kospiClose", domain, kospiDomain, plotWidth, plotTop, plotBottom)}"></path>
             ${axis.labels}
           </g>
           <text class="breadth-chart__axis-title is-kospi" x="4" y="11">KOSPI</text>
@@ -3953,7 +3954,7 @@ function renderBreadthPriceChart(breadthData) {
     <article class="breadth-chart-card breadth-chart-card--dual-axis">
       <header>
         <div><span class="eyebrow">Price & Participation</span><h3>KOSPI와 일간 확산도</h3></div>
-        <div class="breadth-chart-legend"><span><i class="is-kospi"></i>KOSPI · 왼쪽</span><span><i class="is-breadth"></i>일간 확산 · 오른쪽</span><span><i class="is-ma"></i>20일 평균</span></div>
+        <div class="breadth-chart-legend"><span><i class="is-kospi"></i>KOSPI · 왼쪽</span><span><i class="is-breadth"></i>일간 확산 · 오른쪽 · 옅은 선</span><span><i class="is-ma"></i>20일 평균</span></div>
       </header>
       <div class="breadth-chart" data-timeseries-chart="${chartId}">
         ${renderChartRangeControls(chartId)}
