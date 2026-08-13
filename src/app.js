@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260813-4";
+const ASSET_VERSION = "20260813-5";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -3879,8 +3879,8 @@ function renderBreadthPriceChart(breadthData) {
   const points = breadthData?.series ?? [];
   if (points.length < 2) return "";
   const chartWidth = 760;
-  const plotLeft = 54;
-  const plotRight = 706;
+  const plotLeft = 64;
+  const plotRight = 696;
   const plotWidth = plotRight - plotLeft;
   const plotTop = 20;
   const plotBottom = 184;
@@ -3940,10 +3940,10 @@ function renderBreadthPriceChart(breadthData) {
             <path class="breadth-chart__kospi" d="${datedValuePath(points, "kospiClose", domain, kospiDomain, plotWidth, plotTop, plotBottom)}"></path>
             ${axis.labels}
           </g>
-          <text class="breadth-chart__axis-title is-kospi" x="4" y="11">KOSPI</text>
-          ${kospiTicks.map((tick) => `<text class="breadth-chart__axis-value is-kospi" x="4" y="${tick.y + 3}">${formatNumber(tick.value)}</text>`).join("")}
-          <text class="breadth-chart__axis-title is-breadth" x="756" y="11" text-anchor="end">확산도</text>
-          ${breadthTicks.map((tick) => `<text class="breadth-chart__axis-value is-breadth" x="756" y="${tick.y + 3}" text-anchor="end">${tick.value > 0 ? "+" : ""}${tick.value}%</text>`).join("")}
+          <text class="breadth-chart__axis-title is-kospi" x="4" y="13">KOSPI</text>
+          ${kospiTicks.map((tick) => `<text class="breadth-chart__axis-value is-kospi" x="4" y="${tick.y + 4}">${formatNumber(tick.value)}</text>`).join("")}
+          <text class="breadth-chart__axis-title is-breadth" x="756" y="13" text-anchor="end">확산도</text>
+          ${breadthTicks.map((tick) => `<text class="breadth-chart__axis-value is-breadth" x="756" y="${tick.y + 4}" text-anchor="end">${tick.value > 0 ? "+" : ""}${tick.value}%</text>`).join("")}
           ${renderChartCursorLine(plotTop, plotBottom)}
         </svg>
       `;
