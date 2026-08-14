@@ -5699,7 +5699,8 @@ a {
   padding: 5px 0 5px 10px;
 }
 
-.source-detail__records strong,
+.source-detail__records > strong,
+.source-detail__records > div strong,
 .source-detail__components > strong {
   font-size: 0.76rem;
 }
@@ -5713,6 +5714,60 @@ a {
 .source-detail__components {
   display: grid;
   gap: 7px;
+}
+
+.source-detail__directions,
+.source-detail__direction-heading {
+  display: grid;
+  gap: 5px;
+}
+
+.source-detail__direction-heading strong {
+  font-size: 0.76rem;
+}
+
+.source-detail__direction-heading small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.source-detail__direction-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.source-detail__direction {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 10px;
+  border-left: 3px solid var(--line);
+  padding: 5px 0 5px 10px;
+}
+
+.source-detail__direction--up {
+  border-left-color: var(--red);
+}
+
+.source-detail__direction--down {
+  border-left-color: var(--green);
+}
+
+.source-detail__direction dt,
+.source-detail__direction dd {
+  margin: 0;
+  font-size: 0.73rem;
+  line-height: 1.5;
+}
+
+.source-detail__direction dt {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.source-detail__direction dd {
+  color: var(--ink);
 }
 
 .research-page {
@@ -6486,6 +6541,11 @@ a {
   }
 
   .source-detail__summary > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .source-detail__direction {
     grid-template-columns: 1fr;
     gap: 2px;
   }

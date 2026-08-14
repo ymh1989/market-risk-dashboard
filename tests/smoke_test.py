@@ -253,13 +253,15 @@ def test_ui_hierarchy_and_accessibility_contract():
     html = INDEX_FILE.read_text(encoding="utf-8")
     styles = STYLES_FILE.read_text(encoding="utf-8")
     app_source = APP_FILE.read_text(encoding="utf-8")
+    dashboard = json.loads(DATA_FILE.read_text(encoding="utf-8"))
+    market = next(section for section in dashboard["sections"] if section["id"] == "market")
     eyebrow_rule = styles.split(".eyebrow {", 1)[1].split("}", 1)[0]
     source_chip_rule = styles.split(".source-chips span {", 1)[1].split("}", 1)[0]
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260814-4" in html
-    assert "app.js?v=20260814-4" in html
+    assert "styles.css?v=20260814-5" in html
+    assert "app.js?v=20260814-5" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -274,6 +276,17 @@ def test_ui_hierarchy_and_accessibility_contract():
     assert "function renderModelMonitoringPage" in app_source
     assert "function renderReplayPage" in app_source
     assert "data-source-detail-toggle" in app_source
+    assert "const indicatorDirectionMeanings" in app_source
+    assert "function indicatorDirectionMeaning" in app_source
+    assert "점수 상승 시" in app_source
+    assert "점수 하락 시" in app_source
+    assert "현재 원점수 구성" not in app_source
+    assert "<dt>원천·티커</dt>" not in app_source
+    assert "<dt>가중·기여</dt>" not in app_source
+    assert ".source-detail__direction--up" in styles
+    assert ".source-detail__direction--down" in styles
+    for indicator in market["indicators"]:
+        assert f"  {indicator['id']}: {{" in app_source, f"{indicator['id']} direction meaning is missing"
     assert "font-weight: 800;" not in styles
     assert "font-weight: 900;" not in styles
     assert "text-transform: uppercase;" not in styles

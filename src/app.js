@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260814-4";
+const ASSET_VERSION = "20260814-5";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -3343,6 +3343,116 @@ function sourceEnhancementNote(indicator) {
   return "소스 변경 이력 없음";
 }
 
+const indicatorDirectionMeanings = {
+  kospi_price_stress: {
+    up: "가격 하락·실현변동성·고점 대비 낙폭 부담 확대",
+    down: "가격 회복·변동성 진정·고점 대비 낙폭 축소"
+  },
+  kosdaq_growth_stress: {
+    up: "성장주 가격 하락과 변동성 부담 확대",
+    down: "성장주 가격 회복과 변동성 부담 완화"
+  },
+  usdkrw_fx_pressure: {
+    up: "원화 약세와 환율 변동 부담 확대",
+    down: "원화 안정과 환율 부담 완화"
+  },
+  global_volatility_pressure: {
+    up: "VIX 상승·공포 심리 확대·주식 위험회피 강화",
+    down: "VIX 하락·헤지 수요 감소·위험선호 회복"
+  },
+  rates_pressure: {
+    up: "미국 장기금리 상승과 주식 할인율 부담 확대",
+    down: "장기금리 안정과 밸류에이션 부담 완화"
+  },
+  us_credit_spread_stress: {
+    up: "하이일드 스프레드 확대와 신용·조달 위험 상승",
+    down: "스프레드 축소와 신용시장 위험 완화"
+  },
+  us_financial_conditions_stress: {
+    up: "미국 금융여건 긴축과 자금조달 부담 확대",
+    down: "금융여건 완화와 유동성 부담 감소"
+  },
+  shipping_cost_pressure: {
+    up: "수요 대비 운임 비용 부담과 공급망 압력 확대",
+    down: "운임 비용·수요 괴리 축소와 마진 부담 완화"
+  },
+  china_demand_fx_stress: {
+    up: "위안화 약세와 중국 수요 민감 원자재 부진 심화",
+    down: "위안화·원자재 신호 개선과 중국 수요 우려 완화"
+  },
+  energy_import_cost_pressure: {
+    up: "원화 환산 에너지 비용과 물가·기업 마진 부담 확대",
+    down: "원화 환산 에너지 비용과 물가 압력 완화"
+  },
+  yen_carry_unwind_watch: {
+    up: "엔화 강세·VIX 상승·SPX 하락이 겹친 캐리 청산 위험 확대",
+    down: "엔 캐리 청산 신호와 글로벌 수급 충격 완화"
+  },
+  korea_us_rate_fx_watch: {
+    up: "한미 금리차 축소와 원화 약세가 겹친 자금이탈 압력 확대",
+    down: "금리차·환율 조합이 안정되며 자금이탈 우려 완화"
+  },
+  japan_us_rate_spread_watch: {
+    up: "미·일 금리차 축소와 엔화 강세·자금 환류 가능성 확대",
+    down: "금리차 축소 압력이 줄며 캐리 수급 부담 완화"
+  },
+  volatility_term_structure_watch: {
+    up: "단기 변동성과 VVIX 상승으로 옵션 헤지·감마 부담 확대",
+    down: "변동성 기간구조 정상화와 옵션 헤지 부담 완화"
+  },
+  us_market_breadth_watch: {
+    up: "동일가중 상대약세로 미국 증시 상승 폭이 좁아짐",
+    down: "상승 종목 참여가 넓어지며 시장 내부 강도 개선"
+  },
+  broad_reinflation_watch: {
+    up: "원자재·농산물 가격 상승 확산과 재인플레이션 우려 확대",
+    down: "광의 물가 압력과 추가 금리 부담 완화"
+  },
+  global_ai_semiconductor_stress: {
+    up: "글로벌 AI 반도체 가격 약세·변동성·낙폭 부담 확대",
+    down: "AI 반도체 가격과 변동성 스트레스 완화"
+  },
+  bigtech_ai_demand_pressure: {
+    up: "빅테크 주가 스트레스와 AI 투자비용·ROI 우려 확대",
+    down: "빅테크 수요 기대와 AI 투자비용 부담 개선"
+  },
+  korea_ai_semiconductor_concentration: {
+    up: "국내 반도체 가격 스트레스와 KOSPI 대비 쏠림 위험 확대",
+    down: "반도체 가격 스트레스와 지수 쏠림 부담 완화"
+  },
+  foreign_ownership_pressure: {
+    up: "주요 반도체 종목의 외국인 보유비중 이탈 확대",
+    down: "외국인 보유비중 이탈 진정 또는 수급 회복"
+  },
+  trading_activity_heat: {
+    up: "거래량이 60일 평균에서 크게 벗어난 과열·위축 이상 신호 확대",
+    down: "거래량이 평시 범위로 돌아오며 유동성 이상 신호 완화"
+  },
+  single_name_semiconductor_leverage: {
+    up: "삼성전자·SK하이닉스 낙폭과 KOSPI 대비 변동성 배율 확대",
+    down: "개별종목 변동성·낙폭 부담이 KOSPI 대비 완화"
+  },
+  global_credit_proxy_stress: {
+    up: "HYG가 LQD 대비 약해지며 글로벌 신용 위험 확대",
+    down: "하이일드 상대가격 회복과 신용 위험 완화"
+  },
+  emerging_market_stress: {
+    up: "신흥국 주가 약세·변동성·낙폭 부담 확대",
+    down: "신흥국 위험선호와 가격 흐름 회복"
+  },
+  m7_credit_stress_proxy: {
+    up: "M7 고유 주가손실과 공개 신용시장 스트레스 동반 확대",
+    down: "M7 고유손실과 공개 신용시장 부담 완화"
+  }
+};
+
+function indicatorDirectionMeaning(indicator) {
+  return indicatorDirectionMeanings[indicator.id] ?? {
+    up: `${indicator.name} 위험 신호 강화`,
+    down: `${indicator.name} 위험 신호 완화`
+  };
+}
+
 function indicatorQualityNotes(indicator, quality) {
   const source = String(indicator.source ?? "").toLowerCase();
   return (quality?.issues ?? [])
@@ -3357,7 +3467,7 @@ function indicatorQualityNotes(indicator, quality) {
 function renderIndicatorSourceDetail(indicator, provenance) {
   const records = indicatorSourceRecords(indicator, provenance?.snapshot);
   const qualityNotes = indicatorQualityNotes(indicator, provenance?.quality);
-  const details = Array.isArray(indicator.detail) ? indicator.detail : [indicator.detail].filter(Boolean);
+  const directionMeaning = indicatorDirectionMeaning(indicator);
   const normalization = provenance?.model?.normalization;
   const normalizationText = normalization
     ? `최대 2년 · 분위수 ${Number(normalization.percentileWeight) * 100}% · z ${Number(normalization.zScoreWeight) * 100}% · robust z ${Number(normalization.robustZScoreWeight) * 100}%`
@@ -3373,13 +3483,12 @@ function renderIndicatorSourceDetail(indicator, provenance) {
     >원천·산식</button>
     <div class="source-detail" id="${detailId}" hidden>
       <dl class="source-detail__summary">
-        <div><dt>원천·티커</dt><dd>${indicator.source}</dd></div>
         <div><dt>조회시각</dt><dd>${provenance?.snapshot?.generatedAt ?? "확인 대기"}</dd></div>
         <div><dt>정규화</dt><dd>${normalizationText}</dd></div>
         <div><dt>현재 보강</dt><dd>${sourceEnhancementNote(indicator)}</dd></div>
-        <div><dt>가중·기여</dt><dd>${Number(indicator.weight ?? 0) > 0 ? `${(Number(indicator.weight) * 100).toFixed(1)}% · +${Number(indicator.contribution ?? 0).toFixed(2)}점` : "관찰 전용 · 종합점수 미반영"}</dd></div>
       </dl>
       <div class="source-detail__records">
+        <strong>원천 관측 상태</strong>
         ${
           records.length
             ? records
@@ -3395,9 +3504,21 @@ function renderIndicatorSourceDetail(indicator, provenance) {
             : `<div><strong>${indicator.source}</strong><span>카드 산출 결과에 기록된 원천</span></div>`
         }
       </div>
-      <div class="source-detail__components">
-        <strong>현재 원점수 구성</strong>
-        ${renderNarrativeList(details, "narrative-list--compact")}
+      <div class="source-detail__directions">
+        <div class="source-detail__direction-heading">
+          <strong>점수 방향 해석</strong>
+          <small>카드의 0~100 위험점수 기준 · 원천 시계열 자체 등락과 다를 수 있음</small>
+        </div>
+        <dl class="source-detail__direction-list">
+          <div class="source-detail__direction source-detail__direction--up">
+            <dt>점수 상승 시</dt>
+            <dd>${directionMeaning.up}</dd>
+          </div>
+          <div class="source-detail__direction source-detail__direction--down">
+            <dt>점수 하락 시</dt>
+            <dd>${directionMeaning.down}</dd>
+          </div>
+        </dl>
       </div>
       ${
         qualityNotes.length
