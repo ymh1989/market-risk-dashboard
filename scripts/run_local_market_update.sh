@@ -362,6 +362,25 @@ echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 오프라인 HTML 스냅샷을 생�
 git config user.name "${LOCAL_MARKET_UPDATE_GIT_NAME:-local-market-risk-bot}"
 git config user.email "${LOCAL_MARKET_UPDATE_GIT_EMAIL:-local-market-risk-bot@users.noreply.github.com}"
 
+push_update_commit() {
+  if git push "$REMOTE" "HEAD:$BRANCH"; then
+    return 0
+  fi
+
+  echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 원격 변경을 감지했습니다. 최신 $REMOTE/$BRANCH 위로 데이터 커밋을 재배치합니다."
+  git fetch "$REMOTE" "$BRANCH"
+  git rebase -X theirs "$REMOTE/$BRANCH"
+
+  echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 재배치된 코드 기준으로 오프라인 HTML과 스모크 테스트를 다시 검증합니다."
+  "$PYTHON_BIN" scripts/export_offline_dashboard.py --stable-only
+  python3 tests/smoke_test.py
+  git add reports/market-risk-dashboard-offline.html
+  if ! git diff --cached --quiet; then
+    git commit --amend --no-edit
+  fi
+  git push "$REMOTE" "HEAD:$BRANCH"
+}
+
 git add \
   data/risk-dashboard.json \
   data/market-risk-snapshot.json \
@@ -383,7 +402,7 @@ if git diff --cached --quiet; then
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 변경된 데이터가 없어 커밋하지 않습니다."
 else
   git commit -m "Update market risk data"
-  git push "$REMOTE" "HEAD:$BRANCH"
+  push_update_commit
 fi
 
 EXPECTED_GENERATED_AT="$("$PYTHON_BIN" -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["generatedAt"])' data/ml-risk-signal.json)"
