@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260814-3";
+const ASSET_VERSION = "20260814-4";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -3978,7 +3978,7 @@ function classifyMarketShock({
     return {
       label: "수급성 오버슈팅 가능성",
       tone: "caution",
-      note: "시장 내부 매도 확산 · 펀더멘털 확인 필요"
+      note: "시장 내부 매도 확산 · 충격 지속성 확인"
     };
   }
   if (priceHigh && acceleration?.tone === "danger") {
@@ -4031,13 +4031,15 @@ function classifyMarketShock({
 }
 
 function shockMetric({ label, value, level, meta, note }) {
-  const tone = level?.tone ?? "muted";
   const hasValue = value !== null && value !== undefined && Number.isFinite(Number(value));
+  if (!hasValue) return "";
+
+  const tone = level?.tone ?? "muted";
   return `
     <article class="shock-metric shock-metric--${tone}">
       <span>${label}</span>
-      <strong>${hasValue ? Number(value).toFixed(1) : "자료 부족"}</strong>
-      <small>${level?.label ?? "직접자료 미연결"}</small>
+      <strong>${Number(value).toFixed(1)}</strong>
+      <small>${level?.label ?? ""}</small>
       <p>${meta}</p>
       ${note ? `<em>${note}</em>` : ""}
     </article>
@@ -4052,7 +4054,6 @@ function renderShockDecomposition(market, timeseries, breadthData) {
   const directFlowScore = directFlowValue == null ? Number.NaN : Number(directFlowValue);
   const flowScore = Number.isFinite(directFlowScore) ? directFlowScore : fallbackFlowScore;
   const liquidityScore = groupScore(market, "liquidity");
-  const aiSemiProxy = groupScore(market, "ai_semi");
   const breadthStress = breadthCollapseScore(breadthData?.latest);
   const flowLiquidityShock = weightedAvailableScore([
     { value: breadthStress, weight: 0.45 },
@@ -4108,15 +4109,6 @@ function renderShockDecomposition(market, timeseries, breadthData) {
           meta: "기존 Macro 그룹",
           note: "금리·환율·변동성·신용·원자재"
         })}
-        ${shockMetric({
-          label: "펀더멘털 확인",
-          value: null,
-          level: null,
-          meta: aiSemiProxy !== null && aiSemiProxy !== undefined && Number.isFinite(Number(aiSemiProxy))
-            ? `시장기대 proxy ${Number(aiSemiProxy).toFixed(1)}`
-            : "시장기대 proxy 확인 필요",
-          note: "선행 EPS·실적 수정폭 미연결"
-        })}
       </div>
 
       <div class="shock-decomposition__footer">
@@ -4127,7 +4119,6 @@ function renderShockDecomposition(market, timeseries, breadthData) {
         </div>
         ${renderNarrativeList([
           "수급성 판정: 가격 충격과 시장 내부 매도 확산의 동시 확인",
-          "펀더멘털 판정: 직접 EPS·실적 데이터 연결 전 확정 보류",
           "운영 원칙: 기존 종합점수·가중치·경보단계 변경 없음"
         ], "narrative-list--compact shock-decomposition__notes")}
         <details class="shock-methodology">
@@ -4823,12 +4814,14 @@ function renderGroupScores(section, timeseries) {
 }
 
 function renderObservationJournalTrend(section, item, timeseries) {
+  if (item.score == null) return "";
+
   const points = buildObservationJournalSeries(section, item, timeseries);
   if (points.length < 2) {
     return `
       <div class="observation-journal__trend observation-journal__trend--empty">
         <span>검증 점수 흐름</span>
-        <small>${item.score == null ? "직접 데이터 연결 후 제공" : "시계열 준비중"}</small>
+        <small>시계열 준비중</small>
       </div>
     `;
   }
@@ -4908,12 +4901,7 @@ function renderObservationJournalTrend(section, item, timeseries) {
 
 function renderObservationJournalDetail(item) {
   const components = item.components ?? [];
-  if (!components.length) {
-    return renderNarrativeList(
-      ["직접 점수화 보류", ...(item.evidence ?? [])],
-      "narrative-list--compact"
-    );
-  }
+  if (!components.length) return "";
 
   return `
     <div class="observation-journal__detail-heading">
@@ -4954,27 +4942,37 @@ function renderObservationJournal(section, timeseries) {
         ${items
           .map((item) => {
             const detailId = `observation-detail-${item.id}`;
+            const hasScore = item.score !== null && item.score !== undefined;
+            const hasComponents = (item.components ?? []).length > 0;
+            const decision =
+              !hasScore && String(item.decision ?? "").includes("점수화 보류")
+                ? ""
+                : item.decision;
             return `
               <article class="observation-journal__item observation-journal__item--${item.tone ?? "muted"}">
                 <div class="observation-journal__summary">
                   <div>
-                    <span>${item.decision}</span>
+                    ${decision ? `<span>${decision}</span>` : ""}
                     <div class="observation-journal__title">
                       <h4>${item.title}</h4>
-                      <button
-                        type="button"
-                        class="observation-journal__info"
-                        data-observation-detail-toggle="${item.id}"
-                        aria-label="${item.title} 구성 지표 보기"
-                        aria-controls="${detailId}"
-                        aria-expanded="false"
-                        title="${item.title} 구성 지표 보기"
-                      >i</button>
+                      ${
+                        hasComponents
+                          ? `<button
+                               type="button"
+                               class="observation-journal__info"
+                               data-observation-detail-toggle="${item.id}"
+                               aria-label="${item.title} 구성 지표 보기"
+                               aria-controls="${detailId}"
+                               aria-expanded="false"
+                               title="${item.title} 구성 지표 보기"
+                             >i</button>`
+                          : ""
+                      }
                     </div>
                   </div>
                   <div>
                     <span>${item.status}</span>
-                    <strong>${item.score == null ? "점수 보류" : `${formatNumber(item.score, 1)}점`}</strong>
+                    ${hasScore ? `<strong>${formatNumber(item.score, 1)}점</strong>` : ""}
                   </div>
                 </div>
                 ${renderObservationJournalTrend(section, item, timeseries)}
@@ -4983,9 +4981,13 @@ function renderObservationJournal(section, timeseries) {
                 </div>
                 ${renderNarrativeList(item.assessment, "narrative-list--compact")}
                 <footer><span>운영</span><strong>${item.operation}</strong></footer>
-                <div class="observation-journal__detail" id="${detailId}" hidden>
-                  ${renderObservationJournalDetail(item)}
-                </div>
+                ${
+                  hasComponents
+                    ? `<div class="observation-journal__detail" id="${detailId}" hidden>
+                         ${renderObservationJournalDetail(item)}
+                       </div>`
+                    : ""
+                }
               </article>
             `;
           })
