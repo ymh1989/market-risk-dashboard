@@ -260,8 +260,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260814-5" in html
-    assert "app.js?v=20260814-5" in html
+    assert "styles.css?v=20260814-6" in html
+    assert "app.js?v=20260814-6" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -278,13 +278,17 @@ def test_ui_hierarchy_and_accessibility_contract():
     assert "data-source-detail-toggle" in app_source
     assert "const indicatorDirectionMeanings" in app_source
     assert "function indicatorDirectionMeaning" in app_source
-    assert "점수 상승 시" in app_source
-    assert "점수 하락 시" in app_source
+    assert "function renderIndicatorDirectionMeaning" in app_source
+    assert "${renderIndicatorDirectionMeaning(indicator)}" in app_source
+    assert "0~100 위험점수 기준" in app_source
+    assert "점수 상승 시" not in app_source
+    assert "점수 하락 시" not in app_source
     assert "현재 원점수 구성" not in app_source
     assert "<dt>원천·티커</dt>" not in app_source
     assert "<dt>가중·기여</dt>" not in app_source
-    assert ".source-detail__direction--up" in styles
-    assert ".source-detail__direction--down" in styles
+    assert ".indicator-direction__item--up" in styles
+    assert ".indicator-direction__item--down" in styles
+    assert ".source-detail__directions" not in styles
     for indicator in market["indicators"]:
         assert f"  {indicator['id']}: {{" in app_source, f"{indicator['id']} direction meaning is missing"
     assert "font-weight: 800;" not in styles

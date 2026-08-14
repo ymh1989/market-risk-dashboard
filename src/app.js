@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260814-5";
+const ASSET_VERSION = "20260814-6";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -3453,6 +3453,28 @@ function indicatorDirectionMeaning(indicator) {
   };
 }
 
+function renderIndicatorDirectionMeaning(indicator) {
+  const meaning = indicatorDirectionMeaning(indicator);
+  return `
+    <section class="indicator-direction" aria-label="${indicator.name} 점수 방향 해석">
+      <div class="indicator-direction__heading">
+        <strong>점수 방향</strong>
+        <small>0~100 위험점수 기준</small>
+      </div>
+      <dl class="indicator-direction__list">
+        <div class="indicator-direction__item indicator-direction__item--up">
+          <dt>상승 시</dt>
+          <dd>${meaning.up}</dd>
+        </div>
+        <div class="indicator-direction__item indicator-direction__item--down">
+          <dt>하락 시</dt>
+          <dd>${meaning.down}</dd>
+        </div>
+      </dl>
+    </section>
+  `;
+}
+
 function indicatorQualityNotes(indicator, quality) {
   const source = String(indicator.source ?? "").toLowerCase();
   return (quality?.issues ?? [])
@@ -3467,7 +3489,6 @@ function indicatorQualityNotes(indicator, quality) {
 function renderIndicatorSourceDetail(indicator, provenance) {
   const records = indicatorSourceRecords(indicator, provenance?.snapshot);
   const qualityNotes = indicatorQualityNotes(indicator, provenance?.quality);
-  const directionMeaning = indicatorDirectionMeaning(indicator);
   const normalization = provenance?.model?.normalization;
   const normalizationText = normalization
     ? `최대 2년 · 분위수 ${Number(normalization.percentileWeight) * 100}% · z ${Number(normalization.zScoreWeight) * 100}% · robust z ${Number(normalization.robustZScoreWeight) * 100}%`
@@ -3503,22 +3524,6 @@ function renderIndicatorSourceDetail(indicator, provenance) {
                 .join("")
             : `<div><strong>${indicator.source}</strong><span>카드 산출 결과에 기록된 원천</span></div>`
         }
-      </div>
-      <div class="source-detail__directions">
-        <div class="source-detail__direction-heading">
-          <strong>점수 방향 해석</strong>
-          <small>카드의 0~100 위험점수 기준 · 원천 시계열 자체 등락과 다를 수 있음</small>
-        </div>
-        <dl class="source-detail__direction-list">
-          <div class="source-detail__direction source-detail__direction--up">
-            <dt>점수 상승 시</dt>
-            <dd>${directionMeaning.up}</dd>
-          </div>
-          <div class="source-detail__direction source-detail__direction--down">
-            <dt>점수 하락 시</dt>
-            <dd>${directionMeaning.down}</dd>
-          </div>
-        </dl>
       </div>
       ${
         qualityNotes.length
@@ -3567,6 +3572,7 @@ function renderIndicator(indicator, thresholds, timeseries, provenance = null) {
       </div>
       ${renderSparkline(indicator, timeseries)}
       ${renderNarrativeList(indicator.detail, "narrative-list--compact indicator-detail-list")}
+      ${renderIndicatorDirectionMeaning(indicator)}
       <footer>
         <span>${indicator.source}</span>
         <span>추세 ${trendLabel[indicator.trend] ?? "-"}</span>

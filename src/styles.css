@@ -4530,6 +4530,68 @@ a {
   font-size: 1.35rem;
 }
 
+.indicator-direction {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0;
+}
+
+.indicator-direction__heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.indicator-direction__heading strong {
+  font-size: 0.76rem;
+}
+
+.indicator-direction__heading small {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.indicator-direction__list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.indicator-direction__item {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 8px;
+  border-left: 3px solid var(--line);
+  padding-left: 9px;
+}
+
+.indicator-direction__item--up {
+  border-left-color: var(--red);
+}
+
+.indicator-direction__item--down {
+  border-left-color: var(--green);
+}
+
+.indicator-direction__item dt,
+.indicator-direction__item dd {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.indicator-direction__item dt {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.indicator-direction__item dd {
+  color: var(--ink);
+}
+
 .mini-bar {
   height: 8px;
   border-radius: 999px;
@@ -5716,60 +5778,6 @@ a {
   gap: 7px;
 }
 
-.source-detail__directions,
-.source-detail__direction-heading {
-  display: grid;
-  gap: 5px;
-}
-
-.source-detail__direction-heading strong {
-  font-size: 0.76rem;
-}
-
-.source-detail__direction-heading small {
-  color: var(--muted);
-  font-size: 0.7rem;
-  line-height: 1.45;
-}
-
-.source-detail__direction-list {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-}
-
-.source-detail__direction {
-  display: grid;
-  grid-template-columns: 84px minmax(0, 1fr);
-  gap: 10px;
-  border-left: 3px solid var(--line);
-  padding: 5px 0 5px 10px;
-}
-
-.source-detail__direction--up {
-  border-left-color: var(--red);
-}
-
-.source-detail__direction--down {
-  border-left-color: var(--green);
-}
-
-.source-detail__direction dt,
-.source-detail__direction dd {
-  margin: 0;
-  font-size: 0.73rem;
-  line-height: 1.5;
-}
-
-.source-detail__direction dt {
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.source-detail__direction dd {
-  color: var(--ink);
-}
-
 .research-page {
   display: grid;
   gap: 20px;
@@ -6545,7 +6553,7 @@ a {
     gap: 2px;
   }
 
-  .source-detail__direction {
+  .indicator-direction__item {
     grid-template-columns: 1fr;
     gap: 2px;
   }
