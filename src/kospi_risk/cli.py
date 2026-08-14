@@ -87,6 +87,8 @@ def cmd_update_kospi_breadth(args: argparse.Namespace) -> None:
             refresh_from_start=args.refresh_from_start,
             sleep_seconds=args.sleep,
             retries=args.retries,
+            fetch_flows=not args.skip_flows,
+            fetch_program=not args.skip_program_flows,
         )
     except (RuntimeError, ValueError) as error:
         raise SystemExit(str(error)) from None
@@ -439,6 +441,16 @@ def build_parser() -> argparse.ArgumentParser:
     breadth.add_argument("--sleep", type=float, default=0.4, help="거래일 조회 사이 대기 초")
     breadth.add_argument("--retries", type=int, default=3)
     breadth.add_argument("--skip-plots", action="store_true")
+    breadth.add_argument(
+        "--skip-flows",
+        action="store_true",
+        help="외국인·기관·프로그램 직접 순매수 조회 생략",
+    )
+    breadth.add_argument(
+        "--skip-program-flows",
+        action="store_true",
+        help="프로그램 순매수만 생략하고 외국인·기관 순매수는 조회",
+    )
     breadth.add_argument(
         "--refresh-from-start",
         action="store_true",

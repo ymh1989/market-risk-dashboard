@@ -57,6 +57,8 @@ PYTHONPATH=src python3 -m kospi_risk.cli update-kospi-breadth \
 
 실패일을 복구하거나 과거 원천을 재조회할 때만 `--start YYYY-MM-DD --refresh-from-start`를 함께 사용합니다. 해당 시작일부터 다시 호출한 뒤 날짜 중복을 제거하고 새 값을 보존합니다.
 
+외국인·기관 순매수는 기간을 한 번에 조회하고, 프로그램 순매수는 KRX 화면 특성상 거래일별로 조회합니다. KRX 호출 제한을 고려해 프로그램 최초 적재는 최근 80거래일로 제한하고 최신일부터 채우며, 이후에는 누락된 새 거래일만 추가합니다. 세 날짜가 연속 실패하면 해당 실행의 프로그램 조회를 중단하고 기존 값을 보존합니다. 원천 장애를 점검할 때 전체 직접 수급은 `--skip-flows`, 프로그램만은 `--skip-program-flows`로 생략할 수 있습니다.
+
 `make update-kospi-breadth`도 같은 명령을 실행합니다. 최초 시작일은 `KOSPI_BREADTH_START`로 바꿀 수 있습니다.
 
 ```bash
@@ -97,6 +99,13 @@ VKOSPI 파일을 생략하면 결과에 `vkospi`, `vkospi_change` 컬럼과 세 
 | `AD_ma5`, `AD_ma20` | AD Line 5·20거래일 이동평균 |
 | `breadth_ma5`, `breadth_ma20` | breadth 비율 5·20거래일 이동평균 |
 | `samsung_return`, `hynix_return` | 당일 전 종목 응답에서 읽은 삼성전자·SK하이닉스 수익률 |
+| `foreign_net_buy_value` | 외국인·기타외국인 합산 순매수 거래대금, 원 |
+| `institution_net_buy_value` | 금융투자·보험·투신·사모·은행·기타금융·연기금 합산 순매수 거래대금, 원 |
+| `financial_investment_net_buy_value`, `pension_net_buy_value` | 금융투자·연기금 당일 순매수 거래대금, 원 |
+| `program_net_buy_value` | 차익·비차익 프로그램 전체 순매수 거래대금, 원 |
+| `*_net_buy_5d` | 해당 투자자의 5거래일 순매수 거래대금 누계 |
+| `*_sell_pressure` | 5일 순매도 강도의 직전 최대 252거래일 내 분위수, 0~100 |
+| `direct_flow_pressure` | 외국인 45%·기관 35%·프로그램 20% 매도압력 합성점수 |
 
 AD Line의 절대값은 저장 시작일에 종속됩니다. 서로 다른 시작일로 만든 파일의 AD Line 수준을 직접 비교하지 않고, 같은 파일 안의 방향·고점·저점·지수와의 다이버전스를 봅니다.
 
@@ -109,6 +118,8 @@ AD Line의 절대값은 저장 시작일에 종속됩니다. 서로 다른 시�
 
 삼성전자·SK하이닉스 수익률은 같은 날 받은 KOSPI 전 종목 응답에서 직접 읽습니다. 두 티커가 없거나 VKOSPI를 결합하지 않으면 `sector_rotation`은 `False`이며 임의 값을 만들지 않습니다.
 
+직접 수급 압력은 각 날짜까지 존재하는 값만 사용합니다. 5거래일 순매수 누계를 음수 방향으로 바꾼 뒤 직전 최대 252거래일에서의 분위수를 계산하며 최소 60개 관측이 쌓이기 전에는 값을 만들지 않습니다. 프로그램 매매는 독립 투자자군이 아니라 주문 방식이므로 외국인·기관 거래와 일부 중첩될 수 있습니다. 프로그램 값이 일시 누락되면 외국인·기관 가중치만 다시 비례 조정하지만, 원천 상태는 `not_available` 또는 경고로 별도 표시합니다. 이 보조 진단은 기존 종합점수와 6개 그룹 가중치를 변경하지 않습니다.
+
 ## 저장 산출물
 
 - 운영 데이터: `data/processed/kospi_breadth.parquet`
@@ -118,7 +129,7 @@ AD Line의 절대값은 저장 시작일에 종속됩니다. 서로 다른 시�
 - Chart 2: `reports/figures/kospi_breadth/kospi_ad_line.png`
 - Chart 3: `reports/figures/kospi_breadth/kospi_vkospi_breadth.png`, VKOSPI가 있을 때만 생성
 
-메타데이터에는 요청 중 실패한 날짜, 휴장·빈 응답 날짜, 최근 10거래일 universe 범위와 VKOSPI 결합 여부를 기록합니다. 특정 날짜 조회가 실패해도 나머지 날짜는 계속 처리합니다. 최초 실행에서 모든 거래일이 실패하면 빈 파일을 만들지 않고 종료합니다.
+메타데이터에는 요청 중 실패한 날짜, 휴장·빈 응답 날짜, 최근 10거래일 universe 범위, 투자자·프로그램 순매수 상태와 VKOSPI 결합 여부를 기록합니다. 특정 날짜 조회가 실패해도 나머지 날짜는 계속 처리합니다. 최초 실행에서 모든 거래일이 실패하면 빈 파일을 만들지 않고 종료합니다.
 
 ## 품질검사와 수동 sanity check
 

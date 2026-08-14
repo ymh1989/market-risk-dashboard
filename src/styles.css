@@ -6940,6 +6940,56 @@ a {
   font-size: 1.32rem;
 }
 
+.breadth-flow-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 18px;
+}
+
+.breadth-flow-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.breadth-flow-panel h3 {
+  margin: 4px 0 0;
+  font-size: 1rem;
+}
+
+.breadth-flow-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.breadth-flow-metrics article {
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px;
+}
+
+.breadth-flow-metrics article + article {
+  border-left: 1px solid var(--line);
+}
+
+.breadth-flow-metrics span,
+.breadth-flow-metrics small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.breadth-flow-metrics strong {
+  font-size: 1rem;
+}
+
 .breadth-unit-guide {
   display: grid;
   grid-template-columns: auto repeat(3, minmax(0, 1fr));
@@ -7087,7 +7137,10 @@ a {
 .breadth-chart__ma5,
 .breadth-chart__ma,
 .breadth-chart__ad,
-.breadth-chart__ad-ma {
+.breadth-chart__ad-ma,
+.breadth-chart__flow-foreign,
+.breadth-chart__flow-institution,
+.breadth-chart__flow-program {
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -7131,6 +7184,26 @@ a {
 .breadth-chart__ad {
   stroke: var(--green);
   stroke-width: 2.4;
+}
+
+.breadth-chart__flow-foreign {
+  stroke: var(--blue);
+  stroke-width: 2.2;
+}
+
+.breadth-chart__flow-institution {
+  stroke: var(--green);
+  stroke-width: 2.2;
+}
+
+.breadth-chart__flow-program {
+  stroke: var(--amber);
+  stroke-dasharray: 6 4;
+  stroke-width: 1.8;
+}
+
+.breadth-chart-card--flow {
+  grid-column: 1 / -1;
 }
 
 .breadth-chart__label,
@@ -7202,6 +7275,9 @@ a {
 .breadth-chart-legend .is-ma5 { background: var(--green); }
 .breadth-chart-legend .is-ma { background: var(--amber); }
 .breadth-chart-legend .is-ad { background: var(--green); }
+.breadth-chart-legend .is-flow-foreign { background: var(--blue); }
+.breadth-chart-legend .is-flow-institution { background: var(--green); }
+.breadth-chart-legend .is-flow-program { background: var(--amber); }
 
 .breadth-chart-card__note {
   margin: 8px 0 0;
@@ -7276,6 +7352,7 @@ a {
   }
 
   .breadth-metrics,
+  .breadth-flow-metrics,
   .breadth-chart-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -7297,6 +7374,7 @@ a {
 
   .breadth-summary dl,
   .breadth-metrics,
+  .breadth-flow-metrics,
   .breadth-chart-grid,
   .breadth-trust,
   .breadth-trust dl {
@@ -7307,6 +7385,16 @@ a {
     border-top: 1px solid var(--line);
     border-left: 0;
     padding: 10px 0;
+  }
+
+  .breadth-flow-panel > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .breadth-flow-metrics article + article {
+    border-top: 1px solid var(--line);
+    border-left: 0;
   }
 
   .breadth-state {

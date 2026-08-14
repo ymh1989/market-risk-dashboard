@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260814-2";
+const ASSET_VERSION = "20260814-3";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -161,6 +161,11 @@ const formatSignedThousands = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
   const number = Number(value) / 1000;
   return `${number > 0 ? "+" : ""}${formatNumber(number, 1)}천 종목`;
+};
+const formatSignedEok = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
+  const number = Number(value);
+  return `${number > 0 ? "+" : ""}${formatNumber(number, Math.abs(number) < 100 ? 1 : 0)}억원`;
 };
 const formatPointDelta = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
@@ -4042,7 +4047,10 @@ function shockMetric({ label, value, level, meta, note }) {
 function renderShockDecomposition(market, timeseries, breadthData) {
   const priceShock = groupScore(market, "crash");
   const macroConfirmation = groupScore(market, "macro");
-  const flowScore = groupScore(market, "flow");
+  const fallbackFlowScore = groupScore(market, "flow");
+  const directFlowValue = breadthData?.latest?.directFlowPressure;
+  const directFlowScore = directFlowValue == null ? Number.NaN : Number(directFlowValue);
+  const flowScore = Number.isFinite(directFlowScore) ? directFlowScore : fallbackFlowScore;
   const liquidityScore = groupScore(market, "liquidity");
   const aiSemiProxy = groupScore(market, "ai_semi");
   const breadthStress = breadthCollapseScore(breadthData?.latest);
@@ -4088,8 +4096,10 @@ function renderShockDecomposition(market, timeseries, breadthData) {
           label: "수급·유동성 충격",
           value: flowLiquidityShock,
           level: diagnosticLevel(flowLiquidityShock),
-          meta: `Breadth ${breadthDate} · 연구 보조값`,
-          note: "시장 확산 45% · 수급 30% · 거래 25%"
+          meta: Number.isFinite(directFlowScore)
+            ? `KRX 직접 순매수 · ${breadthDate} EOD`
+            : `기존 Flow proxy · ${breadthDate}`,
+          note: "시장 확산 45% · 직접 수급 30% · 거래 25%"
         })}
         ${shockMetric({
           label: "거시·신용 확인",
@@ -4124,9 +4134,12 @@ function renderShockDecomposition(market, timeseries, breadthData) {
           <summary>산식</summary>
           ${renderNarrativeList([
             "시장확산 부담: 일간 35% · 5일 평균 45% · 20일 평균 20%",
-            "수급·유동성: 시장확산 부담 45% · 기존 Flow 30% · 기존 Liquidity 25%",
+            "수급·유동성: 시장확산 45% · KRX 직접 수급 30% · 기존 Liquidity 25%",
+            "직접 수급: 외국인 45% · 기관 35% · 프로그램 20%의 5일 매도압력 분위수",
             "악화 속도: 종합·Crash 5일 변화와 Breadth 5일 평균 변화를 규칙 기반 분류",
-            "외국인 Flow는 보유비중 proxy · 직접 순매매 데이터 아님"
+            Number.isFinite(directFlowScore)
+              ? "각 날짜까지의 직전 최대 252거래일만 비교 · 미래값 미사용"
+              : "직접 순매수 누락 · 기존 외국인 보유비중 Flow proxy로 대체"
           ], "narrative-list--compact")}
         </details>
       </div>
@@ -4150,6 +4163,7 @@ function renderBreadthSummaryPanel(breadthData) {
         <div><dt>일간 확산도</dt><dd>${formatSignedPct(latest.breadthPct)}</dd><small>-100~+100%</small></div>
         <div><dt>5일 평균</dt><dd>${formatSignedPct(latest.breadthMa5Pct)}</dd><small>20일 ${formatSignedPct(latest.breadthMa20Pct)}</small></div>
         <div><dt>AD-20일선</dt><dd>${formatSignedThousands(latest.adDistance20)}</dd><small>누적 순확산</small></div>
+        <div><dt>직접 수급 압력</dt><dd>${latest.directFlowPressure == null ? "-" : `${formatNumber(latest.directFlowPressure, 1)} / 100`}</dd><small>외국인·기관·프로그램</small></div>
       </dl>
       <button type="button" data-open-tab="market-breadth">내부 흐름 보기</button>
     </section>
@@ -4320,6 +4334,85 @@ function renderBreadthAdChart(breadthData) {
   `;
 }
 
+function renderBreadthFlowChart(breadthData) {
+  const points = breadthData?.series ?? [];
+  const hasDirectFlow = points.some((point) =>
+    [point.foreignNetBuy5dEok, point.institutionNetBuy5dEok, point.programNetBuy5dEok]
+      .some((value) => value !== null && value !== undefined && Number.isFinite(Number(value)))
+  );
+  if (points.length < 2 || !hasDirectFlow) return "";
+
+  const chartId = registerInteractiveChart({
+    series: [
+      {
+        label: "외국인 5D",
+        points,
+        valueKey: "foreignNetBuy5dEok",
+        color: "var(--blue)",
+        format: formatSignedEok
+      },
+      {
+        label: "기관 5D",
+        points,
+        valueKey: "institutionNetBuy5dEok",
+        color: "var(--green)",
+        format: formatSignedEok
+      },
+      {
+        label: "프로그램 5D",
+        points,
+        valueKey: "programNetBuy5dEok",
+        color: "var(--amber)",
+        format: formatSignedEok
+      }
+    ]
+  });
+  const layers = chartRangeOptions
+    .map((range) => {
+      const domain = chartRangeDomain([points], range.id);
+      const visible = pointsWithinDomain(points, domain, "foreignNetBuy5dEok");
+      const combined = [
+        { value: 0 },
+        ...visible.flatMap((point) =>
+          ["foreignNetBuy5dEok", "institutionNetBuy5dEok", "programNetBuy5dEok"]
+            .filter((key) => point[key] !== null && point[key] !== undefined)
+            .map((key) => ({ value: Number(point[key]) }))
+        )
+      ];
+      const valueDomain = numericChartDomain(combined, "value", 0.12);
+      const zeroY = 190 - ((0 - valueDomain.min) / (valueDomain.max - valueDomain.min)) * 172;
+      const axis = renderMonthAxisFromDomain(domain, 760, 18, 190, 207);
+      return `
+        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 760 210" role="img" aria-label="외국인 기관 프로그램 5거래일 순매수 누계">
+          ${axis.grid}
+          <path class="breadth-chart__grid" d="M 0 18 L 760 18 M 0 104 L 760 104 M 0 190 L 760 190"></path>
+          <path class="breadth-chart__zero-line" d="M 0 ${zeroY} L 760 ${zeroY}"></path>
+          <path class="breadth-chart__flow-foreign" d="${datedValuePath(points, "foreignNetBuy5dEok", domain, valueDomain, 760, 18, 190)}"></path>
+          <path class="breadth-chart__flow-institution" d="${datedValuePath(points, "institutionNetBuy5dEok", domain, valueDomain, 760, 18, 190)}"></path>
+          <path class="breadth-chart__flow-program" d="${datedValuePath(points, "programNetBuy5dEok", domain, valueDomain, 760, 18, 190)}"></path>
+          ${renderChartCursorLine(18, 190)}
+          ${axis.labels}
+        </svg>
+      `;
+    })
+    .join("");
+
+  return `
+    <article class="breadth-chart-card breadth-chart-card--flow">
+      <header>
+        <div><span class="eyebrow">Direct Order Flow · KRX</span><h3>투자자별 5일 순매수 누계</h3></div>
+        <div class="breadth-chart-legend"><span><i class="is-flow-foreign"></i>외국인</span><span><i class="is-flow-institution"></i>기관</span><span><i class="is-flow-program"></i>프로그램</span></div>
+      </header>
+      <div class="breadth-chart" data-timeseries-chart="${chartId}">
+        ${renderChartRangeControls(chartId)}
+        ${layers}
+        ${renderChartTooltip()}
+      </div>
+      <p class="breadth-chart-card__note">0 위는 순매수 · 0 아래는 순매도 · 거래대금 억원 단위 · 5거래일 누계로 일간 잡음 완화</p>
+    </article>
+  `;
+}
+
 function renderMarketBreadthPage(breadthData) {
   if (!breadthData?.latest || !breadthData?.series?.length) {
     return `
@@ -4335,7 +4428,10 @@ function renderMarketBreadthPage(breadthData) {
   const latest = breadthData.latest;
   const quality = breadthData.quality ?? {};
   const state = latest.state ?? { label: "확인 필요", tone: "watch" };
+  const directFlowLevel = diagnosticLevel(latest.directFlowPressure);
   const qualityLabel = quality.status === "ok" ? "정상" : quality.status === "warning" ? "주의" : "확인 필요";
+  const investorFlowLabel = breadthData.source?.investorFlowStatus === "available" ? "연결" : "미연결";
+  const programFlowLabel = breadthData.source?.programFlowStatus === "available" ? "연결" : "미연결";
   return `
     <section class="breadth-page">
       <div class="section-heading breadth-page__heading">
@@ -4357,6 +4453,27 @@ function renderMarketBreadthPage(breadthData) {
         <article><span>당일 순확산 (Net)</span><strong>${latest.netBreadth > 0 ? "+" : ""}${formatNumber(latest.netBreadth)}종목</strong><small>상승-하락 · 비율 ${formatNumber(latest.adRatio, 2)}</small></article>
         <article><span>AD 누적선-20일선</span><strong>${formatSignedThousands(latest.adDistance20)}</strong><small>AD ${formatSignedThousands(latest.adLine)} · 20D ${formatSignedThousands(latest.adMa20)}</small></article>
       </div>
+
+      <section class="breadth-flow-panel" aria-label="KRX 직접 수급 판독">
+        <header>
+          <div><span class="eyebrow">Direct Order Flow</span><h3>외국인·기관·프로그램 수급</h3></div>
+          <div class="status-pill status-pill--${directFlowLevel.tone}">
+            ${latest.directFlowPressure == null ? "자료 준비중" : `매도압력 ${formatNumber(latest.directFlowPressure, 1)}`}
+          </div>
+        </header>
+        <div class="breadth-flow-metrics">
+          <article><span>외국인</span><strong>${formatSignedEok(latest.foreignNetBuy5dEok)}</strong><small>당일 ${formatSignedEok(latest.foreignNetBuyEok)} · 5D 누계</small></article>
+          <article><span>기관</span><strong>${formatSignedEok(latest.institutionNetBuy5dEok)}</strong><small>당일 ${formatSignedEok(latest.institutionNetBuyEok)} · 5D 누계</small></article>
+          <article><span>프로그램</span><strong>${formatSignedEok(latest.programNetBuy5dEok)}</strong><small>당일 ${formatSignedEok(latest.programNetBuyEok)} · 차익+비차익</small></article>
+          <article><span>기관 내부</span><strong>금투 ${formatSignedEok(latest.financialInvestmentNetBuyEok)}</strong><small>연기금 ${formatSignedEok(latest.pensionNetBuyEok)} · 당일</small></article>
+        </div>
+        ${renderNarrativeList([
+          "양수 = 순매수 · 음수 = 순매도",
+          "압력점수 = 5일 순매도 강도를 직전 최대 252거래일과 비교",
+          "프로그램 = 주문 방식 · 외국인·기관 거래와 일부 중첩 가능",
+          "수급 진단 전용 · 기존 종합점수와 6개 가중치에는 미반영"
+        ], "narrative-list--compact")}
+      </section>
 
       <section class="breadth-unit-guide" aria-label="시장 내부강도 단위 읽는 법">
         <strong>단위 읽는 법</strong>
@@ -4392,6 +4509,7 @@ function renderMarketBreadthPage(breadthData) {
       <div class="breadth-chart-grid">
         ${renderBreadthPriceChart(breadthData)}
         ${renderBreadthAdChart(breadthData)}
+        ${renderBreadthFlowChart(breadthData)}
       </div>
 
       <section class="breadth-trust">
@@ -4403,6 +4521,8 @@ function renderMarketBreadthPage(breadthData) {
             <div><dt>거래일</dt><dd>${formatNumber(breadthData.period.observations)}개</dd></div>
             <div><dt>최근 종목 수</dt><dd>${formatNumber(quality.minRecentTotal)}~${formatNumber(quality.maxRecentTotal)}개</dd></div>
             <div><dt>수집 실패</dt><dd>${formatNumber(quality.failedDates?.length ?? 0)}일</dd></div>
+            <div><dt>외국인·기관</dt><dd>${investorFlowLabel}</dd></div>
+            <div><dt>프로그램</dt><dd>${programFlowLabel}</dd></div>
           </dl>
         </div>
         <div>
@@ -4410,6 +4530,8 @@ function renderMarketBreadthPage(breadthData) {
           <h3>KRX 원천 · pykrx</h3>
           ${renderNarrativeList([
             "stock.get_market_ohlcv(date, market=KOSPI)",
+            "투자자 순매수: get_market_trading_value_by_date · 거래대금",
+            "프로그램 순매수: KRX MDCSTAT02601 · 차익+비차익 전체",
             "우선주·SPAC·REIT 포함 가능 · ETF·ETN 제외",
             "화면 집계와 종목 분류·기준시각에 따라 차이 가능",
             "VKOSPI 미결합 · risk-on·panic 확정 판정 보류"

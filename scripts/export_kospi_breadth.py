@@ -51,6 +51,11 @@ def _percent(value: object, digits: int = 2) -> float | None:
     return None if number is None else round(float(number) * 100, digits)
 
 
+def _eok(value: object, digits: int = 1) -> float | None:
+    number = _number(value, digits + 4)
+    return None if number is None else round(float(number) / 100_000_000, digits)
+
+
 def _read_metadata(path: Path | None) -> dict:
     if path is None or not path.exists():
         return {}
@@ -120,6 +125,23 @@ def build_breadth_payload(frame: pd.DataFrame, metadata: dict | None = None) -> 
     if not vkospi_merged:
         interpretations.append("VKOSPI 미결합 · 공포지수 조합 판정은 보류")
 
+    direct_flow_pressure = _number(latest.get("direct_flow_pressure"), 1)
+    if direct_flow_pressure is None:
+        interpretations.append("KRX 직접 순매수 미결합 · 기존 수급 proxy만 사용")
+    else:
+        flow_label = (
+            "매도 압력 높음"
+            if direct_flow_pressure >= 75
+            else "매도 우위 관찰"
+            if direct_flow_pressure >= 55
+            else "수급 중립"
+            if direct_flow_pressure >= 35
+            else "매수 우위"
+        )
+        interpretations.append(
+            f"직접 수급 압력 {direct_flow_pressure:.1f}/100 · {flow_label}"
+        )
+
     series = []
     for row in data.itertuples(index=False):
         item = {
@@ -141,18 +163,42 @@ def build_breadth_payload(frame: pd.DataFrame, metadata: dict | None = None) -> 
         }
         if vkospi_merged:
             item["vkospi"] = _number(getattr(row, "vkospi", None), 2)
+        for json_key, column in [
+            ("foreignNetBuyEok", "foreign_net_buy_value"),
+            ("institutionNetBuyEok", "institution_net_buy_value"),
+            ("financialInvestmentNetBuyEok", "financial_investment_net_buy_value"),
+            ("pensionNetBuyEok", "pension_net_buy_value"),
+            ("programNetBuyEok", "program_net_buy_value"),
+            ("foreignNetBuy5dEok", "foreign_net_buy_5d"),
+            ("institutionNetBuy5dEok", "institution_net_buy_5d"),
+            ("programNetBuy5dEok", "program_net_buy_5d"),
+        ]:
+            item[json_key] = _eok(getattr(row, column, None))
+        for json_key, column in [
+            ("foreignSellPressure", "foreign_sell_pressure"),
+            ("institutionSellPressure", "institution_sell_pressure"),
+            ("programSellPressure", "program_sell_pressure"),
+            ("directFlowPressure", "direct_flow_pressure"),
+        ]:
+            item[json_key] = _number(getattr(row, column, None), 1)
         series.append(item)
 
     return {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "generatedAt": generated_at,
         "source": {
             "provider": "KRX",
             "library": "pykrx",
             "endpoint": "stock.get_market_ohlcv(date, market='KOSPI')",
+            "investorFlowEndpoint": "stock.get_market_trading_value_by_date(..., detail=True)",
+            "programFlowEndpoint": "KRX MDCSTAT02601 · 일별 전체 순매수 거래대금",
             "frequency": "EOD",
             "universe": "pykrx KOSPI 주식 응답 · ETF/ETN 제외",
             "vkospiStatus": "merged" if vkospi_merged else "not_available",
+            "investorFlowStatus": metadata.get("investorFlowStatus", "not_available"),
+            "programFlowStatus": metadata.get("programFlowStatus", "not_available"),
+            "programFlowCoverageStart": metadata.get("programFlowCoverageStart"),
+            "programFlowObservations": metadata.get("programFlowObservations", 0),
         },
         "period": {
             "startDate": first_date,
@@ -170,6 +216,8 @@ def build_breadth_payload(frame: pd.DataFrame, metadata: dict | None = None) -> 
             "anomalies": quality.get("anomalies", []),
             "failedDates": metadata.get("failedDates", []),
             "emptyDatesCount": len(metadata.get("emptyDates", [])),
+            "directFlowLatestMissing": quality.get("directFlowLatestMissing", False),
+            "programFlowFailedDates": metadata.get("programFlowFailedDates", []),
         },
         "latest": {
             "date": latest_date,
@@ -189,12 +237,32 @@ def build_breadth_payload(frame: pd.DataFrame, metadata: dict | None = None) -> 
             "adMa5": _number(latest["AD_ma5"], 2),
             "adMa20": _number(latest["AD_ma20"], 2),
             "adDistance20": _number(latest["AD_line"] - latest["AD_ma20"], 2),
+            "foreignNetBuyEok": _eok(latest.get("foreign_net_buy_value")),
+            "institutionNetBuyEok": _eok(latest.get("institution_net_buy_value")),
+            "financialInvestmentNetBuyEok": _eok(
+                latest.get("financial_investment_net_buy_value")
+            ),
+            "pensionNetBuyEok": _eok(latest.get("pension_net_buy_value")),
+            "programNetBuyEok": _eok(latest.get("program_net_buy_value")),
+            "foreignNetBuy5dEok": _eok(latest.get("foreign_net_buy_5d")),
+            "institutionNetBuy5dEok": _eok(latest.get("institution_net_buy_5d")),
+            "programNetBuy5dEok": _eok(latest.get("program_net_buy_5d")),
+            "foreignSellPressure": _number(latest.get("foreign_sell_pressure"), 1),
+            "institutionSellPressure": _number(
+                latest.get("institution_sell_pressure"), 1
+            ),
+            "programSellPressure": _number(latest.get("program_sell_pressure"), 1),
+            "directFlowPressure": direct_flow_pressure,
             "interpretation": interpretations,
         },
         "methodology": [
             "breadth_pct = (상승 - 하락) / (상승 + 하락)",
             "AD Line = 저장 시작일부터 일별 (상승 - 하락) 누적",
             "AD Line 절대값은 시작일에 종속 · 방향과 20일선 비교 중심",
+            "직접 수급: 외국인 45% · 기관 35% · 프로그램 20% 매도압력 분위수",
+            "프로그램은 주문 방식 · 외국인·기관 거래와 일부 중첩 가능",
+            "매도압력 분위수: 5거래일 순매수 누계를 직전 최대 252거래일과 비교",
+            "최소 60개 과거 관측 필요 · 각 날짜까지 공개된 값만 사용",
             "장 마감 EOD 기준 · 장중 판정 아님",
         ],
         "series": series,

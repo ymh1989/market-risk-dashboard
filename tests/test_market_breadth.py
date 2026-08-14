@@ -10,7 +10,10 @@ from kospi_risk.data_loader import load_frame
 from kospi_risk.market_breadth import (
     add_market_state_flags,
     calculate_breadth_metrics,
+    calculate_direct_flow_metrics,
     fetch_kospi_breadth,
+    fetch_kospi_investor_flows,
+    fetch_kospi_program_flows,
     merge_vkospi,
     plot_breadth_dashboard,
     sanity_check_breadth,
@@ -136,6 +139,102 @@ def test_market_state_flags_identify_panic_narrow_rally_and_sector_rotation():
     assert bool(result.loc[2, "sector_rotation"])
 
 
+def test_fetch_investor_flows_sums_foreign_and_institution_detail():
+    raw = pd.DataFrame(
+        {
+            "금융투자": [100, -200],
+            "보험": [20, 30],
+            "투신": [-10, 40],
+            "사모": [5, -5],
+            "은행": [0, 10],
+            "기타금융": [2, 3],
+            "연기금": [50, 60],
+            "외국인": [-300, 500],
+            "기타외국인": [-5, 5],
+        },
+        index=pd.to_datetime(["2026-01-02", "2026-01-05"]),
+    )
+    result = fetch_kospi_investor_flows(
+        "2026-01-02",
+        "2026-01-05",
+        sleep_seconds=0,
+        investor_flow_fetcher=lambda _start, _end: raw,
+        sleep_fn=lambda _: None,
+    )
+
+    assert result["foreign_net_buy_value"].tolist() == [-305, 505]
+    assert result["institution_net_buy_value"].tolist() == [167, -62]
+    assert result["financial_investment_net_buy_value"].tolist() == [100, -200]
+    assert result["pension_net_buy_value"].tolist() == [50, 60]
+
+
+def test_fetch_program_flows_uses_total_row_and_continues_after_failure():
+    def fetcher(date_key: str) -> pd.DataFrame:
+        if date_key == "20260105":
+            raise RuntimeError("임시 오류")
+        return pd.DataFrame(
+            {
+                "ITM_TP_NM": ["차익", "비차익", "전체"],
+                "NETBID_TRDVAL": ["100", "-1,300", "-1,200"],
+            }
+        )
+
+    result = fetch_kospi_program_flows(
+        pd.to_datetime(["2026-01-02", "2026-01-05"]),
+        retries=1,
+        sleep_seconds=0,
+        program_flow_fetcher=fetcher,
+        sleep_fn=lambda _: None,
+    )
+
+    assert result["program_net_buy_value"].tolist() == [-1200.0]
+    assert result.attrs["failed_dates"][0]["date"] == "2026-01-05"
+
+
+def test_program_flow_circuit_breaker_stops_source_wide_failures():
+    calls = 0
+
+    def failed_fetcher(_: str) -> pd.DataFrame:
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("KRX 제한 응답")
+
+    result = fetch_kospi_program_flows(
+        pd.bdate_range("2026-01-02", periods=6),
+        retries=1,
+        sleep_seconds=0,
+        program_flow_fetcher=failed_fetcher,
+        sleep_fn=lambda _: None,
+    )
+
+    assert result.empty
+    assert calls == 3
+    assert result.attrs["failed_dates"][-1]["scope"] == "source-circuit-breaker"
+
+
+def test_direct_flow_pressure_is_trailing_only_and_reweights_missing_program():
+    rows = 70
+    frame = pd.DataFrame(
+        {
+            "date": pd.bdate_range("2025-01-02", periods=rows),
+            "foreign_net_buy_value": np.linspace(100, -100, rows),
+            "institution_net_buy_value": np.linspace(50, -50, rows),
+            "program_net_buy_value": [np.nan] * rows,
+        }
+    )
+    result = calculate_direct_flow_metrics(frame)
+    original_pressure = result.loc[65, "direct_flow_pressure"]
+
+    changed_future = frame.copy()
+    changed_future.loc[66:, "foreign_net_buy_value"] = -1_000_000
+    changed = calculate_direct_flow_metrics(changed_future)
+
+    assert result.loc[65, "foreign_net_buy_5d"] < 0
+    assert result.loc[65, "direct_flow_pressure"] > 90
+    assert changed.loc[65, "direct_flow_pressure"] == original_pressure
+    assert np.isnan(result.loc[65, "program_sell_pressure"])
+
+
 def test_update_breadth_data_only_fetches_dates_after_existing_tail(tmp_path: Path):
     output = tmp_path / "kospi_breadth.parquet"
     metadata = tmp_path / "breadth_quality.json"
@@ -154,6 +253,7 @@ def test_update_breadth_data_only_fetches_dates_after_existing_tail(tmp_path: Pa
         start_date="2026-01-02",
         end_date="2026-01-05",
         metadata_path=metadata,
+        fetch_flows=False,
         sleep_seconds=0,
         ohlcv_fetcher=breadth_fetcher,
         index_fetcher=index_fetcher,
@@ -167,6 +267,7 @@ def test_update_breadth_data_only_fetches_dates_after_existing_tail(tmp_path: Pa
         start_date="2025-01-01",
         end_date="2026-01-07",
         metadata_path=metadata,
+        fetch_flows=False,
         sleep_seconds=0,
         ohlcv_fetcher=breadth_fetcher,
         index_fetcher=index_fetcher,
@@ -183,6 +284,74 @@ def test_update_breadth_data_only_fetches_dates_after_existing_tail(tmp_path: Pa
     assert payload["quality"]["status"] == "warning"
 
 
+def test_update_backfills_direct_flows_and_reuses_cached_values(tmp_path: Path):
+    output = tmp_path / "kospi_breadth.parquet"
+    metadata = tmp_path / "breadth_quality.json"
+    flow_calls = {"investor": 0, "program": 0}
+
+    def index_fetcher(start_key: str, end_key: str) -> pd.DataFrame:
+        dates = pd.bdate_range(pd.Timestamp(start_key), pd.Timestamp(end_key))
+        return pd.DataFrame({"종가": [2500.0] * len(dates)}, index=dates)
+
+    def investor_fetcher(start_key: str, end_key: str) -> pd.DataFrame:
+        flow_calls["investor"] += 1
+        dates = pd.bdate_range(pd.Timestamp(start_key), pd.Timestamp(end_key))
+        return pd.DataFrame(
+            {
+                "금융투자": [10] * len(dates),
+                "보험": [0] * len(dates),
+                "투신": [0] * len(dates),
+                "사모": [0] * len(dates),
+                "은행": [0] * len(dates),
+                "기타금융": [0] * len(dates),
+                "연기금": [20] * len(dates),
+                "외국인": [-40] * len(dates),
+                "기타외국인": [0] * len(dates),
+            },
+            index=dates,
+        )
+
+    def program_fetcher(_: str) -> pd.DataFrame:
+        flow_calls["program"] += 1
+        return pd.DataFrame(
+            {"ITM_TP_NM": ["전체"], "NETBID_TRDVAL": ["-15"]}
+        )
+
+    first = update_breadth_data(
+        output,
+        start_date="2026-01-02",
+        end_date="2026-01-05",
+        metadata_path=metadata,
+        sleep_seconds=0,
+        ohlcv_fetcher=lambda _: daily_ohlcv([1, -1, 0]),
+        index_fetcher=index_fetcher,
+        investor_flow_fetcher=investor_fetcher,
+        program_flow_fetcher=program_fetcher,
+        sleep_fn=lambda _: None,
+    )
+    assert first["foreign_net_buy_value"].tolist() == [-40, -40]
+    assert first["institution_net_buy_value"].tolist() == [30, 30]
+    assert first["program_net_buy_value"].tolist() == [-15, -15]
+    assert flow_calls == {"investor": 1, "program": 2}
+
+    update_breadth_data(
+        output,
+        start_date="2026-01-02",
+        end_date="2026-01-05",
+        metadata_path=metadata,
+        sleep_seconds=0,
+        ohlcv_fetcher=lambda _: daily_ohlcv([1, -1, 0]),
+        index_fetcher=index_fetcher,
+        investor_flow_fetcher=investor_fetcher,
+        program_flow_fetcher=program_fetcher,
+        sleep_fn=lambda _: None,
+    )
+    assert flow_calls == {"investor": 1, "program": 2}
+    payload = json.loads(metadata.read_text(encoding="utf-8"))
+    assert payload["investorFlowStatus"] == "available"
+    assert payload["programFlowStatus"] == "available"
+
+
 def test_update_writes_failure_metadata_when_every_date_fails(tmp_path: Path):
     output = tmp_path / "kospi_breadth.parquet"
     metadata = tmp_path / "breadth_quality.json"
@@ -196,6 +365,7 @@ def test_update_writes_failure_metadata_when_every_date_fails(tmp_path: Path):
             start_date="2026-01-02",
             end_date="2026-01-02",
             metadata_path=metadata,
+            fetch_flows=False,
             retries=1,
             sleep_seconds=0,
             ohlcv_fetcher=failed_fetcher,
@@ -251,6 +421,7 @@ def test_incremental_failure_preserves_existing_data_and_marks_warning(tmp_path:
         start_date="2026-01-02",
         end_date="2026-01-02",
         metadata_path=metadata,
+        fetch_flows=False,
         sleep_seconds=0,
         ohlcv_fetcher=lambda _: daily_ohlcv([1, -1, 0]),
         index_fetcher=index_fetcher,
@@ -261,6 +432,7 @@ def test_incremental_failure_preserves_existing_data_and_marks_warning(tmp_path:
         output,
         end_date="2026-01-05",
         metadata_path=metadata,
+        fetch_flows=False,
         retries=1,
         sleep_seconds=0,
         ohlcv_fetcher=lambda _: (_ for _ in ()).throw(RuntimeError("KRX 임시 장애")),

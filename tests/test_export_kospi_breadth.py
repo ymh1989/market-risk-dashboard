@@ -76,3 +76,31 @@ def test_ad_line_base_date_is_explicit() -> None:
 
     assert payload["period"]["adLineBaseDate"] == payload["period"]["startDate"]
     assert any("시작일에 종속" in item for item in payload["methodology"])
+
+
+def test_build_payload_exports_direct_krx_flow_in_eok_units() -> None:
+    frame = sample_frame()
+    frame["foreign_net_buy_value"] = -120_000_000_000
+    frame["institution_net_buy_value"] = 80_000_000_000
+    frame["financial_investment_net_buy_value"] = 30_000_000_000
+    frame["pension_net_buy_value"] = 50_000_000_000
+    frame["program_net_buy_value"] = -40_000_000_000
+    frame["foreign_net_buy_5d"] = -500_000_000_000
+    frame["institution_net_buy_5d"] = 100_000_000_000
+    frame["program_net_buy_5d"] = -200_000_000_000
+    frame["foreign_sell_pressure"] = 90.0
+    frame["institution_sell_pressure"] = 35.0
+    frame["program_sell_pressure"] = 80.0
+    frame["direct_flow_pressure"] = 72.75
+
+    payload = build_breadth_payload(
+        frame,
+        {"investorFlowStatus": "available", "programFlowStatus": "available"},
+    )
+
+    assert payload["schemaVersion"] == 2
+    assert payload["source"]["investorFlowStatus"] == "available"
+    assert payload["latest"]["foreignNetBuyEok"] == -1200.0
+    assert payload["latest"]["foreignNetBuy5dEok"] == -5000.0
+    assert payload["latest"]["directFlowPressure"] == 72.8
+    assert payload["series"][-1]["programNetBuy5dEok"] == -2000.0

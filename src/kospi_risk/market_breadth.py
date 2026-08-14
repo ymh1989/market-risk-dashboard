@@ -21,6 +21,15 @@ KOSPI_INDEX_TICKER = "1001"
 BREADTH_COUNT_COLUMNS = ["date", "up", "down", "flat", "total"]
 BREADTH_CONTEXT_COLUMNS = ["samsung_return", "hynix_return"]
 BREADTH_DAILY_COLUMNS = BREADTH_COUNT_COLUMNS + BREADTH_CONTEXT_COLUMNS
+INVESTOR_FLOW_COLUMNS = [
+    "foreign_net_buy_value",
+    "institution_net_buy_value",
+    "financial_investment_net_buy_value",
+    "pension_net_buy_value",
+]
+PROGRAM_FLOW_COLUMNS = ["program_net_buy_value"]
+PROGRAM_FLOW_BACKFILL_OBSERVATIONS = 80
+DIRECT_FLOW_COLUMNS = INVESTOR_FLOW_COLUMNS + PROGRAM_FLOW_COLUMNS
 BREADTH_OUTPUT_COLUMNS = [
     "date",
     "kospi_close",
@@ -45,6 +54,8 @@ BREADTH_OUTPUT_COLUMNS = [
 
 OhlcvFetcher = Callable[[str], pd.DataFrame]
 IndexFetcher = Callable[[str, str], pd.DataFrame]
+InvestorFlowFetcher = Callable[[str, str], pd.DataFrame]
+ProgramFlowFetcher = Callable[[str], pd.DataFrame]
 
 
 def _as_timestamp(value: str | date | datetime | pd.Timestamp) -> pd.Timestamp:
@@ -64,6 +75,10 @@ def _load_pykrx_stock():
     except ImportError as error:
         raise RuntimeError(
             "pykrx가 설치되어 있지 않습니다. `pip install pykrx` 후 다시 실행하세요."
+        ) from error
+    except Exception as error:
+        raise RuntimeError(
+            "pykrx KRX 로그인 또는 세션 초기화에 실패했습니다. 잠시 뒤 다시 시도하세요."
         ) from error
     return stock
 
@@ -94,6 +109,50 @@ def _default_index_fetcher(start_key: str, end_key: str) -> pd.DataFrame:
     if hasattr(stock, "get_index_ohlcv_by_date"):
         return stock.get_index_ohlcv_by_date(start_key, end_key, KOSPI_INDEX_TICKER)
     return stock.get_index_ohlcv(start_key, end_key, KOSPI_INDEX_TICKER)
+
+
+def _default_investor_flow_fetcher(start_key: str, end_key: str) -> pd.DataFrame:
+    stock = _load_pykrx_stock()
+    return stock.get_market_trading_value_by_date(
+        start_key,
+        end_key,
+        "KOSPI",
+        on="순매수",
+        detail=True,
+    )
+
+
+def _default_program_flow_fetcher(date_key: str) -> pd.DataFrame:
+    try:
+        from pykrx.website.krx.krxio import KrxWebIo
+    except ImportError as error:
+        raise RuntimeError("pykrx KRX 프로그램매매 인터페이스를 불러올 수 없습니다.") from error
+    except Exception as error:
+        raise RuntimeError(
+            "KRX 프로그램매매 로그인 또는 세션 초기화에 실패했습니다."
+        ) from error
+
+    class ProgramTradingQuery(KrxWebIo):
+        @property
+        def bld(self) -> str:
+            return "dbms/MDC/STAT/standard/MDCSTAT02601"
+
+        def fetch(self, observed_key: str) -> dict:
+            return self.read(
+                strtDd=observed_key,
+                endDd=observed_key,
+                mktId="STK",
+            )
+
+    try:
+        response = ProgramTradingQuery().fetch(date_key)
+    except Exception as error:
+        raise RuntimeError(
+            "KRX 프로그램매매가 JSON을 반환하지 않았습니다. 세션 또는 호출 제한을 확인하세요."
+        ) from error
+    if not isinstance(response, dict):
+        raise RuntimeError("KRX 프로그램매매 응답 형식이 올바르지 않습니다.")
+    return pd.DataFrame(response.get("output", []))
 
 
 def _column(frame: pd.DataFrame, candidates: list[str]) -> pd.Series:
@@ -331,6 +390,276 @@ def fetch_kospi_index(
     return frame
 
 
+def _retry_range_fetch(
+    fetcher: InvestorFlowFetcher,
+    start_key: str,
+    end_key: str,
+    *,
+    retries: int,
+    sleep_seconds: float,
+    retry_backoff: float,
+    sleep_fn: Callable[[float], None],
+) -> pd.DataFrame:
+    last_error: Exception | None = None
+    for attempt in range(1, retries + 1):
+        try:
+            return fetcher(start_key, end_key)
+        except Exception as error:
+            last_error = error
+            LOGGER.warning(
+                "KOSPI 투자자 순매수 조회 실패 · %s/%s회 · %s",
+                attempt,
+                retries,
+                error,
+            )
+            if attempt < retries:
+                sleep_fn(max(0.0, sleep_seconds) * retry_backoff ** (attempt - 1))
+    raise RuntimeError(f"KOSPI 투자자 순매수 조회에 실패했습니다: {last_error}") from last_error
+
+
+def fetch_kospi_investor_flows(
+    start_date: str | date | datetime | pd.Timestamp,
+    end_date: str | date | datetime | pd.Timestamp,
+    *,
+    retries: int = 3,
+    sleep_seconds: float = 0.4,
+    retry_backoff: float = 1.8,
+    investor_flow_fetcher: InvestorFlowFetcher | None = None,
+    sleep_fn: Callable[[float], None] = time.sleep,
+) -> pd.DataFrame:
+    """KRX에서 외국인·기관 세부 투자자의 KOSPI 일별 순매수 거래대금을 조회합니다."""
+
+    start = _as_timestamp(start_date)
+    end = _as_timestamp(end_date)
+    if start > end:
+        raise ValueError("시작일은 종료일보다 늦을 수 없습니다.")
+    if investor_flow_fetcher is None:
+        _require_krx_credentials()
+    fetcher = investor_flow_fetcher or _default_investor_flow_fetcher
+    raw = _retry_range_fetch(
+        fetcher,
+        _date_key(start),
+        _date_key(end),
+        retries=retries,
+        sleep_seconds=sleep_seconds,
+        retry_backoff=retry_backoff,
+        sleep_fn=sleep_fn,
+    )
+    if raw is None or raw.empty:
+        return pd.DataFrame(columns=["date", *INVESTOR_FLOW_COLUMNS])
+
+    data = raw.copy()
+    data.index = pd.to_datetime(data.index, errors="coerce")
+    data = data.loc[data.index.notna()]
+    institution_candidates = [
+        "금융투자",
+        "보험",
+        "투신",
+        "사모",
+        "은행",
+        "기타금융",
+        "연기금",
+    ]
+    institution_columns = [column for column in institution_candidates if column in data.columns]
+    if not institution_columns:
+        raise ValueError("KRX 투자자 순매수 응답에 기관 세부 컬럼이 없습니다.")
+
+    if "외국인합계" in data.columns:
+        foreign = pd.to_numeric(data["외국인합계"], errors="coerce")
+    elif "외국인" in data.columns:
+        foreign_columns = [
+            column for column in ["외국인", "기타외국인"] if column in data.columns
+        ]
+        foreign = data[foreign_columns].apply(pd.to_numeric, errors="coerce").sum(axis=1)
+    else:
+        raise ValueError("KRX 투자자 순매수 응답에 외국인 컬럼이 없습니다.")
+
+    institutions = data[institution_columns].apply(pd.to_numeric, errors="coerce")
+    financial_investment = (
+        pd.to_numeric(data["금융투자"], errors="coerce")
+        if "금융투자" in data.columns
+        else pd.Series(np.nan, index=data.index)
+    )
+    pension = (
+        pd.to_numeric(data["연기금"], errors="coerce")
+        if "연기금" in data.columns
+        else pd.Series(np.nan, index=data.index)
+    )
+    result = pd.DataFrame(
+        {
+            "date": data.index,
+            "foreign_net_buy_value": foreign.to_numpy(),
+            "institution_net_buy_value": institutions.sum(axis=1).to_numpy(),
+            "financial_investment_net_buy_value": financial_investment.to_numpy(),
+            "pension_net_buy_value": pension.to_numpy(),
+        }
+    )
+    return result.sort_values("date").drop_duplicates("date", keep="last").reset_index(drop=True)
+
+
+def _normalize_program_flow(raw: pd.DataFrame, observed_date: pd.Timestamp) -> dict[str, object] | None:
+    if raw is None or raw.empty:
+        return None
+    name_column = next(
+        (column for column in ["ITM_TP_NM", "구분"] if column in raw.columns),
+        None,
+    )
+    value_column = next(
+        (column for column in ["NETBID_TRDVAL", "순매수거래대금"] if column in raw.columns),
+        None,
+    )
+    if name_column is None or value_column is None:
+        raise ValueError("KRX 프로그램매매 응답에 구분 또는 순매수 거래대금 컬럼이 없습니다.")
+    total = raw.loc[raw[name_column].astype(str).str.strip() == "전체"]
+    if total.empty:
+        raise ValueError("KRX 프로그램매매 응답에 전체 합계 행이 없습니다.")
+    value = pd.to_numeric(
+        total.iloc[-1][value_column].replace(",", "")
+        if isinstance(total.iloc[-1][value_column], str)
+        else total.iloc[-1][value_column],
+        errors="coerce",
+    )
+    if pd.isna(value):
+        raise ValueError("KRX 프로그램 순매수 거래대금을 숫자로 변환할 수 없습니다.")
+    return {"date": observed_date, "program_net_buy_value": float(value)}
+
+
+def fetch_kospi_program_flows(
+    dates: list[str | date | datetime | pd.Timestamp] | pd.Series | pd.DatetimeIndex,
+    *,
+    retries: int = 3,
+    sleep_seconds: float = 0.25,
+    retry_backoff: float = 1.8,
+    program_flow_fetcher: ProgramFlowFetcher | None = None,
+    max_consecutive_failed_dates: int = 3,
+    sleep_fn: Callable[[float], None] = time.sleep,
+) -> pd.DataFrame:
+    """KRX 프로그램매매 화면에서 거래일별 차익·비차익 합계 순매수를 조회합니다."""
+
+    if program_flow_fetcher is None:
+        _require_krx_credentials()
+    fetcher = program_flow_fetcher or _default_program_flow_fetcher
+    observed_dates = sorted({_as_timestamp(value) for value in dates}, reverse=True)
+    rows: list[dict[str, object]] = []
+    failed_dates: list[dict[str, str]] = []
+    empty_dates: list[str] = []
+    consecutive_failed_dates = 0
+    for date_index, observed_date in enumerate(observed_dates):
+        last_error: Exception | None = None
+        raw: pd.DataFrame | None = None
+        for attempt in range(1, retries + 1):
+            try:
+                raw = fetcher(_date_key(observed_date))
+                last_error = None
+                break
+            except Exception as error:
+                last_error = error
+                LOGGER.warning(
+                    "KOSPI 프로그램 순매수 조회 실패 · %s · %s/%s회 · %s",
+                    observed_date.date().isoformat(),
+                    attempt,
+                    retries,
+                    error,
+                )
+                if attempt < retries:
+                    sleep_fn(max(0.0, sleep_seconds) * retry_backoff ** (attempt - 1))
+        if last_error is not None:
+            failed_dates.append(
+                {"date": observed_date.date().isoformat(), "error": str(last_error)}
+            )
+            consecutive_failed_dates += 1
+            if consecutive_failed_dates >= max_consecutive_failed_dates:
+                remaining = observed_dates[date_index + 1 :]
+                if remaining:
+                    failed_dates.append(
+                        {
+                            "date": (
+                                f"{min(remaining).date().isoformat()}~"
+                                f"{max(remaining).date().isoformat()}"
+                            ),
+                            "error": "연속 실패로 프로그램매매 조회를 중단했습니다.",
+                            "scope": "source-circuit-breaker",
+                        }
+                    )
+                break
+            continue
+        try:
+            row = _normalize_program_flow(raw, observed_date)
+        except ValueError as error:
+            failed_dates.append(
+                {"date": observed_date.date().isoformat(), "error": str(error)}
+            )
+            consecutive_failed_dates += 1
+            if consecutive_failed_dates >= max_consecutive_failed_dates:
+                break
+            continue
+        if row is None:
+            empty_dates.append(observed_date.date().isoformat())
+        else:
+            rows.append(row)
+            consecutive_failed_dates = 0
+        if sleep_seconds > 0:
+            sleep_fn(sleep_seconds)
+
+    result = pd.DataFrame(rows, columns=["date", *PROGRAM_FLOW_COLUMNS])
+    result = result.sort_values("date").reset_index(drop=True)
+    result.attrs["failed_dates"] = failed_dates
+    result.attrs["empty_dates"] = empty_dates
+    return result
+
+
+def _rolling_percentile_last(series: pd.Series, window: int = 252, minimum: int = 60) -> pd.Series:
+    def percentile(values: np.ndarray) -> float:
+        if len(values) == 0 or not np.isfinite(values[-1]):
+            return np.nan
+        finite = values[np.isfinite(values)]
+        if len(finite) == 0:
+            return np.nan
+        current = finite[-1]
+        below = np.count_nonzero(finite < current)
+        equal = np.count_nonzero(finite == current)
+        return float((below + 0.5 * equal) / len(finite) * 100.0)
+
+    return series.rolling(window, min_periods=minimum).apply(percentile, raw=True)
+
+
+def calculate_direct_flow_metrics(frame: pd.DataFrame) -> pd.DataFrame:
+    """직접 순매수의 5거래일 누계와 과거 정보만 사용한 매도압력 분위수를 계산합니다."""
+
+    result = frame.copy()
+    if not any(column in result.columns for column in DIRECT_FLOW_COLUMNS):
+        return result
+    for column in DIRECT_FLOW_COLUMNS:
+        if column not in result.columns:
+            result[column] = np.nan
+        result[column] = pd.to_numeric(result[column], errors="coerce")
+
+    pressure_specs = [
+        ("foreign", "foreign_net_buy_value"),
+        ("institution", "institution_net_buy_value"),
+        ("program", "program_net_buy_value"),
+    ]
+    for prefix, value_column in pressure_specs:
+        cumulative_column = f"{prefix}_net_buy_5d"
+        pressure_column = f"{prefix}_sell_pressure"
+        result[cumulative_column] = result[value_column].rolling(5, min_periods=5).sum()
+        result[pressure_column] = _rolling_percentile_last(-result[cumulative_column])
+
+    pressure_columns = [
+        ("foreign_sell_pressure", 0.45),
+        ("institution_sell_pressure", 0.35),
+        ("program_sell_pressure", 0.20),
+    ]
+    weighted = pd.Series(0.0, index=result.index)
+    available_weight = pd.Series(0.0, index=result.index)
+    for column, weight in pressure_columns:
+        available = result[column].notna()
+        weighted = weighted.add(result[column].fillna(0.0) * weight)
+        available_weight = available_weight.add(available.astype(float) * weight)
+    result["direct_flow_pressure"] = weighted.div(available_weight.replace(0.0, np.nan))
+    return result
+
+
 def merge_vkospi(
     breadth_frame: pd.DataFrame,
     vkospi: pd.DataFrame | str | Path | None,
@@ -490,6 +819,24 @@ def _update_metadata(
     vkospi_merged: bool,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    latest = frame.sort_values("date").iloc[-1] if not frame.empty else None
+    investor_flow_available = bool(
+        latest is not None
+        and all(
+            column in frame.columns and pd.notna(latest[column])
+            for column in ["foreign_net_buy_value", "institution_net_buy_value"]
+        )
+    )
+    program_flow_available = bool(
+        latest is not None
+        and "program_net_buy_value" in frame.columns
+        and pd.notna(latest["program_net_buy_value"])
+    )
+    program_flow_dates = (
+        frame.loc[frame["program_net_buy_value"].notna(), "date"]
+        if "program_net_buy_value" in frame.columns
+        else pd.Series(dtype="datetime64[ns]")
+    )
     payload = {
         "generatedAt": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S KST"),
         "source": "pykrx stock.get_market_ohlcv(date, market='KOSPI')",
@@ -499,6 +846,15 @@ def _update_metadata(
         "failedDates": fetch_attrs.get("failed_dates", []),
         "emptyDates": fetch_attrs.get("empty_dates", []),
         "indexError": fetch_attrs.get("index_error"),
+        "investorFlowStatus": "available" if investor_flow_available else "not_available",
+        "programFlowStatus": "available" if program_flow_available else "not_available",
+        "programFlowCoverageStart": (
+            None if program_flow_dates.empty else program_flow_dates.min().date().isoformat()
+        ),
+        "programFlowObservations": int(len(program_flow_dates)),
+        "investorFlowError": fetch_attrs.get("investor_flow_error"),
+        "programFlowFailedDates": fetch_attrs.get("program_flow_failed_dates", []),
+        "programFlowEmptyDates": fetch_attrs.get("program_flow_empty_dates", []),
         "vkospiMerged": vkospi_merged,
         "adLineBase": "저장된 첫 관측일의 net_breadth부터 누적",
         "quality": quality,
@@ -517,8 +873,12 @@ def update_breadth_data(
     refresh_from_start: bool = False,
     sleep_seconds: float = 0.4,
     retries: int = 3,
+    fetch_flows: bool = True,
+    fetch_program: bool = True,
     ohlcv_fetcher: OhlcvFetcher | None = None,
     index_fetcher: IndexFetcher | None = None,
+    investor_flow_fetcher: InvestorFlowFetcher | None = None,
+    program_flow_fetcher: ProgramFlowFetcher | None = None,
     sleep_fn: Callable[[float], None] = time.sleep,
 ) -> pd.DataFrame:
     """기존 파일 다음 날짜만 조회해 breadth 데이터를 정렬·중복제거 후 저장합니다."""
@@ -644,6 +1004,107 @@ def update_breadth_data(
     all_index = all_index.drop_duplicates("date", keep="last").sort_values("date")
 
     result = _merge_counts_and_index(all_counts, all_index)
+
+    existing_flow = (
+        existing[["date", *[column for column in DIRECT_FLOW_COLUMNS if column in existing.columns]]]
+        .copy()
+        if not existing.empty
+        else pd.DataFrame(columns=["date", *DIRECT_FLOW_COLUMNS])
+    )
+    if not existing_flow.empty:
+        existing_flow["date"] = pd.to_datetime(existing_flow["date"])
+        result = result.merge(existing_flow, on="date", how="left")
+
+    if fetch_flows and not result.empty:
+        target_dates = pd.DatetimeIndex(pd.to_datetime(result["date"]).dropna().unique()).sort_values()
+        investor_missing = result.loc[
+            result.get("foreign_net_buy_value", pd.Series(np.nan, index=result.index)).isna()
+            | result.get("institution_net_buy_value", pd.Series(np.nan, index=result.index)).isna(),
+            "date",
+        ]
+        if not investor_missing.empty:
+            try:
+                investor_flow = fetch_kospi_investor_flows(
+                    investor_missing.min(),
+                    investor_missing.max(),
+                    retries=retries,
+                    sleep_seconds=sleep_seconds,
+                    investor_flow_fetcher=investor_flow_fetcher,
+                    sleep_fn=sleep_fn,
+                )
+                if not investor_flow.empty:
+                    keep_columns = ["date", *INVESTOR_FLOW_COLUMNS]
+                    current = result.drop(columns=INVESTOR_FLOW_COLUMNS, errors="ignore")
+                    cached_investor = existing_flow.reindex(columns=keep_columns).dropna(
+                        subset=INVESTOR_FLOW_COLUMNS,
+                        how="all",
+                    )
+                    investor_frames = [investor_flow[keep_columns]]
+                    if not cached_investor.empty:
+                        investor_frames.insert(0, cached_investor)
+                    combined = pd.concat(
+                        investor_frames,
+                        ignore_index=True,
+                    )
+                    combined = combined.drop_duplicates("date", keep="last")
+                    result = current.merge(combined, on="date", how="left")
+            except Exception as error:
+                fetch_attrs["investor_flow_error"] = str(error)
+                LOGGER.warning("KOSPI 투자자 순매수 결합 실패 · 기존 값 보존 · %s", error)
+
+        program_existing = result.get(
+            "program_net_buy_value", pd.Series(np.nan, index=result.index)
+        )
+        program_missing_dates = result.loc[program_existing.isna(), "date"]
+        program_missing_set = set(pd.to_datetime(program_missing_dates))
+        recent_program_dates = set(target_dates[-PROGRAM_FLOW_BACKFILL_OBSERVATIONS:])
+        program_missing_dates = [
+            value
+            for value in target_dates
+            if value in program_missing_set and value in recent_program_dates
+        ]
+        if fetch_program and program_missing_dates:
+            try:
+                program_flow = fetch_kospi_program_flows(
+                    program_missing_dates,
+                    retries=retries,
+                    sleep_seconds=min(sleep_seconds, 0.25),
+                    program_flow_fetcher=program_flow_fetcher,
+                    sleep_fn=sleep_fn,
+                )
+                fetch_attrs["program_flow_failed_dates"] = program_flow.attrs.get(
+                    "failed_dates", []
+                )
+                fetch_attrs["program_flow_empty_dates"] = program_flow.attrs.get(
+                    "empty_dates", []
+                )
+                if not program_flow.empty:
+                    current = result.drop(columns=PROGRAM_FLOW_COLUMNS, errors="ignore")
+                    cached_program = existing_flow.reindex(
+                        columns=["date", *PROGRAM_FLOW_COLUMNS]
+                    ).dropna(subset=PROGRAM_FLOW_COLUMNS, how="all")
+                    program_frames = [program_flow[["date", *PROGRAM_FLOW_COLUMNS]]]
+                    if not cached_program.empty:
+                        program_frames.insert(0, cached_program)
+                    combined = pd.concat(
+                        program_frames,
+                        ignore_index=True,
+                    )
+                    combined = combined.drop_duplicates("date", keep="last")
+                    result = current.merge(combined, on="date", how="left")
+            except Exception as error:
+                fetch_attrs["program_flow_failed_dates"] = [
+                    {
+                        "date": (
+                            f"{program_missing_dates[0].date().isoformat()}~"
+                            f"{program_missing_dates[-1].date().isoformat()}"
+                        ),
+                        "error": str(error),
+                    }
+                ]
+                LOGGER.warning("KOSPI 프로그램 순매수 결합 실패 · 기존 값 보존 · %s", error)
+
+    result = calculate_direct_flow_metrics(result)
     vkospi_source = vkospi
     if vkospi_source is None and not existing.empty and "vkospi" in existing.columns:
         vkospi_source = existing[["date", "vkospi"]]
@@ -656,6 +1117,21 @@ def update_breadth_data(
             **quality,
             "status": "warning" if quality.get("status") != "error" else "error",
             "fetchFailureCount": len(fetch_attrs.get("failed_dates", [])),
+        }
+    latest_result = result.iloc[-1]
+    direct_flow_missing = not all(
+        column in result.columns and pd.notna(latest_result[column])
+        for column in [
+            "foreign_net_buy_value",
+            "institution_net_buy_value",
+            "program_net_buy_value",
+        ]
+    )
+    if fetch_flows and direct_flow_missing:
+        quality = {
+            **quality,
+            "status": "warning" if quality.get("status") != "error" else "error",
+            "directFlowLatestMissing": True,
         }
     save_frame(result, output)
     if metadata_path:
