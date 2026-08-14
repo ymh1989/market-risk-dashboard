@@ -258,8 +258,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260813-6" in html
-    assert "app.js?v=20260813-6" in html
+    assert "styles.css?v=20260814-1" in html
+    assert "app.js?v=20260814-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -385,6 +385,13 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert "개별종목 참고" in app_source
     assert "els-map-point--single-stock" in app_source
     assert "els-map-trajectory-series--single-stock" in app_source
+    assert "const mapItems = [...singleStockItems, ...map.items]" in app_source
+    assert "data-els-stock-toggle" in app_source
+    assert "data-els-stock-state" in app_source
+    assert "syncStockVisibility" in app_source
+    assert "is-showing-single-stocks" in app_source
+    assert ".els-stock-visibility-toggle" in styles
+    assert ".els-map-point--single-stock" in styles
     assert 'data-els-episode="${episode.id}"' in app_source
     assert "스트레스 에피소드 리플레이" in app_source
     assert "keyTrajectoryPath(keyCoordinates)" in app_source

@@ -1704,6 +1704,11 @@ a {
   gap: 12px;
 }
 
+.els-opportunity-map__tools {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .els-trajectory-toggle {
   display: inline-grid;
   grid-template-columns: repeat(3, 58px);
@@ -1739,6 +1744,39 @@ a {
   color: var(--surface);
   background: var(--ink);
 }
+.els-stock-visibility-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.els-stock-visibility-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--teal);
+  cursor: pointer;
+}
+
+.els-stock-visibility-toggle em {
+  min-width: 24px;
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-style: normal;
+  text-align: right;
+}
+
+.els-stock-visibility-toggle.is-active,
+.els-stock-visibility-toggle.is-active em {
+  color: var(--ink);
+}
+
 
 .els-trajectory-legend {
   gap: 10px;
@@ -1947,6 +1985,11 @@ a {
 .els-map-trajectories.is-visible {
   display: inline;
 }
+.els-opportunity-map:not(.is-showing-single-stocks) .els-map-point--single-stock,
+.els-opportunity-map:not(.is-showing-single-stocks) .els-map-trajectory-series--single-stock {
+  display: none;
+}
+
 
 .els-map-trajectory-series {
   color: var(--blue);
@@ -1994,6 +2037,16 @@ a {
   stroke-width: 3;
   opacity: 0.92;
 }
+.els-map-trajectory-series--kospi200 .els-map-trajectory {
+  stroke-width: 2.8;
+  opacity: 0.94;
+}
+
+.els-map-trajectories--momentum .els-map-trajectory-series--kospi200 .els-map-trajectory {
+  stroke-width: 3.2;
+  opacity: 0.98;
+}
+
 
 .els-map-arrowhead {
   fill: var(--blue);

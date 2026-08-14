@@ -1714,6 +1714,11 @@ a {
   gap: 12px;
 }
 
+.els-opportunity-map__tools {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .els-trajectory-toggle {
   display: inline-grid;
   grid-template-columns: repeat(3, 58px);
@@ -1749,6 +1754,39 @@ a {
   color: var(--surface);
   background: var(--ink);
 }
+.els-stock-visibility-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.els-stock-visibility-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--teal);
+  cursor: pointer;
+}
+
+.els-stock-visibility-toggle em {
+  min-width: 24px;
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-style: normal;
+  text-align: right;
+}
+
+.els-stock-visibility-toggle.is-active,
+.els-stock-visibility-toggle.is-active em {
+  color: var(--ink);
+}
+
 
 .els-trajectory-legend {
   gap: 10px;
@@ -1957,6 +1995,11 @@ a {
 .els-map-trajectories.is-visible {
   display: inline;
 }
+.els-opportunity-map:not(.is-showing-single-stocks) .els-map-point--single-stock,
+.els-opportunity-map:not(.is-showing-single-stocks) .els-map-trajectory-series--single-stock {
+  display: none;
+}
+
 
 .els-map-trajectory-series {
   color: var(--blue);
@@ -2004,6 +2047,16 @@ a {
   stroke-width: 3;
   opacity: 0.92;
 }
+.els-map-trajectory-series--kospi200 .els-map-trajectory {
+  stroke-width: 2.8;
+  opacity: 0.94;
+}
+
+.els-map-trajectories--momentum .els-map-trajectory-series--kospi200 .els-map-trajectory {
+  stroke-width: 3.2;
+  opacity: 0.98;
+}
+
 
 .els-map-arrowhead {
   fill: var(--blue);
@@ -7448,7 +7501,7 @@ function evaluateDashboard(data) {
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260813-6";
+const ASSET_VERSION = "20260814-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -9357,7 +9410,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
   }
 
   const singleStockItems = map.singleStocks ?? [];
-  const mapItems = [...map.items, ...singleStockItems];
+  const mapItems = [...singleStockItems, ...map.items];
   const plot = { left: 66, top: 24, width: 654, height: 310 };
   const markerOffsets = {
     spx: { dx: 10, dy: -10, anchor: "start" },
@@ -9502,7 +9555,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
           <div class="els-opportunity-map__aside">
             ${renderNarrativeList([
               "5개 지수만 Basket 점수에 반영",
-              "삼성전자·SK하이닉스는 지도 참고 · Basket 미반영"
+              "개별종목은 토글로 선택 표시 · Basket 미반영"
             ], "narrative-list--compact")}
             <div class="els-opportunity-map__tools">
               <div class="els-trajectory-toggle" role="group" aria-label="궤적 조회 기간">
@@ -9514,6 +9567,11 @@ function renderElsIssuanceHedgePage(elsRisk) {
                   )
                   .join("")}
               </div>
+              <label class="els-stock-visibility-toggle" title="삼성전자·SK하이닉스 현재점과 궤적 표시">
+                <input type="checkbox" data-els-stock-toggle />
+                <span>개별종목</span>
+                <em data-els-stock-state>OFF</em>
+              </label>
               <div class="els-trajectory-legend" aria-label="궤적 범례">
                 <span><i class="els-trajectory-legend__start"></i>시작</span>
                 <span><i class="els-trajectory-legend__current"></i>현재</span>
@@ -9521,7 +9579,7 @@ function renderElsIssuanceHedgePage(elsRisk) {
               </div>
               <div class="els-asset-type-legend" aria-label="기초자산 유형 범례">
                 <span><i class="els-asset-type-legend__index"></i>지수</span>
-                <span><i class="els-asset-type-legend__stock"></i>개별종목</span>
+                <span data-els-stock-dependent hidden><i class="els-asset-type-legend__stock"></i>개별종목</span>
               </div>
             </div>
           </div>
@@ -13080,6 +13138,21 @@ function renderDashboard(
   });
 
   app.querySelectorAll("[data-els-map]").forEach((mapElement) => {
+    const stockToggle = mapElement.querySelector("[data-els-stock-toggle]");
+    const syncStockVisibility = () => {
+      const showStocks = Boolean(stockToggle?.checked);
+      mapElement.classList.toggle("is-showing-single-stocks", showStocks);
+      stockToggle?.closest(".els-stock-visibility-toggle")?.classList.toggle("is-active", showStocks);
+      mapElement.querySelectorAll("[data-els-stock-state]").forEach((state) => {
+        state.textContent = showStocks ? "ON" : "OFF";
+      });
+      mapElement.querySelectorAll("[data-els-stock-dependent]").forEach((item) => {
+        item.hidden = !showStocks;
+      });
+    };
+    stockToggle?.addEventListener("change", syncStockVisibility);
+    syncStockVisibility();
+
     mapElement.querySelectorAll("[data-els-window]").forEach((button) => {
       button.addEventListener("click", () => {
         const target = button.dataset.elsWindow;
