@@ -258,8 +258,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260814-1" in html
-    assert "app.js?v=20260814-1" in html
+    assert "styles.css?v=20260814-2" in html
+    assert "app.js?v=20260814-2" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -309,6 +309,26 @@ def test_korean_copy_uses_structured_lists_and_contextual_wrapping():
     assert "word-break: keep-all;" in styles
     assert "text-wrap: pretty;" in styles
     assert "text-wrap: balance;" in styles
+
+
+def test_summary_exposes_zero_weight_market_shock_decomposition():
+    app_source = APP_FILE.read_text(encoding="utf-8")
+    styles = STYLES_FILE.read_text(encoding="utf-8")
+
+    assert "function renderShockDecomposition" in app_source
+    assert "function breadthCollapseScore" in app_source
+    assert "function stressAcceleration" in app_source
+    assert "function classifyMarketShock" in app_source
+    assert "if (latest.date === currentDate)" in app_source
+    assert "시장 충격 분해" in app_source
+    assert "기존 종합점수·가중치·경보단계 변경 없음" in app_source
+    assert "선행 EPS·실적 수정폭 미연결" in app_source
+    assert "시장확산 부담 45% · 기존 Flow 30% · 기존 Liquidity 25%" in app_source
+    assert "외국인 Flow는 보유비중 proxy · 직접 순매매 데이터 아님" in app_source
+    assert "${renderShockDecomposition(market, timeseries, breadthData)}" in app_source
+    assert ".shock-decomposition {" in styles
+    assert ".shock-grid {" in styles
+    assert ".shock-diagnosis" in styles
 
 
 def test_operation_mode_distinguishes_active_and_completed_runs():

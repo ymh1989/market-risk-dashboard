@@ -7395,3 +7395,228 @@ a {
     min-width: 620px;
   }
 }
+
+.shock-decomposition {
+  display: grid;
+  gap: 18px;
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-soft);
+  padding: 22px 24px;
+}
+
+.shock-decomposition__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.shock-decomposition__header h2 {
+  margin: 5px 0 4px;
+  font-size: 1.3rem;
+}
+
+.shock-decomposition__header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.shock-diagnosis {
+  display: grid;
+  min-width: 270px;
+  gap: 3px;
+  border-left: 4px solid var(--blue);
+  padding: 7px 0 7px 14px;
+}
+
+.shock-diagnosis--good { border-left-color: var(--green); }
+.shock-diagnosis--caution { border-left-color: var(--amber); }
+.shock-diagnosis--danger { border-left-color: var(--red); }
+
+.shock-diagnosis span,
+.shock-diagnosis small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.shock-diagnosis strong {
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.shock-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.shock-metric {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 4px;
+  padding: 17px 18px;
+}
+
+.shock-metric + .shock-metric {
+  border-left: 1px solid var(--line);
+}
+
+.shock-metric::before {
+  position: absolute;
+  top: 0;
+  right: 18px;
+  left: 18px;
+  height: 3px;
+  background: var(--blue);
+  content: "";
+}
+
+.shock-metric--good::before { background: var(--green); }
+.shock-metric--caution::before { background: var(--amber); }
+.shock-metric--danger::before { background: var(--red); }
+.shock-metric--muted::before { background: var(--muted); opacity: 0.45; }
+
+.shock-metric > span,
+.shock-metric > small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.shock-metric > strong {
+  margin-top: 5px;
+  font-size: 1.55rem;
+  line-height: 1.05;
+}
+
+.shock-metric > p {
+  margin: 8px 0 0;
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.shock-metric > em {
+  color: var(--muted);
+  font-size: 0.67rem;
+  font-style: normal;
+  line-height: 1.4;
+}
+
+.shock-decomposition__footer {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.8fr) minmax(300px, 1.25fr) auto;
+  gap: 20px;
+  align-items: start;
+}
+
+.shock-acceleration {
+  display: grid;
+  gap: 3px;
+  border-left: 4px solid var(--blue);
+  padding-left: 12px;
+}
+
+.shock-acceleration--good { border-left-color: var(--green); }
+.shock-acceleration--caution { border-left-color: var(--amber); }
+.shock-acceleration--danger { border-left-color: var(--red); }
+
+.shock-acceleration span,
+.shock-acceleration small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.shock-acceleration strong {
+  font-size: 1.05rem;
+}
+
+.shock-decomposition__notes {
+  font-size: 0.72rem;
+}
+
+.shock-methodology {
+  min-width: 96px;
+}
+
+.shock-methodology summary {
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 7px 10px;
+}
+
+.shock-methodology[open] {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.shock-methodology[open] summary {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 900px) {
+  .shock-decomposition__header {
+    display: grid;
+  }
+
+  .shock-diagnosis {
+    min-width: 0;
+  }
+
+  .shock-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shock-metric:nth-child(3) {
+    border-left: 0;
+  }
+
+  .shock-metric:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+
+  .shock-decomposition__footer {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .shock-methodology {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .shock-decomposition {
+    padding: 18px 16px;
+  }
+
+  .shock-grid,
+  .shock-decomposition__footer {
+    grid-template-columns: 1fr;
+  }
+
+  .shock-metric + .shock-metric,
+  .shock-metric:nth-child(3) {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .shock-methodology {
+    grid-column: auto;
+  }
+}

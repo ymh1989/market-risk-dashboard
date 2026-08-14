@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260814-1";
+const ASSET_VERSION = "20260814-2";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
@@ -166,6 +166,11 @@ const formatPointDelta = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
   const number = Number(value);
   return `${number > 0 ? "+" : ""}${number.toFixed(1)}p`;
+};
+const formatPctPointDelta = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
+  const number = Number(value);
+  return `${number > 0 ? "+" : ""}${number.toFixed(1)}%p`;
 };
 const formatAttributionDelta = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
@@ -378,7 +383,12 @@ function buildCompositeSeries(section, timeseries) {
   const latest = composite[composite.length - 1];
   const currentScore = Number(section.score);
   if (Number.isFinite(currentScore) && Math.abs(latest.value - currentScore) > 0.05) {
-    composite.push({ date: section.asOf ?? latest.date, value: currentScore });
+    const currentDate = section.asOf ?? latest.date;
+    if (latest.date === currentDate) {
+      latest.value = currentScore;
+    } else if (latest.date < currentDate) {
+      composite.push({ date: currentDate, value: currentScore });
+    }
   }
   return composite;
 }
@@ -3858,6 +3868,272 @@ function renderScoreAttribution(market, timeseries) {
   `;
 }
 
+function groupScore(market, groupId) {
+  const score = Number(
+    (market?.groupScores ?? []).find((group) => group.id === groupId)?.score
+  );
+  return Number.isFinite(score) ? clampScore(score) : null;
+}
+
+function weightedAvailableScore(parts) {
+  const available = parts.filter(
+    ({ value, weight }) =>
+      value !== null &&
+      value !== undefined &&
+      Number.isFinite(Number(value)) &&
+      Number(weight) > 0
+  );
+  const totalWeight = available.reduce((sum, part) => sum + Number(part.weight), 0);
+  if (!totalWeight) return null;
+  return clampScore(
+    available.reduce(
+      (sum, part) => sum + clampScore(part.value) * Number(part.weight),
+      0
+    ) / totalWeight
+  );
+}
+
+function breadthCollapseScore(latest) {
+  if (!latest) return null;
+  return weightedAvailableScore([
+    { value: 50 - Number(latest.breadthPct), weight: 0.35 },
+    { value: 50 - Number(latest.breadthMa5Pct), weight: 0.45 },
+    { value: 50 - Number(latest.breadthMa20Pct), weight: 0.2 }
+  ]);
+}
+
+function diagnosticLevel(score) {
+  if (score === null || score === undefined || !Number.isFinite(Number(score))) {
+    return { label: "확인 필요", tone: "muted" };
+  }
+  if (score >= 75) return { label: "매우 높음", tone: "danger" };
+  if (score >= 55) return { label: "높음", tone: "caution" };
+  if (score >= 35) return { label: "관찰", tone: "watch" };
+  return { label: "낮음", tone: "good" };
+}
+
+function latestBreadthChange(breadthData, offset = 5) {
+  const points = breadthData?.series ?? [];
+  if (points.length <= offset) return null;
+  const latest = Number(points.at(-1)?.breadthMa5Pct);
+  const previous = Number(points.at(-1 - offset)?.breadthMa5Pct);
+  return Number.isFinite(latest) && Number.isFinite(previous) ? latest - previous : null;
+}
+
+function stressAcceleration(market, timeseries, breadthData) {
+  const composite = buildCompositeSeries(market, timeseries);
+  const crashSeries = buildGroupCompositeSeries(market, "crash", timeseries);
+  const latestComposite = composite.at(-1);
+  const latestCrash = crashSeries.at(-1);
+  const compositeChange5d = latestComposite
+    ? valueChange(latestComposite.value, composite, 5)
+    : null;
+  const crashChange5d = latestCrash ? valueChange(latestCrash.value, crashSeries, 5) : null;
+  const breadthChange5d = latestBreadthChange(breadthData, 5);
+  const sharplyWorse =
+    Number(compositeChange5d) >= 4 ||
+    Number(crashChange5d) >= 6 ||
+    Number(breadthChange5d) <= -20;
+  const worse =
+    Number(compositeChange5d) >= 1.5 ||
+    Number(crashChange5d) >= 3 ||
+    Number(breadthChange5d) <= -10;
+  const improving =
+    Number(compositeChange5d) <= -1.5 &&
+    (!Number.isFinite(Number(breadthChange5d)) || Number(breadthChange5d) >= 5);
+
+  return {
+    label: sharplyWorse ? "급격 악화" : worse ? "악화" : improving ? "완화" : "보합",
+    tone: sharplyWorse ? "danger" : worse ? "caution" : improving ? "good" : "watch",
+    compositeChange5d,
+    crashChange5d,
+    breadthChange5d
+  };
+}
+
+function classifyMarketShock({
+  priceShock,
+  flowLiquidityShock,
+  breadthStress,
+  macroConfirmation,
+  acceleration
+}) {
+  const priceHigh = Number(priceShock) >= 75;
+  const flowHigh = Number(flowLiquidityShock) >= 65 || Number(breadthStress) >= 75;
+  const macroHigh = Number(macroConfirmation) >= 65;
+
+  if (priceHigh && flowHigh && macroHigh) {
+    return {
+      label: "시스템 스트레스 주의",
+      tone: "danger",
+      note: "가격·수급·거시 부담 동반"
+    };
+  }
+  if (priceHigh && flowHigh) {
+    return {
+      label: "수급성 오버슈팅 가능성",
+      tone: "caution",
+      note: "시장 내부 매도 확산 · 펀더멘털 확인 필요"
+    };
+  }
+  if (priceHigh && acceleration?.tone === "danger") {
+    return {
+      label: "가격 충격 재가속",
+      tone: "danger",
+      note: "높은 가격 부담 위에 악화 속도 상승"
+    };
+  }
+  if (priceHigh && acceleration?.tone === "caution") {
+    return {
+      label: "가격 충격 잔존",
+      tone: "caution",
+      note: "5일 악화 속도 재상승 관찰"
+    };
+  }
+  if (priceHigh && acceleration?.tone === "good") {
+    return {
+      label: "가격 충격 잔존",
+      tone: "watch",
+      note: "시장 내부 정상화 여부 관찰"
+    };
+  }
+  if (priceHigh) {
+    return {
+      label: "가격 충격 잔존",
+      tone: "watch",
+      note: "추가 확산·거시 확인 신호 관찰"
+    };
+  }
+  if (macroHigh && Number(priceShock) >= 55) {
+    return {
+      label: "거시 부담 주도",
+      tone: "caution",
+      note: "금리·환율·신용 확인 신호 우세"
+    };
+  }
+  if (flowHigh) {
+    return {
+      label: "수급·유동성 경계",
+      tone: "caution",
+      note: "가격 충격 전이 가능성 관찰"
+    };
+  }
+  return {
+    label: Number(priceShock) >= 55 ? "복합 부담 관찰" : "충격 제한적",
+    tone: Number(priceShock) >= 55 ? "watch" : "good",
+    note: "단일 원인 확정 신호 없음"
+  };
+}
+
+function shockMetric({ label, value, level, meta, note }) {
+  const tone = level?.tone ?? "muted";
+  const hasValue = value !== null && value !== undefined && Number.isFinite(Number(value));
+  return `
+    <article class="shock-metric shock-metric--${tone}">
+      <span>${label}</span>
+      <strong>${hasValue ? Number(value).toFixed(1) : "자료 부족"}</strong>
+      <small>${level?.label ?? "직접자료 미연결"}</small>
+      <p>${meta}</p>
+      ${note ? `<em>${note}</em>` : ""}
+    </article>
+  `;
+}
+
+function renderShockDecomposition(market, timeseries, breadthData) {
+  const priceShock = groupScore(market, "crash");
+  const macroConfirmation = groupScore(market, "macro");
+  const flowScore = groupScore(market, "flow");
+  const liquidityScore = groupScore(market, "liquidity");
+  const aiSemiProxy = groupScore(market, "ai_semi");
+  const breadthStress = breadthCollapseScore(breadthData?.latest);
+  const flowLiquidityShock = weightedAvailableScore([
+    { value: breadthStress, weight: 0.45 },
+    { value: flowScore, weight: 0.3 },
+    { value: liquidityScore, weight: 0.25 }
+  ]);
+  const acceleration = stressAcceleration(market, timeseries, breadthData);
+  const classification = classifyMarketShock({
+    priceShock,
+    flowLiquidityShock,
+    breadthStress,
+    macroConfirmation,
+    acceleration
+  });
+  const breadthDate = breadthData?.latest?.date ?? "-";
+
+  return `
+    <section class="shock-decomposition" aria-labelledby="shock-decomposition-title">
+      <header class="shock-decomposition__header">
+        <div>
+          <span class="eyebrow">Shock Decomposition · Research Overlay</span>
+          <h2 id="shock-decomposition-title">시장 충격 분해</h2>
+          <p>종합점수 ${Number(market.score).toFixed(1)} 유지 · 원인 해석을 위한 가중치 0 보조 진단</p>
+        </div>
+        <div class="shock-diagnosis shock-diagnosis--${classification.tone}">
+          <span>잠정 충격 유형</span>
+          <strong>${classification.label}</strong>
+          <small>${classification.note}</small>
+        </div>
+      </header>
+
+      <div class="shock-grid">
+        ${shockMetric({
+          label: "가격 충격",
+          value: priceShock,
+          level: diagnosticLevel(priceShock),
+          meta: "기존 Crash Stress",
+          note: "KOSPI·KOSDAQ 가격 부담"
+        })}
+        ${shockMetric({
+          label: "수급·유동성 충격",
+          value: flowLiquidityShock,
+          level: diagnosticLevel(flowLiquidityShock),
+          meta: `Breadth ${breadthDate} · 연구 보조값`,
+          note: "시장 확산 45% · 수급 30% · 거래 25%"
+        })}
+        ${shockMetric({
+          label: "거시·신용 확인",
+          value: macroConfirmation,
+          level: diagnosticLevel(macroConfirmation),
+          meta: "기존 Macro 그룹",
+          note: "금리·환율·변동성·신용·원자재"
+        })}
+        ${shockMetric({
+          label: "펀더멘털 확인",
+          value: null,
+          level: null,
+          meta: aiSemiProxy !== null && aiSemiProxy !== undefined && Number.isFinite(Number(aiSemiProxy))
+            ? `시장기대 proxy ${Number(aiSemiProxy).toFixed(1)}`
+            : "시장기대 proxy 확인 필요",
+          note: "선행 EPS·실적 수정폭 미연결"
+        })}
+      </div>
+
+      <div class="shock-decomposition__footer">
+        <div class="shock-acceleration shock-acceleration--${acceleration.tone}">
+          <span>5D 스트레스 가속도</span>
+          <strong>${acceleration.label}</strong>
+          <small>종합 ${formatPointDelta(acceleration.compositeChange5d)} · Crash ${formatPointDelta(acceleration.crashChange5d)} · 확산 5D 평균 ${formatPctPointDelta(acceleration.breadthChange5d)}</small>
+        </div>
+        ${renderNarrativeList([
+          "수급성 판정: 가격 충격과 시장 내부 매도 확산의 동시 확인",
+          "펀더멘털 판정: 직접 EPS·실적 데이터 연결 전 확정 보류",
+          "운영 원칙: 기존 종합점수·가중치·경보단계 변경 없음"
+        ], "narrative-list--compact shock-decomposition__notes")}
+        <details class="shock-methodology">
+          <summary>산식</summary>
+          ${renderNarrativeList([
+            "시장확산 부담: 일간 35% · 5일 평균 45% · 20일 평균 20%",
+            "수급·유동성: 시장확산 부담 45% · 기존 Flow 30% · 기존 Liquidity 25%",
+            "악화 속도: 종합·Crash 5일 변화와 Breadth 5일 평균 변화를 규칙 기반 분류",
+            "외국인 Flow는 보유비중 proxy · 직접 순매매 데이터 아님"
+          ], "narrative-list--compact")}
+        </details>
+      </div>
+    </section>
+  `;
+}
+
 function renderBreadthSummaryPanel(breadthData) {
   const latest = breadthData?.latest;
   if (!latest) return "";
@@ -4151,6 +4427,7 @@ function renderSummary(data, timeseries, mlRisk, elsRisk, hmmRegime, breadthData
 
   return `
     ${renderDecisionCockpit(data, timeseries, mlRisk, hmmRegime)}
+    ${renderShockDecomposition(market, timeseries, breadthData)}
     ${renderScoreAttribution(market, timeseries)}
     ${renderBreadthSummaryPanel(breadthData)}
     ${renderMlRiskSignalPanel(mlRisk, market, elsRisk)}
