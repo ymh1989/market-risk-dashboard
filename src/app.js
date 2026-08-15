@@ -2,8 +2,12 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260814-6";
+const ASSET_VERSION = "20260816-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
+const IS_OFFLINE_SNAPSHOT =
+  document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
+const OFFLINE_ADMIN_TAB_IDS = new Set(["operations", "model-monitoring"]);
+document.documentElement.classList.toggle("is-offline-snapshot", IS_OFFLINE_SNAPSHOT);
 const chartRangeOptions = [
   { id: "1m", label: "1M", calendarDays: 31 },
   { id: "3m", label: "3M", calendarDays: 93 },
@@ -5757,7 +5761,10 @@ function renderDashboard(
   const visibleBaseTabs = data.tabs.filter(
     (tab) => !["credit", "liquidity"].includes(tab.id)
   );
-  const dashboardTabs = dashboardTabsWithElsTool(visibleBaseTabs);
+  const allDashboardTabs = dashboardTabsWithElsTool(visibleBaseTabs);
+  const dashboardTabs = IS_OFFLINE_SNAPSHOT
+    ? allDashboardTabs.filter((tab) => !OFFLINE_ADMIN_TAB_IDS.has(tab.id))
+    : allDashboardTabs;
   const enabledTabs = dashboardTabs.filter((tab) => tab.enabled);
   const visibleSections = data.sections.filter((section) =>
     enabledTabs.some((tab) => tab.id === section.id)
@@ -5790,6 +5797,7 @@ function renderDashboard(
         ${renderNarrativeList(data.metadata.subtitle, "narrative-list--hero")}
       </div>
       <div class="hero__aside">
+        ${IS_OFFLINE_SNAPSHOT ? `<span class="hero__snapshot-badge">오프라인 스냅샷</span>` : ""}
         <span>기준일</span>
         <strong>${data.metadata.asOf}</strong>
         <a
@@ -5808,7 +5816,7 @@ function renderDashboard(
       </div>
     </header>
 
-    ${renderOperationStatusStrip(pipelineStatus)}
+    ${IS_OFFLINE_SNAPSHOT ? "" : renderOperationStatusStrip(pipelineStatus)}
 
     <nav class="tabs" aria-label="리스크 대시보드 탭">
       <div class="tabs__items" role="tablist" aria-label="리스크 화면 선택">
@@ -5872,28 +5880,32 @@ function renderDashboard(
       >
         ${renderMarketBreadthPage(breadthData)}
       </section>
-      <section
-        class="tab-panel ${operationsState.className}"
-        id="panel-operations"
-        data-panel="operations"
-        role="tabpanel"
-        aria-labelledby="tab-operations"
-        tabindex="0"
-        ${operationsState.hidden}
-      >
-        ${renderOperationsPage(pipelineStatus)}
-      </section>
-      <section
-        class="tab-panel ${modelMonitoringState.className}"
-        id="panel-model-monitoring"
-        data-panel="model-monitoring"
-        role="tabpanel"
-        aria-labelledby="tab-model-monitoring"
-        tabindex="0"
-        ${modelMonitoringState.hidden}
-      >
-        ${renderModelMonitoringPage(mlRisk)}
-      </section>
+      ${
+        IS_OFFLINE_SNAPSHOT
+          ? ""
+          : `<section
+               class="tab-panel ${operationsState.className}"
+               id="panel-operations"
+               data-panel="operations"
+               role="tabpanel"
+               aria-labelledby="tab-operations"
+               tabindex="0"
+               ${operationsState.hidden}
+             >
+               ${renderOperationsPage(pipelineStatus)}
+             </section>
+             <section
+               class="tab-panel ${modelMonitoringState.className}"
+               id="panel-model-monitoring"
+               data-panel="model-monitoring"
+               role="tabpanel"
+               aria-labelledby="tab-model-monitoring"
+               tabindex="0"
+               ${modelMonitoringState.hidden}
+             >
+               ${renderModelMonitoringPage(mlRisk)}
+             </section>`
+      }
       <section
         class="tab-panel ${replayState.className}"
         id="panel-replay"
@@ -6026,18 +6038,27 @@ function renderDashboard(
 
   const activateTab = (target, { focus = false, updateHash = true } = {}) => {
     if (!enabledTabs.some((tab) => tab.id === target)) return;
+    let selectedTab = null;
     app.querySelectorAll('[role="tab"][data-tab]').forEach((tab) => {
       const selected = tab.dataset.tab === target;
       tab.classList.toggle("is-active", selected);
       tab.setAttribute("aria-selected", selected ? "true" : "false");
       tab.tabIndex = selected ? 0 : -1;
-      if (selected && focus) tab.focus();
+      if (selected) selectedTab = tab;
     });
     app.querySelectorAll(".tab-panel[data-panel]").forEach((panel) => {
       const selected = panel.dataset.panel === target;
       panel.classList.toggle("is-active", selected);
       panel.hidden = !selected;
     });
+    if (selectedTab) {
+      if (focus) selectedTab.focus();
+      selectedTab.scrollIntoView({
+        behavior: focus && !window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "smooth" : "auto",
+        block: "nearest",
+        inline: "nearest"
+      });
+    }
     if (target === "market") void hydrateMarketDetails();
     if (updateHash) history.replaceState(null, "", `#${target}`);
   };

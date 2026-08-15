@@ -24,7 +24,14 @@ def test_offline_export_is_single_file_and_interactive(tmp_path):
     assert output.stat().st_size > 1_000_000
     html = output.read_text(encoding="utf-8")
     assert '<meta name="offline-snapshot" content="true" />' in html
+    assert '<html lang="ko" class="is-offline-snapshot">' in html
     assert "const OFFLINE_DATA = Object.freeze(" in html
+    assert 'const OFFLINE_ADMIN_TAB_IDS = new Set(["operations", "model-monitoring"]);' in html
+    assert "!OFFLINE_ADMIN_TAB_IDS.has(tab.id)" in html
+    assert 'IS_OFFLINE_SNAPSHOT ? "" : renderOperationStatusStrip(pipelineStatus)' in html
+    assert '.is-offline-snapshot [data-tab="operations"]' in html
+    assert '.is-offline-snapshot [data-tab="model-monitoring"]' in html
+    assert "오프라인 스냅샷" in html
     assert "function updateChartCursor" in html
     assert 'chart.addEventListener("pointermove"' in html
     assert "function activateChartRange" in html

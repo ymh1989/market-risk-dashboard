@@ -245,6 +245,18 @@ a {
   font-size: 1.7rem;
 }
 
+.hero__aside .hero__snapshot-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 7px;
+}
+
 .hero__download {
   display: inline-flex;
   width: fit-content;
@@ -334,6 +346,10 @@ a {
   gap: 8px;
   min-width: 0;
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-padding-inline: 8px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
 }
 
 .tab-button {
@@ -345,6 +361,8 @@ a {
   cursor: pointer;
   font-weight: 700;
   padding: 0 16px;
+  scroll-snap-align: start;
+  white-space: nowrap;
 }
 
 .theme-toggle {
@@ -6572,7 +6590,7 @@ a {
   }
 
   .tabs {
-    overflow-x: auto;
+    overflow: visible;
   }
 
   .tabs__items {

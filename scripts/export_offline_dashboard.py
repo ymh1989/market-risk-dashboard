@@ -109,7 +109,12 @@ def build_offline_html() -> tuple[str, str]:
 
 /* 독립형 스냅샷에서는 온라인 전용 기능을 숨깁니다. */
 .snow-lab-trigger,
-.hero__download {
+.hero__download,
+.is-offline-snapshot .operation-status-strip,
+.is-offline-snapshot [data-tab="operations"],
+.is-offline-snapshot [data-tab="model-monitoring"],
+.is-offline-snapshot [data-panel="operations"],
+.is-offline-snapshot [data-panel="model-monitoring"] {
   display: none !important;
 }
 """
@@ -129,6 +134,11 @@ def build_offline_html() -> tuple[str, str]:
     html = html.replace(
         "<title>Integrated Risk Monitoring Dashboard</title>",
         "<title>시장 리스크 대시보드 오프라인 스냅샷</title>",
+    )
+    html = html.replace(
+        '<html lang="ko">',
+        '<html lang="ko" class="is-offline-snapshot">',
+        1,
     )
     html = html.replace(
         "</head>",
