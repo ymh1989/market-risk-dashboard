@@ -401,6 +401,8 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert "push_update_commit()" in run_script
     assert 'git rebase -X theirs "$REMOTE/$BRANCH"' in run_script
     assert "재배치된 코드 기준으로 오프라인 HTML과 스모크 테스트를 다시 검증합니다." in run_script
+    assert "PUBLISH_FILES=(" in run_script
+    assert 'git add -- "${PUBLISH_FILES[@]}"' in run_script
     assert 'SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"' in installer
     assert 'append_calendar_intervals "$MONDAY_TIMES" 1' in installer
     assert 'append_calendar_intervals "$TIMES" 2 3 4 5' in installer

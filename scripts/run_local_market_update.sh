@@ -381,22 +381,24 @@ push_update_commit() {
   git push "$REMOTE" "HEAD:$BRANCH"
 }
 
-git add \
-  data/risk-dashboard.json \
-  data/market-risk-snapshot.json \
-  data/market-risk-timeseries.json \
-  data/naver-marketindex-history.json \
-  data/market-risk-backtest.json \
-  data/market-stress-episodes.json \
-  data/market-history-cache.json \
-  data/els-index-risk.json \
-  data/hmm-regime.json \
-  data/ml-risk-signal.json \
-  data/data-quality.json \
-  data/pipeline-status.json \
-  data/m7-credit-proxy.json \
-  data/kospi-breadth.json \
+PUBLISH_FILES=(
+  data/risk-dashboard.json
+  data/market-risk-snapshot.json
+  data/market-risk-timeseries.json
+  data/naver-marketindex-history.json
+  data/market-risk-backtest.json
+  data/market-stress-episodes.json
+  data/market-history-cache.json
+  data/els-index-risk.json
+  data/hmm-regime.json
+  data/ml-risk-signal.json
+  data/data-quality.json
+  data/pipeline-status.json
+  data/m7-credit-proxy.json
+  data/kospi-breadth.json
   reports/market-risk-dashboard-offline.html
+)
+git add -- "${PUBLISH_FILES[@]}"
 
 if git diff --cached --quiet; then
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 변경된 데이터가 없어 커밋하지 않습니다."
