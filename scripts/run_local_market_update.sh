@@ -285,7 +285,7 @@ persist_local_data_cache() {
 seed_local_data_cache
 
 BREADTH_END_DATE="$("$PYTHON_BIN" -c 'from datetime import datetime, timedelta; from zoneinfo import ZoneInfo; now=datetime.now(ZoneInfo("Asia/Seoul")); target=now if now.strftime("%H:%M") >= "15:35" else now-timedelta(days=1); print(target.date().isoformat())')"
-echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] KOSPI Market Breadth를 갱신합니다: EOD $BREADTH_END_DATE까지"
+echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] KOSPI Market Breadth를 갱신합니다: EOD ${BREADTH_END_DATE}까지"
 "$KOSPI_BREADTH_PYTHON" -m kospi_risk.cli update-kospi-breadth \
   --start 2024-01-01 \
   --end "$BREADTH_END_DATE" \
