@@ -260,8 +260,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260816-1" in html
-    assert "app.js?v=20260816-1" in html
+    assert "styles.css?v=20260818-1" in html
+    assert "app.js?v=20260818-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -281,6 +281,9 @@ def test_ui_hierarchy_and_accessibility_contract():
     assert 'IS_OFFLINE_SNAPSHOT ? "" : renderOperationStatusStrip(pipelineStatus)' in app_source
     assert "selectedTab.scrollIntoView" in app_source
     assert "scroll-snap-type: x proximity;" in styles
+    assert "--desktop-ui-scale: 0.85;" in styles
+    desktop_scale_rule = styles.split("@media (min-width: 901px)", 1)[1].split("}", 2)
+    assert "zoom: var(--desktop-ui-scale);" in "}".join(desktop_scale_rule[:2])
     assert "data-source-detail-toggle" in app_source
     assert "const indicatorDirectionMeanings" in app_source
     assert "function indicatorDirectionMeaning" in app_source

@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260816-1";
+const ASSET_VERSION = "20260818-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";

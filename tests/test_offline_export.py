@@ -32,6 +32,8 @@ def test_offline_export_is_single_file_and_interactive(tmp_path):
     assert '.is-offline-snapshot [data-tab="operations"]' in html
     assert '.is-offline-snapshot [data-tab="model-monitoring"]' in html
     assert "오프라인 스냅샷" in html
+    assert "--desktop-ui-scale: 0.85;" in html
+    assert "zoom: var(--desktop-ui-scale);" in html
     assert "function updateChartCursor" in html
     assert 'chart.addEventListener("pointermove"' in html
     assert "function activateChartRange" in html
