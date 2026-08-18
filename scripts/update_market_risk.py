@@ -5,6 +5,7 @@ import statistics
 import ast
 import csv
 import io
+import os
 import subprocess
 import time
 import urllib.parse
@@ -26,6 +27,7 @@ YAHOO_CHART_URLS = (
     "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d",
 )
 FRED_GRAPH_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
+FRED_API_URL = "https://api.stlouisfed.org/fred/series/observations"
 NAVER_MARKET_INDEX_URL = "https://stock.naver.com/api/securityService/marketindex/{category}/{symbol}/prices"
 NAVER_MARKET_INDEX_DETAIL_URL = (
     "https://stock.naver.com/api/securityService/marketindex/{category}/{symbol}"
@@ -34,6 +36,7 @@ NAVER_BOND_LIVE_URL = "https://stock.naver.com/api/securityService/economic/bond
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-risk-dashboard/0.1)"
 KST = timezone(timedelta(hours=9))
 FRED_FETCH_ATTEMPTS = 3
+FRED_FETCH_STATUS = {}
 
 TICKERS = {
     "kospi": {"symbol": "^KS11", "label": "KOSPI"},
@@ -833,9 +836,79 @@ def fetch_configured_series(configs, fetcher, max_workers=6):
     return {key: results[key] for key in configs}
 
 
-def fetch_fred_series(series_id, lookback_days=1100, start_date=None, end_date=None):
+def load_local_env_value(name):
+    """환경변수 또는 저장소의 비공개 .env에서 설정값을 읽습니다."""
+    value = os.environ.get(name, "").strip()
+    if value:
+        return value
+
+    env_file = ROOT / ".env"
+    if not env_file.exists():
+        return ""
+    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, raw_value = line.split("=", 1)
+        if key.strip() == name:
+            return raw_value.strip().strip('"').strip("'")
+    return ""
+
+
+def _fred_date_range(lookback_days=1100, start_date=None, end_date=None):
     end_date = end_date or datetime.now(KST).date()
     start_date = start_date or (end_date - timedelta(days=lookback_days))
+    return start_date, end_date
+
+
+def fetch_fred_api_series(series_id, api_key, lookback_days=1100, start_date=None, end_date=None):
+    """공식 FRED observations API에서 시계열을 조회합니다."""
+    if len(api_key) != 32 or not api_key.isalnum() or api_key.lower() != api_key:
+        raise RuntimeError("FRED_API_KEY 형식이 올바르지 않습니다(32자 영문 소문자·숫자).")
+
+    start_date, end_date = _fred_date_range(lookback_days, start_date, end_date)
+    params = urllib.parse.urlencode(
+        {
+            "series_id": series_id,
+            "api_key": api_key,
+            "file_type": "json",
+            "observation_start": start_date.isoformat(),
+            "observation_end": end_date.isoformat(),
+            "sort_order": "asc",
+        }
+    )
+    request = urllib.request.Request(
+        f"{FRED_API_URL}?{params}",
+        headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+    )
+    with urllib.request.urlopen(request, timeout=8) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+
+    series = []
+    for observation in payload.get("observations", []):
+        raw_value = observation.get("value")
+        if raw_value in (None, "", "."):
+            continue
+        try:
+            close = float(raw_value)
+        except (TypeError, ValueError):
+            continue
+        series.append(
+            {
+                "date": observation["date"],
+                "close": close,
+                "volume": None,
+            }
+        )
+
+    if len(series) < 80:
+        raise RuntimeError(f"{series_id}: FRED API 관측치가 부족합니다 ({len(series)})")
+    return series
+
+
+def fetch_fred_graph_series(series_id, lookback_days=1100, start_date=None, end_date=None):
+    """API 장애 시 FRED 그래프 공개 CSV를 보조 경로로 조회합니다."""
+    start_date, end_date = _fred_date_range(lookback_days, start_date, end_date)
     params = urllib.parse.urlencode(
         {
             "id": series_id,
@@ -851,17 +924,17 @@ def fetch_fred_series(series_id, lookback_days=1100, start_date=None, end_date=N
         text=True,
     )
     if curl_result.returncode == 0 and curl_result.stdout.strip():
-        text = curl_result.stdout
+        csv_text = curl_result.stdout
     else:
         request = urllib.request.Request(
             url,
             headers={"User-Agent": USER_AGENT, "Accept": "text/csv"},
         )
         with urllib.request.urlopen(request, timeout=5) as response:
-            text = response.read().decode("utf-8", errors="ignore")
+            csv_text = response.read().decode("utf-8", errors="ignore")
 
     series = []
-    for row in csv.DictReader(io.StringIO(text)):
+    for row in csv.DictReader(io.StringIO(csv_text)):
         raw_value = row.get(series_id) or row.get("VALUE") or row.get("value")
         if raw_value in (None, "", "."):
             continue
@@ -871,15 +944,63 @@ def fetch_fred_series(series_id, lookback_days=1100, start_date=None, end_date=N
             continue
         series.append(
             {
-                "date": row["DATE"],
+                "date": row.get("DATE") or row["observation_date"],
                 "close": close,
                 "volume": None,
             }
         )
 
     if len(series) < 80:
-        raise RuntimeError(f"{series_id}: not enough FRED observations ({len(series)})")
+        raise RuntimeError(f"{series_id}: FRED 공개 CSV 관측치가 부족합니다 ({len(series)})")
     return series
+
+
+def fetch_fred_series(series_id, lookback_days=1100, start_date=None, end_date=None):
+    """정식 FRED API를 우선 사용하고 공개 CSV를 보조 경로로 사용합니다."""
+    api_key = load_local_env_value("FRED_API_KEY")
+    api_error = None
+    if api_key:
+        try:
+            series = fetch_fred_api_series(
+                series_id,
+                api_key,
+                lookback_days=lookback_days,
+                start_date=start_date,
+                end_date=end_date,
+            )
+            FRED_FETCH_STATUS[series_id] = {
+                "source": "fred_api",
+                "status": "ok",
+                "warning": None,
+            }
+            print(f"FRED 정식 API 사용: {series_id} ({series[-1]['date']})")
+            return series
+        except Exception as exc:
+            api_error = str(exc).replace(api_key, "***")
+            print(f"FRED 정식 API 조회 실패: {series_id} ({api_error}). 공개 CSV를 시도합니다.")
+
+    try:
+        series = fetch_fred_graph_series(
+            series_id,
+            lookback_days=lookback_days,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        source_note = "API 키 미설정" if not api_key else f"API 실패: {api_error}"
+        FRED_FETCH_STATUS[series_id] = {
+            "source": "fred_csv",
+            "status": "ok" if not api_key else "fallback",
+            "warning": None if not api_key else source_note,
+        }
+        print(f"FRED 공개 CSV 사용: {series_id} ({source_note})")
+        return series
+    except Exception as csv_error:
+        if api_error is not None:
+            raise RuntimeError(
+                f"{series_id}: FRED API와 공개 CSV 조회가 모두 실패했습니다 "
+                f"(API: {api_error}; CSV: {csv_error})"
+            ) from csv_error
+        raise
 
 
 def load_local_fred_series(column):
@@ -953,25 +1074,12 @@ def load_cached_fred_series(config):
     return max(candidates, key=lambda item: item[0][-1]["date"])
 
 
-def _is_recent_fred_fallback(series, max_age_days=7):
-    try:
-        last_date = datetime.strptime(series[-1]["date"], "%Y-%m-%d").date()
-    except (IndexError, KeyError, TypeError, ValueError):
-        return False
-    return (datetime.now(KST).date() - last_date).days <= max_age_days
-
-
 def fetch_fred_series_with_fallback(config, **fetch_kwargs):
     cached_series = None
     cached_source = None
     cache_error = None
     try:
         cached_series, cached_source = load_cached_fred_series(config)
-        if _is_recent_fred_fallback(
-            cached_series, max_age_days=config.get("max_local_age_days", 7)
-        ):
-            print(f"FRED 저장값 사용: {config['series_id']} ({cached_source}, {cached_series[-1]['date']})")
-            return cached_series
     except Exception as exc:
         cache_error = exc
 
@@ -990,6 +1098,12 @@ def fetch_fred_series_with_fallback(config, **fetch_kwargs):
                 time.sleep(delay_seconds)
 
     if cached_series is not None:
+        warning = f"직접 조회 실패: {direct_error}"
+        FRED_FETCH_STATUS[config["series_id"]] = {
+            "source": "fred_cache",
+            "status": "cached",
+            "warning": warning,
+        }
         print(
             f"FRED 직접 조회 실패: {config['series_id']} ({direct_error}). "
             f"{cached_source}의 저장값({cached_series[-1]['date']})을 사용합니다."
@@ -3652,6 +3766,9 @@ def write_snapshot(
                 "lastDate": fred_map[key][-1]["date"],
                 "lastClose": round(fred_map[key][-1]["close"], 4),
                 "observations": len(fred_map[key]),
+                "fetchSource": (FRED_FETCH_STATUS.get(config["series_id"]) or {}).get("source", "unknown"),
+                "fetchStatus": (FRED_FETCH_STATUS.get(config["series_id"]) or {}).get("status", "unknown"),
+                "fetchWarning": (FRED_FETCH_STATUS.get(config["series_id"]) or {}).get("warning"),
             }
             for key, config in FRED_SERIES.items()
         },
@@ -3780,6 +3897,23 @@ def main():
     print(f"Wrote {TIMESERIES_FILE.relative_to(ROOT)}")
 
 
+def check_fred_api():
+    """산출물을 쓰지 않고 FRED API 키와 DGS2 조회를 점검합니다."""
+    api_key = load_local_env_value("FRED_API_KEY")
+    if not api_key:
+        raise SystemExit("FRED_API_KEY가 없습니다. 저장소 .env에 설정하세요.")
+    try:
+        series = fetch_fred_api_series("DGS2", api_key, lookback_days=180)
+    except Exception as exc:
+        safe_error = str(exc).replace(api_key, "***")
+        raise SystemExit(f"FRED 정식 API 연결 실패: {safe_error}") from None
+    latest = series[-1]
+    print(
+        f"FRED 정식 API 연결 정상: DGS2 {latest['date']} {latest['close']:.4f} "
+        f"· 최근 관측치 {len(series)}개"
+    )
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="시장리스크 데이터를 갱신합니다.")
     parser.add_argument(
@@ -3787,12 +3921,19 @@ def parse_args():
         action="store_true",
         help="기존 EOD 캐시는 유지하고 시장지표 최신 스냅샷만 갱신합니다.",
     )
+    parser.add_argument(
+        "--check-fred-api",
+        action="store_true",
+        help="FRED_API_KEY와 공식 DGS2 조회만 점검하고 종료합니다.",
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    if args.refresh_live_only:
+    if args.check_fred_api:
+        check_fred_api()
+    elif args.refresh_live_only:
         snapshots = refresh_naver_market_index_latest_cache()
         labels = ", ".join(
             f"{NAVER_MARKET_INDEXES[key]['label']} {snapshot['close']}"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import urllib.parse
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -40,6 +41,93 @@ def test_history_cache_supplies_dgs2_when_raw_csv_has_no_fred_columns(tmp_path, 
     assert source == "data/market-history-cache.json"
     assert len(series) == 120
     assert series[-1]["date"] == today.isoformat()
+
+
+def test_fred_official_api_parser(monkeypatch):
+    module = load_update_module()
+    api_key = "d" * 32
+    observations = [
+        {"date": f"2026-{1 + index // 28:02d}-{1 + index % 28:02d}", "value": str(4 + index / 1000)}
+        for index in range(84)
+    ]
+    observations[3]["value"] = "."
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def read(self):
+            return json.dumps({"observations": observations}).encode("utf-8")
+
+    def fake_urlopen(request, timeout):
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(request.full_url).query)
+        assert query["series_id"] == ["DGS2"]
+        assert query["api_key"] == [api_key]
+        assert query["file_type"] == ["json"]
+        assert timeout == 8
+        return FakeResponse()
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+
+    result = module.fetch_fred_api_series("DGS2", api_key, lookback_days=180)
+
+    assert len(result) == 83
+    assert result[0]["date"] == observations[0]["date"]
+    assert all(point["volume"] is None for point in result)
+
+
+def test_fred_live_query_runs_before_recent_cache(monkeypatch):
+    module = load_update_module()
+    cached = [
+        {"date": "2026-08-18", "close": 4.0, "volume": None}
+        for _ in range(80)
+    ]
+    live = [
+        {"date": "2026-08-19", "close": 4.1, "volume": None}
+        for _ in range(80)
+    ]
+    calls = []
+
+    monkeypatch.setattr(module, "load_cached_fred_series", lambda _config: (cached, "cache"))
+    monkeypatch.setattr(
+        module,
+        "fetch_fred_series",
+        lambda series_id, **kwargs: calls.append(series_id) or live,
+    )
+
+    result = module.fetch_fred_series_with_fallback(module.FRED_SERIES["us2y"])
+
+    assert calls == ["DGS2"]
+    assert result is live
+
+
+def test_fred_api_error_masks_key_before_csv_fallback(monkeypatch, capsys):
+    module = load_update_module()
+    api_key = "c" * 32
+    csv_series = [
+        {"date": f"2026-01-{(index % 28) + 1:02d}", "close": 4.0, "volume": None}
+        for index in range(80)
+    ]
+
+    monkeypatch.setattr(module, "load_local_env_value", lambda _name: api_key)
+    monkeypatch.setattr(
+        module,
+        "fetch_fred_api_series",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            RuntimeError(f"request failed api_key={api_key}")
+        ),
+    )
+    monkeypatch.setattr(module, "fetch_fred_graph_series", lambda *args, **kwargs: csv_series)
+
+    result = module.fetch_fred_series("DGS2")
+    output = capsys.readouterr().out
+
+    assert result is csv_series
+    assert api_key not in output
+    assert "***" in output
 
 
 def test_yahoo_history_cache_prevents_latest_date_regression(monkeypatch):

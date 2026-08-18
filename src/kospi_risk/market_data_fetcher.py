@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import io
 import json
+import os
 import subprocess
 import urllib.parse
 import urllib.request
@@ -19,9 +20,11 @@ from .data_loader import save_frame
 
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
 FRED_GRAPH_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
+FRED_API_URL = "https://api.stlouisfed.org/fred/series/observations"
 NAVER_CHART_URL = "https://api.finance.naver.com/siseJson.naver"
 DEFAULT_SOURCE_CONFIG = Path("configs/data_sources.yaml")
 FRED_HISTORY_CACHE = Path(__file__).resolve().parents[2] / "data" / "market-history-cache.json"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 @dataclass
@@ -38,6 +41,24 @@ class SourceFetchResult:
 def _utc_timestamp(value: str) -> int:
     dt = datetime.combine(date.fromisoformat(value), time.min, tzinfo=timezone.utc)
     return int(dt.timestamp())
+
+
+def _local_env_value(name: str) -> str:
+    """환경변수 또는 저장소의 비공개 .env에서 값을 읽습니다."""
+    value = os.environ.get(name, "").strip()
+    if value:
+        return value
+    env_file = PROJECT_ROOT / ".env"
+    if not env_file.exists():
+        return ""
+    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, raw_value = line.split("=", 1)
+        if key.strip() == name:
+            return raw_value.strip().strip('"').strip("'")
+    return ""
 
 
 def load_source_config(path: str | Path = DEFAULT_SOURCE_CONFIG) -> dict[str, Any]:
@@ -188,6 +209,63 @@ def fetch_naver_series(
     )
 
 
+def _fred_api_frame(
+    column: str,
+    symbol: str,
+    api_key: str,
+    start: str | None,
+    end: str | None,
+    timeout: int,
+    user_agent: str,
+) -> pd.DataFrame:
+    if len(api_key) != 32 or not api_key.isalnum() or api_key.lower() != api_key:
+        raise RuntimeError("FRED_API_KEY 형식이 올바르지 않습니다(32자 영문 소문자·숫자).")
+    params = {
+        "series_id": symbol,
+        "api_key": api_key,
+        "file_type": "json",
+        "sort_order": "asc",
+    }
+    if start:
+        params["observation_start"] = start
+    if end:
+        params["observation_end"] = end
+    request = urllib.request.Request(
+        f"{FRED_API_URL}?{urllib.parse.urlencode(params)}",
+        headers={"User-Agent": user_agent, "Accept": "application/json"},
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    values = [
+        {"date": item.get("date"), column: item.get("value")}
+        for item in payload.get("observations", [])
+    ]
+    frame = pd.DataFrame(values, columns=["date", column])
+    if frame.empty:
+        raise RuntimeError(f"{symbol}: FRED API 관측치가 없습니다.")
+    return frame
+
+
+def _normalize_fred_frame(
+    frame: pd.DataFrame,
+    column: str,
+    symbol: str,
+    start: str | None,
+    end: str | None,
+) -> pd.DataFrame:
+    frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+    frame[column] = pd.to_numeric(frame[column], errors="coerce")
+    frame = frame.dropna(subset=["date", column]).sort_values("date").drop_duplicates("date", keep="last")
+    if start:
+        frame = frame.loc[frame["date"] >= pd.Timestamp(start)]
+    if end:
+        frame = frame.loc[frame["date"] <= pd.Timestamp(end)]
+    frame = frame.reset_index(drop=True)
+    if frame.empty:
+        raise RuntimeError(f"{symbol}: 유효한 FRED 데이터가 없습니다.")
+    return frame
+
+
 def fetch_fred_series(
     column: str,
     spec: dict[str, Any],
@@ -198,14 +276,40 @@ def fetch_fred_series(
 ) -> SourceFetchResult:
     del range_value
     symbol = str(spec["symbol"])
+    timeout = int(fetch_config.get("timeout_seconds", 20))
+    user_agent = str(
+        fetch_config.get("user_agent", "Mozilla/5.0 (compatible; kospi-risk-regime-lab/0.1)")
+    )
+    api_key = _local_env_value("FRED_API_KEY")
+    api_error = None
+
+    if api_key:
+        try:
+            frame = _normalize_fred_frame(
+                _fred_api_frame(column, symbol, api_key, start, end, timeout, user_agent),
+                column,
+                symbol,
+                start,
+                end,
+            )
+            return SourceFetchResult(
+                column=column,
+                provider="fred_api",
+                symbol=symbol,
+                label=str(spec.get("label", column)),
+                frame=frame,
+                status="ok",
+            )
+        except Exception as exc:
+            api_error = str(exc).replace(api_key, "***")
+
     params = {"id": symbol}
     if start:
         params["cosd"] = start
     if end:
         params["coed"] = end
     url = f"{FRED_GRAPH_CSV_URL}?{urllib.parse.urlencode(params)}"
-    timeout = int(fetch_config.get("timeout_seconds", 20))
-    direct_error = None
+    csv_error = None
     try:
         response = subprocess.run(
             ["curl", "-L", "--silent", "--show-error", "--max-time", str(timeout), url],
@@ -213,51 +317,47 @@ def fetch_fred_series(
             capture_output=True,
             text=True,
         )
-        text = response.stdout
-    except Exception as exc:
-        direct_error = exc
+        csv_text = response.stdout
+    except Exception as curl_error:
         try:
             request = urllib.request.Request(
                 url,
-                headers={
-                    "User-Agent": str(
-                        fetch_config.get("user_agent", "Mozilla/5.0 (compatible; kospi-risk-regime-lab/0.1)")
-                    ),
-                    "Accept": "text/csv,*/*",
-                    "Connection": "close",
-                },
+                headers={"User-Agent": user_agent, "Accept": "text/csv,*/*", "Connection": "close"},
             )
             with urllib.request.urlopen(request, timeout=timeout) as response:
-                text = response.read().decode("utf-8")
+                csv_text = response.read().decode("utf-8")
         except Exception as urllib_error:
-            return load_cached_fred_result(column, spec, start, end, f"{direct_error}; {urllib_error}")
+            csv_error = RuntimeError(f"curl: {curl_error}; urllib: {urllib_error}")
 
-    try:
-        raw = pd.read_csv(io.StringIO(text))
-        date_column = "observation_date" if "observation_date" in raw.columns else "DATE"
-        if date_column not in raw.columns or symbol not in raw.columns:
-            raise RuntimeError(f"{symbol}: FRED CSV 형식이 예상과 다릅니다.")
-        frame = raw.rename(columns={date_column: "date", symbol: column})[["date", column]]
-        frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
-        frame[column] = pd.to_numeric(frame[column], errors="coerce")
-        frame = frame.dropna(subset=["date", column]).sort_values("date").drop_duplicates("date", keep="last")
-        if start:
-            frame = frame.loc[frame["date"] >= pd.Timestamp(start)]
-        if end:
-            frame = frame.loc[frame["date"] <= pd.Timestamp(end)]
-        frame = frame.reset_index(drop=True)
-        if frame.empty:
-            raise RuntimeError(f"{symbol}: 유효한 FRED 데이터가 없습니다.")
-    except Exception as parse_error:
-        return load_cached_fred_result(column, spec, start, end, str(parse_error))
-    return SourceFetchResult(
-        column=column,
-        provider="fred",
-        symbol=symbol,
-        label=str(spec.get("label", column)),
-        frame=frame,
-        status="ok",
-    )
+    if csv_error is None:
+        try:
+            raw = pd.read_csv(io.StringIO(csv_text))
+            date_column = "observation_date" if "observation_date" in raw.columns else "DATE"
+            if date_column not in raw.columns or symbol not in raw.columns:
+                raise RuntimeError(f"{symbol}: FRED CSV 형식이 예상과 다릅니다.")
+            frame = _normalize_fred_frame(
+                raw.rename(columns={date_column: "date", symbol: column})[["date", column]],
+                column,
+                symbol,
+                start,
+                end,
+            )
+            return SourceFetchResult(
+                column=column,
+                provider="fred_csv",
+                symbol=symbol,
+                label=str(spec.get("label", column)),
+                frame=frame,
+                status="fallback" if api_error is not None else "ok",
+                error=f"FRED 정식 API 실패로 공개 CSV 사용: {api_error}" if api_error else None,
+            )
+        except Exception as parse_error:
+            csv_error = parse_error
+
+    details = f"FRED 공개 CSV 실패: {csv_error}"
+    if api_error is not None:
+        details = f"FRED 정식 API 실패: {api_error}; {details}"
+    return load_cached_fred_result(column, spec, start, end, details)
 
 
 def load_cached_fred_result(
@@ -288,7 +388,7 @@ def load_cached_fred_result(
         raise RuntimeError(f"{spec['symbol']}: 지정 기간의 저장 캐시 데이터 없음 ({direct_error})")
     return SourceFetchResult(
         column=column,
-        provider="fred",
+        provider="fred_cache",
         symbol=str(spec["symbol"]),
         label=str(spec.get("label", column)),
         frame=frame,

@@ -112,6 +112,8 @@ def test_configured_start_date_is_forwarded_to_sources():
 
 
 def test_fred_series_parser_uses_observation_date_csv(monkeypatch):
+    monkeypatch.setattr(market_data_fetcher, "_local_env_value", lambda _name: "")
+
     class FakeCompletedProcess:
         stdout = "observation_date,DGS2\n2024-01-01,4.25\n2024-01-02,.\n2024-01-03,4.30\n"
 
@@ -130,9 +132,80 @@ def test_fred_series_parser_uses_observation_date_csv(monkeypatch):
         end="2024-01-04",
     )
 
-    assert result.provider == "fred"
+    assert result.provider == "fred_csv"
     assert result.symbol == "DGS2"
     assert list(result.frame["US2Y"]) == [4.30]
+
+
+def test_fred_series_prefers_official_api(monkeypatch):
+    api_key = "a" * 32
+    payload = {
+        "observations": [
+            {"date": "2024-01-01", "value": "4.25"},
+            {"date": "2024-01-02", "value": "."},
+            {"date": "2024-01-03", "value": "4.30"},
+        ]
+    }
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def read(self):
+            return json.dumps(payload).encode("utf-8")
+
+    def fake_urlopen(request, timeout):
+        assert "api.stlouisfed.org/fred/series/observations" in request.full_url
+        assert "series_id=DGS2" in request.full_url
+        assert f"api_key={api_key}" in request.full_url
+        assert timeout == 5
+        return FakeResponse()
+
+    monkeypatch.setattr(market_data_fetcher, "_local_env_value", lambda _name: api_key)
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("subprocess.run", lambda *args, **kwargs: pytest.fail("CSV fallback should not run"))
+
+    result = fetch_fred_series(
+        "US2Y",
+        {"provider": "fred", "symbol": "DGS2", "label": "US 2Y"},
+        {"timeout_seconds": 5},
+        start="2024-01-01",
+        end="2024-01-04",
+    )
+
+    assert result.provider == "fred_api"
+    assert result.status == "ok"
+    assert list(result.frame["US2Y"]) == [4.25, 4.30]
+
+
+def test_fred_series_falls_back_to_csv_without_leaking_key(monkeypatch):
+    api_key = "b" * 32
+
+    class FakeCompletedProcess:
+        stdout = "observation_date,DGS2\n2024-01-01,4.25\n2024-01-03,4.30\n"
+
+    def fail_api(request, timeout):
+        raise TimeoutError(f"failed request {request.full_url}")
+
+    monkeypatch.setattr(market_data_fetcher, "_local_env_value", lambda _name: api_key)
+    monkeypatch.setattr("urllib.request.urlopen", fail_api)
+    monkeypatch.setattr("subprocess.run", lambda *args, **kwargs: FakeCompletedProcess())
+
+    result = fetch_fred_series(
+        "US2Y",
+        {"provider": "fred", "symbol": "DGS2", "label": "US 2Y"},
+        {"timeout_seconds": 5},
+        start="2024-01-01",
+        end="2024-01-04",
+    )
+
+    assert result.provider == "fred_csv"
+    assert result.status == "fallback"
+    assert api_key not in (result.error or "")
+    assert "***" in (result.error or "")
 
 
 def test_fred_series_uses_history_cache_when_network_fails(tmp_path, monkeypatch):
@@ -156,6 +229,7 @@ def test_fred_series_uses_history_cache_when_network_fails(tmp_path, monkeypatch
         raise TimeoutError("network timeout")
 
     monkeypatch.setattr(market_data_fetcher, "FRED_HISTORY_CACHE", cache_file)
+    monkeypatch.setattr(market_data_fetcher, "_local_env_value", lambda _name: "")
     monkeypatch.setattr("subprocess.run", fail)
     monkeypatch.setattr("urllib.request.urlopen", fail)
 
@@ -167,6 +241,7 @@ def test_fred_series_uses_history_cache_when_network_fails(tmp_path, monkeypatch
         end="2024-01-04",
     )
 
+    assert result.provider == "fred_cache"
     assert result.status == "cached"
     assert list(result.frame["US2Y"]) == [4.25, 4.30]
 

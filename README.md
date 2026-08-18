@@ -43,6 +43,14 @@ make export-els-index-risk
 
 이 명령들은 Yahoo Finance, Naver Finance 주식·시장지표 엔드포인트, FRED에서 데이터를 받아 시장리스크 점수, 감사용 스냅샷, 최근 시계열, 백테스트, 과거 스트레스 사례와 ELS 기초지수별 리스크를 갱신합니다. 현재 모델은 한국 시장지표, 수급·거래량, 글로벌 크레딧·위험선호, 미국 신용스프레드·금융여건, 운임·원자재·국제환율, AI 반도체 및 빅테크 AI 수요 지표를 함께 사용합니다.
 
+FRED 계열은 `.env`의 `FRED_API_KEY`가 있으면 공식 `fred/series/observations` JSON API를 우선 사용합니다. 키가 없거나 API가 실패하면 FRED 공개 CSV, 로컬 저장 캐시 순서로 대체하며 API 키는 로그와 산출물에 기록하지 않습니다.
+
+```bash
+python3 scripts/update_market_risk.py --check-fred-api
+```
+
+위 점검은 `DGS2` 최근 관측치만 조회하며 대시보드 파일을 변경하지 않습니다.
+
 - 한국 시장: KOSPI, KOSDAQ, USD/KRW
 - 글로벌 스트레스: VIX, 미국 10년 금리 proxy
 - 수급·거래량: 삼성전자, SK하이닉스, 한미반도체, KODEX 200의 거래량 및 외국인소진율
