@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260818-1";
+const ASSET_VERSION = "20260818-2";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -5235,6 +5235,16 @@ function hideChartCursor(chart) {
   chart.querySelector("[data-chart-tooltip]")?.classList.remove("is-visible");
 }
 
+function effectiveChartZoom(element) {
+  const currentZoom = Number(element.currentCSSZoom);
+  if (Number.isFinite(currentZoom) && currentZoom > 0) return currentZoom;
+
+  const rect = element.getBoundingClientRect();
+  const layoutWidth = Number(element.offsetWidth);
+  const inferredZoom = layoutWidth > 0 ? rect.width / layoutWidth : 1;
+  return Number.isFinite(inferredZoom) && inferredZoom > 0 ? inferredZoom : 1;
+}
+
 function updateChartCursor(chart, svg, event) {
   const model = interactiveChartRegistry.get(chart.dataset.timeseriesChart);
   if (!model) return;
@@ -5306,13 +5316,17 @@ function updateChartCursor(chart, svg, event) {
   if (!tooltip || !rows) return;
   tooltip.innerHTML = `<b>${anchorPoint.date}</b>${rows}`;
   const chartRect = chart.getBoundingClientRect();
-  const horizontalInset = Math.min(110, Math.max(16, chartRect.width / 2));
+  const cssZoom = effectiveChartZoom(chart);
+  const layoutWidth = chartRect.width / cssZoom;
+  const layoutHeight = chartRect.height / cssZoom;
+  const horizontalInset = Math.min(110, Math.max(16, layoutWidth / 2));
+  const tooltipPointerX = (event.clientX - chartRect.left) / cssZoom;
   const localX = Math.max(
     horizontalInset,
-    Math.min(chartRect.width - horizontalInset, event.clientX - chartRect.left)
+    Math.min(layoutWidth - horizontalInset, tooltipPointerX)
   );
-  const localY = event.clientY - chartRect.top;
-  const above = localY > chartRect.height * 0.52;
+  const localY = (event.clientY - chartRect.top) / cssZoom;
+  const above = localY > layoutHeight * 0.52;
   tooltip.style.left = `${localX}px`;
   tooltip.style.top = `${above ? localY - 14 : localY + 14}px`;
   tooltip.dataset.placement = above ? "above" : "below";
