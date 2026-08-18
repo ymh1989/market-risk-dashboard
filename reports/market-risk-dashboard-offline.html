@@ -3365,6 +3365,15 @@ a {
   line-height: 1.15;
 }
 
+.market-trend-row__numbers .market-trend-row__range-change {
+  border-left: 1px solid var(--line);
+  padding-left: 8px;
+}
+
+.market-trend-row__range-change dt {
+  color: var(--blue);
+}
+
 .market-trend-row__state {
   display: grid;
   grid-column: 1 / -1;
@@ -7913,7 +7922,7 @@ function evaluateDashboard(data) {
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260818-2";
+const ASSET_VERSION = "20260818-3";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -10754,6 +10763,12 @@ function marketTrendChange(rows, offset, type) {
   return type === "yield" ? (latest - base) * 100 : (latest / base - 1) * 100;
 }
 
+function marketTrendRangeChange(rows, domain, type) {
+  const visible = pointsWithinDomain(rows, domain, "close");
+  if (visible.length < 2) return null;
+  return marketTrendChange(visible, visible.length - 1, type);
+}
+
 function formatMarketTrendChange(value, type) {
   if (!Number.isFinite(value)) return "-";
   const sign = value > 0 ? "+" : "";
@@ -10901,6 +10916,18 @@ function renderMarketTrendRow(item, seriesIndex, timelineDomains) {
       `;
     })
     .join("");
+  const rangeChangeLayers = chartRangeOptions
+    .map((range) => {
+      const domain = timelineDomains[range.id];
+      const change = marketTrendRangeChange(item.rows, domain, item.type);
+      return `
+        <div class="market-trend-row__range-change ${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}">
+          <dt>${range.label} 변동</dt>
+          <dd>${formatMarketTrendChange(change, item.type)}</dd>
+        </div>
+      `;
+    })
+    .join("");
   const persistenceText =
     item.direction === "flat"
       ? `상승 ${item.upCount} · 하락 ${item.downCount}`
@@ -10926,7 +10953,7 @@ function renderMarketTrendRow(item, seriesIndex, timelineDomains) {
         </div>
         <div><dt>${item.metadata.frequency === "weekly" ? "직전" : "전일"}</dt><dd>${formatMarketTrendChange(item.oneDayChange, item.type)}</dd></div>
         <div><dt>1주</dt><dd>${formatMarketTrendChange(item.oneWeekChange, item.type)}</dd></div>
-        <div><dt>1개월</dt><dd>${formatMarketTrendChange(item.oneMonthChange, item.type)}</dd></div>
+        ${rangeChangeLayers}
       </dl>
       <div class="market-trend-row__state">
         <strong>${item.directionLabel}</strong>
@@ -11013,6 +11040,7 @@ function renderMarketIndexTrendPanel(marketIndexes) {
         <span>Naver Pay 증권 시장지표</span>
         <span>현재값은 실시간·지연 잠정치 · 과거 시계열과 ML은 확정 EOD</span>
         <span>일간 최근 10회 · 주간 최근 6회 방향 판독</span>
+        <span>전일·1주는 고정 · 기간 변동은 선택 구간 첫 관측 대비</span>
       </footer>
     </section>
   `;

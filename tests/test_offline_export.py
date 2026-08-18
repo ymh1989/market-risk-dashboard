@@ -37,6 +37,8 @@ def test_offline_export_is_single_file_and_interactive(tmp_path):
     assert "function effectiveChartZoom" in html
     assert "tooltipPointerX = (event.clientX - chartRect.left) / cssZoom" in html
     assert "function updateChartCursor" in html
+    assert "function marketTrendRangeChange" in html
+    assert "<dt>${range.label} 변동</dt>" in html
     assert 'chart.addEventListener("pointermove"' in html
     assert "function activateChartRange" in html
     assert "data-observation-detail-toggle" in html
