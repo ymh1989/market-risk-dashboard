@@ -3,6 +3,7 @@ import math
 from datetime import date, timedelta
 
 from scripts.update_market_risk import (
+    NAVER_MARKET_INDEXES,
     _weighted_asof_score_points,
     broad_reinflation_component_points,
     change_pressure_component_points,
@@ -24,6 +25,22 @@ from scripts.update_market_risk import (
     volatility_term_structure_component_points,
     yen_carry_unwind_component_points,
 )
+
+
+def test_naver_history_targets_cover_three_year_window():
+    weekly_targets = [
+        config["target_observations"]
+        for config in NAVER_MARKET_INDEXES.values()
+        if config["frequency"] == "weekly"
+    ]
+    daily_targets = [
+        config["target_observations"]
+        for config in NAVER_MARKET_INDEXES.values()
+        if config["frequency"] == "daily"
+    ]
+
+    assert weekly_targets and min(weekly_targets) >= 160
+    assert daily_targets and min(daily_targets) >= 760
 
 
 def test_foreign_ownership_drop_uses_percentage_points():

@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260818-3";
+const ASSET_VERSION = "20260818-4";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -2843,10 +2843,30 @@ function marketTrendChange(rows, offset, type) {
   return type === "yield" ? (latest - base) * 100 : (latest / base - 1) * 100;
 }
 
-function marketTrendRangeChange(rows, domain, type) {
+function marketTrendRangeMetric(rows, domain, type, frequency) {
   const visible = pointsWithinDomain(rows, domain, "close");
-  if (visible.length < 2) return null;
-  return marketTrendChange(visible, visible.length - 1, type);
+  if (visible.length < 2) {
+    return { change: null, isComplete: false, coverageLabel: "구간 미충족", firstDate: null };
+  }
+
+  const firstDate = visible[0].date;
+  const lastDate = visible.at(-1).date;
+  const dayMs = 24 * 60 * 60 * 1000;
+  const coverageDays = Math.max(0, (dateMs(lastDate) - dateMs(firstDate)) / dayMs);
+  const toleranceDays = frequency === "weekly" ? 10 : 7;
+  const isComplete = dateMs(firstDate) <= domain.start + toleranceDays * dayMs;
+  const coverageLabel =
+    coverageDays >= 335
+      ? `${(coverageDays / 365.25).toFixed(1)}Y`
+      : coverageDays >= 45
+        ? `${Math.max(1, Math.round(coverageDays / 30.44))}M`
+        : `${Math.max(1, Math.round(coverageDays / 7))}W`;
+  return {
+    change: marketTrendChange(visible, visible.length - 1, type),
+    isComplete,
+    coverageLabel,
+    firstDate
+  };
 }
 
 function formatMarketTrendChange(value, type) {
@@ -2999,11 +3019,20 @@ function renderMarketTrendRow(item, seriesIndex, timelineDomains) {
   const rangeChangeLayers = chartRangeOptions
     .map((range) => {
       const domain = timelineDomains[range.id];
-      const change = marketTrendRangeChange(item.rows, domain, item.type);
+      const metric = marketTrendRangeMetric(
+        item.rows,
+        domain,
+        item.type,
+        item.metadata.frequency
+      );
+      const label = metric.isComplete ? range.label : `가용 ${metric.coverageLabel}`;
+      const coverageTitle = metric.isComplete
+        ? ""
+        : ` title="${range.label} 요청 · ${metric.firstDate ?? "첫 관측 없음"}부터"`;
       return `
-        <div class="market-trend-row__range-change ${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}">
-          <dt>${range.label} 변동</dt>
-          <dd>${formatMarketTrendChange(change, item.type)}</dd>
+        <div class="market-trend-row__range-change ${metric.isComplete ? "" : "is-partial"} ${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}"${coverageTitle}>
+          <dt>${label} 변동</dt>
+          <dd>${formatMarketTrendChange(metric.change, item.type)}</dd>
         </div>
       `;
     })
@@ -3120,7 +3149,7 @@ function renderMarketIndexTrendPanel(marketIndexes) {
         <span>Naver Pay 증권 시장지표</span>
         <span>현재값은 실시간·지연 잠정치 · 과거 시계열과 ML은 확정 EOD</span>
         <span>일간 최근 10회 · 주간 최근 6회 방향 판독</span>
-        <span>전일·1주는 고정 · 기간 변동은 선택 구간 첫 관측 대비</span>
+        <span>전일·1주는 고정 · 기간 변동은 선택 구간 첫 관측 대비 · 부족 시 가용기간 표기</span>
       </footer>
     </section>
   `;

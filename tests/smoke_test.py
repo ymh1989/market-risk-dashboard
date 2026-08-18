@@ -1,5 +1,6 @@
 import json
 import pathlib
+from datetime import date, timedelta
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -170,6 +171,16 @@ def test_dashboard_contract():
         "kr10y",
     }
     assert all(len(points) >= 60 for points in market_index_cache["series"].values())
+    latest_market_date = max(
+        date.fromisoformat(points[-1]["date"])
+        for points in market_index_cache["series"].values()
+    )
+    three_year_start = latest_market_date - timedelta(days=1096)
+    for key, points in market_index_cache["series"].items():
+        tolerance_days = 10 if market_index_cache["metadata"][key]["frequency"] == "weekly" else 7
+        assert date.fromisoformat(points[0]["date"]) <= three_year_start + timedelta(
+            days=tolerance_days
+        ), f"{key} should cover the 3Y dashboard range"
 
     for indicator in market["indicators"]:
         assert 0 <= indicator["value"] <= 100, f"{indicator['id']} score must be 0~100"
@@ -260,8 +271,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260818-3" in html
-    assert "app.js?v=20260818-3" in html
+    assert "styles.css?v=20260818-4" in html
+    assert "app.js?v=20260818-4" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -481,13 +492,16 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert 'class="market-trend-row__current"' in app_source
     assert ".market-trend-row__current dd" in styles
     assert '"weekly" ? "직전" : "전일"' in app_source
-    assert "function marketTrendRangeChange" in app_source
+    assert "function marketTrendRangeMetric" in app_source
     assert "marketTrendChange(visible, visible.length - 1, type)" in app_source
     assert "const rangeChangeLayers = chartRangeOptions" in app_source
-    assert "marketTrendRangeChange(item.rows, domain, item.type)" in app_source
-    assert "<dt>${range.label} 변동</dt>" in app_source
-    assert "전일·1주는 고정 · 기간 변동은 선택 구간 첫 관측 대비" in app_source
+    assert "marketTrendRangeMetric(" in app_source
+    assert "<dt>${label} 변동</dt>" in app_source
+    assert "전일·1주는 고정 · 기간 변동은 선택 구간 첫 관측 대비 · 부족 시 가용기간 표기" in app_source
     assert ".market-trend-row__range-change dt" in styles
+    assert "`가용 ${metric.coverageLabel}`" in app_source
+    assert "metric.isComplete ? range.label" in app_source
+    assert ".market-trend-row__range-change.is-partial dt" in styles
     assert "const riskGroupDefinitions" in app_source
     assert 'class="group-card__info"' in app_source
     assert 'class="group-card__tooltip"' in app_source
