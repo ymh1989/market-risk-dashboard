@@ -169,6 +169,38 @@ make install-local-market-update
 
 설치 후 LaunchAgent는 실제 예약 요일과 시각에만 스크립트를 실행합니다. 월요일은 토요일 전체 갱신과 같은 금요일 종가를 다시 계산하지 않도록 `12:30`, `15:35`만 실행하고, 화~금은 `07:30`, `12:30`, `15:35`, 토요일은 `07:30`에 실행합니다. `07:30`과 `12:30`은 최신 데이터·모델 신호만 빠르게 갱신합니다. 평일 `15:35`는 변경된 Walk-forward fold만 증분 계산하고, 토요일 `07:30`은 캐시를 비운 뒤 전체 OOS 백테스트를 다시 검증합니다. 일요일에는 실행하지 않습니다. 예약 직후 일시적인 시스템 지연은 기본 10분까지 같은 실행으로 인정합니다. 현재 작업 폴더에 README나 설정 파일 변경이 남아 있어도 예약 작업이 막히지 않도록, 스크립트는 `origin/main` 기준의 깨끗한 임시 worktree에서 데이터 갱신, ML 재학습, 테스트, JSON 커밋·푸시를 처리합니다.
 
+### 미국장 마감 후 야간 사전준비
+
+미국장 EOD 수집과 원천 품질 점검은 별도 LaunchAgent로 실행합니다.
+
+```bash
+make install-overnight-market-prepare
+```
+
+- 실행 요일: 한국시간 화~토
+- 미국 서머타임: `05:30 KST`
+- 미국 표준시간: `06:30 KST`
+- `launchd`에는 두 시각을 모두 등록하고 `America/New_York` 시간대의 DST 판정과 일치하는 한 번만 실행
+- 수집 대상: KOSPI·SPX·SOX·VIX·NASDAQ·환율·미국 금리·FRED 신용·금융여건·원자재
+- 품질 확인: 필수 원천 실패, 최신 관측일, 행 수 감소, 최근 10일 이전 과거값 수정, 선택 원천 대체 여부
+- 산출물: 원자료·원천 메타데이터·시장 시계열 캐시·HMM·ELS·ML 신호·피처·운영 모델·완비성 보고서를 `data/cache/overnight-market-prepare/current`에 후보로 저장
+- 게시 제한: 야간 후보는 홈페이지에 직접 게시하지 않음
+
+`07:30` 갱신은 야간의 장기·네이버 시계열 캐시를 시작점으로 사용한 뒤 미국장 원자료를 다시 조회합니다. 결과 해시가 야간 후보와 같을 때만 미리 계산한 피처·모델을 사용하며, 제공처 값이 달라졌으면 기존 경로로 재계산합니다. HMM·ELS 게시본은 07:30 기준으로 다시 생성합니다. 코드 버전·후보 생성시각·체크섬 중 하나라도 맞지 않아도 자동으로 기존 경로를 사용합니다.
+
+야간 단계가 실패하면 `.env`의 `MARKET_OPERATIONS_TELEGRAM_CHAT_IDS`로 짧은 운영 메시지를 전송합니다. 이 값이 비어 있으면 금융공학뉴스에서 사용 중인 `TELEGRAM_CHAT_ID`를 사용합니다. 메시지에는 실패 단계·명령·마지막 로그와 Codex에 바로 붙여넣을 점검 문장이 포함됩니다. 성공 메시지는 보내지 않아 알림 피로를 줄입니다.
+
+수동 검증은 아래 명령으로 실행합니다.
+
+```bash
+make run-overnight-market-prepare
+python3 scripts/send_operations_alert.py \
+  --job "야간 준비 테스트" --stage "알림 형식" --exit-code 1 \
+  --command "test failure" --log-file logs/overnight-market-prepare.launchd.log --dry-run
+```
+
+로그는 `logs/overnight-market-prepare-YYYYMMDD.log`와 `logs/overnight-market-prepare.launchd.log`에 저장됩니다.
+
 게시 직전에는 `scripts/prepare_atomic_publication.py`가 필수 JSON과 오프라인 HTML을 임시 스냅샷에서 먼저 검증합니다.
 
 - 모든 JSON에 동일한 `publication.runId` 부여

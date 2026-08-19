@@ -401,6 +401,19 @@ def test_operations_page_exposes_daily_schedule_overview():
     installer = (ROOT / "scripts" / "install_local_market_update_launchd.sh").read_text(
         encoding="utf-8"
     )
+    overnight_run = (ROOT / "scripts" / "run_overnight_market_prepare.sh").read_text(
+        encoding="utf-8"
+    )
+    overnight_installer = (
+        ROOT / "scripts" / "install_overnight_market_prepare_launchd.sh"
+    ).read_text(encoding="utf-8")
+    overnight_helper = (ROOT / "scripts" / "overnight_market_prepare.py").read_text(
+        encoding="utf-8"
+    )
+    operations_alert = (ROOT / "scripts" / "send_operations_alert.py").read_text(
+        encoding="utf-8"
+    )
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
 
     assert "function buildScheduleOverview" in app_source
     assert "function findSuccessfulRunForSchedule" in app_source
@@ -449,6 +462,19 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert 'SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"' in installer
     assert 'append_calendar_intervals "$MONDAY_TIMES" 1' in installer
     assert 'append_calendar_intervals "$TIMES" 2 3 4 5' in installer
+    assert "America/New_York" in overnight_helper
+    assert '"05:30" if daylight_saving else "06:30"' in overnight_helper
+    assert "for weekday in 2 3 4 5 6" in overnight_installer
+    assert 'append_interval "$weekday" 5 30' in overnight_installer
+    assert 'append_interval "$weekday" 6 30' in overnight_installer
+    assert "--only-at-scheduled-kst" in overnight_installer
+    assert 'CURRENT_STAGE="미국장 EOD 수집"' in overnight_run
+    assert 'CURRENT_STAGE="원천 품질·과거값 대조"' in overnight_run
+    assert "send_operations_alert.py" in overnight_run
+    assert "Codex 붙여넣기" in operations_alert
+    assert 'if [[ "$SCHEDULED_TIME" != "07:30"' in run_script
+    assert '"$CURRENT_MARKET_DATA_SHA" == "$OVERNIGHT_MARKET_DATA_SHA"' in run_script
+    assert "install-overnight-market-prepare:" in makefile
 
 
 def test_dashboard_data_requests_bypass_stale_cache():

@@ -1,4 +1,4 @@
-.PHONY: serve test audit-data update-m7-credit-proxy update-market-risk update-kospi-breadth backtest-market-risk analyze-stress-episodes export-offline send-news-digest install-news-digest
+.PHONY: serve test audit-data update-m7-credit-proxy update-market-risk update-kospi-breadth backtest-market-risk analyze-stress-episodes export-offline send-news-digest install-news-digest run-local-market-update install-local-market-update run-overnight-market-prepare install-overnight-market-prepare
 
 KOSPI_BREADTH_START ?= 2024-01-01
 
@@ -34,3 +34,15 @@ send-news-digest:
 
 install-news-digest:
 	bash scripts/install_news_digest_launchd.sh
+
+run-local-market-update:
+	bash scripts/run_local_market_update.sh
+
+install-local-market-update:
+	bash scripts/install_local_market_update_launchd.sh
+
+run-overnight-market-prepare:
+	bash scripts/run_overnight_market_prepare.sh
+
+install-overnight-market-prepare:
+	bash scripts/install_overnight_market_prepare_launchd.sh

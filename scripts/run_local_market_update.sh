@@ -14,6 +14,7 @@ SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"
 LABEL="${LOCAL_MARKET_UPDATE_LABEL:-com.marketlab.market-risk-update}"
 PYTHON_BIN="${LOCAL_MARKET_UPDATE_PYTHON:-}"
 KOSPI_BREADTH_PYTHON="${KOSPI_BREADTH_PYTHON:-}"
+OVERNIGHT_CANDIDATE_DIR="${OVERNIGHT_PREPARE_CANDIDATE_DIR:-$ROOT/data/cache/overnight-market-prepare/current}"
 PAGES_URL="${LOCAL_MARKET_UPDATE_PAGES_URL:-https://ymh1989.github.io/market-risk-dashboard}"
 PAGES_VERIFY_ATTEMPTS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_ATTEMPTS:-12}"
 PAGES_VERIFY_INTERVAL_SECONDS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_INTERVAL_SECONDS:-10}"
@@ -38,6 +39,7 @@ if [[ -f "$ENV_FILE" ]]; then
   LABEL="${LOCAL_MARKET_UPDATE_LABEL:-$LABEL}"
   PYTHON_BIN="${LOCAL_MARKET_UPDATE_PYTHON:-$PYTHON_BIN}"
   KOSPI_BREADTH_PYTHON="${KOSPI_BREADTH_PYTHON:-$KOSPI_BREADTH_PYTHON}"
+  OVERNIGHT_CANDIDATE_DIR="${OVERNIGHT_PREPARE_CANDIDATE_DIR:-$OVERNIGHT_CANDIDATE_DIR}"
   PAGES_URL="${LOCAL_MARKET_UPDATE_PAGES_URL:-$PAGES_URL}"
   PAGES_VERIFY_ATTEMPTS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_ATTEMPTS:-$PAGES_VERIFY_ATTEMPTS}"
   PAGES_VERIFY_INTERVAL_SECONDS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_INTERVAL_SECONDS:-$PAGES_VERIFY_INTERVAL_SECONDS}"
@@ -297,6 +299,32 @@ persist_local_data_cache() {
 
 seed_local_data_cache
 
+OVERNIGHT_MARKET_DATA_SHA=""
+seed_overnight_candidate() {
+  local worktree_commit candidate_sha
+  if [[ "$SCHEDULED_TIME" != "07:30" || ! -d "$OVERNIGHT_CANDIDATE_DIR" ]]; then
+    return 0
+  fi
+  worktree_commit="$(git rev-parse HEAD)"
+  candidate_sha="$("$PYTHON_BIN" scripts/overnight_market_prepare.py verify \
+    --root "$OVERNIGHT_CANDIDATE_DIR" \
+    --expected-commit "$worktree_commit" \
+    --max-age-hours 4 \
+    --format sha 2>/dev/null || true)"
+  if [[ -z "$candidate_sha" ]]; then
+    echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 야간 후보가 없거나 현재 코드와 달라 기존 계산 경로를 사용합니다."
+    return 0
+  fi
+  cp -p "$OVERNIGHT_CANDIDATE_DIR/raw/market_data.csv" data/raw/market_data.csv
+  cp -p "$OVERNIGHT_CANDIDATE_DIR/raw/market_data_sources.json" data/raw/market_data_sources.json
+  cp -p "$OVERNIGHT_CANDIDATE_DIR/dashboard/market-history-cache.json" data/market-history-cache.json
+  cp -p "$OVERNIGHT_CANDIDATE_DIR/dashboard/naver-marketindex-history.json" data/naver-marketindex-history.json
+  OVERNIGHT_MARKET_DATA_SHA="$candidate_sha"
+  echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 검증된 야간 미국장 후보와 시장 시계열 캐시를 불러왔습니다."
+}
+
+seed_overnight_candidate
+
 BREADTH_END_DATE="$("$PYTHON_BIN" -c 'from datetime import datetime, timedelta; from zoneinfo import ZoneInfo; now=datetime.now(ZoneInfo("Asia/Seoul")); target=now if now.strftime("%H:%M") >= "15:35" else now-timedelta(days=1); print(target.date().isoformat())')"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] KOSPI Market Breadth를 갱신합니다: EOD ${BREADTH_END_DATE}까지"
 "$KOSPI_BREADTH_PYTHON" -m kospi_risk.cli update-kospi-breadth \
@@ -332,8 +360,18 @@ echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] ML risk-off 산출물을 갱신합�
 ML_STAGE_STARTED_EPOCH="$(date +%s)"
 "$PYTHON_BIN" -m kospi_risk.cli fetch-market-data --source-config configs/data_sources.yaml --output data/raw/market_data.csv --metadata data/raw/market_data_sources.json --min-rows 1500
 persist_local_data_cache
-"$PYTHON_BIN" -m kospi_risk.cli build-features --input data/raw/market_data.csv --output data/processed/features.parquet --config configs/base.yaml
-"$PYTHON_BIN" -m kospi_risk.cli train --features data/processed/features.parquet --config configs/base.yaml
+CURRENT_MARKET_DATA_SHA="$("$PYTHON_BIN" -c 'import hashlib, pathlib; print(hashlib.sha256(pathlib.Path("data/raw/market_data.csv").read_bytes()).hexdigest())')"
+if [[ -n "$OVERNIGHT_MARKET_DATA_SHA" && "$CURRENT_MARKET_DATA_SHA" == "$OVERNIGHT_MARKET_DATA_SHA" ]]; then
+  cp -p "$OVERNIGHT_CANDIDATE_DIR/processed/features.parquet" data/processed/features.parquet
+  cp -p "$OVERNIGHT_CANDIDATE_DIR/models/model_bundle.joblib" models/model_bundle.joblib
+  echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 미국장 원자료가 야간 후보와 같아 피처·운영 모델을 재사용합니다."
+else
+  if [[ -n "$OVERNIGHT_MARKET_DATA_SHA" ]]; then
+    echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 07:30 재조회에서 원자료 변경을 감지해 피처·모델을 다시 계산합니다."
+  fi
+  "$PYTHON_BIN" -m kospi_risk.cli build-features --input data/raw/market_data.csv --output data/processed/features.parquet --config configs/base.yaml
+  "$PYTHON_BIN" -m kospi_risk.cli train --features data/processed/features.parquet --config configs/base.yaml
+fi
 if [[ "$UPDATE_MODE" == "full" ]]; then
   BACKTEST_CACHE_ARGS=()
   if [[ "$SCHEDULED_DAY_TYPE" == "saturday" ]]; then
