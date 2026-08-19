@@ -272,7 +272,7 @@ def test_ui_hierarchy_and_accessibility_contract():
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
     assert "styles.css?v=20260819-1" in html
-    assert "app.js?v=20260819-1" in html
+    assert "app.js?v=20260819-2" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -395,6 +395,9 @@ def test_operations_page_exposes_daily_schedule_overview():
     app_source = APP_FILE.read_text(encoding="utf-8")
     styles = STYLES_FILE.read_text(encoding="utf-8")
     run_script = (ROOT / "scripts" / "run_local_market_update.sh").read_text(encoding="utf-8")
+    workflow = (ROOT / ".github" / "workflows" / "update-market-risk.yml").read_text(
+        encoding="utf-8"
+    )
     installer = (ROOT / "scripts" / "install_local_market_update_launchd.sh").read_text(
         encoding="utf-8"
     )
@@ -430,8 +433,19 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert "push_update_commit()" in run_script
     assert 'git rebase -X theirs "$REMOTE/$BRANCH"' in run_script
     assert "재배치된 코드 기준으로 오프라인 HTML과 스모크 테스트를 다시 검증합니다." in run_script
+    assert 'export MARKET_UPDATE_RUN_ID="$RUN_ID"' in run_script
+    assert "prepare_atomic_publication()" in run_script
+    assert "scripts/prepare_atomic_publication.py" in run_script
+    assert "--reused-file data/market-stress-episodes.json" in run_script
+    assert "--reused-file data/market-history-cache.json" in run_script
+    assert "data/publication-manifest.json" in run_script
+    assert "pages_publication_run_id()" in run_script
     assert "PUBLISH_FILES=(" in run_script
     assert 'git add -- "${PUBLISH_FILES[@]}"' in run_script
+    assert "MARKET_UPDATE_RUN_ID=gha-${{ github.run_id }}-${{ github.run_attempt }}" in workflow
+    assert "scripts/prepare_atomic_publication.py" in workflow
+    assert "--reused-file data/kospi-breadth.json" in workflow
+    assert "data/publication-manifest.json" in workflow
     assert 'SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"' in installer
     assert 'append_calendar_intervals "$MONDAY_TIMES" 1' in installer
     assert 'append_calendar_intervals "$TIMES" 2 3 4 5' in installer
@@ -443,6 +457,10 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert "DATA_REQUEST_VERSION = Date.now()" in app_source
     assert "request=${DATA_REQUEST_VERSION}" in app_source
     assert 'cache: "no-store"' in app_source
+    assert 'loadJson("./data/publication-manifest.json", false, true)' in app_source
+    assert "allowLegacyMissing && response.status === 404" in app_source
+    assert "validatePublicationBundle(publicationManifest" in app_source
+    assert "payload?.publication?.runId !== activePublicationRunId" in app_source
     assert 'id: "operations", label: "운영현황"' in app_source
     assert 'id: "els-issuance", label: "ELS 발행·헤지"' in app_source
     assert "renderElsIssuanceHedgePage" in app_source

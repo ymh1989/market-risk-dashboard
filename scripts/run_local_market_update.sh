@@ -147,26 +147,26 @@ mark_scheduled_done() {
   fi
 }
 
-pages_generated_at() {
+pages_publication_run_id() {
   local response
-  response="$(curl -fsSL --max-time 20 -H "Cache-Control: no-cache" "${PAGES_URL%/}/data/ml-risk-signal.json?check=$(date +%s)" 2>/dev/null || true)"
+  response="$(curl -fsSL --max-time 20 -H "Cache-Control: no-cache" "${PAGES_URL%/}/data/publication-manifest.json?check=$(date +%s)" 2>/dev/null || true)"
   if [[ -z "$response" ]]; then
     return 0
   fi
-  "$PYTHON_BIN" -c 'import json, sys; print(json.load(sys.stdin).get("generatedAt", ""))' <<< "$response" 2>/dev/null || true
+  "$PYTHON_BIN" -c 'import json, sys; payload=json.load(sys.stdin); print(payload.get("runId", "") if payload.get("status") == "ready" else "")' <<< "$response" 2>/dev/null || true
 }
 
 wait_for_pages_deployment() {
-  local expected_generated_at="$1"
-  local attempt deployed_generated_at
+  local expected_run_id="$1"
+  local attempt deployed_run_id
 
   for ((attempt = 1; attempt <= PAGES_VERIFY_ATTEMPTS; attempt++)); do
-    deployed_generated_at="$(pages_generated_at)"
-    if [[ "$deployed_generated_at" == "$expected_generated_at" ]]; then
-      echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] GitHub Pages 반영을 확인했습니다: $deployed_generated_at"
+    deployed_run_id="$(pages_publication_run_id)"
+    if [[ "$deployed_run_id" == "$expected_run_id" ]]; then
+      echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] GitHub Pages 원자적 스냅샷 반영을 확인했습니다: $deployed_run_id"
       return 0
     fi
-    echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] Pages 반영 대기 중 ($attempt/$PAGES_VERIFY_ATTEMPTS): ${deployed_generated_at:-응답 없음}"
+    echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] Pages 반영 대기 중 ($attempt/$PAGES_VERIFY_ATTEMPTS): ${deployed_run_id:-manifest 응답 없음}"
     sleep "$PAGES_VERIFY_INTERVAL_SECONDS"
   done
   return 1
@@ -211,6 +211,10 @@ fi
 UPDATE_MODE="$(resolve_update_mode)"
 RUN_STARTED_EPOCH="$(date +%s)"
 RUN_STARTED_AT="$(kst_now '+%Y-%m-%d %H:%M:%S KST')"
+RUN_TRIGGER_ID="${SCHEDULED_TIME:-manual}"
+RUN_TRIGGER_ID="${RUN_TRIGGER_ID/:/}"
+RUN_ID="$(kst_now '+%Y%m%dT%H%M%S')-${RUN_TRIGGER_ID}-${UPDATE_MODE}"
+export MARKET_UPDATE_RUN_ID="$RUN_ID"
 
 mkdir -p "$LOG_DIR"
 LOCK_DIR="$LOG_DIR/.local-market-update.lock"
@@ -364,6 +368,7 @@ RUN_COMPLETED_EPOCH="$(date +%s)"
   --full-times "$FULL_TIMES" \
   --schedule-grace-minutes "$SCHEDULE_GRACE_MINUTES" \
   --scheduled-time "$SCHEDULED_TIME" \
+  --run-id "$RUN_ID" \
   --started-at "$RUN_STARTED_AT" \
   --completed-at "$RUN_COMPLETED_AT" \
   --total-duration "$((RUN_COMPLETED_EPOCH - RUN_STARTED_EPOCH))" \
@@ -371,8 +376,27 @@ RUN_COMPLETED_EPOCH="$(date +%s)"
   --ml-duration "$((ML_STAGE_COMPLETED_EPOCH - ML_STAGE_STARTED_EPOCH))" \
   --validation-duration "$((VALIDATION_STAGE_COMPLETED_EPOCH - VALIDATION_STAGE_STARTED_EPOCH))"
 
+ATOMIC_REUSE_ARGS=()
+if [[ "$UPDATE_MODE" == "fast" ]]; then
+  ATOMIC_REUSE_ARGS+=(
+    --reused-file data/market-stress-episodes.json
+    --reused-file data/market-history-cache.json
+  )
+fi
+
+prepare_atomic_publication() {
+  "$PYTHON_BIN" scripts/prepare_atomic_publication.py \
+    --run-id "$RUN_ID" \
+    --mode "$UPDATE_MODE" \
+    --started-at "$RUN_STARTED_AT" \
+    "${ATOMIC_REUSE_ARGS[@]}"
+}
+
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 오프라인 HTML 스냅샷을 생성합니다."
 "$PYTHON_BIN" scripts/export_offline_dashboard.py --stable-only
+echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 게시 파일을 동일 runId로 검증하고 봉인합니다: $RUN_ID"
+prepare_atomic_publication
+python3 tests/smoke_test.py
 
 git config user.name "${LOCAL_MARKET_UPDATE_GIT_NAME:-local-market-risk-bot}"
 git config user.email "${LOCAL_MARKET_UPDATE_GIT_EMAIL:-local-market-risk-bot@users.noreply.github.com}"
@@ -388,8 +412,9 @@ push_update_commit() {
 
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 재배치된 코드 기준으로 오프라인 HTML과 스모크 테스트를 다시 검증합니다."
   "$PYTHON_BIN" scripts/export_offline_dashboard.py --stable-only
+  prepare_atomic_publication
   python3 tests/smoke_test.py
-  git add reports/market-risk-dashboard-offline.html
+  git add -- "${PUBLISH_FILES[@]}"
   if ! git diff --cached --quiet; then
     git commit --amend --no-edit
   fi
@@ -409,6 +434,7 @@ PUBLISH_FILES=(
   data/ml-risk-signal.json
   data/data-quality.json
   data/pipeline-status.json
+  data/publication-manifest.json
   data/m7-credit-proxy.json
   data/kospi-breadth.json
   reports/market-risk-dashboard-offline.html
@@ -422,9 +448,8 @@ else
   push_update_commit
 fi
 
-EXPECTED_GENERATED_AT="$("$PYTHON_BIN" -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["generatedAt"])' data/ml-risk-signal.json)"
 for ((retry = 0; retry <= PAGES_DEPLOY_RETRIES; retry++)); do
-  if wait_for_pages_deployment "$EXPECTED_GENERATED_AT"; then
+  if wait_for_pages_deployment "$RUN_ID"; then
     mark_scheduled_done
     echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 로컬 예약 갱신을 완료했습니다."
     exit 0

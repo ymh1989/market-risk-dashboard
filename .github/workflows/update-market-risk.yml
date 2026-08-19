@@ -13,6 +13,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Initialize publication run
+        run: |
+          echo "MARKET_UPDATE_RUN_ID=gha-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_ENV"
+          echo "MARKET_UPDATE_STARTED_AT=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')" >> "$GITHUB_ENV"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -48,14 +53,21 @@ jobs:
         run: |
           python3 scripts/audit_data_completeness.py --strict
           make test
-          python3 scripts/write_pipeline_status.py --mode full
+          COMPLETED_AT="$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')"
+          python3 scripts/write_pipeline_status.py --mode full --run-id "$MARKET_UPDATE_RUN_ID" --started-at "$MARKET_UPDATE_STARTED_AT" --completed-at "$COMPLETED_AT"
           python3 scripts/export_offline_dashboard.py --stable-only
+          python3 scripts/prepare_atomic_publication.py \
+            --run-id "$MARKET_UPDATE_RUN_ID" \
+            --mode full \
+            --started-at "$MARKET_UPDATE_STARTED_AT" \
+            --reused-file data/kospi-breadth.json
+          python3 tests/smoke_test.py
 
       - name: Commit refreshed data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/risk-dashboard.json data/market-risk-snapshot.json data/market-risk-timeseries.json data/naver-marketindex-history.json data/market-risk-backtest.json data/market-stress-episodes.json data/market-history-cache.json data/els-index-risk.json data/hmm-regime.json data/ml-risk-signal.json data/data-quality.json data/pipeline-status.json data/m7-credit-proxy.json reports/market-risk-dashboard-offline.html
+          git add data/risk-dashboard.json data/market-risk-snapshot.json data/market-risk-timeseries.json data/naver-marketindex-history.json data/market-risk-backtest.json data/market-stress-episodes.json data/market-history-cache.json data/els-index-risk.json data/hmm-regime.json data/ml-risk-signal.json data/data-quality.json data/pipeline-status.json data/publication-manifest.json data/m7-credit-proxy.json data/kospi-breadth.json reports/market-risk-dashboard-offline.html
           if git diff --cached --quiet; then
             echo "No data changes to commit."
           else

@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260819-1";
+const ASSET_VERSION = "20260819-2";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -6325,19 +6325,47 @@ function renderDashboard(
   activateTab(activeTab, { updateHash: false });
 }
 
-async function loadJson(path, required = false) {
+let activePublicationRunId = "";
+
+function validatePublicationBundle(manifest, entries) {
+  if (!manifest) return;
+  const runId = String(manifest.runId ?? "");
+  if (manifest.status !== "ready" || !runId) {
+    throw new Error("게시 manifest가 준비 완료 상태가 아닙니다.");
+  }
+  const mismatches = entries
+    .filter(({ payload }) => payload)
+    .filter(({ payload }) => payload?.publication?.runId !== runId)
+    .map(({ path }) => path);
+  if (mismatches.length) {
+    throw new Error(`게시 데이터 실행번호가 일치하지 않습니다: ${mismatches.join(", ")}`);
+  }
+  activePublicationRunId = runId;
+}
+
+async function loadJson(path, required = false, allowLegacyMissing = false) {
   try {
     const response = await fetch(versioned(path), { cache: "no-store" });
+    if (allowLegacyMissing && response.status === 404) return null;
     if (!response.ok) throw new Error(`${path} 응답 오류: ${response.status}`);
-    return await response.json();
+    const payload = await response.json();
+    if (
+      activePublicationRunId &&
+      !path.includes("publication-manifest.json") &&
+      payload?.publication?.runId !== activePublicationRunId
+    ) {
+      throw new Error(`${path}가 현재 게시 실행번호와 일치하지 않습니다.`);
+    }
+    return payload;
   } catch (error) {
-    if (required) throw error;
+    if (required || allowLegacyMissing) throw error;
     console.warn(`선택 데이터 로드 실패: ${path}`, error);
     return null;
   }
 }
 
 Promise.all([
+  loadJson("./data/publication-manifest.json", false, true),
   loadJson("./data/risk-dashboard.json", true),
   loadJson("./data/market-risk-timeseries.json"),
   loadJson("./data/ml-risk-signal.json"),
@@ -6349,8 +6377,20 @@ Promise.all([
   loadJson("./data/market-stress-episodes.json"),
   loadJson("./data/kospi-breadth.json")
 ])
-  .then(([dashboard, timeseries, mlRisk, elsRisk, hmmRegime, pipelineStatus, sourceSnapshot, dataQuality, stressEpisodes, breadthData]) =>
-    renderDashboard(
+  .then(([publicationManifest, dashboard, timeseries, mlRisk, elsRisk, hmmRegime, pipelineStatus, sourceSnapshot, dataQuality, stressEpisodes, breadthData]) => {
+    validatePublicationBundle(publicationManifest, [
+      { path: "risk-dashboard.json", payload: dashboard },
+      { path: "market-risk-timeseries.json", payload: timeseries },
+      { path: "ml-risk-signal.json", payload: mlRisk },
+      { path: "els-index-risk.json", payload: elsRisk },
+      { path: "hmm-regime.json", payload: hmmRegime },
+      { path: "pipeline-status.json", payload: pipelineStatus },
+      { path: "market-risk-snapshot.json", payload: sourceSnapshot },
+      { path: "data-quality.json", payload: dataQuality },
+      { path: "market-stress-episodes.json", payload: stressEpisodes },
+      { path: "kospi-breadth.json", payload: breadthData }
+    ]);
+    return renderDashboard(
       dashboard,
       timeseries,
       mlRisk,
@@ -6361,8 +6401,8 @@ Promise.all([
       dataQuality,
       stressEpisodes,
       breadthData
-    )
-  )
+    );
+  })
   .catch((error) => {
     app.innerHTML = `
       <div class="loading-panel loading-panel--error">
