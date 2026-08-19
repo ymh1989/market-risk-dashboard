@@ -36,6 +36,7 @@ def test_offline_export_is_single_file_and_interactive(tmp_path):
     assert "zoom: var(--desktop-ui-scale);" in html
     assert "function effectiveChartZoom" in html
     assert "tooltipPointerX = (event.clientX - chartRect.left) / cssZoom" in html
+    assert "chartPointerInViewBox(svg, event, viewBoxWidth)" in html
     assert "function updateChartCursor" in html
     assert "function marketTrendRangeMetric" in html
     assert "<dt>${label} 변동</dt>" in html

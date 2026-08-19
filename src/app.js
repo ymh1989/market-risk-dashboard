@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260818-4";
+const ASSET_VERSION = "20260819-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -3006,7 +3006,7 @@ function renderMarketTrendRow(item, seriesIndex, timelineDomains) {
       const livePath = marketTrendPath(liveCoordinates);
       const lastPoint = coordinates.at(-1);
       return `
-        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg data-chart-series-index="${seriesIndex}" viewBox="0 0 180 52" role="img" aria-label="${item.label} 선택 기간 흐름">
+        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg data-chart-series-index="${seriesIndex}" viewBox="0 0 180 52" preserveAspectRatio="none" role="img" aria-label="${item.label} 선택 기간 흐름">
           <path class="market-trend-row__baseline" d="M 0 26 H 180"></path>
           <path class="market-trend-row__line" d="${path}"></path>
           ${hasVisibleLive ? `<path class="market-trend-row__live-line" d="${livePath}"></path>` : ""}
@@ -5293,6 +5293,25 @@ function effectiveChartZoom(element) {
   return Number.isFinite(inferredZoom) && inferredZoom > 0 ? inferredZoom : 1;
 }
 
+function chartPointerInViewBox(svg, event, fallbackWidth) {
+  const matrix = svg.getScreenCTM?.();
+  if (matrix && typeof svg.createSVGPoint === "function") {
+    try {
+      const point = svg.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      const transformed = point.matrixTransform(matrix.inverse());
+      if (Number.isFinite(transformed.x)) return transformed.x;
+    } catch (_error) {
+      // 분리된 SVG나 구형 브라우저에서는 표시 사각형 기준으로 계산합니다.
+    }
+  }
+
+  const rect = svg.getBoundingClientRect();
+  if (!rect.width) return null;
+  return ((event.clientX - rect.left) / rect.width) * fallbackWidth;
+}
+
 function updateChartCursor(chart, svg, event) {
   const model = interactiveChartRegistry.get(chart.dataset.timeseriesChart);
   if (!model) return;
@@ -5305,7 +5324,8 @@ function updateChartCursor(chart, svg, event) {
   const svgRect = svg.getBoundingClientRect();
   if (!svgRect.width) return;
   const viewBoxWidth = svg.viewBox?.baseVal?.width || model.width;
-  const pointerX = ((event.clientX - svgRect.left) / svgRect.width) * viewBoxWidth;
+  const pointerX = chartPointerInViewBox(svg, event, viewBoxWidth);
+  if (!Number.isFinite(pointerX)) return;
   const plotSpan = Math.max(model.plotRight - model.plotLeft, 1);
   const ratio = Math.max(0, Math.min(1, (pointerX - model.plotLeft) / plotSpan));
   const requestedTime = domain.start + ratio * domain.span;
