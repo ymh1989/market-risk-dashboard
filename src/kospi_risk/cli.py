@@ -132,8 +132,15 @@ def cmd_train(args: argparse.Namespace) -> None:
 def cmd_backtest(args: argparse.Namespace) -> None:
     config = load_config(args.config)
     df = load_frame(args.features)
-    scored, metrics, matrices = run_walk_forward_backtest(df, config)
-    crash_scored, crash_metrics = run_crash_walk_forward_backtest(df, config)
+    cache_path = None if args.no_cache else args.cache
+    scored, metrics, matrices = run_walk_forward_backtest(
+        df, config, cache_path=cache_path, refresh_cache=args.refresh_cache
+    )
+    crash_scored, crash_metrics = run_crash_walk_forward_backtest(
+        df, config, cache_path=cache_path, refresh_cache=args.refresh_cache
+    )
+    broad_cache_stats = metrics.attrs.get("cache", {})
+    crash_cache_stats = crash_metrics.attrs.get("cache", {})
     broad_selection = metrics.attrs.get("model_selection")
     broad_splits = metrics.attrs.get("splits")
     crash_selection = crash_metrics.attrs.get("model_selection")
@@ -211,6 +218,14 @@ def cmd_backtest(args: argparse.Namespace) -> None:
     print(f"Wrote walk-forward predictions: {predictions_path}")
     print(f"Wrote score bucket analysis: {bucket_path}")
     print(f"Wrote figures: {Path(args.output).parent / 'figures'}")
+    if cache_path is not None:
+        print(
+            "Walk-forward 캐시: "
+            f"broad {broad_cache_stats.get('hits', 0)} hit/{broad_cache_stats.get('misses', 0)} miss, "
+            f"crash {crash_cache_stats.get('hits', 0)} hit/{crash_cache_stats.get('misses', 0)} miss"
+        )
+        if args.refresh_cache:
+            print("Walk-forward 캐시를 전체 재검증 결과로 교체했습니다.")
 
 
 def cmd_predict_latest(args: argparse.Namespace) -> None:
@@ -481,6 +496,13 @@ def build_parser() -> argparse.ArgumentParser:
     backtest.add_argument("--features", default="data/processed/features.parquet")
     backtest.add_argument("--config", default="configs/base.yaml")
     backtest.add_argument("--output", default="reports/backtest_report.md")
+    backtest.add_argument("--cache", default="data/cache/walk_forward_backtest.joblib")
+    backtest.add_argument("--no-cache", action="store_true", help="fold 캐시를 사용하지 않고 전체 재계산")
+    backtest.add_argument(
+        "--refresh-cache",
+        action="store_true",
+        help="기존 fold 캐시를 재사용하지 않고 전체 재검증 후 교체",
+    )
     backtest.set_defaults(func=cmd_backtest)
 
     latest = subparsers.add_parser("predict-latest")

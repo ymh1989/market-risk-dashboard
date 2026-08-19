@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import math
+import os
 import warnings
 from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
 
+import joblib
 import numpy as np
 import pandas as pd
 from sklearn.metrics import (
@@ -35,6 +42,8 @@ CRASH_TASKS = [
     ("crash_5d_10pct", "target_crash_5d_10pct", "prob_crash_5d_10pct"),
 ]
 
+BACKTEST_CACHE_SCHEMA_VERSION = 1
+
 
 @dataclass
 class WalkForwardSplit:
@@ -42,6 +51,108 @@ class WalkForwardSplit:
     train_end: int
     test_start: int
     test_end: int
+
+
+@lru_cache(maxsize=1)
+def _implementation_fingerprint() -> str:
+    """모델 코드 변경 시 이전 fold 캐시가 재사용되지 않도록 해시를 만든다."""
+    digest = hashlib.sha256()
+    package_dir = Path(__file__).resolve().parent
+    for path in sorted(package_dir.glob("*.py")):
+        digest.update(path.name.encode("utf-8"))
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def _config_fingerprint(config: dict) -> str:
+    """실행 중에만 쓰는 내부 옵션을 제외하고 설정 해시를 만든다."""
+    stable_config = {key: value for key, value in config.items() if not str(key).startswith("_")}
+    encoded = json.dumps(stable_config, ensure_ascii=True, sort_keys=True, default=str).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _frame_hash_context(frame: pd.DataFrame) -> tuple[str, np.ndarray]:
+    """열 구조와 행 내용을 분리해 fold별 입력 해시 계산 비용을 줄인다."""
+    schema = [(str(column), str(dtype)) for column, dtype in frame.dtypes.items()]
+    schema_hash = hashlib.sha256(json.dumps(schema, ensure_ascii=True).encode("utf-8")).hexdigest()
+    row_hashes = pd.util.hash_pandas_object(frame, index=False, categorize=True).to_numpy(dtype=np.uint64)
+    return schema_hash, row_hashes
+
+
+def _fold_cache_key(
+    namespace: str,
+    split: WalkForwardSplit,
+    schema_hash: str,
+    row_hashes: np.ndarray,
+    config_hash: str,
+) -> str:
+    """학습·시험 입력과 경계가 모두 같은 fold만 재사용할 수 있는 키를 만든다."""
+    input_hash = hashlib.sha256(row_hashes[split.train_start : split.test_end].tobytes()).hexdigest()
+    payload = {
+        "namespace": namespace,
+        "implementation": _implementation_fingerprint(),
+        "config": config_hash,
+        "schema": schema_hash,
+        "input": input_hash,
+        "train_start": split.train_start,
+        "train_end": split.train_end,
+        "test_start": split.test_start,
+        "test_end": split.test_end,
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def _empty_backtest_cache() -> dict[str, Any]:
+    return {
+        "schema_version": BACKTEST_CACHE_SCHEMA_VERSION,
+        "namespaces": {"broad": {}, "crash": {}},
+    }
+
+
+def _load_backtest_cache(cache_path: str | Path | None, refresh: bool) -> dict[str, Any]:
+    if cache_path is None:
+        return _empty_backtest_cache()
+    path = Path(cache_path)
+    if not path.exists():
+        return _empty_backtest_cache()
+    try:
+        cache = joblib.load(path)
+        if not isinstance(cache, dict) or cache.get("schema_version") != BACKTEST_CACHE_SCHEMA_VERSION:
+            raise ValueError("지원하지 않는 캐시 형식")
+        namespaces = cache.setdefault("namespaces", {})
+        namespaces.setdefault("broad", {})
+        namespaces.setdefault("crash", {})
+        return cache
+    except Exception as error:  # 손상된 캐시 때문에 연구 파이프라인을 중단하지 않는다.
+        warnings.warn(
+            f"Walk-forward 캐시를 읽지 못해 전체 재계산합니다: {error}",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return _empty_backtest_cache()
+
+
+def _save_backtest_cache(cache_path: str | Path | None, cache: dict[str, Any]) -> None:
+    if cache_path is None:
+        return
+    path = Path(cache_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = path.with_suffix(f"{path.suffix}.tmp")
+    joblib.dump(cache, temporary_path, compress=3)
+    os.replace(temporary_path, path)
+
+
+def _valid_fold_cache_entry(entry: Any) -> bool:
+    if not isinstance(entry, dict):
+        return False
+    return all(
+        isinstance(entry.get(key), expected_type)
+        for key, expected_type in (
+            ("ml_scored", pd.DataFrame),
+            ("baseline_scored", pd.DataFrame),
+            ("selection_rows", list),
+        )
+    )
 
 
 def make_walk_forward_splits(n_rows: int, config: dict) -> list[WalkForwardSplit]:
@@ -213,7 +324,12 @@ def evaluate_predictions(
     return pd.DataFrame(metrics), matrices
 
 
-def run_walk_forward_backtest(df: pd.DataFrame, config: dict) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, np.ndarray]]:
+def run_walk_forward_backtest(
+    df: pd.DataFrame,
+    config: dict,
+    cache_path: str | Path | None = None,
+    refresh_cache: bool = False,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, np.ndarray]]:
     clean = eligible_training_frame(df)
     warning_rows = int(config.get("validation", {}).get("reliability_warning_rows", 1500))
     if len(clean) < warning_rows:
@@ -229,30 +345,54 @@ def run_walk_forward_backtest(df: pd.DataFrame, config: dict) -> tuple[pd.DataFr
     baseline_parts = []
     selection_rows = []
     split_rows = []
+    cache = _load_backtest_cache(cache_path, refresh_cache)
+    namespace_cache = {} if refresh_cache else cache["namespaces"]["broad"]
+    active_cache: dict[str, Any] = {}
+    schema_hash, row_hashes = _frame_hash_context(clean)
+    config_hash = _config_fingerprint(config)
+    cache_hits = 0
+    cache_misses = 0
     for fold, split in enumerate(splits, start=1):
         train_df = clean.iloc[split.train_start : split.train_end].reset_index(drop=True)
         test_df = clean.iloc[split.test_start : split.test_end].reset_index(drop=True)
         if pd.to_datetime(train_df["date"].iloc[-1]) >= pd.to_datetime(test_df["date"].iloc[0]):
             raise ValueError("Walk-forward split is invalid: train end date must be before test start date.")
-        fold_config = {**config, "_suppress_reliability_warning": True, "_skip_crash_models": True}
-        bundle = train_bundle(train_df, fold_config)
-        predictions = predict_bundle(bundle, test_df)
-        baseline = baseline_predictions(train_df, test_df)
-        ml_scored = pd.concat([test_df.reset_index(drop=True), predictions.drop(columns=["date"])], axis=1)
-        baseline_scored = pd.concat([test_df.reset_index(drop=True), baseline.drop(columns=["date"])], axis=1)
+        cache_key = _fold_cache_key("broad", split, schema_hash, row_hashes, config_hash)
+        cached_entry = namespace_cache.get(cache_key)
+        if _valid_fold_cache_entry(cached_entry):
+            ml_scored = cached_entry["ml_scored"].copy()
+            baseline_scored = cached_entry["baseline_scored"].copy()
+            fold_selection_rows = [dict(row) for row in cached_entry["selection_rows"]]
+            cache_hits += 1
+        else:
+            fold_config = {**config, "_suppress_reliability_warning": True, "_skip_crash_models": True}
+            bundle = train_bundle(train_df, fold_config)
+            predictions = predict_bundle(bundle, test_df)
+            baseline = baseline_predictions(train_df, test_df)
+            ml_scored = pd.concat([test_df.reset_index(drop=True), predictions.drop(columns=["date"])], axis=1)
+            baseline_scored = pd.concat([test_df.reset_index(drop=True), baseline.drop(columns=["date"])], axis=1)
+            fold_selection_rows = []
+            for row in bundle.model_selection_metrics:
+                selected = bundle.selected_models.get(str(row["task"]), "")
+                if row["task"] == "outperform_spx":
+                    selected = bundle.selected_models.get("outperform_spx", "")
+                if row["task"] == "outperform_sox":
+                    selected = bundle.selected_models.get("outperform_sox", "")
+                if row["task"] == "regime_strategy":
+                    selected = bundle.selected_models.get("regime_strategy", "")
+                fold_selection_rows.append({**row, "selected": str(row["candidate"]) == selected})
+            cached_entry = {
+                "ml_scored": ml_scored.copy(),
+                "baseline_scored": baseline_scored.copy(),
+                "selection_rows": [dict(row) for row in fold_selection_rows],
+            }
+            cache_misses += 1
+        active_cache[cache_key] = cached_entry
         ml_scored["fold"] = fold
         baseline_scored["fold"] = fold
         scored_parts.append(ml_scored)
         baseline_parts.append(baseline_scored)
-        for row in bundle.model_selection_metrics:
-            selected = bundle.selected_models.get(str(row["task"]), "")
-            if row["task"] == "outperform_spx":
-                selected = bundle.selected_models.get("outperform_spx", "")
-            if row["task"] == "outperform_sox":
-                selected = bundle.selected_models.get("outperform_sox", "")
-            if row["task"] == "regime_strategy":
-                selected = bundle.selected_models.get("regime_strategy", "")
-            selection_rows.append({**row, "fold": fold, "selected": str(row["candidate"]) == selected})
+        selection_rows.extend({**row, "fold": fold} for row in fold_selection_rows)
         split_rows.append(
             {
                 "fold": fold,
@@ -264,6 +404,8 @@ def run_walk_forward_backtest(df: pd.DataFrame, config: dict) -> tuple[pd.DataFr
                 "test_rows": len(test_df),
             }
         )
+    cache["namespaces"]["broad"] = active_cache
+    _save_backtest_cache(cache_path, cache)
     scored = pd.concat(scored_parts, ignore_index=True)
     baseline_scored = pd.concat(baseline_parts, ignore_index=True)
     ml_metrics, ml_matrices = evaluate_predictions(scored, model_name="ml_selected", include_crash_tasks=False)
@@ -271,11 +413,23 @@ def run_walk_forward_backtest(df: pd.DataFrame, config: dict) -> tuple[pd.DataFr
     metrics = pd.concat([ml_metrics, baseline_metrics], ignore_index=True)
     metrics.attrs["model_selection"] = pd.DataFrame(selection_rows)
     metrics.attrs["splits"] = pd.DataFrame(split_rows)
+    metrics.attrs["cache"] = {
+        "enabled": cache_path is not None,
+        "hits": cache_hits,
+        "misses": cache_misses,
+        "folds": len(splits),
+        "refreshed": refresh_cache,
+    }
     matrices = {**ml_matrices, **baseline_matrices}
     return scored, metrics, matrices
 
 
-def run_crash_walk_forward_backtest(df: pd.DataFrame, config: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
+def run_crash_walk_forward_backtest(
+    df: pd.DataFrame,
+    config: dict,
+    cache_path: str | Path | None = None,
+    refresh_cache: bool = False,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     clean = eligible_crash_training_frame(df)
     splits = make_walk_forward_splits(len(clean), config)
     if not splits:
@@ -285,25 +439,48 @@ def run_crash_walk_forward_backtest(df: pd.DataFrame, config: dict) -> tuple[pd.
     baseline_parts = []
     selection_rows = []
     split_rows = []
+    cache = _load_backtest_cache(cache_path, refresh_cache)
+    namespace_cache = {} if refresh_cache else cache["namespaces"]["crash"]
+    active_cache: dict[str, Any] = {}
+    schema_hash, row_hashes = _frame_hash_context(clean)
+    config_hash = _config_fingerprint(config)
+    cache_hits = 0
+    cache_misses = 0
     for fold, split in enumerate(splits, start=1):
         train_df = clean.iloc[split.train_start : split.train_end].reset_index(drop=True)
         test_df = clean.iloc[split.test_start : split.test_end].reset_index(drop=True)
         if pd.to_datetime(train_df["date"].iloc[-1]) >= pd.to_datetime(test_df["date"].iloc[0]):
             raise ValueError("Crash walk-forward split is invalid: train end date must be before test start date.")
-        fold_config = {**config, "_suppress_reliability_warning": True}
-        bundle = train_crash_bundle(train_df, fold_config)
-        predictions = predict_crash_bundle(bundle, test_df)
-        baseline = crash_baseline_predictions(test_df)
-        ml_scored = pd.concat([test_df.reset_index(drop=True), predictions.drop(columns=["date"])], axis=1)
-        baseline_scored = pd.concat([test_df.reset_index(drop=True), baseline.drop(columns=["date"])], axis=1)
+        cache_key = _fold_cache_key("crash", split, schema_hash, row_hashes, config_hash)
+        cached_entry = namespace_cache.get(cache_key)
+        if _valid_fold_cache_entry(cached_entry):
+            ml_scored = cached_entry["ml_scored"].copy()
+            baseline_scored = cached_entry["baseline_scored"].copy()
+            fold_selection_rows = [dict(row) for row in cached_entry["selection_rows"]]
+            cache_hits += 1
+        else:
+            fold_config = {**config, "_suppress_reliability_warning": True}
+            bundle = train_crash_bundle(train_df, fold_config)
+            predictions = predict_crash_bundle(bundle, test_df)
+            baseline = crash_baseline_predictions(test_df)
+            ml_scored = pd.concat([test_df.reset_index(drop=True), predictions.drop(columns=["date"])], axis=1)
+            baseline_scored = pd.concat([test_df.reset_index(drop=True), baseline.drop(columns=["date"])], axis=1)
+            fold_selection_rows = [
+                {**row, "selected": str(row["candidate"]) == bundle.selected_models.get(str(row["task"]), "")}
+                for row in bundle.model_selection_metrics
+            ]
+            cached_entry = {
+                "ml_scored": ml_scored.copy(),
+                "baseline_scored": baseline_scored.copy(),
+                "selection_rows": [dict(row) for row in fold_selection_rows],
+            }
+            cache_misses += 1
+        active_cache[cache_key] = cached_entry
         ml_scored["fold"] = fold
         baseline_scored["fold"] = fold
         scored_parts.append(ml_scored)
         baseline_parts.append(baseline_scored)
-        for row in bundle.model_selection_metrics:
-            selection_rows.append(
-                {**row, "fold": fold, "selected": str(row["candidate"]) == bundle.selected_models.get(str(row["task"]), "")}
-            )
+        selection_rows.extend({**row, "fold": fold} for row in fold_selection_rows)
         split_rows.append(
             {
                 "fold": fold,
@@ -315,6 +492,8 @@ def run_crash_walk_forward_backtest(df: pd.DataFrame, config: dict) -> tuple[pd.
                 "test_rows": len(test_df),
             }
         )
+    cache["namespaces"]["crash"] = active_cache
+    _save_backtest_cache(cache_path, cache)
 
     scored = pd.concat(scored_parts, ignore_index=True)
     baseline_scored = pd.concat(baseline_parts, ignore_index=True)
@@ -324,4 +503,11 @@ def run_crash_walk_forward_backtest(df: pd.DataFrame, config: dict) -> tuple[pd.
     )
     metrics.attrs["model_selection"] = pd.DataFrame(selection_rows)
     metrics.attrs["splits"] = pd.DataFrame(split_rows)
+    metrics.attrs["cache"] = {
+        "enabled": cache_path is not None,
+        "hits": cache_hits,
+        "misses": cache_misses,
+        "folds": len(splits),
+        "refreshed": refresh_cache,
+    }
     return scored, metrics

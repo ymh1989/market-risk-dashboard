@@ -167,7 +167,7 @@ LOCAL_MARKET_UPDATE_BRANCH=main
 make install-local-market-update
 ```
 
-설치 후 LaunchAgent는 실제 예약 요일과 시각에만 스크립트를 실행합니다. 월요일은 토요일 전체 갱신과 같은 금요일 종가를 다시 계산하지 않도록 `12:30`, `15:35`만 실행하고, 화~금은 `07:30`, `12:30`, `15:35`, 토요일은 `07:30`에 실행합니다. `07:30`과 `12:30`은 최신 데이터·모델 신호만 빠르게 갱신하고, 평일 `15:35`와 토요일 `07:30`은 OOS 백테스트와 스트레스 이력까지 다시 계산합니다. 일요일에는 실행하지 않습니다. 예약 직후 일시적인 시스템 지연은 기본 10분까지 같은 실행으로 인정합니다. 현재 작업 폴더에 README나 설정 파일 변경이 남아 있어도 예약 작업이 막히지 않도록, 스크립트는 `origin/main` 기준의 깨끗한 임시 worktree에서 데이터 갱신, ML 재학습, 테스트, JSON 커밋·푸시를 처리합니다.
+설치 후 LaunchAgent는 실제 예약 요일과 시각에만 스크립트를 실행합니다. 월요일은 토요일 전체 갱신과 같은 금요일 종가를 다시 계산하지 않도록 `12:30`, `15:35`만 실행하고, 화~금은 `07:30`, `12:30`, `15:35`, 토요일은 `07:30`에 실행합니다. `07:30`과 `12:30`은 최신 데이터·모델 신호만 빠르게 갱신합니다. 평일 `15:35`는 변경된 Walk-forward fold만 증분 계산하고, 토요일 `07:30`은 캐시를 비운 뒤 전체 OOS 백테스트를 다시 검증합니다. 일요일에는 실행하지 않습니다. 예약 직후 일시적인 시스템 지연은 기본 10분까지 같은 실행으로 인정합니다. 현재 작업 폴더에 README나 설정 파일 변경이 남아 있어도 예약 작업이 막히지 않도록, 스크립트는 `origin/main` 기준의 깨끗한 임시 worktree에서 데이터 갱신, ML 재학습, 테스트, JSON 커밋·푸시를 처리합니다.
 
 CSI300 원지수의 Yahoo 종가가 지연될 때는 `510300.SS` 추종 ETF를 보강값으로 사용합니다. 보강 구간은 마지막 공통 관측일의 가격비율로 원지수 레벨에 연결하고, 원지수의 마지막 유효일 이후에만 덧붙여 수익률 단절을 막습니다. 보강 사용 여부는 ML 입력 원천 메타데이터에 `supplemented`로 남습니다.
 
@@ -411,7 +411,9 @@ python -m pip install -e .
 
 실제 시장 데이터 소스는 `configs/data_sources.yaml`에서 관리합니다. 장기 이력은 Yahoo Finance를 기본으로 사용하고, KOSPI는 Naver 지수 시계열을 날짜별로 병합해 국내장 최신 구간을 보강합니다. S&P 500, SOX, USD/KRW와 일부 글로벌 선택 지표는 Yahoo Finance를 사용하며, 수집 원천·보강 상태·결측치는 `data/raw/market_data_sources.json`에 기록됩니다.
 
-Backtest는 기본적으로 최근 12개 walk-forward fold를 사용합니다. 더 긴 검증을 원하면 `configs/base.yaml`의 `validation.max_backtest_folds`를 늘리고, 전체 기간 fold를 모두 돌리고 싶으면 `0`으로 바꿉니다.
+Backtest는 기본적으로 최근 84개 Walk-forward fold를 사용합니다. fold별 예측은 `data/cache/walk_forward_backtest.joblib`에 로컬 캐시되며, 학습·시험 데이터 내용, fold 경계, 설정 또는 모델 코드가 달라지면 해당 캐시는 자동 무효화됩니다. 새 거래일만 추가된 일반적인 평일에는 마지막 미완료 fold만 다시 계산합니다.
+
+캐시를 사용하지 않는 일회성 검증은 `--no-cache`, 전체 fold를 다시 계산해 캐시를 교체하는 검증은 `--refresh-cache`를 사용합니다. 예약 작업은 평일 증분 계산과 토요일 전체 재검증을 자동으로 구분합니다.
 
 ### 실행 순서
 
@@ -420,6 +422,7 @@ python -m kospi_risk.cli fetch-market-data --source-config configs/data_sources.
 python -m kospi_risk.cli build-features --input data/raw/market_data.csv --output data/processed/features.parquet --config configs/base.yaml
 python -m kospi_risk.cli train --features data/processed/features.parquet --config configs/base.yaml
 python -m kospi_risk.cli backtest --features data/processed/features.parquet --config configs/base.yaml --output reports/backtest_report.md
+# 전체 재검증은 위 명령 끝에 --refresh-cache 추가
 python -m kospi_risk.cli predict-latest --features data/processed/features.parquet --config configs/base.yaml --output reports/latest_signal.csv
 python scripts/export_ml_risk_signal.py
 ```
