@@ -100,6 +100,8 @@ def test_prepare_publication_stamps_and_verifies_one_run(tmp_path):
         (tmp_path / "data/market-stress-episodes.json").read_text(encoding="utf-8")
     )
     assert stress["publication"]["state"] == "reused"
+    dashboard_text = (tmp_path / "data/risk-dashboard.json").read_text(encoding="utf-8")
+    assert "\n" not in dashboard_text
 
 
 def test_prepare_failure_does_not_touch_existing_files(tmp_path):

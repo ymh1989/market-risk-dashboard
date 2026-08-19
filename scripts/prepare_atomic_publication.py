@@ -171,9 +171,21 @@ def _validate_control_files(payloads: dict[Path, dict[str, Any]], run_id: str) -
         raise PublicationError("데이터 완비성 판정이 error라 게시를 중단합니다.")
 
 
-def _write_json(path: Path, payload: dict[str, Any]) -> None:
+def _write_json(
+    path: Path,
+    payload: dict[str, Any],
+    *,
+    format_source: Path | None = None,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    source_text = format_source.read_text(encoding="utf-8") if format_source else ""
+    if source_text and "\n" not in source_text.strip():
+        separators = (", ", ": ") if '": ' in source_text else (",", ":")
+        suffix = "\n" if source_text.endswith("\n") else ""
+        serialized = json.dumps(payload, ensure_ascii=False, separators=separators) + suffix
+    else:
+        serialized = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+    path.write_text(serialized, encoding="utf-8")
 
 
 def verify_publication(
@@ -290,7 +302,7 @@ def prepare_publication(
                     "startedAt": started_text,
                     "preparedAt": prepared_text,
                 }
-                _write_json(staged, payload)
+                _write_json(staged, payload, format_source=source)
             else:
                 shutil.copy2(source, staged)
             artifact_rows.append(
