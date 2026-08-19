@@ -45,8 +45,8 @@ append_interval() {
 
 # launchd Weekday: 2=화요일, 6=토요일. 두 슬롯 중 뉴욕 DST에 맞는 하나만 실행합니다.
 for weekday in 2 3 4 5 6; do
-  append_interval "$weekday" 5 30
-  append_interval "$weekday" 6 30
+  append_interval "$weekday" 5 40
+  append_interval "$weekday" 6 40
 done
 
 mkdir -p "$HOME/Library/LaunchAgents" "$LOG_DIR"
@@ -98,8 +98,8 @@ launchctl bootstrap "gui/$(id -u)" "$PLIST"
 launchctl enable "gui/$(id -u)/$LABEL"
 
 echo "$LABEL LaunchAgent를 설치했습니다."
-echo "화~토 05:30·06:30 KST에 깨우고 뉴욕 DST에 맞는 한 슬롯만 실행합니다."
-echo "서머타임: 05:30 KST · 표준시간: 06:30 KST"
+echo "화~토 05:40·06:40 KST에 깨우고 뉴욕 DST에 맞는 한 슬롯만 실행합니다."
+echo "서머타임: 05:40 KST · 표준시간: 06:40 KST"
 echo "실패 알림: MARKET_OPERATIONS_TELEGRAM_CHAT_ID(S), 미설정 시 TELEGRAM_CHAT_ID"
 echo "plist: $PLIST"
 echo "log: $LOG_DIR/overnight-market-prepare.launchd.log"

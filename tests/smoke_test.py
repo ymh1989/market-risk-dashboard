@@ -463,10 +463,10 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert 'append_calendar_intervals "$MONDAY_TIMES" 1' in installer
     assert 'append_calendar_intervals "$TIMES" 2 3 4 5' in installer
     assert "America/New_York" in overnight_helper
-    assert '"05:30" if daylight_saving else "06:30"' in overnight_helper
+    assert '"05:40" if daylight_saving else "06:40"' in overnight_helper
     assert "for weekday in 2 3 4 5 6" in overnight_installer
-    assert 'append_interval "$weekday" 5 30' in overnight_installer
-    assert 'append_interval "$weekday" 6 30' in overnight_installer
+    assert 'append_interval "$weekday" 5 40' in overnight_installer
+    assert 'append_interval "$weekday" 6 40' in overnight_installer
     assert "--only-at-scheduled-kst" in overnight_installer
     assert 'CURRENT_STAGE="미국장 EOD 수집"' in overnight_run
     assert 'CURRENT_STAGE="원천 품질·과거값 대조"' in overnight_run

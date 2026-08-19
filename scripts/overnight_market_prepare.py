@@ -60,7 +60,7 @@ def overnight_schedule(now: Optional[datetime] = None) -> dict[str, Any]:
         "eligible": now_kst.weekday() in {1, 2, 3, 4, 5},
         "kstDate": now_kst.date().isoformat(),
         "kstTime": now_kst.strftime("%H:%M"),
-        "slot": "05:30" if daylight_saving else "06:30",
+        "slot": "05:40" if daylight_saving else "06:40",
         "usMarketDate": now_new_york.date().isoformat(),
         "newYorkOffset": now_new_york.strftime("%z"),
         "season": "summer" if daylight_saving else "standard",

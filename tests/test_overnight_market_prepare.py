@@ -24,14 +24,14 @@ SOURCE_COMMIT = "a" * 40
 
 
 def test_overnight_schedule_uses_new_york_dst_and_skips_monday():
-    summer = overnight_schedule(datetime(2026, 8, 19, 5, 30, tzinfo=KST))
-    winter = overnight_schedule(datetime(2026, 1, 14, 6, 30, tzinfo=KST))
-    monday = overnight_schedule(datetime(2026, 8, 17, 5, 30, tzinfo=KST))
+    summer = overnight_schedule(datetime(2026, 8, 19, 5, 40, tzinfo=KST))
+    winter = overnight_schedule(datetime(2026, 1, 14, 6, 40, tzinfo=KST))
+    monday = overnight_schedule(datetime(2026, 8, 17, 5, 40, tzinfo=KST))
 
-    assert summer["slot"] == "05:30"
+    assert summer["slot"] == "05:40"
     assert summer["season"] == "summer"
     assert summer["usMarketDate"] == "2026-08-18"
-    assert winter["slot"] == "06:30"
+    assert winter["slot"] == "06:40"
     assert winter["season"] == "standard"
     assert monday["eligible"] is False
 
@@ -144,9 +144,9 @@ def test_candidate_seal_verify_publish_and_tamper_detection(tmp_path):
     seal_candidate(
         staging,
         source_commit=SOURCE_COMMIT,
-        slot="05:30",
+        slot="05:40",
         us_market_date="2026-08-18",
-        started_at="2026-08-19 05:30:00 KST",
+        started_at="2026-08-19 05:40:00 KST",
         prepared_at=datetime(2026, 8, 19, 5, 40, tzinfo=KST),
     )
 

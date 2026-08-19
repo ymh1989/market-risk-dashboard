@@ -178,9 +178,10 @@ make install-overnight-market-prepare
 ```
 
 - 실행 요일: 한국시간 화~토
-- 미국 서머타임: `05:30 KST`
-- 미국 표준시간: `06:30 KST`
+- 미국 서머타임: `05:40 KST`
+- 미국 표준시간: `06:40 KST`
 - `launchd`에는 두 시각을 모두 등록하고 `America/New_York` 시간대의 DST 판정과 일치하는 한 번만 실행
+- 미국장 마감 직후 제공처의 최종 일봉 확정을 기다리기 위해 10분의 수집 여유를 둠
 - 수집 대상: KOSPI·SPX·SOX·VIX·NASDAQ·환율·미국 금리·FRED 신용·금융여건·원자재
 - 품질 확인: 필수 원천 실패, 최신 관측일, 행 수 감소, 최근 10일 이전 과거값 수정, 선택 원천 대체 여부
 - 산출물: 원자료·원천 메타데이터·시장 시계열 캐시·HMM·ELS·ML 신호·피처·운영 모델·완비성 보고서를 `data/cache/overnight-market-prepare/current`에 후보로 저장
