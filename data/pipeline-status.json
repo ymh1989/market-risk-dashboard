@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-20 18:19:26 KST",
+  "generatedAt": "2026-08-21 07:31:59 KST",
   "current": {
-    "runId": "20260820T180359-manual-full",
+    "runId": "20260821T073000-0730-fast",
     "status": "success",
-    "mode": "full",
-    "trigger": "manual",
-    "scheduledTime": null,
-    "startedAt": "2026-08-20 18:03:59 KST",
-    "completedAt": "2026-08-20 18:19:26 KST",
-    "durationSeconds": 927,
+    "mode": "fast",
+    "trigger": "scheduled",
+    "scheduledTime": "07:30",
+    "startedAt": "2026-08-21 07:30:00 KST",
+    "completedAt": "2026-08-21 07:31:59 KST",
+    "durationSeconds": 119,
     "dataAsOf": "2026-08-20",
-    "dashboardGeneratedAt": "2026-08-20 18:04 KST",
-    "mlGeneratedAt": "2026-08-20 18:19 KST",
-    "qualityScore": 97.1,
+    "dashboardGeneratedAt": "2026-08-21 07:30 KST",
+    "mlGeneratedAt": "2026-08-21 07:31 KST",
+    "qualityScore": 96.4,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
@@ -60,21 +60,21 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 113,
+      "durationSeconds": 65,
       "detail": "시장 데이터 수집, 위험점수, M7 프록시, ELS·HMM 산출"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
-      "durationSeconds": 803,
+      "durationSeconds": 41,
       "detail": "특성 생성, 모델 학습, 예측 및 OOS 검증"
     },
     {
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 0,
+      "durationSeconds": 1,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -89,13 +89,13 @@
     {
       "id": "yahoo",
       "label": "Yahoo Finance",
-      "status": "warning",
+      "status": "ok",
       "lastDate": "2026-08-20",
       "seriesCount": 36,
-      "detail": "36/36개 수집 · 허용시차 내 35개",
-      "oldestLastDate": "2026-08-14",
-      "freshCount": 35,
-      "staleCount": 1,
+      "detail": "36/36개 수집 · 허용시차 내 36개",
+      "oldestLastDate": "2026-08-20",
+      "freshCount": 36,
+      "staleCount": 0,
       "fallbackCount": 0
     },
     {
@@ -126,7 +126,7 @@
       "id": "fred",
       "label": "FRED",
       "status": "ok",
-      "lastDate": "2026-08-19",
+      "lastDate": "2026-08-20",
       "seriesCount": 5,
       "detail": "5/5개 수집 · 허용시차 내 5개",
       "oldestLastDate": "2026-08-14",
@@ -151,15 +151,15 @@
       "seriesCount": 17,
       "freshCount": 17,
       "staleCount": 0,
-      "fallbackCount": 1,
-      "detail": "17/17개 수집 · 사용 가능 17개 · 보강/대체 1개"
+      "fallbackCount": 2,
+      "detail": "17/17개 수집 · 사용 가능 17개 · 보강/대체 2개"
     },
     {
       "id": "m7-credit",
       "label": "M7 Credit Stress Proxy",
       "status": "warning",
-      "lastDate": "2026-08-19",
-      "oldestLastDate": "2026-08-17",
+      "lastDate": "2026-08-20",
+      "oldestLastDate": "2026-08-18",
       "seriesCount": 14,
       "freshCount": 14,
       "staleCount": 0,
@@ -172,31 +172,31 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-08-20 18:04 KST"
+      "generatedAt": "2026-08-21 07:30 KST"
     },
     {
       "id": "ml",
       "label": "ML 위험신호",
       "status": "ok",
-      "generatedAt": "2026-08-20 18:19 KST"
+      "generatedAt": "2026-08-21 07:31 KST"
     },
     {
       "id": "els",
       "label": "ELS 지수위험",
       "status": "ok",
-      "generatedAt": "2026-08-20 18:05 KST"
+      "generatedAt": "2026-08-21 07:31 KST"
     },
     {
       "id": "hmm",
       "label": "HMM 레짐",
       "status": "ok",
-      "generatedAt": "2026-08-20 18:06 KST"
+      "generatedAt": "2026-08-21 07:31 KST"
     },
     {
       "id": "backtest",
       "label": "시장 백테스트",
       "status": "ok",
-      "generatedAt": "2026-08-20 18:04 KST"
+      "generatedAt": "2026-08-21 07:30 KST"
     },
     {
       "id": "stress",
@@ -208,56 +208,45 @@
       "id": "m7",
       "label": "M7 신용스트레스 프록시",
       "status": "ok",
-      "generatedAt": "2026-08-20T18:04:09+09:00"
+      "generatedAt": "2026-08-21T07:30:11+09:00"
     },
     {
       "id": "breadth",
       "label": "KOSPI 시장 내부강도",
       "status": "ok",
-      "generatedAt": "2026-08-20 18:04:02 KST"
+      "generatedAt": "2026-08-21 07:30:05 KST"
     },
     {
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-08-20 18:19:26 KST"
+      "generatedAt": "2026-08-21 07:31:58 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 97.1,
-    "referenceDate": "2026-08-20",
+    "score": 96.4,
+    "referenceDate": "2026-08-21",
     "summary": {
       "checks": 225,
-      "ok": 212,
-      "warning": 13,
+      "ok": 209,
+      "warning": 16,
       "error": 0,
       "sourceSeriesExpected": 94,
       "sourceSeriesPresent": 94,
-      "freshSeries": 93,
-      "staleSeries": 1,
-      "fallbackSeries": 13
+      "freshSeries": 94,
+      "staleSeries": 0,
+      "fallbackSeries": 14
     },
     "issues": [
-      {
-        "id": "source:yahoo:vix3m",
-        "category": "source",
-        "label": "Cboe 3-Month Volatility Index",
-        "status": "warning",
-        "detail": "최신 2026-08-14 · 영업일 시차 4일 · 관측치 479개 · yahoo+history-cache",
-        "groupId": "yahoo",
-        "lastDate": "2026-08-14",
-        "observations": 479,
-        "fetchStatus": "yahoo+history-cache"
-      },
       {
         "id": "source:m7:price:AAPL",
         "category": "source",
         "label": "price:AAPL",
         "status": "warning",
-        "detail": "최신 2026-08-19 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-08-20 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-08-19",
+        "lastDate": "2026-08-20",
         "fetchStatus": "dashboard_yahoo"
       },
       {
@@ -265,9 +254,9 @@
         "category": "source",
         "label": "price:AMZN",
         "status": "warning",
-        "detail": "최신 2026-08-19 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-08-20 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-08-19",
+        "lastDate": "2026-08-20",
         "fetchStatus": "dashboard_yahoo"
       },
       {
@@ -275,9 +264,9 @@
         "category": "source",
         "label": "price:GOOGL",
         "status": "warning",
-        "detail": "최신 2026-08-19 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-08-20 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-08-19",
+        "lastDate": "2026-08-20",
         "fetchStatus": "dashboard_yahoo"
       },
       {
@@ -285,9 +274,9 @@
         "category": "source",
         "label": "price:HYG",
         "status": "warning",
-        "detail": "최신 2026-08-19 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-08-20 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-08-19",
+        "lastDate": "2026-08-20",
         "fetchStatus": "dashboard_yahoo"
       },
       {
@@ -295,9 +284,9 @@
         "category": "source",
         "label": "price:IEF",
         "status": "warning",
-        "detail": "최신 2026-08-19 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-08-20 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-08-19",
+        "lastDate": "2026-08-20",
         "fetchStatus": "dashboard_yahoo"
       },
       {
@@ -305,9 +294,9 @@
         "category": "source",
         "label": "price:IGIB",
         "status": "warning",
-        "detail": "최신 2026-08-19 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-08-20 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-08-19",
+        "lastDate": "2026-08-20",
         "fetchStatus": "dashboard_yahoo"
       },
       {
@@ -315,9 +304,19 @@
         "category": "source",
         "label": "price:LQD",
         "status": "warning",
-        "detail": "최신 2026-08-19 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-08-20 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-08-19",
+        "lastDate": "2026-08-20",
+        "fetchStatus": "dashboard_yahoo"
+      },
+      {
+        "id": "source:m7:price:META",
+        "category": "source",
+        "label": "price:META",
+        "status": "warning",
+        "detail": "최신 2026-08-20 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-08-20",
         "fetchStatus": "dashboard_yahoo"
       }
     ]
@@ -327,7 +326,7 @@
       "id": "ai-roi",
       "title": "AI 투자 ROI 회의론",
       "status": "주의",
-      "score": 65.0,
+      "score": 65.5,
       "tone": "caution",
       "decision": "기존 가중지표 유지",
       "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검"
@@ -336,7 +335,7 @@
       "id": "geopolitics-reinflation",
       "title": "지정학·재인플레이션",
       "status": "부담 높음",
-      "score": 76.6,
+      "score": 75.6,
       "tone": "danger",
       "decision": "관찰지표 보강",
       "operation": "DBC·DBA 관찰카드 유지 · 기존 에너지 가중치 변경 없음"
@@ -345,7 +344,7 @@
       "id": "macro-rates",
       "title": "매크로 금리 불확실성",
       "status": "관찰",
-      "score": 53.9,
+      "score": 54.1,
       "tone": "watch",
       "decision": "기존 가중지표 유지",
       "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -354,7 +353,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "확산 미확인",
-      "score": 17.9,
+      "score": 23.5,
       "tone": "good",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -370,6 +369,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20260821T073000-0730-fast",
+      "status": "success",
+      "mode": "fast",
+      "trigger": "scheduled",
+      "scheduledTime": "07:30",
+      "startedAt": "2026-08-21 07:30:00 KST",
+      "completedAt": "2026-08-21 07:31:59 KST",
+      "durationSeconds": 119,
+      "dataAsOf": "2026-08-20",
+      "dashboardGeneratedAt": "2026-08-21 07:30 KST",
+      "mlGeneratedAt": "2026-08-21 07:31 KST",
+      "qualityScore": 96.4,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20260820T180359-manual-full",
       "status": "success",
@@ -534,29 +548,14 @@
       "mlGeneratedAt": "2026-08-17 15:54 KST",
       "qualityScore": 97.3,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20260817T123216-12:30",
-      "status": "success",
-      "mode": "fast",
-      "trigger": "scheduled",
-      "scheduledTime": "12:30",
-      "startedAt": "2026-08-17 12:30:01 KST",
-      "completedAt": "2026-08-17 12:32:16 KST",
-      "durationSeconds": 135,
-      "dataAsOf": "2026-08-17",
-      "dashboardGeneratedAt": "2026-08-17 12:30 KST",
-      "mlGeneratedAt": "2026-08-17 12:32 KST",
-      "qualityScore": 97.3,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260820T180359-manual-full",
-    "mode": "full",
+    "runId": "20260821T073000-0730-fast",
+    "mode": "fast",
     "state": "generated",
-    "startedAt": "2026-08-20 18:03:59 KST",
-    "preparedAt": "2026-08-20 18:19:26 KST"
+    "startedAt": "2026-08-21 07:30:00 KST",
+    "preparedAt": "2026-08-21 07:31:59 KST"
   }
 }
