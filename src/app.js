@@ -2875,6 +2875,37 @@ function formatMarketTrendChange(value, type) {
   return type === "yield" ? `${sign}${value.toFixed(1)}bp` : `${sign}${value.toFixed(2)}%`;
 }
 
+function formatMarketTrendCurrentComparison(pointValue, currentValue, type) {
+  const point = Number(pointValue);
+  const current = Number(currentValue);
+  if (!Number.isFinite(point) || !Number.isFinite(current) || point === 0) return "";
+
+  const rawChange = current - point;
+  if (Math.abs(rawChange) < 1e-10) return "현재와 동일";
+  if (type === "yield") {
+    return `현재까지 ${formatMarketTrendChange(rawChange * 100, type)}`;
+  }
+
+  const scale = Math.max(Math.abs(point), Math.abs(current));
+  const digits =
+    type === "fx"
+      ? scale >= 100
+        ? 2
+        : 4
+      : type === "index"
+        ? scale >= 1000
+          ? 1
+          : 2
+        : scale >= 1000
+          ? 1
+          : scale >= 10
+            ? 2
+            : 4;
+  const rawText = `${rawChange > 0 ? "+" : ""}${formatNumber(rawChange, digits)}`;
+  const percentChange = (current / point - 1) * 100;
+  return `현재까지 ${rawText} · ${formatMarketTrendChange(percentChange, type)}`;
+}
+
 function formatMarketTrendValue(value, type) {
   if (!Number.isFinite(Number(value))) return "-";
   const number = Number(value);
@@ -3099,6 +3130,8 @@ function renderMarketIndexTrendPanel(marketIndexes) {
       valueKey: "close",
       color: item.direction === "up" ? "var(--red)" : item.direction === "down" ? "var(--green)" : "var(--blue)",
       format: (value) => formatMarketTrendValue(value, item.type),
+      detail: (point) =>
+        formatMarketTrendCurrentComparison(point.close, item.latest.close, item.type),
       status: (point) => (point.isLive ? "잠정" : "EOD")
     }))
   });

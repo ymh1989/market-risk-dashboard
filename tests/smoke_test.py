@@ -272,7 +272,7 @@ def test_ui_hierarchy_and_accessibility_contract():
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
     assert "styles.css?v=20260819-1" in html
-    assert "app.js?v=20260819-2" in html
+    assert "app.js?v=20260820-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -540,6 +540,9 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert ".market-trend-row__current dd" in styles
     assert '"weekly" ? "직전" : "전일"' in app_source
     assert "function marketTrendRangeMetric" in app_source
+    assert "function formatMarketTrendCurrentComparison" in app_source
+    assert "현재까지 ${rawText} · ${formatMarketTrendChange(percentChange, type)}" in app_source
+    assert "formatMarketTrendCurrentComparison(point.close, item.latest.close, item.type)" in app_source
     assert "marketTrendChange(visible, visible.length - 1, type)" in app_source
     assert "const rangeChangeLayers = chartRangeOptions" in app_source
     assert "marketTrendRangeMetric(" in app_source
