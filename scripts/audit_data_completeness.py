@@ -12,18 +12,22 @@ from kospi_risk.market_data_fetcher import load_source_config
 try:
     from scripts.update_market_risk import (
         FRED_SERIES,
-        NAVER_LATEST_INDEX_IDS,
+        MARKET_DIRECTION_INDEXES,
+        MARKET_LATEST_INDEX_IDS,
         NAVER_MARKET_INDEXES,
         NAVER_SYMBOLS,
         TICKERS,
+        NAVER_CRYPTO_DIRECTION_INDEXES,
     )
 except ModuleNotFoundError:
     from update_market_risk import (
         FRED_SERIES,
-        NAVER_LATEST_INDEX_IDS,
+        MARKET_DIRECTION_INDEXES,
+        MARKET_LATEST_INDEX_IDS,
         NAVER_MARKET_INDEXES,
         NAVER_SYMBOLS,
         TICKERS,
+        NAVER_CRYPTO_DIRECTION_INDEXES,
     )
 
 
@@ -730,18 +734,22 @@ def cache_series_checks(
     market_history = data.get("naverMarketHistory") or {}
     rows_by_id = market_history.get("series") or {}
     missing = sorted(set(NAVER_MARKET_INDEXES) - set(rows_by_id))
+    missing_optional = sorted(set(NAVER_CRYPTO_DIRECTION_INDEXES) - set(rows_by_id))
+    coverage_status = "error" if missing else ("warning" if missing_optional else "ok")
     checks.append(
         make_check(
             "cache:naver-market:coverage",
             "cache",
-            "Naver 시장지표 캐시",
-            "error" if missing else "ok",
-            f"{len(rows_by_id)}/{len(NAVER_MARKET_INDEXES)}개"
-            + (f" · 누락 {', '.join(missing)}" if missing else " · 누락 없음"),
+            "시장 방향성 캐시",
+            coverage_status,
+            f"{len(rows_by_id)}/{len(MARKET_DIRECTION_INDEXES)}개"
+            + (f" · 필수 누락 {', '.join(missing)}" if missing else "")
+            + (f" · 선택 누락 {', '.join(missing_optional)}" if missing_optional else "")
+            + (" · 누락 없음" if not missing and not missing_optional else ""),
         )
     )
     for item_id, rows in rows_by_id.items():
-        minimum = int(NAVER_MARKET_INDEXES.get(item_id, {}).get("min_observations", 60))
+        minimum = int(MARKET_DIRECTION_INDEXES.get(item_id, {}).get("min_observations", 60))
         checks.append(
             validate_series_rows(
                 f"cache:naver-market:{item_id}",
@@ -753,14 +761,14 @@ def cache_series_checks(
         )
 
     live_snapshots = market_history.get("liveSnapshots") or {}
-    missing_live = sorted(set(NAVER_LATEST_INDEX_IDS) - set(live_snapshots))
+    missing_live = sorted(set(MARKET_LATEST_INDEX_IDS) - set(live_snapshots))
     checks.append(
         make_check(
             "cache:naver-market-live:coverage",
             "cache",
             "시장지표 최신 스냅샷",
             "warning" if missing_live else "ok",
-            f"{len(live_snapshots)}/{len(NAVER_LATEST_INDEX_IDS)}개"
+            f"{len(live_snapshots)}/{len(MARKET_LATEST_INDEX_IDS)}개"
             + (f" · 누락 {', '.join(missing_live)}" if missing_live else " · 누락 없음"),
         )
     )
@@ -769,7 +777,7 @@ def cache_series_checks(
         current_value = snapshot.get("close")
         previous_close = snapshot.get("previousClose")
         malformed = (
-            item_id not in NAVER_LATEST_INDEX_IDS
+            item_id not in MARKET_LATEST_INDEX_IDS
             or observed_date is None
             or not isinstance(current_value, (int, float))
             or not isinstance(previous_close, (int, float))
@@ -777,7 +785,7 @@ def cache_series_checks(
         lag = business_day_lag(observed_date, reference_date) if observed_date else 999
         allowed_lag = (
             7
-            if NAVER_MARKET_INDEXES.get(item_id, {}).get("frequency") == "weekly"
+            if MARKET_DIRECTION_INDEXES.get(item_id, {}).get("frequency") == "weekly"
             else 1
         )
         status = "error" if malformed else ("warning" if lag > allowed_lag else "ok")

@@ -143,6 +143,13 @@ const marketTrendGroups = [
       { id: "bdti", label: "BDTI", type: "index", upLabel: "운임 상승", downLabel: "운임 하락" },
       { id: "bdi", label: "BDI", type: "index", upLabel: "운임 상승", downLabel: "운임 하락" }
     ]
+  },
+  {
+    id: "digital",
+    label: "디지털자산",
+    items: [
+      { id: "btc", label: "비트코인 · 원화", type: "crypto", upLabel: "가격 상승", downLabel: "가격 하락" }
+    ]
   }
 ];
 
@@ -2888,20 +2895,23 @@ function formatMarketTrendCurrentComparison(pointValue, currentValue, type) {
 
   const scale = Math.max(Math.abs(point), Math.abs(current));
   const digits =
-    type === "fx"
-      ? scale >= 100
-        ? 2
-        : 4
-      : type === "index"
-        ? scale >= 1000
-          ? 1
-          : 2
-        : scale >= 1000
+    type === "crypto"
+      ? 0
+      : type === "fx"
+        ? scale >= 100
+          ? 2
+          : 4
+        : type === "index"
+          ? scale >= 1000
+            ? 1
+            : 2
+          : scale >= 1000
           ? 1
           : scale >= 10
             ? 2
             : 4;
-  const rawText = `${rawChange > 0 ? "+" : ""}${formatNumber(rawChange, digits)}`;
+  const formattedRaw = `${rawChange > 0 ? "+" : ""}${formatNumber(rawChange, digits)}`;
+  const rawText = type === "crypto" ? `${formattedRaw}원` : formattedRaw;
   const percentChange = (current / point - 1) * 100;
   return `현재까지 ${rawText} · ${formatMarketTrendChange(percentChange, type)}`;
 }
@@ -2910,6 +2920,7 @@ function formatMarketTrendValue(value, type) {
   if (!Number.isFinite(Number(value))) return "-";
   const number = Number(value);
   if (type === "yield") return `${number.toFixed(3)}%`;
+  if (type === "crypto") return `₩${formatNumber(number, 0)}`;
   if (type === "fx") return number >= 100 ? number.toFixed(2) : number.toFixed(4);
   if (number >= 1000) return formatNumber(number, 1);
   if (number >= 100) return number.toFixed(2);
@@ -2966,8 +2977,9 @@ function analyzeMarketTrend(definition, marketIndexes) {
     : confirmedRows;
 
   const weekly = metadata.frequency === "weekly";
-  const oneWeekOffset = weekly ? 1 : 5;
-  const oneMonthOffset = weekly ? 4 : 20;
+  const calendarDaily = definition.type === "crypto";
+  const oneWeekOffset = weekly ? 1 : calendarDaily ? 7 : 5;
+  const oneMonthOffset = weekly ? 4 : calendarDaily ? 30 : 20;
   const recentWindow = rows.slice(-(weekly ? 7 : 11));
   const changes = recentWindow
     .slice(1)
@@ -3148,7 +3160,7 @@ function renderMarketIndexTrendPanel(marketIndexes) {
     <section class="market-trend-panel" data-timeseries-chart="${chartId}">
       <header class="market-trend-panel__header">
         <div>
-          <span class="eyebrow">Naver Market Direction</span>
+          <span class="eyebrow">Cross-Asset Direction</span>
           <h2>금리·환율·원자재·운임 방향성</h2>
           ${renderNarrativeList(narrative, "narrative-list--compact")}
         </div>
@@ -3179,7 +3191,7 @@ function renderMarketIndexTrendPanel(marketIndexes) {
       </div>
       ${renderChartTooltip()}
       <footer class="market-trend-panel__footer">
-        <span>Naver Pay 증권 시장지표</span>
+        <span>Naver Pay 증권 · 업비트 BTC/KRW</span>
         <span>현재값은 실시간·지연 잠정치 · 과거 시계열과 ML은 확정 EOD</span>
         <span>일간 최근 10회 · 주간 최근 6회 방향 판독</span>
         <span>전일·1주는 고정 · 기간 변동은 선택 구간 첫 관측 대비 · 부족 시 가용기간 표기</span>

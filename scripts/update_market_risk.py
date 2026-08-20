@@ -33,6 +33,9 @@ NAVER_MARKET_INDEX_DETAIL_URL = (
     "https://stock.naver.com/api/securityService/marketindex/{category}/{symbol}"
 )
 NAVER_BOND_LIVE_URL = "https://stock.naver.com/api/securityService/economic/bond/{symbol}"
+NAVER_CRYPTO_CANDLE_URL = (
+    "https://stock.naver.com/api/coin/candle/{exchange}/{market}/{ticker}/{candle_type}"
+)
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-risk-dashboard/0.1)"
 KST = timezone(timedelta(hours=9))
 FRED_FETCH_ATTEMPTS = 3
@@ -256,6 +259,28 @@ NAVER_MARKET_INDEXES = {
     },
 }
 NAVER_LATEST_INDEX_IDS = tuple(NAVER_MARKET_INDEXES)
+
+NAVER_CRYPTO_DIRECTION_INDEXES = {
+    "btc": {
+        "provider": "naver-crypto",
+        "category": "digital-assets",
+        "exchange": "UPBIT",
+        "market": "KRW",
+        "ticker": "BTC",
+        "symbol": "BTC/KRW",
+        "label": "비트코인 (원화)",
+        "frequency": "daily",
+        "lookback_days": 1105,
+        "target_observations": 1100,
+        "min_observations": 365,
+        "max_cache_age_days": 2,
+    }
+}
+MARKET_DIRECTION_INDEXES = {
+    **NAVER_MARKET_INDEXES,
+    **NAVER_CRYPTO_DIRECTION_INDEXES,
+}
+MARKET_LATEST_INDEX_IDS = tuple(MARKET_DIRECTION_INDEXES)
 
 RISK_GROUPS = {
     "crash": {"label": "Crash Stress", "weight": 0.18},
@@ -739,10 +764,41 @@ def fetch_naver_market_index_latest_snapshots(
 
 def write_naver_market_index_cache(series_map, fetch_statuses, live_snapshots=None, live_statuses=None):
     now = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
+    cached_payload = load_naver_market_index_cache_payload()
+    cache_series = dict(series_map)
+    cache_snapshots = dict(live_snapshots or {})
+    cache_statuses = dict(live_statuses or {})
+    for key in NAVER_CRYPTO_DIRECTION_INDEXES:
+        cached_series = (cached_payload.get("series") or {}).get(key)
+        cached_snapshot = (cached_payload.get("liveSnapshots") or {}).get(key)
+        if cached_series:
+            cache_series[key] = cached_series
+            fetch_statuses[key] = (cached_payload.get("metadata") or {}).get(key, {}).get(
+                "fetchStatus", "cache_fallback"
+            )
+        if cached_snapshot:
+            cache_snapshots[key] = cached_snapshot
+        if key in cache_series:
+            cache_statuses[key] = (cached_payload.get("liveSnapshotStatuses") or {}).get(
+                key, fetch_statuses.get(key, "cache_fallback")
+            )
+
+    metadata = {}
+    for key, rows in cache_series.items():
+        config = MARKET_DIRECTION_INDEXES.get(key)
+        if not config or not rows:
+            continue
+        metadata[key] = {
+            **config,
+            "fetchStatus": fetch_statuses.get(key, "unknown"),
+            "observations": len(rows),
+            "firstDate": rows[0]["date"],
+            "lastDate": rows[-1]["date"],
+        }
     payload = {
         "schemaVersion": 1,
         "generatedAt": now,
-        "source": "Naver Pay Securities market-index endpoints",
+        "source": "Naver Pay Securities market-index and crypto endpoints",
         "sourcePages": {
             "transport": "https://stock.naver.com/market/marketindex/transport",
             "metals": "https://stock.naver.com/market/marketindex/metals",
@@ -750,23 +806,185 @@ def write_naver_market_index_cache(series_map, fetch_statuses, live_snapshots=No
             "bond": "https://stock.naver.com/market/marketindex/bondAndInterest/bond",
             "exchange": "https://stock.naver.com/marketindex/exchange/FX_USDKRW/price",
             "exchangeWorld": "https://stock.naver.com/market/marketindex/exchangeRate/exchangeWorld",
+            "bitcoin": "https://stock.naver.com/market/crypto",
         },
-        "metadata": {
-            key: {
-                **config,
-                "fetchStatus": fetch_statuses[key],
-                "observations": len(series_map[key]),
-                "firstDate": series_map[key][0]["date"],
-                "lastDate": series_map[key][-1]["date"],
-            }
-            for key, config in NAVER_MARKET_INDEXES.items()
-        },
-        "series": series_map,
+        "metadata": metadata,
+        "series": cache_series,
         "liveSnapshotsGeneratedAt": now,
-        "liveSnapshots": live_snapshots or {},
-        "liveSnapshotStatuses": live_statuses or {},
+        "liveSnapshots": cache_snapshots,
+        "liveSnapshotStatuses": cache_statuses,
     }
     NAVER_MARKET_INDEX_CACHE_FILE.write_text(json.dumps(payload, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def fetch_naver_crypto_direction_series(config, now=None):
+    """네이버 가상자산 API에서 업비트 BTC/KRW 일봉을 조회한다."""
+    now = (now or datetime.now(KST)).astimezone(KST)
+    start = now - timedelta(days=int(config.get("lookback_days", 1105)))
+    params = urllib.parse.urlencode(
+        {
+            "from": start.replace(hour=9, minute=0, second=0, microsecond=0).strftime(
+                "%Y-%m-%dT%H:%M:%S"
+            ),
+            "to": now.strftime("%Y-%m-%dT%H:%M:%S"),
+        }
+    )
+    url = NAVER_CRYPTO_CANDLE_URL.format(
+        exchange=config["exchange"],
+        market=config["market"],
+        ticker=config["ticker"],
+        candle_type="days",
+    )
+    request = urllib.request.Request(
+        f"{url}?{params}",
+        headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    if not isinstance(payload, list):
+        raise RuntimeError("BTC/KRW: Naver 가상자산 응답 형식이 예상과 다릅니다.")
+    return payload
+
+
+def _parse_iso_datetime(value):
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _prepare_naver_crypto_direction_series(
+    series,
+    config,
+    fetch_status,
+    cached_snapshot=None,
+    now=None,
+):
+    """완료된 BTC 일봉과 진행 중인 09시 기준 일봉을 분리한다."""
+    now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    observations = {}
+    for point in series or []:
+        traded_at = _parse_iso_datetime(point.get("tradeBaseAt"))
+        close = parse_naver_number(point.get("closePrice"))
+        if traded_at is None or close is None:
+            continue
+        date = traded_at.astimezone(timezone.utc).date().isoformat()
+        observations[date] = {
+            "date": date,
+            "close": close,
+            "open": parse_naver_number(point.get("openPrice")),
+            "high": parse_naver_number(point.get("highPrice")),
+            "low": parse_naver_number(point.get("lowPrice")),
+            "volume": parse_naver_number(point.get("accumulatedTradingVolume")),
+            "tradeBaseAt": point.get("tradeBaseAt"),
+            "lastTradeAt": point.get("lastTradeAt"),
+        }
+    rows = [observations[date] for date in sorted(observations)]
+    if len(rows) < int(config.get("min_observations", 80)):
+        raise RuntimeError(f"{config['symbol']}: 방향성 차트 관측치 부족 ({len(rows)})")
+
+    latest = rows[-1]
+    latest_started_at = _parse_iso_datetime(latest.get("tradeBaseAt"))
+    is_provisional = bool(
+        latest_started_at is not None
+        and now < latest_started_at.astimezone(timezone.utc) + timedelta(days=1)
+    )
+    confirmed = rows[:-1] if is_provisional else rows
+    if not confirmed:
+        raise RuntimeError(f"{config['symbol']}: 확정 일봉이 없습니다.")
+    previous = confirmed[-1] if is_provisional else rows[-2]
+    target = int(config.get("target_observations", len(confirmed)))
+    confirmed = confirmed[-target:]
+
+    observed_at = latest.get("lastTradeAt") or datetime.now(KST).isoformat(timespec="seconds")
+    if str(fetch_status).startswith("cache_fallback") and cached_snapshot:
+        observed_at = cached_snapshot.get("observedAt") or observed_at
+    snapshot = {
+        "date": latest["date"],
+        "observedAt": observed_at,
+        "close": latest["close"],
+        "previousClose": previous["close"],
+        "change": round(latest["close"] - previous["close"], 6),
+        "changeBps": None,
+        "marketStatus": "OPEN" if is_provisional else "CLOSED",
+        "delayTime": None,
+        "delayTimeName": None,
+        "priceDataType": "INDICATIVE" if is_provisional else "CLOSING_PRICE",
+        "displayStatus": "24시간 거래" if is_provisional else "최근 EOD",
+        "source": "Naver Pay Securities crypto endpoint · Upbit BTC/KRW",
+        "confirmedDate": confirmed[-1]["date"],
+        "isProvisional": is_provisional,
+        "fetchStatus": fetch_status,
+    }
+    return confirmed, snapshot
+
+
+def refresh_naver_crypto_direction_cache():
+    payload = load_naver_market_index_cache_payload()
+    if not payload.get("series"):
+        raise RuntimeError("시장 방향성 캐시가 없어 비트코인을 추가할 수 없습니다.")
+
+    payload.setdefault("metadata", {})
+    payload.setdefault("liveSnapshots", {})
+    payload.setdefault("liveSnapshotStatuses", {})
+    for key, config in NAVER_CRYPTO_DIRECTION_INDEXES.items():
+        cached_rows = list((payload.get("series") or {}).get(key) or [])
+        cached_snapshot = (payload.get("liveSnapshots") or {}).get(key) or {}
+        try:
+            series = fetch_naver_crypto_direction_series(config)
+            fetch_status = "naver-crypto"
+        except Exception as exc:
+            if not _is_recent_market_index_cache(
+                cached_rows, config["max_cache_age_days"]
+            ):
+                print(f"선택 지표 {config['symbol']} 조회 실패: {exc}", flush=True)
+                continue
+            fetch_status = f"cache_fallback: {exc}"
+            payload["metadata"][key] = {
+                **config,
+                "fetchStatus": fetch_status,
+                "observations": len(cached_rows),
+                "firstDate": cached_rows[0]["date"],
+                "lastDate": cached_rows[-1]["date"],
+            }
+            payload["liveSnapshotStatuses"][key] = fetch_status
+            continue
+
+        confirmed, snapshot = _prepare_naver_crypto_direction_series(
+            series,
+            config,
+            fetch_status,
+            cached_snapshot=cached_snapshot,
+        )
+        payload["series"][key] = confirmed
+        payload["metadata"][key] = {
+            **config,
+            "fetchStatus": fetch_status,
+            "observations": len(confirmed),
+            "firstDate": confirmed[0]["date"],
+            "lastDate": confirmed[-1]["date"],
+        }
+        payload["liveSnapshots"][key] = snapshot
+        payload["liveSnapshotStatuses"][key] = fetch_status
+
+    payload["source"] = "Naver Pay Securities market-index and crypto endpoints"
+    payload.setdefault("sourcePages", {})["bitcoin"] = (
+        "https://stock.naver.com/market/crypto"
+    )
+    payload["generatedAt"] = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
+    payload["liveSnapshotsGeneratedAt"] = payload["generatedAt"]
+    NAVER_MARKET_INDEX_CACHE_FILE.write_text(
+        json.dumps(payload, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        key: payload["liveSnapshots"][key]
+        for key in NAVER_CRYPTO_DIRECTION_INDEXES
+        if key in payload["liveSnapshots"]
+    }
 
 
 def fetch_naver_market_indexes(max_workers=5):
@@ -813,6 +1031,14 @@ def refresh_naver_market_index_latest_cache():
         series_map,
         payload.get("liveSnapshots") or {},
     )
+    for key in NAVER_CRYPTO_DIRECTION_INDEXES:
+        cached_snapshot = (payload.get("liveSnapshots") or {}).get(key)
+        if cached_snapshot:
+            live_snapshots[key] = cached_snapshot
+        if key in series_map:
+            live_statuses[key] = (payload.get("liveSnapshotStatuses") or {}).get(
+                key, "cache_fallback"
+            )
     payload["liveSnapshotsGeneratedAt"] = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
     payload["liveSnapshots"] = live_snapshots
     payload["liveSnapshotStatuses"] = live_statuses
@@ -3853,6 +4079,7 @@ def main():
         NAVER_SYMBOLS, lambda config: fetch_naver_chart(config["symbol"]), max_workers=4
     )
     market_index_map, market_index_statuses = fetch_naver_market_indexes()
+    refresh_naver_crypto_direction_cache()
     print("FRED 금융여건 시계열을 조회합니다.", flush=True)
     fred_map = fetch_configured_series(
         FRED_SERIES, fetch_fred_series_with_fallback, max_workers=3
@@ -3935,8 +4162,9 @@ if __name__ == "__main__":
         check_fred_api()
     elif args.refresh_live_only:
         snapshots = refresh_naver_market_index_latest_cache()
+        snapshots.update(refresh_naver_crypto_direction_cache())
         labels = ", ".join(
-            f"{NAVER_MARKET_INDEXES[key]['label']} {snapshot['close']}"
+            f"{MARKET_DIRECTION_INDEXES[key]['label']} {snapshot['close']}"
             for key, snapshot in snapshots.items()
             if snapshot.get("isProvisional")
         )

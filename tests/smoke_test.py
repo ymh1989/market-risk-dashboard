@@ -153,7 +153,7 @@ def test_dashboard_contract():
         and isinstance(snapshot.get("previousClose"), (int, float))
         for snapshot in market_index_cache["liveSnapshots"].values()
     )
-    assert set(market_index_cache["series"]) == {
+    required_market_series = {
         "scfi",
         "bdti",
         "bdi",
@@ -170,6 +170,11 @@ def test_dashboard_contract():
         "kr3y",
         "kr10y",
     }
+    assert required_market_series <= set(market_index_cache["series"])
+    assert set(market_index_cache["series"]) <= required_market_series | {"btc"}
+    if "btc" in market_index_cache["series"]:
+        assert market_index_cache["metadata"]["btc"]["provider"] == "naver-crypto"
+        assert market_index_cache["metadata"]["btc"]["symbol"] == "BTC/KRW"
     assert all(len(points) >= 60 for points in market_index_cache["series"].values())
     latest_market_date = max(
         date.fromisoformat(points[-1]["date"])
@@ -271,8 +276,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260819-1" in html
-    assert "app.js?v=20260820-1" in html
+    assert "styles.css?v=20260820-1" in html
+    assert "app.js?v=20260820-2" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -533,6 +538,11 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert 'loadJson("./data/naver-marketindex-history.json")' in app_source
     assert "renderMarketIndexTrendPanel" in app_source
     assert "금리·환율·원자재·운임 방향성" in app_source
+    assert 'id: "digital"' in app_source
+    assert '{ id: "btc", label: "비트코인 · 원화", type: "crypto"' in app_source
+    assert 'if (type === "crypto") return `₩${formatNumber(number, 0)}`' in app_source
+    assert ".market-trend-group--digital" in styles
+    assert "Naver Pay 증권 · 업비트 BTC/KRW" in app_source
     assert "현재값은 실시간·지연 잠정치" in app_source
     assert "market-trend-row__live-line" in app_source
     assert 'viewBox="0 0 180 52" preserveAspectRatio="none"' in app_source

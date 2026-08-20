@@ -1,9 +1,11 @@
 import json
 import math
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from scripts.update_market_risk import (
     NAVER_MARKET_INDEXES,
+    NAVER_CRYPTO_DIRECTION_INDEXES,
+    _prepare_naver_crypto_direction_series,
     _weighted_asof_score_points,
     broad_reinflation_component_points,
     change_pressure_component_points,
@@ -41,6 +43,34 @@ def test_naver_history_targets_cover_three_year_window():
 
     assert weekly_targets and min(weekly_targets) >= 160
     assert daily_targets and min(daily_targets) >= 760
+
+
+def test_bitcoin_direction_series_separates_incomplete_utc_candle():
+    start = date(2025, 7, 16)
+    rows = [
+        {
+            "tradeBaseAt": f"{(start + timedelta(days=index)).isoformat()}T00:00:00Z",
+            "lastTradeAt": f"{(start + timedelta(days=index)).isoformat()}T12:00:00Z",
+            "closePrice": 100_000 + index * 10,
+            "accumulatedTradingVolume": 1,
+        }
+        for index in range(400)
+    ]
+    now = datetime(2026, 8, 19, 22, 30, tzinfo=timezone.utc)
+
+    confirmed, snapshot = _prepare_naver_crypto_direction_series(
+        rows,
+        NAVER_CRYPTO_DIRECTION_INDEXES["btc"],
+        "naver-crypto",
+        now=now,
+    )
+
+    assert rows[-1]["tradeBaseAt"].startswith("2026-08-19")
+    assert confirmed[-1]["date"] == "2026-08-18"
+    assert snapshot["date"] == "2026-08-19"
+    assert snapshot["confirmedDate"] == "2026-08-18"
+    assert snapshot["isProvisional"] is True
+    assert snapshot["displayStatus"] == "24시간 거래"
 
 
 def test_foreign_ownership_drop_uses_percentage_points():
