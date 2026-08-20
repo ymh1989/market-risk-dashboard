@@ -373,12 +373,12 @@ else
   "$PYTHON_BIN" -m kospi_risk.cli train --features data/processed/features.parquet --config configs/base.yaml
 fi
 if [[ "$UPDATE_MODE" == "full" ]]; then
-  BACKTEST_CACHE_ARGS=()
   if [[ "$SCHEDULED_DAY_TYPE" == "saturday" ]]; then
-    BACKTEST_CACHE_ARGS+=(--refresh-cache)
     echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 토요일 정기 전체 ML 검증: fold 캐시를 새로 구축합니다."
+    "$PYTHON_BIN" -m kospi_risk.cli backtest --features data/processed/features.parquet --config configs/base.yaml --output reports/backtest_report.md --refresh-cache
+  else
+    "$PYTHON_BIN" -m kospi_risk.cli backtest --features data/processed/features.parquet --config configs/base.yaml --output reports/backtest_report.md
   fi
-  "$PYTHON_BIN" -m kospi_risk.cli backtest --features data/processed/features.parquet --config configs/base.yaml --output reports/backtest_report.md "${BACKTEST_CACHE_ARGS[@]}"
   persist_local_data_cache
 else
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] fast 모드: ML walk-forward 백테스트를 생략하고 직전 OOS 메트릭을 재사용합니다."

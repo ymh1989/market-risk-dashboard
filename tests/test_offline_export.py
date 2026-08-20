@@ -84,3 +84,12 @@ def test_homepage_and_update_pipelines_publish_latest_snapshot():
     assert "reports/market-risk-dashboard-offline.html" in local_update
     assert "scripts/export_offline_dashboard.py --stable-only" in workflow
     assert "reports/market-risk-dashboard-offline.html" in workflow
+
+
+def test_weekday_full_update_does_not_expand_an_empty_bash_array():
+    local_update = (ROOT / "scripts" / "run_local_market_update.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "BACKTEST_CACHE_ARGS" not in local_update
+    assert "--output reports/backtest_report.md --refresh-cache" in local_update
