@@ -104,6 +104,24 @@ def test_prepare_publication_stamps_and_verifies_one_run(tmp_path):
     assert "\n" not in dashboard_text
 
 
+def test_prepare_publication_accepts_live_mode_with_reused_eod_artifacts(tmp_path):
+    make_publication_candidate(tmp_path)
+
+    manifest = prepare_publication(
+        tmp_path,
+        run_id=RUN_ID,
+        mode="live",
+        started_at=STARTED_AT,
+        artifact_paths=ARTIFACTS,
+        reused_paths=[Path("data/market-stress-episodes.json")],
+        prepared_at=PREPARED_AT,
+    )
+
+    assert manifest["mode"] == "live"
+    assert manifest["reusedCount"] == 1
+    assert verify_publication(tmp_path, expected_run_id=RUN_ID)["status"] == "ready"
+
+
 def test_prepare_failure_does_not_touch_existing_files(tmp_path):
     make_publication_candidate(tmp_path)
     dashboard_path = tmp_path / "data/risk-dashboard.json"

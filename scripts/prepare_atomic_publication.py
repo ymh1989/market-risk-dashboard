@@ -249,7 +249,7 @@ def prepare_publication(
 ) -> dict[str, Any]:
     if not run_id.strip():
         raise PublicationError("게시 runId가 비어 있습니다.")
-    if mode not in {"fast", "full"}:
+    if mode not in {"live", "fast", "full"}:
         raise PublicationError(f"지원하지 않는 갱신 모드입니다: {mode}")
     started = _parse_datetime(started_at)
     if started is None:
@@ -357,7 +357,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="대시보드 게시 파일을 하나의 검증된 runId로 묶습니다.")
     parser.add_argument("--root", default=str(ROOT))
     parser.add_argument("--run-id", default="")
-    parser.add_argument("--mode", choices=["fast", "full"], default="full")
+    parser.add_argument("--mode", choices=["live", "fast", "full"], default="full")
     parser.add_argument("--started-at", default="")
     parser.add_argument("--reused-file", action="append", default=[])
     parser.add_argument("--manifest", default=str(MANIFEST_PATH))

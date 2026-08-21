@@ -277,7 +277,7 @@ def test_ui_hierarchy_and_accessibility_contract():
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
     assert "styles.css?v=20260821-1" in html
-    assert "app.js?v=20260821-1" in html
+    assert "app.js?v=20260821-2" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -389,6 +389,7 @@ def test_operation_mode_distinguishes_active_and_completed_runs():
 
     assert 'if (mode === "full") return "전체 갱신";' in app_source
     assert 'if (mode === "fast") return "빠른 갱신";' in app_source
+    assert 'if (mode === "live") return "장중 갱신";' in app_source
     assert "activeRun: null" in app_source
     assert "elapsedSeconds: Math.floor(elapsedMinutes * 60)" in app_source
     assert "state.activeRun.mode" in app_source
@@ -418,6 +419,9 @@ def test_operations_page_exposes_daily_schedule_overview():
     operations_alert = (ROOT / "scripts" / "send_operations_alert.py").read_text(
         encoding="utf-8"
     )
+    pipeline_status_writer = (ROOT / "scripts" / "write_pipeline_status.py").read_text(
+        encoding="utf-8"
+    )
     makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
 
     assert "function buildScheduleOverview" in app_source
@@ -442,10 +446,17 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert ".operations-schedule-list" in styles
     assert ".operations-schedule-item--caution" in styles
     assert 'SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"' in run_script
-    assert 'MONDAY_TIMES="${LOCAL_MARKET_UPDATE_MONDAY_TIMES:-12:30,15:35}"' in run_script
+    assert 'TIMES="${LOCAL_MARKET_UPDATE_TIMES:-07:30,09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35}"' in run_script
+    assert 'MONDAY_TIMES="${LOCAL_MARKET_UPDATE_MONDAY_TIMES:-09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35}"' in run_script
+    assert 'LIVE_TIMES="${LOCAL_MARKET_UPDATE_LIVE_TIMES:-09:00,10:00,11:00,12:00,13:00,14:00,15:00}"' in run_script
+    assert '--live|--mode=live)' in run_script
+    assert 'if [[ "$UPDATE_MODE" == "live" ]]' in run_script
+    assert "장중 경량 갱신" in run_script
     assert 'SCHEDULED_DAY_TYPE="saturday"' in run_script
     assert 'if [[ "$SCHEDULED_DAY_TYPE" == "saturday" ]]' in run_script
     assert '--saturday-times "$SATURDAY_TIMES"' in run_script
+    assert '--live-times "$LIVE_TIMES"' in run_script
+    assert '"history": history[:30]' in pipeline_status_writer
     assert 'EOD ${BREADTH_END_DATE}까지' in run_script
     assert 'EOD $BREADTH_END_DATE까지' not in run_script
     assert "push_update_commit()" in run_script
@@ -456,6 +467,7 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert "scripts/prepare_atomic_publication.py" in run_script
     assert "--reused-file data/market-stress-episodes.json" in run_script
     assert "--reused-file data/market-history-cache.json" in run_script
+    assert "--reused-file data/kospi-breadth.json" in run_script
     assert "data/publication-manifest.json" in run_script
     assert "pages_publication_run_id()" in run_script
     assert "PUBLISH_FILES=(" in run_script
@@ -465,6 +477,7 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert "--reused-file data/kospi-breadth.json" in workflow
     assert "data/publication-manifest.json" in workflow
     assert 'SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"' in installer
+    assert 'TIMES="${LOCAL_MARKET_UPDATE_TIMES:-07:30,09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35}"' in installer
     assert 'append_calendar_intervals "$MONDAY_TIMES" 1' in installer
     assert 'append_calendar_intervals "$TIMES" 2 3 4 5' in installer
     assert "America/New_York" in overnight_helper
@@ -905,8 +918,17 @@ def test_pipeline_status_contract():
     assert status["schemaVersion"] == 1
     assert status["current"]["status"] == "success"
     assert status["current"]["dataAsOf"]
-    assert {item["time"] for item in status["schedule"]["times"]} == {"07:30", "12:30", "15:35"}
-    assert {item["time"] for item in status["schedule"]["mondayTimes"]} == {"12:30", "15:35"}
+    schedule_times = {item["time"] for item in status["schedule"]["times"]}
+    monday_times = {item["time"] for item in status["schedule"]["mondayTimes"]}
+    assert {"07:30", "15:35"} <= schedule_times
+    assert "15:35" in monday_times
+    if any(item["mode"] == "live" for item in status["schedule"]["times"]):
+        assert schedule_times == {
+            "07:30", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "15:35"
+        }
+        assert monday_times == {
+            "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "15:35"
+        }
     assert status["schedule"]["saturdayTimes"] == [{"time": "07:30", "mode": "full"}]
     assert status["schedule"]["weekdaysOnly"] is False
     assert {stage["id"] for stage in status["stages"]} == {"market", "ml", "validation", "deployment"}

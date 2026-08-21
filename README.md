@@ -152,10 +152,11 @@ GitHub Actions의 `schedule` 트리거는 트래픽과 큐 상태에 따라 정�
 먼저 `.env.example`을 `.env`로 복사하고 아래 값을 확인합니다.
 
 ```bash
-LOCAL_MARKET_UPDATE_TIMES=07:30,12:30,15:35
-LOCAL_MARKET_UPDATE_MONDAY_TIMES=12:30,15:35
+LOCAL_MARKET_UPDATE_TIMES=07:30,09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35
+LOCAL_MARKET_UPDATE_MONDAY_TIMES=09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35
 LOCAL_MARKET_UPDATE_SATURDAY_TIMES=07:30
 LOCAL_MARKET_UPDATE_FULL_TIMES=15:35
+LOCAL_MARKET_UPDATE_LIVE_TIMES=09:00,10:00,11:00,12:00,13:00,14:00,15:00
 LOCAL_MARKET_UPDATE_SCHEDULE_GRACE_MINUTES=10
 LOCAL_MARKET_UPDATE_REMOTE=origin
 LOCAL_MARKET_UPDATE_BRANCH=main
@@ -167,7 +168,7 @@ LOCAL_MARKET_UPDATE_BRANCH=main
 make install-local-market-update
 ```
 
-설치 후 LaunchAgent는 실제 예약 요일과 시각에만 스크립트를 실행합니다. 월요일은 토요일 전체 갱신과 같은 금요일 종가를 다시 계산하지 않도록 `12:30`, `15:35`만 실행하고, 화~금은 `07:30`, `12:30`, `15:35`, 토요일은 `07:30`에 실행합니다. `07:30`과 `12:30`은 최신 데이터·모델 신호만 빠르게 갱신합니다. 평일 `15:35`는 변경된 Walk-forward fold만 증분 계산하고, 토요일 `07:30`은 캐시를 비운 뒤 전체 OOS 백테스트를 다시 검증합니다. 일요일에는 실행하지 않습니다. 예약 직후 일시적인 시스템 지연은 기본 10분까지 같은 실행으로 인정합니다. 현재 작업 폴더에 README나 설정 파일 변경이 남아 있어도 예약 작업이 막히지 않도록, 스크립트는 `origin/main` 기준의 깨끗한 임시 worktree에서 데이터 갱신, ML 재학습, 테스트, JSON 커밋·푸시를 처리합니다.
+설치 후 LaunchAgent는 실제 예약 요일과 시각에만 스크립트를 실행합니다. 국내장 중에는 평일 `09:00`부터 `15:00`까지 매 정각 장중 갱신을 실행합니다. 장중 모드는 KOSPI·KOSDAQ과 금리·환율·원자재·비트코인 등 현재 시장값과 위험점수만 다시 계산하고, KRX Breadth·M7·ELS·HMM·ML·스트레스 이력은 직전 확정 산출물을 재사용합니다. 화~금 `07:30`은 미국·유럽장 EOD와 운영 모델 신호를 빠르게 갱신하고, 월요일 `07:30`은 토요일 전체 갱신과 같은 금요일 종가를 반복하므로 생략합니다. 평일 `15:35`는 KRX Breadth와 변경된 Walk-forward fold까지 반영하며, 토요일 `07:30`은 캐시를 비운 뒤 전체 OOS 백테스트를 다시 검증합니다. 일요일에는 실행하지 않습니다. 예약 직후 일시적인 시스템 지연은 기본 10분까지 같은 실행으로 인정합니다. 현재 작업 폴더에 README나 설정 파일 변경이 남아 있어도 예약 작업이 막히지 않도록, 스크립트는 `origin/main` 기준의 깨끗한 임시 worktree에서 데이터 갱신, 검증, JSON 커밋·푸시를 처리합니다.
 
 ### 미국장 마감 후 야간 사전준비
 

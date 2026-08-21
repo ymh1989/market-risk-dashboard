@@ -8,8 +8,8 @@ STATE_DIR="$ROOT/logs/local-market-update-state"
 
 BRANCH="${LOCAL_MARKET_UPDATE_BRANCH:-main}"
 REMOTE="${LOCAL_MARKET_UPDATE_REMOTE:-origin}"
-TIMES="${LOCAL_MARKET_UPDATE_TIMES:-07:30,12:30,15:35}"
-MONDAY_TIMES="${LOCAL_MARKET_UPDATE_MONDAY_TIMES:-12:30,15:35}"
+TIMES="${LOCAL_MARKET_UPDATE_TIMES:-07:30,09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35}"
+MONDAY_TIMES="${LOCAL_MARKET_UPDATE_MONDAY_TIMES:-09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35}"
 SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"
 LABEL="${LOCAL_MARKET_UPDATE_LABEL:-com.marketlab.market-risk-update}"
 PYTHON_BIN="${LOCAL_MARKET_UPDATE_PYTHON:-}"
@@ -21,6 +21,7 @@ PAGES_VERIFY_INTERVAL_SECONDS="${LOCAL_MARKET_UPDATE_PAGES_VERIFY_INTERVAL_SECON
 PAGES_DEPLOY_RETRIES="${LOCAL_MARKET_UPDATE_PAGES_DEPLOY_RETRIES:-2}"
 MODE="${LOCAL_MARKET_UPDATE_MODE:-auto}"
 FULL_TIMES="${LOCAL_MARKET_UPDATE_FULL_TIMES:-15:35}"
+LIVE_TIMES="${LOCAL_MARKET_UPDATE_LIVE_TIMES:-09:00,10:00,11:00,12:00,13:00,14:00,15:00}"
 SCHEDULE_GRACE_MINUTES="${LOCAL_MARKET_UPDATE_SCHEDULE_GRACE_MINUTES:-10}"
 ONLY_AT_SCHEDULED_KST=0
 SCHEDULE_STATE_FILE=""
@@ -46,6 +47,7 @@ if [[ -f "$ENV_FILE" ]]; then
   PAGES_DEPLOY_RETRIES="${LOCAL_MARKET_UPDATE_PAGES_DEPLOY_RETRIES:-$PAGES_DEPLOY_RETRIES}"
   MODE="${LOCAL_MARKET_UPDATE_MODE:-$MODE}"
   FULL_TIMES="${LOCAL_MARKET_UPDATE_FULL_TIMES:-$FULL_TIMES}"
+  LIVE_TIMES="${LOCAL_MARKET_UPDATE_LIVE_TIMES:-$LIVE_TIMES}"
   SCHEDULE_GRACE_MINUTES="${LOCAL_MARKET_UPDATE_SCHEDULE_GRACE_MINUTES:-$SCHEDULE_GRACE_MINUTES}"
 fi
 
@@ -56,6 +58,9 @@ for arg in "$@"; do
       ;;
     --fast|--mode=fast)
       MODE="fast"
+      ;;
+    --live|--mode=live)
+      MODE="live"
       ;;
     --full|--mode=full)
       MODE="full"
@@ -76,15 +81,6 @@ if [[ -z "$PYTHON_BIN" ]]; then
   else
     PYTHON_BIN="$(command -v python3)"
   fi
-fi
-
-if [[ -z "$KOSPI_BREADTH_PYTHON" ]]; then
-  KOSPI_BREADTH_PYTHON="$ROOT/.venv-breadth/bin/python"
-fi
-if [[ ! -x "$KOSPI_BREADTH_PYTHON" ]]; then
-  echo "KOSPI Market Breadth용 Python을 찾지 못했습니다: $KOSPI_BREADTH_PYTHON" >&2
-  echo ".venv-breadth에 pykrx를 설치하거나 KOSPI_BREADTH_PYTHON을 지정하세요." >&2
-  exit 1
 fi
 
 kst_now() {
@@ -175,9 +171,9 @@ wait_for_pages_deployment() {
 }
 
 resolve_update_mode() {
-  local full_time
+  local full_time live_time
   case "$MODE" in
-    full|fast)
+    full|fast|live)
       echo "$MODE"
       ;;
     auto)
@@ -197,6 +193,14 @@ resolve_update_mode() {
           return 0
         fi
       done
+      IFS=',' read -ra live_times <<< "$LIVE_TIMES"
+      for live_time in "${live_times[@]}"; do
+        live_time="${live_time//[[:space:]]/}"
+        if [[ "$SCHEDULED_TIME" == "$live_time" ]]; then
+          echo "live"
+          return 0
+        fi
+      done
       echo "fast"
       ;;
     *)
@@ -211,6 +215,16 @@ if (( ONLY_AT_SCHEDULED_KST )); then
 fi
 
 UPDATE_MODE="$(resolve_update_mode)"
+if [[ "$UPDATE_MODE" != "live" ]]; then
+  if [[ -z "$KOSPI_BREADTH_PYTHON" ]]; then
+    KOSPI_BREADTH_PYTHON="$ROOT/.venv-breadth/bin/python"
+  fi
+  if [[ ! -x "$KOSPI_BREADTH_PYTHON" ]]; then
+    echo "KOSPI Market Breadth용 Python을 찾지 못했습니다: $KOSPI_BREADTH_PYTHON" >&2
+    echo ".venv-breadth에 pykrx를 설치하거나 KOSPI_BREADTH_PYTHON을 지정하세요." >&2
+    exit 1
+  fi
+fi
 RUN_STARTED_EPOCH="$(date +%s)"
 RUN_STARTED_AT="$(kst_now '+%Y-%m-%d %H:%M:%S KST')"
 RUN_TRIGGER_ID="${SCHEDULED_TIME:-manual}"
@@ -325,6 +339,15 @@ seed_overnight_candidate() {
 
 seed_overnight_candidate
 
+echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 갱신 모드: $UPDATE_MODE"
+if [[ "$UPDATE_MODE" == "live" ]]; then
+  echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 장중 경량 갱신: 현재 시장값과 위험점수만 갱신합니다."
+  MARKET_STAGE_STARTED_EPOCH="$(date +%s)"
+  make update-market-risk
+  MARKET_STAGE_COMPLETED_EPOCH="$(date +%s)"
+  ML_STAGE_STARTED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"
+  ML_STAGE_COMPLETED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"
+else
 BREADTH_END_DATE="$("$PYTHON_BIN" -c 'from datetime import datetime, timedelta; from zoneinfo import ZoneInfo; now=datetime.now(ZoneInfo("Asia/Seoul")); target=now if now.strftime("%H:%M") >= "15:35" else now-timedelta(days=1); print(target.date().isoformat())')"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] KOSPI Market Breadth를 갱신합니다: EOD ${BREADTH_END_DATE}까지"
 "$KOSPI_BREADTH_PYTHON" -m kospi_risk.cli update-kospi-breadth \
@@ -340,7 +363,6 @@ echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] KOSPI Market Breadth를 갱신합니
   --output data/kospi-breadth.json
 persist_local_data_cache
 
-echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 갱신 모드: $UPDATE_MODE"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] M7 공개시장 신용스트레스 프록시를 갱신합니다."
 "$PYTHON_BIN" -m m7_credit_proxy.pipeline --update-latest
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 시장리스크 데이터를 갱신합니다."
@@ -386,6 +408,7 @@ fi
 "$PYTHON_BIN" -m kospi_risk.cli predict-latest --features data/processed/features.parquet --config configs/base.yaml --output reports/latest_signal.csv
 "$PYTHON_BIN" scripts/export_ml_risk_signal.py
 ML_STAGE_COMPLETED_EPOCH="$(date +%s)"
+fi
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 게시 직전 시장지표 최신값을 갱신합니다."
 "$PYTHON_BIN" scripts/update_market_risk.py --refresh-live-only
@@ -404,6 +427,7 @@ RUN_COMPLETED_EPOCH="$(date +%s)"
   --monday-times "$MONDAY_TIMES" \
   --saturday-times "$SATURDAY_TIMES" \
   --full-times "$FULL_TIMES" \
+  --live-times "$LIVE_TIMES" \
   --schedule-grace-minutes "$SCHEDULE_GRACE_MINUTES" \
   --scheduled-time "$SCHEDULED_TIME" \
   --run-id "$RUN_ID" \
@@ -419,6 +443,17 @@ if [[ "$UPDATE_MODE" == "fast" ]]; then
   ATOMIC_REUSE_ARGS+=(
     --reused-file data/market-stress-episodes.json
     --reused-file data/market-history-cache.json
+  )
+elif [[ "$UPDATE_MODE" == "live" ]]; then
+  ATOMIC_REUSE_ARGS+=(
+    --reused-file data/market-risk-backtest.json
+    --reused-file data/market-stress-episodes.json
+    --reused-file data/market-history-cache.json
+    --reused-file data/els-index-risk.json
+    --reused-file data/hmm-regime.json
+    --reused-file data/ml-risk-signal.json
+    --reused-file data/m7-credit-proxy.json
+    --reused-file data/kospi-breadth.json
   )
 fi
 

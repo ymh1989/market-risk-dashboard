@@ -4,6 +4,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 
+WEEKDAY_TIMES = "07:30,09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35"
+MONDAY_TIMES = "09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35"
+LIVE_TIMES = "09:00,10:00,11:00,12:00,13:00,14:00,15:00"
+
+
 def load_pipeline_status_module():
     script = Path(__file__).resolve().parents[1] / "scripts" / "write_pipeline_status.py"
     spec = importlib.util.spec_from_file_location("write_pipeline_status", script)
@@ -32,10 +37,11 @@ def test_pipeline_status_keeps_previous_run_history(tmp_path):
     args = SimpleNamespace(
         output=str(output),
         mode="full",
-        times="07:30,12:30,15:35",
-        monday_times="12:30,15:35",
+        times=WEEKDAY_TIMES,
+        monday_times=MONDAY_TIMES,
         saturday_times="07:30",
         full_times="15:35",
+        live_times=LIVE_TIMES,
         schedule_grace_minutes=10,
         scheduled_time="15:35",
         run_id="2026-07-20-15:35",
@@ -53,14 +59,31 @@ def test_pipeline_status_keeps_previous_run_history(tmp_path):
         "2026-07-20-15:35",
         "2026-07-20-12:30",
     ]
-    assert [item["mode"] for item in payload["schedule"]["times"]] == ["fast", "fast", "full"]
-    assert payload["schedule"]["mondayTimes"] == [
-        {"time": "12:30", "mode": "fast"},
-        {"time": "15:35", "mode": "full"},
+    assert [item["mode"] for item in payload["schedule"]["times"]] == [
+        "fast",
+        "live",
+        "live",
+        "live",
+        "live",
+        "live",
+        "live",
+        "live",
+        "full",
+    ]
+    assert [item["mode"] for item in payload["schedule"]["mondayTimes"]] == [
+        "live",
+        "live",
+        "live",
+        "live",
+        "live",
+        "live",
+        "live",
+        "full",
     ]
     assert payload["schedule"]["saturdayTimes"] == [{"time": "07:30", "mode": "full"}]
     assert payload["schedule"]["weekdaysOnly"] is False
     assert payload["schedule"]["delayGraceMinutes"] == 10
+    assert payload["schedule"]["expectedDurationMinutes"]["live"] == 3
     assert all(source["lastDate"] for source in payload["sources"])
 
 
@@ -114,10 +137,11 @@ def test_pipeline_status_can_refresh_research_log_without_fabricating_a_run(tmp_
     args = SimpleNamespace(
         output=str(output),
         mode="full",
-        times="07:30,12:30,15:35",
-        monday_times="12:30,15:35",
+        times=WEEKDAY_TIMES,
+        monday_times=MONDAY_TIMES,
         saturday_times="07:30",
         full_times="15:35",
+        live_times=LIVE_TIMES,
         schedule_grace_minutes=10,
         scheduled_time="",
         run_id="",
