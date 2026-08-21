@@ -438,14 +438,18 @@ RUN_COMPLETED_EPOCH="$(date +%s)"
   --ml-duration "$((ML_STAGE_COMPLETED_EPOCH - ML_STAGE_STARTED_EPOCH))" \
   --validation-duration "$((VALIDATION_STAGE_COMPLETED_EPOCH - VALIDATION_STAGE_STARTED_EPOCH))"
 
-ATOMIC_REUSE_ARGS=()
+ATOMIC_PUBLICATION_ARGS=(
+  --run-id "$RUN_ID"
+  --mode "$UPDATE_MODE"
+  --started-at "$RUN_STARTED_AT"
+)
 if [[ "$UPDATE_MODE" == "fast" ]]; then
-  ATOMIC_REUSE_ARGS+=(
+  ATOMIC_PUBLICATION_ARGS+=(
     --reused-file data/market-stress-episodes.json
     --reused-file data/market-history-cache.json
   )
 elif [[ "$UPDATE_MODE" == "live" ]]; then
-  ATOMIC_REUSE_ARGS+=(
+  ATOMIC_PUBLICATION_ARGS+=(
     --reused-file data/market-risk-backtest.json
     --reused-file data/market-stress-episodes.json
     --reused-file data/market-history-cache.json
@@ -458,11 +462,7 @@ elif [[ "$UPDATE_MODE" == "live" ]]; then
 fi
 
 prepare_atomic_publication() {
-  "$PYTHON_BIN" scripts/prepare_atomic_publication.py \
-    --run-id "$RUN_ID" \
-    --mode "$UPDATE_MODE" \
-    --started-at "$RUN_STARTED_AT" \
-    "${ATOMIC_REUSE_ARGS[@]}"
+  "$PYTHON_BIN" scripts/prepare_atomic_publication.py "${ATOMIC_PUBLICATION_ARGS[@]}"
 }
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 오프라인 HTML 스냅샷을 생성합니다."

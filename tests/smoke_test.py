@@ -465,6 +465,8 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert 'export MARKET_UPDATE_RUN_ID="$RUN_ID"' in run_script
     assert "prepare_atomic_publication()" in run_script
     assert "scripts/prepare_atomic_publication.py" in run_script
+    assert "ATOMIC_PUBLICATION_ARGS=(" in run_script
+    assert "ATOMIC_REUSE_ARGS=()" not in run_script
     assert "--reused-file data/market-stress-episodes.json" in run_script
     assert "--reused-file data/market-history-cache.json" in run_script
     assert "--reused-file data/kospi-breadth.json" in run_script
