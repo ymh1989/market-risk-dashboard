@@ -2818,7 +2818,7 @@ function renderSparkline(indicator, timeseries) {
   `;
 }
 
-function marketTrendCoordinates(points, domain = null, width = 180, height = 52, padding = 4) {
+function marketTrendCoordinates(points, domain = null, width = 180, height = 52, padding = 6) {
   if (points.length < 2) return [];
   const values = points.map((point) => Number(point.close)).filter(Number.isFinite);
   if (values.length < 2) return [];
@@ -3053,7 +3053,7 @@ function renderMarketTrendRow(item, seriesIndex, timelineDomains) {
           <path class="market-trend-row__baseline" d="M 0 26 H 180"></path>
           <path class="market-trend-row__line" d="${path}"></path>
           ${hasVisibleLive ? `<path class="market-trend-row__live-line" d="${livePath}"></path>` : ""}
-          ${lastPoint ? `<circle class="${hasVisibleLive ? "market-trend-row__live-point" : ""}" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="3"></circle>` : ""}
+          ${lastPoint ? `<circle class="${hasVisibleLive ? "market-trend-row__live-point" : ""}" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="2.15"></circle>` : ""}
           ${renderChartCursorLine(3, 49)}
         </svg>
       `;

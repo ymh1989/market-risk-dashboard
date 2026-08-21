@@ -3246,13 +3246,20 @@ a {
   width: 100%;
   height: 52px;
   overflow: visible;
+  shape-rendering: geometricPrecision;
+}
+
+.market-trend-row__chart path,
+.market-trend-row__chart circle {
+  vector-effect: non-scaling-stroke;
 }
 
 .market-trend-row__baseline {
   fill: none;
   stroke: var(--line);
-  stroke-dasharray: 3 5;
-  stroke-width: 1;
+  stroke-dasharray: 2 6;
+  stroke-width: 0.75;
+  opacity: 0.55;
 }
 
 .market-trend-row__line {
@@ -3260,25 +3267,35 @@ a {
   stroke: var(--muted);
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2.25;
+  stroke-width: 1.5;
+  opacity: 0.92;
 }
 
 .market-trend-row__live-line {
   fill: none;
   stroke: var(--muted);
-  stroke-dasharray: 3 3;
+  stroke-dasharray: 2.5 3.5;
   stroke-linecap: round;
-  stroke-width: 2.25;
+  stroke-linejoin: round;
+  stroke-width: 1.45;
+  opacity: 0.9;
 }
 
 .market-trend-row__chart circle {
   fill: var(--muted);
+  stroke: var(--surface);
+  stroke-width: 0.8;
 }
 
 .market-trend-row__chart .market-trend-row__live-point {
   fill: var(--surface);
   stroke: currentColor;
-  stroke-width: 2;
+  stroke-width: 1.35;
+}
+
+.market-trend-group--digital .market-trend-row__line,
+.market-trend-group--digital .market-trend-row__live-line {
+  stroke-width: 1.35;
 }
 
 .market-trend-row--up .market-trend-row__line {
