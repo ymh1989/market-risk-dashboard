@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-24 13:01:32 KST",
+  "generatedAt": "2026-08-24 14:01:14 KST",
   "current": {
-    "runId": "20260824T130005-1300-live",
+    "runId": "20260824T140005-1400-live",
     "status": "success",
     "mode": "live",
     "trigger": "scheduled",
-    "scheduledTime": "13:00",
-    "startedAt": "2026-08-24 13:00:05 KST",
-    "completedAt": "2026-08-24 13:01:32 KST",
-    "durationSeconds": 87,
+    "scheduledTime": "14:00",
+    "startedAt": "2026-08-24 14:00:05 KST",
+    "completedAt": "2026-08-24 14:01:14 KST",
+    "durationSeconds": 69,
     "dataAsOf": "2026-08-24",
-    "dashboardGeneratedAt": "2026-08-24 13:01 KST",
+    "dashboardGeneratedAt": "2026-08-24 14:00 KST",
     "mlGeneratedAt": "2026-08-22 07:49 KST",
-    "qualityScore": 96.7,
+    "qualityScore": 97.1,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
@@ -109,7 +109,7 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 83,
+      "durationSeconds": 65,
       "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
     },
     {
@@ -123,7 +123,7 @@
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 1,
+      "durationSeconds": 0,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -174,14 +174,14 @@
     {
       "id": "fred",
       "label": "FRED",
-      "status": "warning",
+      "status": "ok",
       "lastDate": "2026-08-21",
       "seriesCount": 5,
-      "detail": "5/5개 수집 · 허용시차 내 5개 · 대체값 2개",
+      "detail": "5/5개 수집 · 허용시차 내 5개",
       "oldestLastDate": "2026-08-14",
       "freshCount": 5,
       "staleCount": 0,
-      "fallbackCount": 2
+      "fallbackCount": 0
     },
     {
       "id": "krx-breadth",
@@ -221,7 +221,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-08-24 13:01 KST"
+      "generatedAt": "2026-08-24 14:00 KST"
     },
     {
       "id": "ml",
@@ -269,47 +269,25 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-08-24 13:01:32 KST"
+      "generatedAt": "2026-08-24 14:01:14 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 96.7,
+    "score": 97.1,
     "referenceDate": "2026-08-24",
     "summary": {
       "checks": 224,
-      "ok": 209,
-      "warning": 15,
+      "ok": 211,
+      "warning": 13,
       "error": 0,
       "sourceSeriesExpected": 94,
       "sourceSeriesPresent": 94,
       "freshSeries": 94,
       "staleSeries": 0,
-      "fallbackSeries": 16
+      "fallbackSeries": 14
     },
     "issues": [
-      {
-        "id": "source:fred:us_high_yield_oas",
-        "category": "source",
-        "label": "US High Yield OAS",
-        "status": "warning",
-        "detail": "최신 2026-08-20 · 영업일 시차 2일 · 관측치 726개 · cached",
-        "groupId": "fred",
-        "lastDate": "2026-08-20",
-        "observations": 726,
-        "fetchStatus": "cached"
-      },
-      {
-        "id": "source:fred:us_financial_stress_stlfsi",
-        "category": "source",
-        "label": "St. Louis Fed Financial Stress Index",
-        "status": "warning",
-        "detail": "최신 2026-08-14 · 영업일 시차 6일 · 관측치 1511개 · cached",
-        "groupId": "fred",
-        "lastDate": "2026-08-14",
-        "observations": 1511,
-        "fetchStatus": "cached"
-      },
       {
         "id": "source:m7:price:AAPL",
         "category": "source",
@@ -369,6 +347,26 @@
         "groupId": "m7-credit",
         "lastDate": "2026-08-21",
         "fetchStatus": "dashboard_yahoo"
+      },
+      {
+        "id": "source:m7:price:LQD",
+        "category": "source",
+        "label": "price:LQD",
+        "status": "warning",
+        "detail": "최신 2026-08-21 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-08-21",
+        "fetchStatus": "dashboard_yahoo"
+      },
+      {
+        "id": "source:m7:price:META",
+        "category": "source",
+        "label": "price:META",
+        "status": "warning",
+        "detail": "최신 2026-08-21 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-08-21",
+        "fetchStatus": "dashboard_yahoo"
       }
     ]
   },
@@ -386,7 +384,7 @@
       "id": "geopolitics-reinflation",
       "title": "지정학·재인플레이션",
       "status": "부담 높음",
-      "score": 77.7,
+      "score": 77.6,
       "tone": "danger",
       "decision": "관찰지표 보강",
       "operation": "DBC·DBA 관찰카드 유지 · 기존 에너지 가중치 변경 없음"
@@ -395,7 +393,7 @@
       "id": "macro-rates",
       "title": "매크로 금리 불확실성",
       "status": "주의",
-      "score": 61.7,
+      "score": 60.3,
       "tone": "caution",
       "decision": "기존 가중지표 유지",
       "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -404,7 +402,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "확산 미확인",
-      "score": 25.7,
+      "score": 23.5,
       "tone": "good",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -420,6 +418,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20260824T140005-1400-live",
+      "status": "success",
+      "mode": "live",
+      "trigger": "scheduled",
+      "scheduledTime": "14:00",
+      "startedAt": "2026-08-24 14:00:05 KST",
+      "completedAt": "2026-08-24 14:01:14 KST",
+      "durationSeconds": 69,
+      "dataAsOf": "2026-08-24",
+      "dashboardGeneratedAt": "2026-08-24 14:00 KST",
+      "mlGeneratedAt": "2026-08-22 07:49 KST",
+      "qualityScore": 97.1,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20260824T130005-1300-live",
       "status": "success",
@@ -783,10 +796,10 @@
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260824T130005-1300-live",
+    "runId": "20260824T140005-1400-live",
     "mode": "live",
     "state": "generated",
-    "startedAt": "2026-08-24 13:00:05 KST",
-    "preparedAt": "2026-08-24 13:01:32 KST"
+    "startedAt": "2026-08-24 14:00:05 KST",
+    "preparedAt": "2026-08-24 14:01:14 KST"
   }
 }
