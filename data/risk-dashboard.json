@@ -3,7 +3,7 @@
     "title": "통합 리스크 모니터링 대시보드",
     "subtitle": "시장 조기경보 · 신용리스크 확장 준비 · 유동성리스크 확장 준비",
     "asOf": "2026-08-24",
-    "generatedAt": "2026-08-24 15:35 KST",
+    "generatedAt": "2026-08-25 07:30 KST",
     "source": "Yahoo Finance, Naver Finance equity/market-index, and FRED endpoints via scripts/update_market_risk.py"
   },
   "tabs": [
@@ -220,13 +220,13 @@
           "name": "원/달러 환율 압력",
           "category": "외환",
           "group": "macro",
-          "value": 21.9,
+          "value": 22.4,
           "unit": "score",
           "weight": 0.06,
           "trend": "down",
-          "detail": "USD/KRW 1,380.67, 20일 변화율 -5.30%, 2년 분위 15.6",
+          "detail": "USD/KRW 1,382.11, 20일 변화율 -5.62%, 2년 분위 16.3",
           "source": "Yahoo Finance chart: KRW=X",
-          "contribution": 1.31,
+          "contribution": 1.34,
           "contributionPct": 6.0
         },
         {
@@ -234,13 +234,13 @@
           "name": "글로벌 변동성 압력",
           "category": "변동성",
           "group": "macro",
-          "value": 25.6,
+          "value": 30.3,
           "unit": "score",
           "weight": 0.05,
           "trend": "down",
-          "detail": "VIX 15.13, 20일 변화율 -18.57%, 2년 분위 18.0",
+          "detail": "VIX 15.85, 20일 변화율 -15.10%, 2년 분위 26.5",
           "source": "Yahoo Finance chart: ^VIX",
-          "contribution": 1.28,
+          "contribution": 1.52,
           "contributionPct": 5.0
         },
         {
@@ -252,7 +252,7 @@
           "unit": "score",
           "weight": 0.03,
           "trend": "down",
-          "detail": "미 10년 금리 proxy 4.74, 20일 변화율 +1.26%, 2년 분위 98.3",
+          "detail": "미 10년 금리 proxy 4.70, 20일 변화율 +1.36%, 2년 분위 97.5",
           "source": "Yahoo Finance chart: ^TNX",
           "contribution": 2.32,
           "contributionPct": 3.0
@@ -262,13 +262,13 @@
           "name": "미국 신용스프레드 스트레스",
           "category": "신용/크레딧",
           "group": "macro",
-          "value": 35.4,
+          "value": 30.6,
           "unit": "score",
           "weight": 0.05,
-          "trend": "flat",
-          "detail": "미국 하이일드 OAS 2.75%, 최근 20개 관측치 변화 -0.02%p, 위험분위 26.8",
+          "trend": "down",
+          "detail": "미국 하이일드 OAS 2.70%, 최근 20개 관측치 변화 -0.09%p, 위험분위 18.2",
           "source": "FRED: BAMLH0A0HYM2",
-          "contribution": 1.77,
+          "contribution": 1.53,
           "contributionPct": 5.0
         },
         {
@@ -276,13 +276,13 @@
           "name": "미국 금융여건 긴축 압력",
           "category": "금융여건",
           "group": "macro",
-          "value": 35.0,
+          "value": 36.4,
           "unit": "score",
           "weight": 0.03,
           "trend": "down",
-          "detail": "STLFSI -0.83, NFCI -0.56, 미 2년 4.19%, 10Y-2Y 0.50%p",
+          "detail": "STLFSI -0.83, NFCI -0.56, 미 2년 4.24%, 10Y-2Y 0.46%p",
           "source": "FRED: STLFSI4, NFCI, DGS2, T10Y2Y",
-          "contribution": 1.05,
+          "contribution": 1.09,
           "contributionPct": 3.0
         },
         {
@@ -304,13 +304,13 @@
           "name": "중국 경기·위안화 압력",
           "category": "중국/원자재",
           "group": "macro",
-          "value": 56.2,
+          "value": 56.0,
           "unit": "score",
           "weight": 0.03,
           "trend": "up",
-          "detail": "USD/CNY 6.7210, 최근 20개 관측치 변화 -0.75%, 철광석 95.21, 최근 20개 관측치 수익률 -3.26%, 구리/금 상대비율(×1000) 1.4073, 20개 관측치 변화 -9.89%. 위안화 약세와 중국 수요 민감 원자재 하락이 함께 나타날 때 한국 수출주 부담을 높게 봅니다.",
+          "detail": "USD/CNY 6.7210, 최근 20개 관측치 변화 -0.75%, 철광석 95.34, 최근 20개 관측치 수익률 -3.06%, 구리/금 상대비율(×1000) 1.4060, 20개 관측치 변화 -10.14%. 위안화 약세와 중국 수요 민감 원자재 하락이 함께 나타날 때 한국 수출주 부담을 높게 봅니다.",
           "source": "Naver market index: USDCNY, TIOc1, HGcv1, GCcv1",
-          "contribution": 1.69,
+          "contribution": 1.68,
           "contributionPct": 3.0
         },
         {
@@ -318,13 +318,13 @@
           "name": "원화 환산 에너지 수입비용",
           "category": "에너지/환율",
           "group": "macro",
-          "value": 77.3,
+          "value": 63.2,
           "unit": "score",
           "weight": 0.02,
           "trend": "down",
-          "detail": "브렌트유 $94.39, USD/KRW 1,380.67, 원화 환산 배럴당 비용 130,321.45원, 최근 20개 관측치 변화 +3.04%. 유가와 원화 약세가 동시에 기업 마진·물가·금리 부담으로 전이되는 경로를 측정합니다.",
+          "detail": "브렌트유 $92.17, USD/KRW 1,382.11, 원화 환산 배럴당 비용 127,389.08원, 최근 20개 관측치 변화 -0.50%. 유가와 원화 약세가 동시에 기업 마진·물가·금리 부담으로 전이되는 경로를 측정합니다.",
           "source": "Naver market index: LCOcv1; Yahoo Finance: KRW=X",
-          "contribution": 1.55,
+          "contribution": 1.26,
           "contributionPct": 2.0
         },
         {
@@ -333,11 +333,11 @@
           "category": "관찰/글로벌 수급",
           "group": "macro",
           "role": "observation",
-          "value": 50.2,
+          "value": 49.1,
           "unit": "score",
           "weight": 0.0,
           "trend": "up",
-          "detail": "USD/JPY 158.93, 5개 관측치 변화 -0.23%, VIX 15.13·5개 관측치 +6.18%, SPX 5개 관측치 -1.43%. 엔화 급강세·VIX 상승·SPX 하락의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
+          "detail": "USD/JPY 158.93, 5개 관측치 변화 -0.23%, VIX 15.85·5개 관측치 +4.34%, SPX 5개 관측치 -1.19%. 엔화 급강세·VIX 상승·SPX 하락의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
           "source": "Naver market index: USDJPY; Yahoo Finance: ^VIX, ^GSPC",
           "contribution": 0.0,
           "contributionPct": 0.0
@@ -348,11 +348,11 @@
           "category": "관찰/금리·외환",
           "group": "macro",
           "role": "observation",
-          "value": 29.7,
+          "value": 0.0,
           "unit": "score",
           "weight": 0.0,
           "trend": "down",
-          "detail": "한국 3년 3.853%, 미국 2년 4.234%, 금리차 -0.381%p·20개 관측치 변화 -0.013%p, USD/KRW 1,380.67·20개 관측치 -5.30%. 금리차 축소와 원화 약세의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
+          "detail": "한국 3년 3.836%, 미국 2년 4.238%, 금리차 -0.402%p·20개 관측치 변화 +0.050%p, USD/KRW 1,382.11·20개 관측치 -5.62%. 금리차 축소와 원화 약세의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
           "source": "Naver market index: KR3YT=RR, US2YT=RR; Yahoo Finance: KRW=X",
           "contribution": 0.0,
           "contributionPct": 0.0
@@ -363,11 +363,11 @@
           "category": "관찰/금리·외환",
           "group": "macro",
           "role": "observation",
-          "value": 13.9,
+          "value": 21.8,
           "unit": "score",
           "weight": 0.0,
           "trend": "up",
-          "detail": "미국 10년 4.738%, 일본 10년 2.874%, 미국-일본 금리차 +1.864%p. 5개 관측치 변화 +0.044%p, 20개 관측치 변화 -0.003%p. 금리차 축소에 따른 달러 캐리 매력 저하와 엔화 강세·자금 환류 가능성을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
+          "detail": "미국 10년 4.700%, 일본 10년 2.881%, 미국-일본 금리차 +1.819%p. 5개 관측치 변화 +0.017%p, 20개 관측치 변화 -0.044%p. 금리차 축소에 따른 달러 캐리 매력 저하와 엔화 강세·자금 환류 가능성을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
           "source": "Naver market index: US10YT=RR, JP10YT=RR",
           "contribution": 0.0,
           "contributionPct": 0.0
@@ -378,11 +378,11 @@
           "category": "관찰/옵션·수급",
           "group": "macro",
           "role": "observation",
-          "value": 24.2,
+          "value": 33.2,
           "unit": "score",
           "weight": 0.0,
           "trend": "down",
-          "detail": "VIX 15.13, VIX3M 18.50, 단기/3개월 비율 0.818, VVIX 86.27·5개 관측치 -1.38%. 단기 변동성이 3개월 변동성을 웃돌고 VVIX가 함께 오를수록 옵션 헤지 수요와 딜러 감마 부담이 커진 것으로 봅니다. 직접 델타 헷지 물량은 아니며 종합점수에는 반영하지 않습니다.",
+          "detail": "VIX 15.85, VIX3M 18.56, 단기/3개월 비율 0.854, VVIX 88.64·5개 관측치 -5.62%. 단기 변동성이 3개월 변동성을 웃돌고 VVIX가 함께 오를수록 옵션 헤지 수요와 딜러 감마 부담이 커진 것으로 봅니다. 직접 델타 헷지 물량은 아니며 종합점수에는 반영하지 않습니다.",
           "source": "Yahoo Finance chart: ^VIX, ^VIX3M, ^VVIX",
           "contribution": 0.0,
           "contributionPct": 0.0
@@ -393,11 +393,11 @@
           "category": "관찰/시장 폭",
           "group": "macro",
           "role": "observation",
-          "value": 0.0,
+          "value": 25.1,
           "unit": "score",
           "weight": 0.0,
-          "trend": "flat",
-          "detail": "RSP/SPY 20개 관측치 상대성과 +0.16%, QQEW/QQQ 상대성과 +4.41%. 동일가중 지수가 시가총액가중 지수보다 약해질 때 하락이 대형주 일부에서 시장 전반으로 확산된 것으로 봅니다. IPO 자금흡수나 기계적 매도량을 직접 측정하는 값은 아닙니다.",
+          "trend": "up",
+          "detail": "RSP/SPY 20개 관측치 상대성과 -0.16%, QQEW/QQQ 상대성과 +3.31%. 동일가중 지수가 시가총액가중 지수보다 약해질 때 하락이 대형주 일부에서 시장 전반으로 확산된 것으로 봅니다. IPO 자금흡수나 기계적 매도량을 직접 측정하는 값은 아닙니다.",
           "source": "Yahoo Finance chart: RSP, SPY, QQEW, QQQ",
           "contribution": 0.0,
           "contributionPct": 0.0
@@ -408,11 +408,11 @@
           "category": "관찰/물가",
           "group": "macro",
           "role": "observation",
-          "value": 78.0,
+          "value": 90.4,
           "unit": "score",
           "weight": 0.0,
-          "trend": "down",
-          "detail": "광의 원자재 DBC 20개 관측치 +3.85%·최근 5개 +4.20%, 농산물 DBA 20개 관측치 +0.28%·최근 5개 +1.98%. 유가 단일 충격이 농산물과 광의 원자재로 번지는지 보는 선물 ETF proxy이며 종합점수에는 반영하지 않습니다.",
+          "trend": "flat",
+          "detail": "광의 원자재 DBC 20개 관측치 +6.65%·최근 5개 +1.24%, 농산물 DBA 20개 관측치 +2.46%·최근 5개 +0.57%. 유가 단일 충격이 농산물과 광의 원자재로 번지는지 보는 선물 ETF proxy이며 종합점수에는 반영하지 않습니다.",
           "source": "Yahoo Finance chart: DBC, DBA",
           "contribution": 0.0,
           "contributionPct": 0.0
@@ -422,13 +422,13 @@
           "name": "글로벌 AI 반도체 스트레스",
           "category": "AI 반도체",
           "group": "ai_semi",
-          "value": 70.4,
+          "value": 71.9,
           "unit": "score",
           "weight": 0.1,
           "trend": "flat",
-          "detail": "7개 글로벌 AI 반도체 basket, SOX 11,740.37, SOX 20일 수익률 -0.66%, NVDA 점수 51.6, TSM 점수 66.9",
+          "detail": "7개 글로벌 AI 반도체 basket, SOX 11,423.17, SOX 20일 수익률 -1.14%, NVDA 점수 53.6, TSM 점수 69.7",
           "source": "Yahoo Finance chart: ^SOX, NVDA, TSM, AVGO, AMD, MU, ASML",
-          "contribution": 7.04,
+          "contribution": 7.19,
           "contributionPct": 10.0
         },
         {
@@ -436,13 +436,13 @@
           "name": "빅테크 AI 수요 우려",
           "category": "AI 수요",
           "group": "ai_semi",
-          "value": 60.2,
+          "value": 59.1,
           "unit": "score",
           "weight": 0.06,
           "trend": "up",
-          "detail": "Apple 309.35, Apple 20일 수익률 -7.11%, 빅테크 바스켓 +6.23%, 메모리 공급자 바스켓 -0.20%, 비용압력 격차 -6.44%",
+          "detail": "Apple 310.34, Apple 20일 수익률 -7.89%, 빅테크 바스켓 +6.27%, 메모리 공급자 바스켓 -0.29%, 비용압력 격차 -6.55%",
           "source": "Yahoo Finance chart: AAPL, MSFT, GOOGL, META, AMZN, 005930.KS, 000660.KS, MU",
-          "contribution": 3.61,
+          "contribution": 3.55,
           "contributionPct": 6.0
         },
         {
@@ -450,13 +450,13 @@
           "name": "한국 AI 반도체 쏠림/스트레스",
           "category": "AI 반도체",
           "group": "ai_semi",
-          "value": 74.1,
+          "value": 74.2,
           "unit": "score",
           "weight": 0.1,
           "trend": "flat",
-          "detail": "5개 한국 반도체 basket, 삼성전자 257,000.00, SK하이닉스 1,675,000.00, 반도체 60일 상대성과 -15.42%, 쏠림점수 51.4",
+          "detail": "5개 한국 반도체 basket, 삼성전자 257,000.00, SK하이닉스 1,671,000.00, 반도체 60일 상대성과 -15.41%, 쏠림점수 51.4",
           "source": "Yahoo Finance chart: 005930.KS, 000660.KS, 042700.KS, 000990.KS, 058470.KQ, ^KS11",
-          "contribution": 7.41,
+          "contribution": 7.42,
           "contributionPct": 10.0
         },
         {
@@ -478,11 +478,11 @@
           "name": "거래량 과열/위축 압력",
           "category": "유동성",
           "group": "liquidity",
-          "value": 43.9,
+          "value": 43.8,
           "unit": "score",
           "weight": 0.07,
           "trend": "flat",
-          "detail": "주요 반도체·KODEX ETF 거래량의 60일 평균 대비 평균 괴리 -24.99%, 최대 괴리 +4.58%",
+          "detail": "주요 반도체·KODEX ETF 거래량의 60일 평균 대비 평균 괴리 -24.97%, 최대 괴리 +4.59%",
           "source": "Naver Finance chart: 005930, 000660, 042700, 069500, 122630",
           "contribution": 3.07,
           "contributionPct": 7.0
@@ -492,13 +492,13 @@
           "name": "삼성전자·하이닉스 단일종목 레버리지",
           "category": "단일종목/레버리지",
           "group": "overheating",
-          "value": 72.1,
+          "value": 72.2,
           "unit": "score",
           "weight": 0.04,
           "trend": "flat",
-          "detail": "삼성전자 257,000.00, SK하이닉스 1,675,000.00, 20일 수익률 삼성 +3.01%·하이닉스 -4.78%, KOSPI 대비 변동성 배율 삼성 1.45x·하이닉스 1.68x",
+          "detail": "삼성전자 257,000.00, SK하이닉스 1,671,000.00, 20일 수익률 삼성 +3.01%·하이닉스 -5.00%, KOSPI 대비 변동성 배율 삼성 1.45x·하이닉스 1.68x",
           "source": "Yahoo Finance chart: 005930.KS, 000660.KS, ^KS11",
-          "contribution": 2.88,
+          "contribution": 2.89,
           "contributionPct": 4.0
         },
         {
@@ -506,11 +506,11 @@
           "name": "글로벌 신용스프레드 proxy",
           "category": "신용/크레딧",
           "group": "macro",
-          "value": 38.4,
+          "value": 37.8,
           "unit": "score",
           "weight": 0.01,
           "trend": "up",
-          "detail": "HYG/LQD 상대가격 기준, 20일 수익률 +0.77%, 고점대비 -0.21%",
+          "detail": "HYG/LQD 상대가격 기준, 20일 수익률 +0.85%, 고점대비 -0.34%",
           "source": "Yahoo Finance chart: HYG, LQD",
           "contribution": 0.38,
           "contributionPct": 1.0
@@ -520,13 +520,13 @@
           "name": "신흥국 위험선호 스트레스",
           "category": "글로벌",
           "group": "overheating",
-          "value": 64.7,
+          "value": 68.6,
           "unit": "score",
           "weight": 0.05,
           "trend": "down",
-          "detail": "EEM 67.12, 20일 수익률 +5.98%, 고점대비 -5.74%",
+          "detail": "EEM 66.11, 20일 수익률 +3.91%, 고점대비 -7.16%",
           "source": "Yahoo Finance chart: EEM",
-          "contribution": 3.24,
+          "contribution": 3.43,
           "contributionPct": 5.0
         },
         {
@@ -535,17 +535,17 @@
           "category": "관찰/기업신용",
           "group": "macro",
           "role": "observation",
-          "value": 44.6,
+          "value": 29.4,
           "unit": "score",
           "weight": 0.0,
           "trend": "down",
-          "asOf": "2026-08-21",
+          "asOf": "2026-08-24",
           "quality": "partial",
           "detail": [
-            "주도요인 M7 시장대비 고유손실 43.0점",
-            "M7 중간 잔차 5D +0.17% · 최약 META -5.22%",
-            "IG 금리중립 손실 5D -0.03% · OFR FSI -2.62",
-            "구성종목 7/7 · 점수 커버리지 100% · 품질 대체 가격원 · 기준일 2026-08-21",
+            "주도요인 투자등급 금리중립 약세 39.8점",
+            "M7 중간 잔차 5D +2.58% · 최약 NVDA -3.84%",
+            "IG 금리중립 손실 5D -0.13% · OFR FSI -2.67",
+            "구성종목 7/7 · 점수 커버리지 100% · 품질 대체 가격원 · 기준일 2026-08-24",
             "본 지표는 CDS 스프레드가 아니며, 공개 시장자료를 이용해 산출한 상대적 신용 스트레스 프록시입니다."
           ],
           "source": "기존 대시보드 가격 피드 · OFR FSI · U.S. Treasury",
@@ -565,9 +565,9 @@
         {
           "id": "ai_semi",
           "label": "AI Semi",
-          "score": 69.5,
+          "score": 69.8,
           "weight": 0.26,
-          "contribution": 18.06,
+          "contribution": 18.16,
           "indicatorCount": 3,
           "observationCount": 0
         },
@@ -583,18 +583,18 @@
         {
           "id": "macro",
           "label": "Macro",
-          "score": 39.8,
+          "score": 39.0,
           "weight": 0.3,
-          "contribution": 11.93,
+          "contribution": 11.7,
           "indicatorCount": 9,
           "observationCount": 7
         },
         {
           "id": "overheating",
           "label": "Overheating",
-          "score": 68.0,
+          "score": 70.2,
           "weight": 0.09,
-          "contribution": 6.12,
+          "contribution": 6.32,
           "indicatorCount": 2,
           "observationCount": 0
         },
@@ -610,7 +610,7 @@
         {
           "id": "liquidity",
           "label": "Liquidity",
-          "score": 43.9,
+          "score": 43.8,
           "weight": 0.07,
           "contribution": 3.07,
           "indicatorCount": 1,
@@ -622,36 +622,36 @@
           "id": "ai-roi",
           "title": "AI 투자 ROI 회의론",
           "status": "주의",
-          "score": 65.5,
+          "score": 65.3,
           "tone": "caution",
           "decision": "기존 가중지표 유지",
           "components": [
             {
               "id": "bigtech_ai_demand_pressure",
               "name": "빅테크 AI 수요 우려",
-              "value": 60.2,
+              "value": 59.1,
               "weight": 0.55,
-              "contribution": 33.11
+              "contribution": 32.51
             },
             {
               "id": "global_ai_semiconductor_stress",
               "name": "글로벌 AI 반도체 스트레스",
-              "value": 70.4,
+              "value": 71.9,
               "weight": 0.25,
-              "contribution": 17.6
+              "contribution": 17.98
             },
             {
               "id": "korea_ai_semiconductor_concentration",
               "name": "한국 AI 반도체 쏠림/스트레스",
-              "value": 74.1,
+              "value": 74.2,
               "weight": 0.2,
-              "contribution": 14.82
+              "contribution": 14.84
             }
           ],
           "evidence": [
-            "빅테크 AI 수요 우려 60.2",
-            "글로벌 AI 반도체 70.4",
-            "한국 AI 반도체 74.1"
+            "빅테크 AI 수요 우려 59.1",
+            "글로벌 AI 반도체 71.9",
+            "한국 AI 반도체 74.2"
           ],
           "assessment": "반도체 가격 스트레스와 빅테크 수요 신호를 분리합니다. 반도체 조정이 크더라도 빅테크 수요 신호가 동반 악화되지 않으면 ROI 붕괴로 단정하지 않습니다. 실적·CAPEX·매출 추정치 데이터가 없는 현재는 가중치를 늘리지 않습니다.",
           "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검"
@@ -660,28 +660,28 @@
           "id": "geopolitics-reinflation",
           "title": "지정학·재인플레이션",
           "status": "부담 높음",
-          "score": 77.7,
+          "score": 78.2,
           "tone": "danger",
           "decision": "관찰지표 보강",
           "components": [
             {
               "id": "broad_reinflation_watch",
               "name": "원자재·농산물 재인플레이션",
-              "value": 78.0,
+              "value": 90.4,
               "weight": 0.55,
-              "contribution": 42.9
+              "contribution": 49.72
             },
             {
               "id": "energy_import_cost_pressure",
               "name": "원화 환산 에너지 수입비용",
-              "value": 77.3,
+              "value": 63.2,
               "weight": 0.45,
-              "contribution": 34.78
+              "contribution": 28.44
             }
           ],
           "evidence": [
-            "원화 환산 에너지 비용 77.3",
-            "원자재·농산물 재인플레이션 78.0"
+            "원화 환산 에너지 비용 63.2",
+            "원자재·농산물 재인플레이션 90.4"
           ],
           "assessment": "유가 단일 상승과 광의 물가 확산을 분리합니다. 원자재·농산물의 5일 흐름이 꺾여도 20일 누적압력이 높으면 즉시 해소로 보지 않습니다.",
           "operation": "DBC·DBA 관찰카드 유지 · 기존 에너지 가중치 변경 없음"
@@ -690,7 +690,7 @@
           "id": "macro-rates",
           "title": "매크로 금리 불확실성",
           "status": "주의",
-          "score": 60.3,
+          "score": 60.9,
           "tone": "caution",
           "decision": "기존 가중지표 유지",
           "components": [
@@ -704,14 +704,14 @@
             {
               "id": "us_financial_conditions_stress",
               "name": "미국 금융여건 긴축 압력",
-              "value": 35.0,
+              "value": 36.4,
               "weight": 0.4,
-              "contribution": 14.0
+              "contribution": 14.56
             }
           ],
           "evidence": [
             "글로벌 금리 압력 77.2",
-            "미국 금융여건 35.0"
+            "미국 금융여건 36.4"
           ],
           "assessment": "시장금리 레벨과 금융여건을 함께 봅니다. 지정학 완화가 예상되더라도 실제 금리와 금융여건 점수가 낮아지기 전에는 부담 완화를 선반영하지 않습니다.",
           "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -720,36 +720,36 @@
           "id": "flow-deleveraging",
           "title": "옵션 헤지·디레버리징",
           "status": "확산 미확인",
-          "score": 19.7,
+          "score": 32.5,
           "tone": "good",
           "decision": "관찰지표 보강",
           "components": [
             {
               "id": "volatility_term_structure_watch",
               "name": "옵션 헤지·변동성 기간구조",
-              "value": 24.2,
+              "value": 33.2,
               "weight": 0.45,
-              "contribution": 10.89
-            },
-            {
-              "id": "trading_activity_heat",
-              "name": "거래량 과열/위축 압력",
-              "value": 43.9,
-              "weight": 0.2,
-              "contribution": 8.78
+              "contribution": 14.94
             },
             {
               "id": "us_market_breadth_watch",
               "name": "미국 증시 폭 악화",
-              "value": 0.0,
+              "value": 25.1,
               "weight": 0.35,
-              "contribution": 0.0
+              "contribution": 8.79
+            },
+            {
+              "id": "trading_activity_heat",
+              "name": "거래량 과열/위축 압력",
+              "value": 43.8,
+              "weight": 0.2,
+              "contribution": 8.76
             }
           ],
           "evidence": [
-            "옵션 기간구조 24.2",
-            "미국 증시 폭 악화 0.0",
-            "거래 유동성 43.9"
+            "옵션 기간구조 33.2",
+            "미국 증시 폭 악화 25.1",
+            "거래 유동성 43.8"
           ],
           "assessment": "VIX 기간구조와 동일가중 상대성과로 공포와 하락 확산을 교차 확인합니다. 동일가중 상대성과가 강하면 대형 기술주 조정은 확인하되 시장 전반 디레버리징으로 판정하지 않습니다. 딜러 델타·감마, 기관 포지션과 IPO 자금흡수의 직접 관측값은 아닙니다.",
           "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -774,116 +774,116 @@
       "m7CreditProxy": {
         "name": "M7 Credit Stress Proxy",
         "latest": {
-          "as_of": "2026-08-21",
-          "updated_at_kst": "2026-08-24T15:35:36+09:00",
-          "score": 44.6,
-          "score_band": "Normal",
-          "score_band_label": "보통",
-          "change_1d": -5.9,
-          "change_5d": -15.1,
-          "worst_member": "META",
-          "worst_member_residual_5d": -0.052152,
-          "m7_idio_loss_5d": -0.001681,
-          "m7_dispersion_5d": 0.031474,
-          "ig_credit_loss_5d": -0.000302,
-          "hy_ig_relative_5d": -0.00063,
-          "ofr_fsi": -2.624,
-          "treasury_5y": 4.43,
-          "treasury_10y": 4.74,
-          "treasury_2s10s": 0.5,
+          "as_of": "2026-08-24",
+          "updated_at_kst": "2026-08-25T07:30:24+09:00",
+          "score": 29.4,
+          "score_band": "Low",
+          "score_band_label": "낮음",
+          "change_1d": -15.2,
+          "change_5d": -38.5,
+          "worst_member": "NVDA",
+          "worst_member_residual_5d": -0.038435,
+          "m7_idio_loss_5d": -0.025844,
+          "m7_dispersion_5d": 0.018811,
+          "ig_credit_loss_5d": -0.001312,
+          "hy_ig_relative_5d": 0.003411,
+          "ofr_fsi": -2.675,
+          "treasury_5y": 4.41,
+          "treasury_10y": 4.7,
+          "treasury_2s10s": 0.46,
           "coverage": 1.0,
           "member_coverage": 7,
           "quality": "partial",
           "top_driver": {
-            "id": "m7_idio_loss_5d",
-            "score": 43.0,
-            "weight": 0.3,
-            "weighted_points": 12.9
+            "id": "ig_credit_loss_5d",
+            "score": 39.8,
+            "weight": 0.2,
+            "weighted_points": 7.96
           },
           "disclaimer": "본 지표는 CDS 스프레드가 아니며, 공개 시장자료를 이용해 산출한 상대적 신용 스트레스 프록시입니다."
         },
         "members": [
           {
-            "ticker": "META",
-            "close": 549.9000244140625,
-            "return_1d": 0.007456547270739078,
-            "return_5d": -0.06772900368808188,
-            "rolling_beta": 0.740767359061184,
-            "residual_1d": 0.004818137109489758,
-            "residual_5d": -0.052152299297154946,
-            "drawdown_60d": 0.19287838666014845,
+            "ticker": "NVDA",
+            "close": 208.47999572753906,
+            "return_1d": -0.029061128249296964,
+            "return_5d": -0.0734633979949485,
+            "rolling_beta": 1.142648439903218,
+            "residual_1d": -0.01803106976271646,
+            "residual_5d": -0.038435085507550544,
+            "drawdown_60d": 0.07465604570078377,
             "quality_flag": "ok",
             "rank": 1
           },
           {
-            "ticker": "NVDA",
-            "close": 214.72000122070312,
-            "return_1d": -0.00982248016076015,
-            "return_5d": -0.04636703798012565,
-            "rolling_beta": 1.1349819646392376,
-            "residual_1d": -0.013871149567622598,
-            "residual_5d": -0.019160309612663348,
-            "drawdown_60d": 0.0469596169007781,
+            "ticker": "META",
+            "close": 559.02001953125,
+            "return_1d": 0.016584823990333897,
+            "return_5d": -0.017487656087682435,
+            "rolling_beta": 0.7349612331687024,
+            "residual_1d": 0.02382041577233345,
+            "residual_5d": 0.006524149207638327,
+            "drawdown_60d": 0.17949241676411276,
             "quality_flag": "ok",
             "rank": 2
           },
           {
-            "ticker": "MSFT",
-            "close": 483.239990234375,
-            "return_1d": 0.004343752186226402,
-            "return_5d": -0.02270951902345064,
-            "rolling_beta": 0.42805791097498785,
-            "residual_1d": 0.002825705502170266,
-            "residual_5d": -0.012488513886211087,
-            "drawdown_60d": 0.043295872691496595,
+            "ticker": "AAPL",
+            "close": 310.3399963378906,
+            "return_1d": 0.0032002269754076718,
+            "return_5d": 0.015543702532552661,
+            "rolling_beta": 0.20257196203735794,
+            "residual_1d": 0.0052269020439183606,
+            "residual_5d": 0.022236130838261925,
+            "drawdown_60d": 0.08666292801472375,
             "quality_flag": "ok",
             "rank": 3
           },
           {
             "ticker": "AMZN",
-            "close": 258.6300048828125,
-            "return_1d": -0.005689825658748426,
-            "return_5d": -0.015305498218500801,
-            "rolling_beta": 0.7017375873698001,
-            "residual_1d": -0.00817926607480066,
-            "residual_5d": 0.0016810363485366062,
-            "drawdown_60d": 0.0893950606048266,
+            "close": 262.07000732421875,
+            "return_1d": 0.01330086369122152,
+            "return_5d": 0.002908460344899666,
+            "rolling_beta": 0.6969465458744958,
+            "residual_1d": 0.02020351679773364,
+            "residual_5d": 0.0258443825644117,
+            "drawdown_60d": 0.07728322842937829,
             "quality_flag": "ok",
             "rank": 4
           },
           {
-            "ticker": "GOOGL",
-            "close": 344.82000732421875,
-            "return_1d": 0.012181858493291564,
-            "return_5d": -0.0031222509144906985,
-            "rolling_beta": 0.7448104301507839,
-            "residual_1d": 0.00948325992083846,
-            "residual_5d": 0.015031785917921139,
-            "drawdown_60d": 0.11561285016322209,
+            "ticker": "MSFT",
+            "close": 487.30999755859375,
+            "return_1d": 0.00842233136012771,
+            "return_5d": 0.016399187958856087,
+            "rolling_beta": 0.4309820529176883,
+            "residual_1d": 0.012709786134331009,
+            "residual_5d": 0.03033886715434925,
+            "drawdown_60d": 0.03523819351770263,
             "quality_flag": "ok",
             "rank": 5
           },
           {
-            "ticker": "AAPL",
-            "close": 309.3500061035156,
-            "return_1d": -0.006263995393247401,
-            "return_5d": 0.01117907204135693,
-            "rolling_beta": 0.2056998015276856,
-            "residual_1d": -0.007008661314350412,
-            "residual_5d": 0.016268226080646306,
-            "drawdown_60d": 0.08957648989082045,
+            "ticker": "GOOGL",
+            "close": 348.05999755859375,
+            "return_1d": 0.00939617819603078,
+            "return_5d": 0.011802318484284147,
+            "rolling_beta": 0.7363729085329,
+            "residual_1d": 0.01673808577900307,
+            "residual_5d": 0.03604293742982262,
+            "drawdown_60d": 0.08432479970159468,
             "quality_flag": "ok",
             "rank": 6
           },
           {
             "ticker": "TSLA",
-            "close": 362.8599853515625,
-            "return_1d": 0.05137188948486271,
-            "return_5d": 0.06015717707890578,
-            "rolling_beta": 1.5004763304647366,
-            "residual_1d": 0.04480762020872609,
-            "residual_5d": 0.0950759133462743,
-            "drawdown_60d": 0.17923551155391626,
+            "close": 348.95001220703125,
+            "return_1d": -0.03833427136104406,
+            "return_5d": 0.02844098072868384,
+            "rolling_beta": 1.5060633227058366,
+            "residual_1d": -0.02398263734876222,
+            "residual_5d": 0.07731155330142384,
+            "drawdown_60d": 0.19927027842571343,
             "quality_flag": "ok",
             "rank": 7
           }
@@ -991,10 +991,10 @@
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260824T153505-1535-full",
-    "mode": "full",
+    "runId": "20260825T073000-0730-fast",
+    "mode": "fast",
     "state": "generated",
-    "startedAt": "2026-08-24 15:35:05 KST",
-    "preparedAt": "2026-08-24 15:38:33 KST"
+    "startedAt": "2026-08-25 07:30:00 KST",
+    "preparedAt": "2026-08-25 07:31:56 KST"
   }
 }
