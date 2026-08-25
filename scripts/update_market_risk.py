@@ -239,6 +239,24 @@ NAVER_MARKET_INDEXES = {
         "min_observations": 80,
         "max_cache_age_days": 7,
     },
+    "jp2y_naver": {
+        "category": "bond",
+        "symbol": "JP2YT=RR",
+        "label": "일본 국채 2년",
+        "frequency": "daily",
+        "target_observations": 780,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
+    "jp30y_naver": {
+        "category": "bond",
+        "symbol": "JP30YT=RR",
+        "label": "일본 국채 30년",
+        "frequency": "daily",
+        "target_observations": 780,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
     "kr3y": {
         "category": "bond",
         "symbol": "KR3YT=RR",
@@ -252,6 +270,15 @@ NAVER_MARKET_INDEXES = {
         "category": "bond",
         "symbol": "KR10YT=RR",
         "label": "한국 국채 10년",
+        "frequency": "daily",
+        "target_observations": 780,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
+    "kr30y": {
+        "category": "bond",
+        "symbol": "KR30YT=RR",
+        "label": "한국 국채 30년",
         "frequency": "daily",
         "target_observations": 780,
         "min_observations": 80,
@@ -276,9 +303,67 @@ NAVER_CRYPTO_DIRECTION_INDEXES = {
         "max_cache_age_days": 2,
     }
 }
+RATE_SPREAD_DIRECTION_INDEXES = {
+    "us_10y2y_spread": {
+        "provider": "derived",
+        "category": "bond-spread",
+        "symbol": "US10YT=RR - US2YT=RR",
+        "label": "미국 10Y-2Y",
+        "frequency": "daily",
+        "longSeries": "us10y_naver",
+        "shortSeries": "us2y_naver",
+        "formula": "미국 국채 10년 금리 - 2년 금리",
+        "unit": "percentagePoint",
+    },
+    "kr_10y3y_spread": {
+        "provider": "derived",
+        "category": "bond-spread",
+        "symbol": "KR10YT=RR - KR3YT=RR",
+        "label": "한국 10Y-3Y",
+        "frequency": "daily",
+        "longSeries": "kr10y",
+        "shortSeries": "kr3y",
+        "formula": "한국 국채 10년 금리 - 3년 금리",
+        "unit": "percentagePoint",
+    },
+    "kr_30y10y_spread": {
+        "provider": "derived",
+        "category": "bond-spread",
+        "symbol": "KR30YT=RR - KR10YT=RR",
+        "label": "한국 30Y-10Y",
+        "frequency": "daily",
+        "longSeries": "kr30y",
+        "shortSeries": "kr10y",
+        "formula": "한국 국채 30년 금리 - 10년 금리",
+        "unit": "percentagePoint",
+    },
+    "jp_10y2y_spread": {
+        "provider": "derived",
+        "category": "bond-spread",
+        "symbol": "JP10YT=RR - JP2YT=RR",
+        "label": "일본 10Y-2Y",
+        "frequency": "daily",
+        "longSeries": "jp10y_naver",
+        "shortSeries": "jp2y_naver",
+        "formula": "일본 국채 10년 금리 - 2년 금리",
+        "unit": "percentagePoint",
+    },
+    "jp_30y10y_spread": {
+        "provider": "derived",
+        "category": "bond-spread",
+        "symbol": "JP30YT=RR - JP10YT=RR",
+        "label": "일본 30Y-10Y",
+        "frequency": "daily",
+        "longSeries": "jp30y_naver",
+        "shortSeries": "jp10y_naver",
+        "formula": "일본 국채 30년 금리 - 10년 금리",
+        "unit": "percentagePoint",
+    },
+}
 MARKET_DIRECTION_INDEXES = {
     **NAVER_MARKET_INDEXES,
     **NAVER_CRYPTO_DIRECTION_INDEXES,
+    **RATE_SPREAD_DIRECTION_INDEXES,
 }
 MARKET_LATEST_INDEX_IDS = tuple(MARKET_DIRECTION_INDEXES)
 
@@ -762,6 +847,93 @@ def fetch_naver_market_index_latest_snapshots(
     )
 
 
+def make_aligned_difference_series(first_series, second_series):
+    """두 원천의 공통 관측일만 사용해 첫 번째 값에서 두 번째 값을 뺍니다."""
+    first_by_date = {point["date"]: point["close"] for point in first_series}
+    second_by_date = {point["date"]: point["close"] for point in second_series}
+    return [
+        {
+            "date": date,
+            "close": round(first_by_date[date] - second_by_date[date], 6),
+            "volume": None,
+        }
+        for date in sorted(set(first_by_date).intersection(second_by_date))
+    ]
+
+
+def build_rate_spread_series(series_map):
+    """장·단기 국채금리 원천으로 국가별 커브 스프레드를 만듭니다."""
+    augmented = dict(series_map)
+    for key, config in RATE_SPREAD_DIRECTION_INDEXES.items():
+        augmented.pop(key, None)
+        long_series = augmented.get(config["longSeries"]) or []
+        short_series = augmented.get(config["shortSeries"]) or []
+        if long_series and short_series:
+            augmented[key] = make_aligned_difference_series(long_series, short_series)
+    return augmented
+
+
+def build_rate_spread_live_snapshots(series_map, snapshots, statuses=None):
+    """동일 관측일의 장·단기 잠정값만 결합해 스프레드 최신값을 만듭니다."""
+    augmented = dict(snapshots)
+    augmented_statuses = dict(statuses or {})
+    for key, config in RATE_SPREAD_DIRECTION_INDEXES.items():
+        long_id = config["longSeries"]
+        short_id = config["shortSeries"]
+        long_snapshot = snapshots.get(long_id) or {}
+        short_snapshot = snapshots.get(short_id) or {}
+        if not long_snapshot or long_snapshot.get("date") != short_snapshot.get("date"):
+            continue
+        required = (
+            long_snapshot.get("close"),
+            short_snapshot.get("close"),
+            long_snapshot.get("previousClose"),
+            short_snapshot.get("previousClose"),
+        )
+        if not all(isinstance(value, (int, float)) for value in required):
+            continue
+
+        close = long_snapshot["close"] - short_snapshot["close"]
+        previous_close = long_snapshot["previousClose"] - short_snapshot["previousClose"]
+        confirmed_rows = series_map.get(key) or []
+        confirmed_date = confirmed_rows[-1]["date"] if confirmed_rows else None
+        observed_at = max(
+            str(long_snapshot.get("observedAt") or ""),
+            str(short_snapshot.get("observedAt") or ""),
+        )
+        is_provisional = bool(
+            long_snapshot.get("isProvisional") or short_snapshot.get("isProvisional")
+        )
+        source_statuses = [
+            augmented_statuses.get(long_id, "unknown"),
+            augmented_statuses.get(short_id, "unknown"),
+        ]
+        derived_status = f"derived: {' + '.join(source_statuses)}"
+        augmented[key] = {
+            "date": long_snapshot["date"],
+            "observedAt": observed_at,
+            "close": round(close, 6),
+            "previousClose": round(previous_close, 6),
+            "change": round(close - previous_close, 6),
+            "changeBps": round((close - previous_close) * 100, 2),
+            "marketStatus": (
+                "OPEN"
+                if "OPEN" in {long_snapshot.get("marketStatus"), short_snapshot.get("marketStatus")}
+                else "CLOSED"
+            ),
+            "delayTime": None,
+            "delayTimeName": None,
+            "priceDataType": "INDICATIVE" if is_provisional else "CLOSING_PRICE",
+            "displayStatus": "장중 계산" if is_provisional else "최근 EOD 계산",
+            "source": f"Naver Pay Securities · {config['formula']}",
+            "confirmedDate": confirmed_date,
+            "isProvisional": is_provisional,
+            "fetchStatus": derived_status,
+        }
+        augmented_statuses[key] = derived_status
+    return augmented, augmented_statuses
+
+
 def write_naver_market_index_cache(series_map, fetch_statuses, live_snapshots=None, live_statuses=None):
     now = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
     cached_payload = load_naver_market_index_cache_payload()
@@ -783,6 +955,18 @@ def write_naver_market_index_cache(series_map, fetch_statuses, live_snapshots=No
                 key, fetch_statuses.get(key, "cache_fallback")
             )
 
+    cache_series = build_rate_spread_series(cache_series)
+    for key, config in RATE_SPREAD_DIRECTION_INDEXES.items():
+        if key in cache_series:
+            fetch_statuses[key] = (
+                f"derived: {config['longSeries']} - {config['shortSeries']}"
+            )
+    cache_snapshots, cache_statuses = build_rate_spread_live_snapshots(
+        cache_series,
+        cache_snapshots,
+        cache_statuses,
+    )
+
     metadata = {}
     for key, rows in cache_series.items():
         config = MARKET_DIRECTION_INDEXES.get(key)
@@ -798,7 +982,7 @@ def write_naver_market_index_cache(series_map, fetch_statuses, live_snapshots=No
     payload = {
         "schemaVersion": 1,
         "generatedAt": now,
-        "source": "Naver Pay Securities market-index and crypto endpoints",
+        "source": "Naver Pay Securities market-index and crypto endpoints · 국채금리 스프레드 파생",
         "sourcePages": {
             "transport": "https://stock.naver.com/market/marketindex/transport",
             "metals": "https://stock.naver.com/market/marketindex/metals",
@@ -1039,6 +1223,25 @@ def refresh_naver_market_index_latest_cache():
             live_statuses[key] = (payload.get("liveSnapshotStatuses") or {}).get(
                 key, "cache_fallback"
             )
+    series_map = build_rate_spread_series(series_map)
+    live_snapshots, live_statuses = build_rate_spread_live_snapshots(
+        series_map,
+        live_snapshots,
+        live_statuses,
+    )
+    payload["series"] = series_map
+    payload.setdefault("metadata", {})
+    for key, config in RATE_SPREAD_DIRECTION_INDEXES.items():
+        rows = series_map.get(key) or []
+        if not rows:
+            continue
+        payload["metadata"][key] = {
+            **config,
+            "fetchStatus": live_statuses.get(key, "derived"),
+            "observations": len(rows),
+            "firstDate": rows[0]["date"],
+            "lastDate": rows[-1]["date"],
+        }
     payload["liveSnapshotsGeneratedAt"] = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
     payload["liveSnapshots"] = live_snapshots
     payload["liveSnapshotStatuses"] = live_statuses

@@ -164,12 +164,20 @@ def test_dashboard_contract():
         "usdcny",
         "usdjpy",
         "usdkrw_naver",
-        "us2y_naver",
-        "us10y_naver",
-        "jp10y_naver",
-        "kr3y",
-        "kr10y",
-    }
+            "us2y_naver",
+            "us10y_naver",
+            "jp2y_naver",
+            "jp10y_naver",
+            "jp30y_naver",
+            "kr3y",
+            "kr10y",
+            "kr30y",
+            "us_10y2y_spread",
+            "kr_10y3y_spread",
+            "kr_30y10y_spread",
+            "jp_10y2y_spread",
+            "jp_30y10y_spread",
+        }
     assert required_market_series <= set(market_index_cache["series"])
     assert set(market_index_cache["series"]) <= required_market_series | {"btc"}
     if "btc" in market_index_cache["series"]:
@@ -559,7 +567,12 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert 'loadJson("./data/pipeline-status.json")' in app_source
     assert 'loadJson("./data/naver-marketindex-history.json")' in app_source
     assert "renderMarketIndexTrendPanel" in app_source
-    assert "금리·환율·원자재·운임 방향성" in app_source
+    assert "금리·스프레드·환율·원자재·운임 방향성" in app_source
+    assert 'id: "spreads"' in app_source
+    assert '{ id: "us_10y2y_spread", label: "미국 10Y-2Y", type: "spread"' in app_source
+    assert '{ id: "kr_30y10y_spread", label: "한국 30Y-10Y", type: "spread"' in app_source
+    assert '{ id: "jp_10y2y_spread", label: "일본 10Y-2Y", type: "spread"' in app_source
+    assert 'if (type === "spread") return `${number > 0 ? "+" : ""}${(number * 100).toFixed(1)}bp`' in app_source
     assert 'id: "digital"' in app_source
     assert '{ id: "btc", label: "비트코인 · 원화", type: "crypto"' in app_source
     assert 'if (type === "crypto") return `₩${formatNumber(number, 0)}`' in app_source

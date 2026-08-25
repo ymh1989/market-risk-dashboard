@@ -117,6 +117,17 @@ const marketTrendGroups = [
     ]
   },
   {
+    id: "spreads",
+    label: "금리 커브 스프레드",
+    items: [
+      { id: "us_10y2y_spread", label: "미국 10Y-2Y", type: "spread", upLabel: "커브 스티프닝", downLabel: "커브 플래트닝" },
+      { id: "kr_10y3y_spread", label: "한국 10Y-3Y", type: "spread", upLabel: "커브 스티프닝", downLabel: "커브 플래트닝" },
+      { id: "kr_30y10y_spread", label: "한국 30Y-10Y", type: "spread", upLabel: "초장기 부담 확대", downLabel: "초장기 부담 완화" },
+      { id: "jp_10y2y_spread", label: "일본 10Y-2Y", type: "spread", upLabel: "커브 스티프닝", downLabel: "커브 플래트닝" },
+      { id: "jp_30y10y_spread", label: "일본 30Y-10Y", type: "spread", upLabel: "초장기 부담 확대", downLabel: "초장기 부담 완화" }
+    ]
+  },
+  {
     id: "fx",
     label: "환율",
     items: [
@@ -2852,12 +2863,17 @@ function marketTrendPath(coordinates) {
     .join(" ");
 }
 
+function isRateTrendType(type) {
+  return type === "yield" || type === "spread";
+}
+
 function marketTrendChange(rows, offset, type) {
   if (!rows?.length || rows.length <= offset) return null;
   const latest = Number(rows[rows.length - 1].close);
   const base = Number(rows[rows.length - 1 - offset].close);
-  if (!Number.isFinite(latest) || !Number.isFinite(base) || base === 0) return null;
-  return type === "yield" ? (latest - base) * 100 : (latest / base - 1) * 100;
+  if (!Number.isFinite(latest) || !Number.isFinite(base)) return null;
+  if (!isRateTrendType(type) && base === 0) return null;
+  return isRateTrendType(type) ? (latest - base) * 100 : (latest / base - 1) * 100;
 }
 
 function marketTrendRangeMetric(rows, domain, type, frequency) {
@@ -2889,19 +2905,20 @@ function marketTrendRangeMetric(rows, domain, type, frequency) {
 function formatMarketTrendChange(value, type) {
   if (!Number.isFinite(value)) return "-";
   const sign = value > 0 ? "+" : "";
-  return type === "yield" ? `${sign}${value.toFixed(1)}bp` : `${sign}${value.toFixed(2)}%`;
+  return isRateTrendType(type) ? `${sign}${value.toFixed(1)}bp` : `${sign}${value.toFixed(2)}%`;
 }
 
 function formatMarketTrendCurrentComparison(pointValue, currentValue, type) {
   const point = Number(pointValue);
   const current = Number(currentValue);
-  if (!Number.isFinite(point) || !Number.isFinite(current) || point === 0) return "";
+  if (!Number.isFinite(point) || !Number.isFinite(current)) return "";
 
   const rawChange = current - point;
   if (Math.abs(rawChange) < 1e-10) return "현재와 동일";
-  if (type === "yield") {
+  if (isRateTrendType(type)) {
     return `현재까지 ${formatMarketTrendChange(rawChange * 100, type)}`;
   }
+  if (point === 0) return "";
 
   const scale = Math.max(Math.abs(point), Math.abs(current));
   const digits =
@@ -2930,6 +2947,7 @@ function formatMarketTrendValue(value, type) {
   if (!Number.isFinite(Number(value))) return "-";
   const number = Number(value);
   if (type === "yield") return `${number.toFixed(3)}%`;
+  if (type === "spread") return `${number > 0 ? "+" : ""}${(number * 100).toFixed(1)}bp`;
   if (type === "crypto") return `₩${formatNumber(number, 0)}`;
   if (type === "fx") return number >= 100 ? number.toFixed(2) : number.toFixed(4);
   if (number >= 1000) return formatNumber(number, 1);
@@ -2999,7 +3017,7 @@ function analyzeMarketTrend(definition, marketIndexes) {
   const downCount = changes.filter((value) => value < 0).length;
   const upShare = changes.length ? upCount / changes.length : 0.5;
   const monthChange = marketTrendChange(rows, oneMonthOffset, definition.type);
-  const meaningfulThreshold = definition.type === "yield" ? 3 : 0.5;
+  const meaningfulThreshold = isRateTrendType(definition.type) ? 3 : 0.5;
   const meaningful = Number.isFinite(monthChange) && Math.abs(monthChange) >= meaningfulThreshold;
   let direction = "flat";
   let persistent = false;
@@ -3171,7 +3189,7 @@ function renderMarketIndexTrendPanel(marketIndexes) {
       <header class="market-trend-panel__header">
         <div>
           <span class="eyebrow">Cross-Asset Direction</span>
-          <h2>금리·환율·원자재·운임 방향성</h2>
+          <h2>금리·스프레드·환율·원자재·운임 방향성</h2>
           ${renderNarrativeList(narrative, "narrative-list--compact")}
         </div>
         <div class="market-trend-panel__summary">
@@ -3201,7 +3219,7 @@ function renderMarketIndexTrendPanel(marketIndexes) {
       </div>
       ${renderChartTooltip()}
       <footer class="market-trend-panel__footer">
-        <span>Naver Pay 증권 · 업비트 BTC/KRW</span>
+        <span>Naver Pay 증권 · 업비트 BTC/KRW · 국채 스프레드는 동일 관측일 장기금리-단기금리</span>
         <span>현재값은 실시간·지연 잠정치 · 과거 시계열과 ML은 확정 EOD</span>
         <span>일간 최근 10회 · 주간 최근 6회 방향 판독</span>
         <span>전일·1주는 고정 · 기간 변동은 선택 구간 첫 관측 대비 · 부족 시 가용기간 표기</span>

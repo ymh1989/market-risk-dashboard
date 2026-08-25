@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from scripts.update_market_risk import (
     NAVER_MARKET_INDEXES,
     NAVER_CRYPTO_DIRECTION_INDEXES,
+    RATE_SPREAD_DIRECTION_INDEXES,
     _prepare_naver_crypto_direction_series,
     _weighted_asof_score_points,
     broad_reinflation_component_points,
@@ -15,11 +16,14 @@ from scripts.update_market_risk import (
     fetch_naver_market_index_latest_snapshot,
     fetch_naver_market_index_latest_snapshots,
     fetch_naver_market_index_series,
+    build_rate_spread_live_snapshots,
+    build_rate_spread_series,
     level_and_change_component_points,
     level_and_change_score_at,
     level_and_point_change_score,
     japan_us_rate_spread_component_points,
     make_difference_series,
+    make_aligned_difference_series,
     make_product_series,
     rolling_negative_point_changes,
     shipping_cost_pressure_score,
@@ -43,6 +47,68 @@ def test_naver_history_targets_cover_three_year_window():
 
     assert weekly_targets and min(weekly_targets) >= 160
     assert daily_targets and min(daily_targets) >= 760
+
+
+def test_rate_spreads_use_only_common_observation_dates():
+    long_series = [
+        {"date": "2026-08-20", "close": 4.6},
+        {"date": "2026-08-22", "close": 4.5},
+    ]
+    short_series = [
+        {"date": "2026-08-20", "close": 4.1},
+        {"date": "2026-08-21", "close": 4.0},
+        {"date": "2026-08-22", "close": 3.9},
+    ]
+
+    result = make_aligned_difference_series(long_series, short_series)
+
+    assert [point["date"] for point in result] == ["2026-08-20", "2026-08-22"]
+    assert [point["close"] for point in result] == [0.5, 0.6]
+
+
+def test_rate_spread_series_and_live_snapshot_are_derived_from_source_yields():
+    series_map = {
+        "us10y_naver": [{"date": "2026-08-25", "close": 4.63}],
+        "us2y_naver": [{"date": "2026-08-25", "close": 4.17}],
+    }
+    augmented = build_rate_spread_series(series_map)
+    assert augmented["us_10y2y_spread"][-1]["close"] == 0.46
+
+    snapshots = {
+        "us10y_naver": {
+            "date": "2026-08-26",
+            "observedAt": "2026-08-26T14:00:00+09:00",
+            "close": 4.60,
+            "previousClose": 4.63,
+            "marketStatus": "OPEN",
+            "isProvisional": True,
+        },
+        "us2y_naver": {
+            "date": "2026-08-26",
+            "observedAt": "2026-08-26T14:01:00+09:00",
+            "close": 4.10,
+            "previousClose": 4.17,
+            "marketStatus": "OPEN",
+            "isProvisional": True,
+        },
+    }
+    live, statuses = build_rate_spread_live_snapshots(
+        augmented,
+        snapshots,
+        {"us10y_naver": "live", "us2y_naver": "live"},
+    )
+
+    assert set(RATE_SPREAD_DIRECTION_INDEXES).issuperset({"us_10y2y_spread"})
+    assert live["us_10y2y_spread"]["close"] == 0.5
+    assert live["us_10y2y_spread"]["changeBps"] == 4.0
+    assert live["us_10y2y_spread"]["confirmedDate"] == "2026-08-25"
+    assert live["us_10y2y_spread"]["isProvisional"] is True
+    assert statuses["us_10y2y_spread"].startswith("derived:")
+
+    mismatched = json.loads(json.dumps(snapshots))
+    mismatched["us2y_naver"]["date"] = "2026-08-25"
+    unmatched_live, _ = build_rate_spread_live_snapshots(augmented, mismatched)
+    assert "us_10y2y_spread" not in unmatched_live
 
 
 def test_bitcoin_direction_series_separates_incomplete_utc_candle():
