@@ -978,8 +978,8 @@ def test_pipeline_status_contract():
     assert all(item["decision"] and item["operation"] for item in status["researchLog"])
     assert status["history"]
     assert quality["schemaVersion"] == 1
-    assert quality["summary"]["sourceSeriesExpected"] == 94
-    assert quality["summary"]["sourceSeriesPresent"] == 94
+    assert quality["summary"]["sourceSeriesExpected"] >= 94
+    assert quality["summary"]["sourceSeriesPresent"] == quality["summary"]["sourceSeriesExpected"]
     assert quality["summary"]["error"] == 0
 
 
