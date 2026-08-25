@@ -4,9 +4,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 
-WEEKDAY_TIMES = "07:30,09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35"
-MONDAY_TIMES = "09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35"
+WEEKDAY_TIMES = "07:30,09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35,18:30"
+MONDAY_TIMES = "09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35,18:30"
 LIVE_TIMES = "09:00,10:00,11:00,12:00,13:00,14:00,15:00"
+KRX_TIMES = "18:30"
 
 
 def load_pipeline_status_module():
@@ -42,6 +43,7 @@ def test_pipeline_status_keeps_previous_run_history(tmp_path):
         saturday_times="07:30",
         full_times="15:35",
         live_times=LIVE_TIMES,
+        krx_times=KRX_TIMES,
         schedule_grace_minutes=10,
         scheduled_time="15:35",
         run_id="2026-07-20-15:35",
@@ -69,6 +71,7 @@ def test_pipeline_status_keeps_previous_run_history(tmp_path):
         "live",
         "live",
         "full",
+        "krx",
     ]
     assert [item["mode"] for item in payload["schedule"]["mondayTimes"]] == [
         "live",
@@ -79,11 +82,13 @@ def test_pipeline_status_keeps_previous_run_history(tmp_path):
         "live",
         "live",
         "full",
+        "krx",
     ]
     assert payload["schedule"]["saturdayTimes"] == [{"time": "07:30", "mode": "full"}]
     assert payload["schedule"]["weekdaysOnly"] is False
     assert payload["schedule"]["delayGraceMinutes"] == 10
     assert payload["schedule"]["expectedDurationMinutes"]["live"] == 3
+    assert payload["schedule"]["expectedDurationMinutes"]["krx"] == 4
     assert all(source["lastDate"] for source in payload["sources"])
 
 
@@ -142,6 +147,7 @@ def test_pipeline_status_can_refresh_research_log_without_fabricating_a_run(tmp_
         saturday_times="07:30",
         full_times="15:35",
         live_times=LIVE_TIMES,
+        krx_times=KRX_TIMES,
         schedule_grace_minutes=10,
         scheduled_time="",
         run_id="",

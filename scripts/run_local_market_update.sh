@@ -8,8 +8,8 @@ STATE_DIR="$ROOT/logs/local-market-update-state"
 
 BRANCH="${LOCAL_MARKET_UPDATE_BRANCH:-main}"
 REMOTE="${LOCAL_MARKET_UPDATE_REMOTE:-origin}"
-TIMES="${LOCAL_MARKET_UPDATE_TIMES:-07:30,09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35}"
-MONDAY_TIMES="${LOCAL_MARKET_UPDATE_MONDAY_TIMES:-09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35}"
+TIMES="${LOCAL_MARKET_UPDATE_TIMES:-07:30,09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35,18:30}"
+MONDAY_TIMES="${LOCAL_MARKET_UPDATE_MONDAY_TIMES:-09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35,18:30}"
 SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"
 LABEL="${LOCAL_MARKET_UPDATE_LABEL:-com.marketlab.market-risk-update}"
 PYTHON_BIN="${LOCAL_MARKET_UPDATE_PYTHON:-}"
@@ -22,6 +22,7 @@ PAGES_DEPLOY_RETRIES="${LOCAL_MARKET_UPDATE_PAGES_DEPLOY_RETRIES:-2}"
 MODE="${LOCAL_MARKET_UPDATE_MODE:-auto}"
 FULL_TIMES="${LOCAL_MARKET_UPDATE_FULL_TIMES:-15:35}"
 LIVE_TIMES="${LOCAL_MARKET_UPDATE_LIVE_TIMES:-09:00,10:00,11:00,12:00,13:00,14:00,15:00}"
+KRX_TIMES="${LOCAL_MARKET_UPDATE_KRX_TIMES:-18:30}"
 SCHEDULE_GRACE_MINUTES="${LOCAL_MARKET_UPDATE_SCHEDULE_GRACE_MINUTES:-10}"
 ONLY_AT_SCHEDULED_KST=0
 SCHEDULE_STATE_FILE=""
@@ -48,6 +49,7 @@ if [[ -f "$ENV_FILE" ]]; then
   MODE="${LOCAL_MARKET_UPDATE_MODE:-$MODE}"
   FULL_TIMES="${LOCAL_MARKET_UPDATE_FULL_TIMES:-$FULL_TIMES}"
   LIVE_TIMES="${LOCAL_MARKET_UPDATE_LIVE_TIMES:-$LIVE_TIMES}"
+  KRX_TIMES="${LOCAL_MARKET_UPDATE_KRX_TIMES:-$KRX_TIMES}"
   SCHEDULE_GRACE_MINUTES="${LOCAL_MARKET_UPDATE_SCHEDULE_GRACE_MINUTES:-$SCHEDULE_GRACE_MINUTES}"
 fi
 
@@ -61,6 +63,9 @@ for arg in "$@"; do
       ;;
     --live|--mode=live)
       MODE="live"
+      ;;
+    --krx|--mode=krx)
+      MODE="krx"
       ;;
     --full|--mode=full)
       MODE="full"
@@ -171,9 +176,9 @@ wait_for_pages_deployment() {
 }
 
 resolve_update_mode() {
-  local full_time live_time
+  local full_time live_time krx_time
   case "$MODE" in
-    full|fast|live)
+    full|fast|live|krx)
       echo "$MODE"
       ;;
     auto)
@@ -190,6 +195,14 @@ resolve_update_mode() {
         full_time="${full_time//[[:space:]]/}"
         if [[ "$SCHEDULED_TIME" == "$full_time" ]]; then
           echo "full"
+          return 0
+        fi
+      done
+      IFS=',' read -ra krx_times <<< "$KRX_TIMES"
+      for krx_time in "${krx_times[@]}"; do
+        krx_time="${krx_time//[[:space:]]/}"
+        if [[ "$SCHEDULED_TIME" == "$krx_time" ]]; then
+          echo "krx"
           return 0
         fi
       done
@@ -339,6 +352,23 @@ seed_overnight_candidate() {
 
 seed_overnight_candidate
 
+update_kospi_breadth_data() {
+  local end_date="$1"
+  echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] KOSPI Market Breadth를 갱신합니다: EOD ${end_date}까지"
+  "$KOSPI_BREADTH_PYTHON" -m kospi_risk.cli update-kospi-breadth \
+    --start 2024-01-01 \
+    --end "$end_date" \
+    --output data/processed/kospi_breadth.parquet \
+    --metadata data/quality/kospi_breadth_update.json \
+    --raw-dir "$ROOT/data/raw/kospi_breadth" \
+    --skip-plots
+  "$KOSPI_BREADTH_PYTHON" scripts/export_kospi_breadth.py \
+    --input data/processed/kospi_breadth.parquet \
+    --metadata data/quality/kospi_breadth_update.json \
+    --output data/kospi-breadth.json
+  persist_local_data_cache
+}
+
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 갱신 모드: $UPDATE_MODE"
 if [[ "$UPDATE_MODE" == "live" ]]; then
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 장중 경량 갱신: 현재 시장값과 위험점수만 갱신합니다."
@@ -347,21 +377,20 @@ if [[ "$UPDATE_MODE" == "live" ]]; then
   MARKET_STAGE_COMPLETED_EPOCH="$(date +%s)"
   ML_STAGE_STARTED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"
   ML_STAGE_COMPLETED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"
+elif [[ "$UPDATE_MODE" == "krx" ]]; then
+  BREADTH_END_DATE="$(kst_now '+%Y-%m-%d')"
+  echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] KRX 확정치 갱신: 외국인·기관·프로그램 순매매만 보강합니다."
+  MARKET_STAGE_STARTED_EPOCH="$(date +%s)"
+  update_kospi_breadth_data "$BREADTH_END_DATE"
+  "$KOSPI_BREADTH_PYTHON" scripts/verify_kospi_flow_final.py \
+    --input data/processed/kospi_breadth.parquet \
+    --date "$BREADTH_END_DATE"
+  MARKET_STAGE_COMPLETED_EPOCH="$(date +%s)"
+  ML_STAGE_STARTED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"
+  ML_STAGE_COMPLETED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"
 else
 BREADTH_END_DATE="$("$PYTHON_BIN" -c 'from datetime import datetime, timedelta; from zoneinfo import ZoneInfo; now=datetime.now(ZoneInfo("Asia/Seoul")); target=now if now.strftime("%H:%M") >= "15:35" else now-timedelta(days=1); print(target.date().isoformat())')"
-echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] KOSPI Market Breadth를 갱신합니다: EOD ${BREADTH_END_DATE}까지"
-"$KOSPI_BREADTH_PYTHON" -m kospi_risk.cli update-kospi-breadth \
-  --start 2024-01-01 \
-  --end "$BREADTH_END_DATE" \
-  --output data/processed/kospi_breadth.parquet \
-  --metadata data/quality/kospi_breadth_update.json \
-  --raw-dir "$ROOT/data/raw/kospi_breadth" \
-  --skip-plots
-"$KOSPI_BREADTH_PYTHON" scripts/export_kospi_breadth.py \
-  --input data/processed/kospi_breadth.parquet \
-  --metadata data/quality/kospi_breadth_update.json \
-  --output data/kospi-breadth.json
-persist_local_data_cache
+update_kospi_breadth_data "$BREADTH_END_DATE"
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] M7 공개시장 신용스트레스 프록시를 갱신합니다."
 "$PYTHON_BIN" -m m7_credit_proxy.pipeline --update-latest
@@ -410,8 +439,10 @@ fi
 ML_STAGE_COMPLETED_EPOCH="$(date +%s)"
 fi
 
-echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 게시 직전 시장지표 최신값을 갱신합니다."
-"$PYTHON_BIN" scripts/update_market_risk.py --refresh-live-only
+if [[ "$UPDATE_MODE" != "krx" ]]; then
+  echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 게시 직전 시장지표 최신값을 갱신합니다."
+  "$PYTHON_BIN" scripts/update_market_risk.py --refresh-live-only
+fi
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 대시보드 데이터를 검증합니다."
 VALIDATION_STAGE_STARTED_EPOCH="$(date +%s)"
@@ -428,6 +459,7 @@ RUN_COMPLETED_EPOCH="$(date +%s)"
   --saturday-times "$SATURDAY_TIMES" \
   --full-times "$FULL_TIMES" \
   --live-times "$LIVE_TIMES" \
+  --krx-times "$KRX_TIMES" \
   --schedule-grace-minutes "$SCHEDULE_GRACE_MINUTES" \
   --scheduled-time "$SCHEDULED_TIME" \
   --run-id "$RUN_ID" \
@@ -458,6 +490,20 @@ elif [[ "$UPDATE_MODE" == "live" ]]; then
     --reused-file data/ml-risk-signal.json
     --reused-file data/m7-credit-proxy.json
     --reused-file data/kospi-breadth.json
+  )
+elif [[ "$UPDATE_MODE" == "krx" ]]; then
+  ATOMIC_PUBLICATION_ARGS+=(
+    --reused-file data/risk-dashboard.json
+    --reused-file data/market-risk-snapshot.json
+    --reused-file data/market-risk-timeseries.json
+    --reused-file data/naver-marketindex-history.json
+    --reused-file data/market-risk-backtest.json
+    --reused-file data/market-stress-episodes.json
+    --reused-file data/market-history-cache.json
+    --reused-file data/els-index-risk.json
+    --reused-file data/hmm-regime.json
+    --reused-file data/ml-risk-signal.json
+    --reused-file data/m7-credit-proxy.json
   )
 fi
 

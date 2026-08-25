@@ -138,6 +138,7 @@ def artifact_status(data):
 
 def stage_status(args):
     live_mode = args.mode == "live"
+    krx_mode = args.mode == "krx"
     return [
         {
             "id": "market",
@@ -145,9 +146,13 @@ def stage_status(args):
             "status": "success",
             "durationSeconds": args.market_duration,
             "detail": (
-                "장중 가격·금리·환율·원자재와 위험점수 갱신"
-                if live_mode
-                else "시장 데이터 수집, 위험점수, M7 프록시, ELS·HMM 산출"
+                "KRX 외국인·기관·프로그램 당일 확정치 갱신"
+                if krx_mode
+                else (
+                    "장중 가격·금리·환율·원자재와 위험점수 갱신"
+                    if live_mode
+                    else "시장 데이터 수집, 위험점수, M7 프록시, ELS·HMM 산출"
+                )
             ),
         },
         {
@@ -157,7 +162,7 @@ def stage_status(args):
             "durationSeconds": args.ml_duration,
             "detail": (
                 "직전 확정 ML·HMM 산출물 재사용"
-                if live_mode
+                if live_mode or krx_mode
                 else "특성 생성, 모델 학습, 예측 및 OOS 검증"
             ),
         },
@@ -218,6 +223,16 @@ def build_payload(args):
     saturday_times = split_times(args.saturday_times)
     full_times = set(split_times(args.full_times))
     live_times = set(split_times(args.live_times))
+    krx_times = set(split_times(args.krx_times))
+
+    def schedule_mode(item):
+        if item in full_times:
+            return "full"
+        if item in krx_times:
+            return "krx"
+        if item in live_times:
+            return "live"
+        return "fast"
     trigger = "scheduled" if args.scheduled_time else "manual"
     scheduled_time = args.scheduled_time or None
     completed_key = args.completed_at.replace(" KST", "").replace("-", "").replace(":", "").replace(" ", "T")
@@ -252,21 +267,15 @@ def build_payload(args):
             "timezone": "Asia/Seoul",
             "weekdaysOnly": False,
             "times": [
-                {
-                    "time": item,
-                    "mode": "full" if item in full_times else "live" if item in live_times else "fast",
-                }
+                {"time": item, "mode": schedule_mode(item)}
                 for item in schedule_times
             ],
             "mondayTimes": [
-                {
-                    "time": item,
-                    "mode": "full" if item in full_times else "live" if item in live_times else "fast",
-                }
+                {"time": item, "mode": schedule_mode(item)}
                 for item in monday_times
             ],
             "saturdayTimes": [{"time": item, "mode": "full"} for item in saturday_times],
-            "expectedDurationMinutes": {"live": 3, "fast": 5, "full": 25},
+            "expectedDurationMinutes": {"krx": 4, "live": 3, "fast": 5, "full": 25},
             "delayGraceMinutes": args.schedule_grace_minutes,
         },
         "stages": stage_status(args),
@@ -293,14 +302,14 @@ def parse_args():
     now = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
     parser = argparse.ArgumentParser(description="홈페이지 운영현황 상태 파일을 생성합니다.")
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
-    parser.add_argument("--mode", choices=["live", "fast", "full"], default="full")
+    parser.add_argument("--mode", choices=["krx", "live", "fast", "full"], default="full")
     parser.add_argument(
         "--times",
-        default="07:30,09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35",
+        default="07:30,09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35,18:30",
     )
     parser.add_argument(
         "--monday-times",
-        default="09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35",
+        default="09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35,18:30",
     )
     parser.add_argument("--saturday-times", default="07:30")
     parser.add_argument("--full-times", default="15:35")
@@ -308,6 +317,7 @@ def parse_args():
         "--live-times",
         default="09:00,10:00,11:00,12:00,13:00,14:00,15:00",
     )
+    parser.add_argument("--krx-times", default="18:30")
     parser.add_argument("--schedule-grace-minutes", type=int, default=10)
     parser.add_argument("--scheduled-time", default="")
     parser.add_argument("--run-id", default="")

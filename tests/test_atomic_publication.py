@@ -122,6 +122,24 @@ def test_prepare_publication_accepts_live_mode_with_reused_eod_artifacts(tmp_pat
     assert verify_publication(tmp_path, expected_run_id=RUN_ID)["status"] == "ready"
 
 
+def test_prepare_publication_accepts_krx_mode_with_reused_non_krx_artifacts(tmp_path):
+    make_publication_candidate(tmp_path)
+
+    manifest = prepare_publication(
+        tmp_path,
+        run_id=RUN_ID,
+        mode="krx",
+        started_at=STARTED_AT,
+        artifact_paths=ARTIFACTS,
+        reused_paths=[Path("data/market-stress-episodes.json")],
+        prepared_at=PREPARED_AT,
+    )
+
+    assert manifest["mode"] == "krx"
+    assert manifest["reusedCount"] == 1
+    assert verify_publication(tmp_path, expected_run_id=RUN_ID)["status"] == "ready"
+
+
 def test_prepare_failure_does_not_touch_existing_files(tmp_path):
     make_publication_candidate(tmp_path)
     dashboard_path = tmp_path / "data/risk-dashboard.json"

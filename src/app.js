@@ -578,6 +578,7 @@ function pipelineModeLabel(mode) {
   if (mode === "full") return "전체 갱신";
   if (mode === "fast") return "빠른 갱신";
   if (mode === "live") return "장중 갱신";
+  if (mode === "krx") return "KRX 확정 갱신";
   return mode || "-";
 }
 
@@ -616,9 +617,11 @@ function findSuccessfulRunForSchedule(history, scheduleItem) {
   const modeMatches = (run) =>
     scheduleItem.mode === "full"
       ? run.mode === "full"
-      : scheduleItem.mode === "fast"
-        ? run.mode === "fast" || run.mode === "full"
-        : run.mode === "live" || run.mode === "fast" || run.mode === "full";
+      : scheduleItem.mode === "krx"
+        ? run.mode === "krx" || run.mode === "full"
+        : scheduleItem.mode === "fast"
+          ? run.mode === "fast" || run.mode === "full"
+          : run.mode === "live" || run.mode === "fast" || run.mode === "full";
   const successful = (history ?? []).filter(
     (run) => run.status === "success" && modeMatches(run)
   );
@@ -757,7 +760,8 @@ function buildScheduleOverview(pipelineStatus) {
     completedCount: items.filter((item) => item.status === "success").length,
     fullMedian: medianRunDuration(history, "full"),
     fastMedian: medianRunDuration(history, "fast"),
-    liveMedian: medianRunDuration(history, "live")
+    liveMedian: medianRunDuration(history, "live"),
+    krxMedian: medianRunDuration(history, "krx")
   };
 }
 
@@ -897,6 +901,7 @@ function renderScheduleOverview(pipelineStatus) {
       <footer class="operations-schedule-baseline">
         <span>최근 성공 중앙 소요시간</span>
         <strong>장중 갱신 ${formatDurationSeconds(overview.liveMedian)}</strong>
+        <strong>KRX 확정 ${formatDurationSeconds(overview.krxMedian)}</strong>
         <strong>전체 갱신 ${formatDurationSeconds(overview.fullMedian)}</strong>
         <strong>빠른 갱신 ${formatDurationSeconds(overview.fastMedian)}</strong>
       </footer>
