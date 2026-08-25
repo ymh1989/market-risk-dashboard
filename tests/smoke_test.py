@@ -163,21 +163,22 @@ def test_dashboard_contract():
         "brent",
         "usdcny",
         "usdjpy",
+        "eurusd",
         "usdkrw_naver",
-            "us2y_naver",
-            "us10y_naver",
-            "jp2y_naver",
-            "jp10y_naver",
-            "jp30y_naver",
-            "kr3y",
-            "kr10y",
-            "kr30y",
-            "us_10y2y_spread",
-            "kr_10y3y_spread",
-            "kr_30y10y_spread",
-            "jp_10y2y_spread",
-            "jp_30y10y_spread",
-        }
+        "us2y_naver",
+        "us10y_naver",
+        "jp2y_naver",
+        "jp10y_naver",
+        "jp30y_naver",
+        "kr3y",
+        "kr10y",
+        "kr30y",
+        "us_10y2y_spread",
+        "kr_10y3y_spread",
+        "kr_30y10y_spread",
+        "jp_10y2y_spread",
+        "jp_30y10y_spread",
+    }
     assert required_market_series <= set(market_index_cache["series"])
     assert set(market_index_cache["series"]) <= required_market_series | {"btc"}
     if "btc" in market_index_cache["series"]:
@@ -621,6 +622,7 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert "엔화 약세" in app_source
     assert '{ id: "jp10y_naver", label: "일본 10년"' in app_source
     assert '{ id: "usdkrw_naver", label: "원/달러"' in app_source
+    assert '{ id: "eurusd", label: "유로/달러", type: "fx", upLabel: "유로 강세", downLabel: "유로 약세"' in app_source
     assert 'upLabel: "원화 약세", downLabel: "원화 강세"' in app_source
 
     summary_source = app_source.split("function renderSummary", 1)[1].split("function renderModelPanel", 1)[0]

@@ -133,7 +133,8 @@ const marketTrendGroups = [
     items: [
       { id: "usdkrw_naver", label: "원/달러", type: "fx", upLabel: "원화 약세", downLabel: "원화 강세" },
       { id: "usdjpy", label: "달러/엔", type: "fx", upLabel: "엔화 약세", downLabel: "엔화 강세" },
-      { id: "usdcny", label: "달러/위안", type: "fx", upLabel: "위안화 약세", downLabel: "위안화 강세" }
+      { id: "usdcny", label: "달러/위안", type: "fx", upLabel: "위안화 약세", downLabel: "위안화 강세" },
+      { id: "eurusd", label: "유로/달러", type: "fx", upLabel: "유로 강세", downLabel: "유로 약세" }
     ]
   },
   {

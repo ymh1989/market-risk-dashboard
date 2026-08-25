@@ -203,6 +203,15 @@ NAVER_MARKET_INDEXES = {
         "min_observations": 80,
         "max_cache_age_days": 7,
     },
+    "eurusd": {
+        "category": "exchangeWorld",
+        "symbol": "EURUSD",
+        "label": "유로/달러",
+        "frequency": "daily",
+        "target_observations": 780,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
     "usdkrw_naver": {
         "category": "exchange",
         "symbol": "FX_USDKRW",
