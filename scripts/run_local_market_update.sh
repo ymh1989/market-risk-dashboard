@@ -378,7 +378,15 @@ if [[ "$UPDATE_MODE" == "live" ]]; then
   ML_STAGE_STARTED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"
   ML_STAGE_COMPLETED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"
 elif [[ "$UPDATE_MODE" == "krx" ]]; then
-  BREADTH_END_DATE="$(kst_now '+%Y-%m-%d')"
+  if [[ -n "$SCHEDULED_TIME" ]]; then
+    BREADTH_END_DATE="$(kst_now '+%Y-%m-%d')"
+  else
+    BREADTH_END_DATE="$("$KOSPI_BREADTH_PYTHON" -c 'import pandas as pd; dates=pd.to_datetime(pd.read_parquet("data/processed/kospi_breadth.parquet")["date"], errors="coerce").dropna(); print(dates.max().date().isoformat() if len(dates) else "")')"
+    if [[ -z "$BREADTH_END_DATE" ]]; then
+      echo "수동 KRX 보강 기준일을 확인할 수 없습니다." >&2
+      exit 1
+    fi
+  fi
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] KRX 확정치 갱신: 외국인·기관·프로그램 순매매만 보강합니다."
   MARKET_STAGE_STARTED_EPOCH="$(date +%s)"
   update_kospi_breadth_data "$BREADTH_END_DATE"
