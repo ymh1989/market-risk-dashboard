@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260819-2";
+const ASSET_VERSION = "20260826-2";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -3115,7 +3115,7 @@ function renderMarketTrendRow(item, seriesIndex, timelineDomains) {
       : `최근 ${item.directionSamples}회 중 ${item.directionalCount}회 ${item.direction === "up" ? "상승" : "하락"}`;
 
   return `
-    <article class="market-trend-row market-trend-row--${item.direction}">
+    <article class="market-trend-row market-trend-row--${item.direction}" data-chart-tooltip-host>
       <div class="market-trend-row__identity">
         <strong>${item.label}</strong>
         ${
@@ -5457,8 +5457,10 @@ function updateChartCursor(chart, svg, event) {
   const tooltip = chart.querySelector("[data-chart-tooltip]");
   if (!tooltip || !rows) return;
   tooltip.innerHTML = `<b>${anchorPoint.date}</b>${rows}`;
-  const chartRect = chart.getBoundingClientRect();
-  const cssZoom = effectiveChartZoom(chart);
+  const tooltipHost = svg.closest("[data-chart-tooltip-host]") ?? chart;
+  if (tooltip.parentElement !== tooltipHost) tooltipHost.append(tooltip);
+  const chartRect = tooltipHost.getBoundingClientRect();
+  const cssZoom = effectiveChartZoom(tooltipHost);
   const layoutWidth = chartRect.width / cssZoom;
   const layoutHeight = chartRect.height / cssZoom;
   const horizontalInset = Math.min(110, Math.max(16, layoutWidth / 2));

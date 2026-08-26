@@ -285,8 +285,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260821-1" in html
-    assert "app.js?v=20260826-1" in html
+    assert "styles.css?v=20260826-2" in html
+    assert "app.js?v=20260826-2" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -597,6 +597,9 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert 'return "과거 대비 현재는 동일"' in app_source
     assert "formatMarketTrendCurrentComparison(point.close, item.latest.close, item.type)" in app_source
     assert "marketTrendChange(visible, visible.length - 1, type)" in app_source
+    assert 'data-chart-tooltip-host' in app_source
+    assert 'svg.closest("[data-chart-tooltip-host]") ?? chart' in app_source
+    assert "tooltipHost.append(tooltip)" in app_source
     assert "const rangeChangeLayers = chartRangeOptions" in app_source
     assert "marketTrendRangeMetric(" in app_source
     assert "<dt>${label} 변동</dt>" in app_source
