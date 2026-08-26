@@ -592,7 +592,9 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert '"weekly" ? "직전" : "전일"' in app_source
     assert "function marketTrendRangeMetric" in app_source
     assert "function formatMarketTrendCurrentComparison" in app_source
-    assert "현재까지 ${rawText} · ${formatMarketTrendChange(percentChange, type)}" in app_source
+    assert "과거 대비 현재는 ${rawText} · ${formatMarketTrendChange(percentChange, type)}" in app_source
+    assert "과거 대비 현재는 ${formatMarketTrendChange(rawChange * 100, type)}" in app_source
+    assert 'return "과거 대비 현재는 동일"' in app_source
     assert "formatMarketTrendCurrentComparison(point.close, item.latest.close, item.type)" in app_source
     assert "marketTrendChange(visible, visible.length - 1, type)" in app_source
     assert "const rangeChangeLayers = chartRangeOptions" in app_source

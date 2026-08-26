@@ -2915,9 +2915,9 @@ function formatMarketTrendCurrentComparison(pointValue, currentValue, type) {
   if (!Number.isFinite(point) || !Number.isFinite(current)) return "";
 
   const rawChange = current - point;
-  if (Math.abs(rawChange) < 1e-10) return "현재와 동일";
+  if (Math.abs(rawChange) < 1e-10) return "과거 대비 현재는 동일";
   if (isRateTrendType(type)) {
-    return `현재까지 ${formatMarketTrendChange(rawChange * 100, type)}`;
+    return `과거 대비 현재는 ${formatMarketTrendChange(rawChange * 100, type)}`;
   }
   if (point === 0) return "";
 
@@ -2941,7 +2941,7 @@ function formatMarketTrendCurrentComparison(pointValue, currentValue, type) {
   const formattedRaw = `${rawChange > 0 ? "+" : ""}${formatNumber(rawChange, digits)}`;
   const rawText = type === "crypto" ? `${formattedRaw}원` : formattedRaw;
   const percentChange = (current / point - 1) * 100;
-  return `현재까지 ${rawText} · ${formatMarketTrendChange(percentChange, type)}`;
+  return `과거 대비 현재는 ${rawText} · ${formatMarketTrendChange(percentChange, type)}`;
 }
 
 function formatMarketTrendValue(value, type) {
