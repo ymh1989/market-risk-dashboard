@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26 14:00:51 KST",
+  "generatedAt": "2026-08-26 15:01:28 KST",
   "current": {
-    "runId": "20260826T140001-1400-live",
+    "runId": "20260826T150003-1500-live",
     "status": "success",
     "mode": "live",
     "trigger": "scheduled",
-    "scheduledTime": "14:00",
-    "startedAt": "2026-08-26 14:00:01 KST",
-    "completedAt": "2026-08-26 14:00:51 KST",
-    "durationSeconds": 50,
+    "scheduledTime": "15:00",
+    "startedAt": "2026-08-26 15:00:03 KST",
+    "completedAt": "2026-08-26 15:01:28 KST",
+    "durationSeconds": 85,
     "dataAsOf": "2026-08-26",
-    "dashboardGeneratedAt": "2026-08-26 14:00 KST",
+    "dashboardGeneratedAt": "2026-08-26 15:01 KST",
     "mlGeneratedAt": "2026-08-26 07:32 KST",
-    "qualityScore": 97.0,
+    "qualityScore": 96.7,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
@@ -118,7 +118,7 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 46,
+      "durationSeconds": 81,
       "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
     },
     {
@@ -132,7 +132,7 @@
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 0,
+      "durationSeconds": 1,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -183,14 +183,14 @@
     {
       "id": "fred",
       "label": "FRED",
-      "status": "ok",
+      "status": "warning",
       "lastDate": "2026-08-25",
       "seriesCount": 5,
-      "detail": "5/5개 수집 · 허용시차 내 5개",
+      "detail": "5/5개 수집 · 허용시차 내 5개 · 대체값 1개",
       "oldestLastDate": "2026-08-14",
       "freshCount": 5,
       "staleCount": 0,
-      "fallbackCount": 0
+      "fallbackCount": 1
     },
     {
       "id": "krx-breadth",
@@ -230,7 +230,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-08-26 14:00 KST"
+      "generatedAt": "2026-08-26 15:01 KST"
     },
     {
       "id": "ml",
@@ -278,23 +278,23 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-08-26 14:00:51 KST"
+      "generatedAt": "2026-08-26 15:01:28 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 97.0,
+    "score": 96.7,
     "referenceDate": "2026-08-26",
     "summary": {
       "checks": 246,
-      "ok": 231,
-      "warning": 15,
+      "ok": 230,
+      "warning": 16,
       "error": 0,
       "sourceSeriesExpected": 98,
       "sourceSeriesPresent": 98,
       "freshSeries": 97,
       "staleSeries": 1,
-      "fallbackSeries": 14
+      "fallbackSeries": 15
     },
     "issues": [
       {
@@ -307,6 +307,17 @@
         "lastDate": "2026-08-21",
         "observations": 475,
         "fetchStatus": "yahoo+history-cache"
+      },
+      {
+        "id": "source:fred:us_financial_stress_stlfsi",
+        "category": "source",
+        "label": "St. Louis Fed Financial Stress Index",
+        "status": "warning",
+        "detail": "최신 2026-08-14 · 영업일 시차 8일 · 관측치 1511개 · cached",
+        "groupId": "fred",
+        "lastDate": "2026-08-14",
+        "observations": 1511,
+        "fetchStatus": "cached"
       },
       {
         "id": "source:m7:price:AAPL",
@@ -367,16 +378,6 @@
         "groupId": "m7-credit",
         "lastDate": "2026-08-25",
         "fetchStatus": "dashboard_yahoo"
-      },
-      {
-        "id": "source:m7:price:LQD",
-        "category": "source",
-        "label": "price:LQD",
-        "status": "warning",
-        "detail": "최신 2026-08-25 · 영업일 시차 1일 · dashboard_yahoo",
-        "groupId": "m7-credit",
-        "lastDate": "2026-08-25",
-        "fetchStatus": "dashboard_yahoo"
       }
     ]
   },
@@ -394,7 +395,7 @@
       "id": "geopolitics-reinflation",
       "title": "지정학·재인플레이션",
       "status": "부담 높음",
-      "score": 81.7,
+      "score": 81.6,
       "tone": "danger",
       "decision": "관찰지표 보강",
       "operation": "DBC·DBA 관찰카드 유지 · 기존 에너지 가중치 변경 없음"
@@ -403,7 +404,7 @@
       "id": "macro-rates",
       "title": "매크로 금리 불확실성",
       "status": "관찰",
-      "score": 56.8,
+      "score": 58.2,
       "tone": "watch",
       "decision": "기존 가중지표 유지",
       "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -412,7 +413,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "확산 미확인",
-      "score": 38.1,
+      "score": 35.3,
       "tone": "good",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -428,6 +429,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20260826T150003-1500-live",
+      "status": "success",
+      "mode": "live",
+      "trigger": "scheduled",
+      "scheduledTime": "15:00",
+      "startedAt": "2026-08-26 15:00:03 KST",
+      "completedAt": "2026-08-26 15:01:28 KST",
+      "durationSeconds": 85,
+      "dataAsOf": "2026-08-26",
+      "dashboardGeneratedAt": "2026-08-26 15:01 KST",
+      "mlGeneratedAt": "2026-08-26 07:32 KST",
+      "qualityScore": 96.7,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20260826T140001-1400-live",
       "status": "success",
@@ -862,29 +878,14 @@
       "mlGeneratedAt": "2026-08-22 07:49 KST",
       "qualityScore": 97.3,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20260821T154235-1535-full",
-      "status": "success",
-      "mode": "full",
-      "trigger": "scheduled",
-      "scheduledTime": "15:35",
-      "startedAt": "2026-08-21 15:42:35 KST",
-      "completedAt": "2026-08-21 15:45:32 KST",
-      "durationSeconds": 177,
-      "dataAsOf": "2026-08-21",
-      "dashboardGeneratedAt": "2026-08-21 15:43 KST",
-      "mlGeneratedAt": "2026-08-21 15:45 KST",
-      "qualityScore": 97.1,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260826T140001-1400-live",
+    "runId": "20260826T150003-1500-live",
     "mode": "live",
     "state": "generated",
-    "startedAt": "2026-08-26 14:00:01 KST",
-    "preparedAt": "2026-08-26 14:00:51 KST"
+    "startedAt": "2026-08-26 15:00:03 KST",
+    "preparedAt": "2026-08-26 15:01:28 KST"
   }
 }
