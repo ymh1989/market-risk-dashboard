@@ -311,7 +311,8 @@ export PYTHONPATH="$WORKTREE/src"
 export PYTHONWARNINGS="${PYTHONWARNINGS:-ignore:Skipping features without any observed values:UserWarning}"
 export MPLCONFIGDIR="${MPLCONFIGDIR:-$WORKTREE/.cache/matplotlib}"
 export M7_CREDIT_RAW_DIR="${M7_CREDIT_RAW_DIR:-$ROOT/data/raw/m7_credit_proxy}"
-mkdir -p "$MPLCONFIGDIR"
+export INDEX_HISTORY_CACHE_DIR="${INDEX_HISTORY_CACHE_DIR:-$ROOT/data/raw/index_history}"
+mkdir -p "$MPLCONFIGDIR" "$INDEX_HISTORY_CACHE_DIR"
 
 seed_local_data_cache() {
   local filename source_file

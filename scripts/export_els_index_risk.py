@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import json
 import math
+import os
 import time
 import urllib.parse
 import urllib.request
@@ -13,10 +14,29 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
+try:
+    from index_history_cache import (
+        incremental_start_date,
+        load_history,
+        merge_histories,
+        save_history,
+    )
+except ModuleNotFoundError:  # pytest에서 저장소 루트 패키지로 불러오는 경우
+    from scripts.index_history_cache import (
+        incremental_start_date,
+        load_history,
+        merge_histories,
+        save_history,
+    )
+
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_FILE = ROOT / "data" / "els-index-risk.json"
 STRESS_EPISODES_FILE = ROOT / "data" / "market-stress-episodes.json"
+INDEX_HISTORY_CACHE_DIR = Path(
+    os.environ.get("INDEX_HISTORY_CACHE_DIR") or ROOT / "data" / "raw" / "index_history"
+)
+INCREMENTAL_OVERLAP_DAYS = 10
 YAHOO_CHART_URLS = (
     "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d",
     "https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d",
@@ -114,7 +134,7 @@ def _yahoo_daily_rows(result: dict, now_timestamp: float | None = None) -> tuple
     return rows, incomplete_date
 
 
-def _fetch_yahoo(symbol: str, range_value: str = "10y") -> pd.DataFrame:
+def _fetch_yahoo(symbol: str, range_value: str = "10y", min_rows: int = 260) -> pd.DataFrame:
     """Yahoo 축약·일시 오류에 대비해 호스트를 바꿔 최대 3회 조회한다."""
 
     encoded_symbol = urllib.parse.quote(symbol, safe="")
@@ -138,9 +158,9 @@ def _fetch_yahoo(symbol: str, range_value: str = "10y") -> pd.DataFrame:
             rows, incomplete_date = _yahoo_daily_rows(result)
             frame = pd.DataFrame(rows).drop_duplicates("date").sort_values("date").reset_index(drop=True)
             frame.attrs["excludedIncompleteSessionDate"] = incomplete_date
-            if len(frame) < 260:
+            if len(frame) < min_rows:
                 raise RuntimeError(
-                    f"{symbol}: ELS index risk needs at least 260 observations, got {len(frame)}"
+                    f"{symbol}: ELS index risk needs at least {min_rows} observations, got {len(frame)}"
                 )
             return frame
         except Exception as error:  # 원천의 축약 JSON·HTTP 오류를 같은 재시도 정책으로 다룬다.
@@ -150,18 +170,25 @@ def _fetch_yahoo(symbol: str, range_value: str = "10y") -> pd.DataFrame:
     raise RuntimeError(f"{symbol}: Yahoo 3회 조회 실패 ({'; '.join(errors)})")
 
 
-def _fetch_naver_index(symbol: str, lookback_days: int = 3700) -> pd.DataFrame:
-    """Yahoo KOSPI200 장애 시 Naver KPI200 장기 일봉을 사용한다."""
+def _fetch_naver_index(
+    symbol: str,
+    *,
+    start_date: str | None = None,
+    lookback_days: int = 3700,
+    min_rows: int = 260,
+) -> pd.DataFrame:
+    """KOSPI200 장기 또는 증분 일봉을 Naver KPI200에서 조회한다."""
 
     naver_symbol = NAVER_INDEX_SYMBOLS.get(symbol)
     if not naver_symbol:
         raise RuntimeError(f"{symbol}: Naver 대체 심볼이 없습니다.")
     now = datetime.now(ZoneInfo("Asia/Seoul"))
+    start_value = start_date or (now - timedelta(days=lookback_days)).date().isoformat()
     params = urllib.parse.urlencode(
         {
             "symbol": naver_symbol,
             "requestType": 1,
-            "startTime": (now - timedelta(days=lookback_days)).strftime("%Y%m%d"),
+            "startTime": start_value.replace("-", ""),
             "endTime": now.strftime("%Y%m%d"),
             "timeframe": "day",
         }
@@ -179,42 +206,79 @@ def _fetch_naver_index(symbol: str, lookback_days: int = 3700) -> pd.DataFrame:
         if isinstance(row, list) and len(row) >= 5 and row[4] not in (None, "")
     ]
     frame = pd.DataFrame(values).drop_duplicates("date").sort_values("date").reset_index(drop=True)
-    if len(frame) < 260:
+    if len(frame) < min_rows:
         raise RuntimeError(f"{symbol}: Naver KPI200 관측치가 부족합니다: {len(frame)}")
     return frame
 
 
-def _fetch_price_history(symbol: str, cached_prices: pd.DataFrame | None = None) -> pd.DataFrame:
+def _fetch_price_history(
+    symbol: str,
+    cached_prices: pd.DataFrame | None = None,
+    cache_key: str | None = None,
+) -> pd.DataFrame:
+    """장기 캐시를 먼저 읽고 최근 구간만 증분 조회해 병합한다."""
+
+    disk_cache = load_history(INDEX_HISTORY_CACHE_DIR, cache_key) if cache_key else None
+    stored = disk_cache.frame if disk_cache is not None else pd.DataFrame(columns=["date", "close"])
+    existing = merge_histories(stored, cached_prices)
+    has_long_cache = len(existing) >= 260
+    source = "Naver KPI200" if symbol in NAVER_INDEX_SYMBOLS else "Yahoo Finance"
+    fetch_mode = "incremental" if has_long_cache else "bootstrap"
+    fetched = pd.DataFrame(columns=["date", "close"])
+    excluded_dates: set[str] = set()
+
     try:
-        historical = _fetch_yahoo(symbol, "10y")
-        price_source = "Yahoo Finance"
+        if symbol in NAVER_INDEX_SYMBOLS:
+            start = incremental_start_date(existing, INCREMENTAL_OVERLAP_DAYS)
+            fetched = _fetch_naver_index(
+                symbol,
+                start_date=start.isoformat() if start else None,
+                min_rows=1 if start else 260,
+            )
+        elif has_long_cache:
+            fetched = _fetch_yahoo(symbol, "3mo", min_rows=5)
+        else:
+            historical = _fetch_yahoo(symbol, "10y", min_rows=260)
+            try:
+                recent = _fetch_yahoo(symbol, "3mo", min_rows=5)
+            except Exception:
+                recent = pd.DataFrame(columns=["date", "close"])
+            for frame in (historical, recent):
+                excluded_date = frame.attrs.get("excludedIncompleteSessionDate")
+                if excluded_date:
+                    excluded_dates.add(excluded_date)
+            fetched = merge_histories(historical, recent)
     except Exception:
-        historical = _fetch_naver_index(symbol)
-        price_source = "Naver KPI200"
-    frames = [historical]
-    if cached_prices is not None and not cached_prices.empty:
-        frames.append(cached_prices[["date", "close"]])
-    recent = pd.DataFrame(columns=["date", "close"])
-    if price_source == "Yahoo Finance":
-        try:
-            recent = _fetch_yahoo(symbol, "2y")
-            frames.append(recent)
-        except Exception:
-            pass
-    merged = (
-        pd.concat(frames, ignore_index=True)
-        .drop_duplicates("date", keep="last")
-        .sort_values("date")
-        .reset_index(drop=True)
-    )
-    excluded_dates = {
-        frame.attrs.get("excludedIncompleteSessionDate")
-        for frame in (historical, recent)
-        if frame.attrs.get("excludedIncompleteSessionDate")
-    }
+        if not has_long_cache:
+            raise
+        fetch_mode = "cache-fallback"
+
+    fetched_excluded_date = fetched.attrs.get("excludedIncompleteSessionDate")
+    if fetched_excluded_date:
+        excluded_dates.add(fetched_excluded_date)
+    merged = merge_histories(existing, fetched)
     if excluded_dates:
         merged = merged.loc[~merged["date"].isin(excluded_dates)].reset_index(drop=True)
-    merged.attrs["priceSource"] = price_source
+    if len(merged) < 260:
+        raise RuntimeError(f"{symbol}: 장기 가격 캐시가 부족합니다: {len(merged)}")
+
+    metadata = disk_cache.metadata if disk_cache is not None else {}
+    if cache_key and fetch_mode != "cache-fallback":
+        saved = save_history(
+            INDEX_HISTORY_CACHE_DIR,
+            cache_key,
+            merged,
+            source=source,
+            fetch_mode=fetch_mode,
+            fetched_rows=len(fetched),
+            overlap_days=INCREMENTAL_OVERLAP_DAYS,
+        )
+        merged = saved.frame
+        metadata = saved.metadata
+
+    merged.attrs["priceSource"] = source
+    merged.attrs["historyCacheStatus"] = fetch_mode
+    merged.attrs["historyCacheLastDate"] = metadata.get("lastDate", merged.iloc[-1]["date"])
     return merged
 
 
@@ -297,8 +361,9 @@ def _reading(latest: pd.Series, score: float) -> str:
 
 
 def _index_payload(spec: dict[str, str], cached_prices: pd.DataFrame | None = None) -> tuple[dict, pd.DataFrame]:
-    price = _fetch_price_history(spec["symbol"], cached_prices)
+    price = _fetch_price_history(spec["symbol"], cached_prices, cache_key=spec["id"])
     price_source = price.attrs.get("priceSource", "Yahoo Finance")
+    history_cache_status = price.attrs.get("historyCacheStatus", "memory-only")
     frame = _features(price)
     latest = frame.dropna(subset=["els_risk_score"]).iloc[-1]
     latest_year = int(str(latest["date"])[:4])
@@ -321,6 +386,9 @@ def _index_payload(spec: dict[str, str], cached_prices: pd.DataFrame | None = No
         {
             **spec,
             "priceSource": price_source,
+            "historyCacheStatus": history_cache_status,
+            "historyStartDate": frame.iloc[0]["date"],
+            "historyObservations": int(len(frame)),
             "lastDate": latest["date"],
             "lastClose": _round(latest["close"], 2),
             "score": _round(score, 2),

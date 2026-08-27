@@ -429,6 +429,9 @@ def test_operations_page_exposes_daily_schedule_overview():
     operations_alert = (ROOT / "scripts" / "send_operations_alert.py").read_text(
         encoding="utf-8"
     )
+    index_history_cache = (ROOT / "scripts" / "index_history_cache.py").read_text(
+        encoding="utf-8"
+    )
     pipeline_status_writer = (ROOT / "scripts" / "write_pipeline_status.py").read_text(
         encoding="utf-8"
     )
@@ -508,6 +511,11 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert 'CURRENT_STAGE="원천 품질·과거값 대조"' in overnight_run
     assert "send_operations_alert.py" in overnight_run
     assert "Codex 붙여넣기" in operations_alert
+    assert 'export INDEX_HISTORY_CACHE_DIR="${INDEX_HISTORY_CACHE_DIR:-$ROOT/data/raw/index_history}"' in run_script
+    assert "incremental_start_date" in index_history_cache
+    assert "os.replace(temp_path, path)" in index_history_cache
+    assert "data/raw/index_history" in workflow
+    assert "actions/cache@v4" in workflow
     assert 'if [[ "$SCHEDULED_TIME" != "07:30"' in run_script
     assert '"$CURRENT_MARKET_DATA_SHA" == "$OVERNIGHT_MARKET_DATA_SHA"' in run_script
     assert "install-overnight-market-prepare:" in makefile

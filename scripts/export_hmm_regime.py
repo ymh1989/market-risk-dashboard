@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import json
 import math
+import os
 import re
 import urllib.parse
 import urllib.request
@@ -16,10 +17,32 @@ import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 
+try:
+    from index_history_cache import (
+        cache_is_fresh,
+        incremental_start_date,
+        load_history,
+        merge_histories,
+        save_history,
+    )
+except ModuleNotFoundError:  # pytest에서 저장소 루트 패키지로 불러오는 경우
+    from scripts.index_history_cache import (
+        cache_is_fresh,
+        incremental_start_date,
+        load_history,
+        merge_histories,
+        save_history,
+    )
+
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_FILE = ROOT / "data" / "hmm-regime.json"
 ELS_INDEX_RISK_FILE = ROOT / "data" / "els-index-risk.json"
+INDEX_HISTORY_CACHE_DIR = Path(
+    os.environ.get("INDEX_HISTORY_CACHE_DIR") or ROOT / "data" / "raw" / "index_history"
+)
+INCREMENTAL_OVERLAP_DAYS = 10
+SHARED_CACHE_MAX_AGE_MINUTES = 30
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d"
 NAVER_SISE_URL = "https://api.finance.naver.com/siseJson.naver"
 NAVER_INDEX_SYMBOLS = {"^KS200": "KPI200"}
@@ -120,18 +143,25 @@ def _load_els_price_history(path: Path = ELS_INDEX_RISK_FILE) -> dict[str, pd.Da
     return cached
 
 
-def _fetch_naver_index(symbol: str, lookback_days: int = 2200) -> pd.DataFrame:
-    """Yahoo KOSPI200 장애 시 HMM 학습용 Naver KPI200 일봉을 사용한다."""
+def _fetch_naver_index(
+    symbol: str,
+    *,
+    start_date: str | None = None,
+    lookback_days: int = 2200,
+    min_rows: int = 320,
+) -> pd.DataFrame:
+    """HMM 학습에 필요한 KOSPI200 장기 또는 증분 일봉을 조회한다."""
 
     naver_symbol = NAVER_INDEX_SYMBOLS.get(symbol)
     if not naver_symbol:
         raise RuntimeError(f"{symbol}: Naver 대체 심볼이 없습니다.")
     now = datetime.now(ZoneInfo("Asia/Seoul"))
+    start_value = start_date or (now - timedelta(days=lookback_days)).date().isoformat()
     params = urllib.parse.urlencode(
         {
             "symbol": naver_symbol,
             "requestType": 1,
-            "startTime": (now - timedelta(days=lookback_days)).strftime("%Y%m%d"),
+            "startTime": start_value.replace("-", ""),
             "endTime": now.strftime("%Y%m%d"),
             "timeframe": "day",
         }
@@ -149,36 +179,72 @@ def _fetch_naver_index(symbol: str, lookback_days: int = 2200) -> pd.DataFrame:
         if isinstance(row, list) and len(row) >= 5 and row[4] not in (None, "")
     ]
     frame = pd.DataFrame(values).drop_duplicates("date").sort_values("date").reset_index(drop=True)
-    if len(frame) < 320:
+    if len(frame) < min_rows:
         raise RuntimeError(f"{symbol}: Naver KPI200 관측치가 부족합니다: {len(frame)}")
     return frame
 
 
-def _fetch_price_history(symbol: str, cached_prices: pd.DataFrame | None = None) -> pd.DataFrame:
-    try:
-        historical = _fetch_yahoo(symbol, RANGE_VALUE, min_rows=320)
-        price_source = "Yahoo Finance 다중 구간 + ELS 가격 캐시"
-    except Exception:
-        historical = _fetch_naver_index(symbol)
-        price_source = "Naver KPI200 + ELS 가격 캐시"
-    frames = [historical]
-    if cached_prices is not None and not cached_prices.empty:
-        frames.append(cached_prices[["date", "close"]])
-    if price_source.startswith("Yahoo"):
-        try:
-            frames.append(_fetch_yahoo(symbol, "2y", min_rows=120))
-        except Exception as error:
-            warnings.warn(
-                f"{symbol}: Yahoo 2y 보강 조회 실패, 장기·캐시 데이터로 계속합니다: {error}",
-                RuntimeWarning,
-            )
-    merged = (
-        pd.concat(frames, ignore_index=True)
-        .drop_duplicates("date", keep="last")
-        .sort_values("date")
-        .reset_index(drop=True)
+def _fetch_price_history(
+    symbol: str,
+    cached_prices: pd.DataFrame | None = None,
+    cache_key: str | None = None,
+) -> pd.DataFrame:
+    """ELS와 공유한 장기 캐시를 재사용하고 필요할 때만 최근 구간을 적재한다."""
+
+    disk_cache = load_history(INDEX_HISTORY_CACHE_DIR, cache_key) if cache_key else None
+    stored = disk_cache.frame if disk_cache is not None else pd.DataFrame(columns=["date", "close"])
+    existing = merge_histories(stored, cached_prices)
+    has_long_cache = len(existing) >= 320
+    source = (
+        disk_cache.metadata.get("source")
+        if disk_cache is not None and disk_cache.metadata.get("source")
+        else ("Naver KPI200" if symbol in NAVER_INDEX_SYMBOLS else "Yahoo Finance")
     )
-    merged.attrs["priceSource"] = price_source
+    fetch_mode = "shared-cache" if (
+        has_long_cache
+        and disk_cache is not None
+        and cache_is_fresh(disk_cache.metadata, SHARED_CACHE_MAX_AGE_MINUTES)
+    ) else ("incremental" if has_long_cache else "bootstrap")
+    fetched = pd.DataFrame(columns=["date", "close"])
+
+    if fetch_mode != "shared-cache":
+        try:
+            if symbol in NAVER_INDEX_SYMBOLS:
+                start = incremental_start_date(existing, INCREMENTAL_OVERLAP_DAYS)
+                fetched = _fetch_naver_index(
+                    symbol,
+                    start_date=start.isoformat() if start else None,
+                    min_rows=1 if start else 320,
+                )
+                source = "Naver KPI200"
+            elif has_long_cache:
+                fetched = _fetch_yahoo(symbol, "3mo", min_rows=5)
+                source = "Yahoo Finance"
+            else:
+                fetched = _fetch_yahoo(symbol, RANGE_VALUE, min_rows=320)
+                source = "Yahoo Finance"
+        except Exception:
+            if not has_long_cache:
+                raise
+            fetch_mode = "cache-fallback"
+
+    merged = merge_histories(existing, fetched)
+    if len(merged) < 320:
+        raise RuntimeError(f"{symbol}: HMM 장기 가격 캐시가 부족합니다: {len(merged)}")
+    if cache_key and fetch_mode not in {"shared-cache", "cache-fallback"}:
+        saved = save_history(
+            INDEX_HISTORY_CACHE_DIR,
+            cache_key,
+            merged,
+            source=source,
+            fetch_mode=fetch_mode,
+            fetched_rows=len(fetched),
+            overlap_days=INCREMENTAL_OVERLAP_DAYS,
+        )
+        merged = saved.frame
+
+    merged.attrs["priceSource"] = f"{source} + 증분 캐시"
+    merged.attrs["historyCacheStatus"] = fetch_mode
     return merged
 
 
@@ -477,8 +543,9 @@ def _reading(regime: str, latest: pd.Series, probabilities: dict[str, float], vo
 
 
 def _index_payload(spec: dict, cached_prices: pd.DataFrame | None = None) -> dict:
-    price = _fetch_price_history(spec["symbol"], cached_prices)
-    price_source = price.attrs.get("priceSource", "Yahoo Finance 다중 구간 + ELS 가격 캐시")
+    price = _fetch_price_history(spec["symbol"], cached_prices, cache_key=spec["id"])
+    price_source = price.attrs.get("priceSource", "Yahoo Finance + 증분 캐시")
+    history_cache_status = price.attrs.get("historyCacheStatus", "memory-only")
     vol, vol_symbol, vol_source_label = _fetch_vol_proxy(spec)
     frame = _features(price, vol)
     columns = ["ret_20d", "realized_vol_20d", "drawdown_60d", "vol_proxy_rank_252d", "vol_proxy_change_20d"]
@@ -519,6 +586,7 @@ def _index_payload(spec: dict, cached_prices: pd.DataFrame | None = None) -> dic
         **{key: spec[key] for key in ["id", "label", "name", "region"]},
         "symbol": spec["symbol"],
         "priceSource": price_source,
+        "historyCacheStatus": history_cache_status,
         "volSymbol": vol_symbol,
         "volSource": vol_source,
         "lastDate": latest["date"],

@@ -28,6 +28,14 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install .
 
+      - name: Restore incremental index history cache
+        uses: actions/cache@v4
+        with:
+          path: data/raw/index_history
+          key: index-history-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            index-history-${{ runner.os }}-
+
       - name: Refresh market risk data
         run: |
           python3 -m m7_credit_proxy.pipeline --update-latest

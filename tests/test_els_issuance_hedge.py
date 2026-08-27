@@ -44,26 +44,26 @@ def test_issuance_stance_covers_four_operating_zones():
 
 def test_long_history_is_merged_with_fresher_recent_prices(monkeypatch):
     module = load_els_module()
+    dates = pd.date_range("2024-01-02", periods=300, freq="B")
     historical = pd.DataFrame(
-        {"date": ["2020-01-02", "2026-07-16"], "close": [100.0, 200.0]}
+        {"date": dates.strftime("%Y-%m-%d"), "close": np.linspace(100.0, 200.0, 300)}
     )
+    recent_date = (dates[-1] + pd.offsets.BDay(1)).strftime("%Y-%m-%d")
     recent = pd.DataFrame(
-        {"date": ["2026-07-16", "2026-07-21"], "close": [201.0, 210.0]}
+        {"date": [dates[-1].strftime("%Y-%m-%d"), recent_date], "close": [201.0, 210.0]}
     )
-    cached = pd.DataFrame(
-        {"date": ["2026-07-21", "2026-07-22"], "close": [211.0, 220.0]}
-    )
+    cached = pd.DataFrame({"date": [recent_date], "close": [211.0]})
 
     monkeypatch.setattr(
         module,
         "_fetch_yahoo",
-        lambda _symbol, range_value: historical if range_value == "10y" else recent,
+        lambda _symbol, range_value, **_kwargs: historical if range_value == "10y" else recent,
     )
     merged = module._fetch_price_history("TEST", cached)
 
-    assert merged["date"].tolist() == ["2020-01-02", "2026-07-16", "2026-07-21", "2026-07-22"]
-    assert merged.loc[merged["date"] == "2026-07-16", "close"].iloc[0] == 201.0
-    assert merged.loc[merged["date"] == "2026-07-21", "close"].iloc[0] == 210.0
+    assert len(merged) == 301
+    assert merged.loc[merged["date"] == dates[-1].strftime("%Y-%m-%d"), "close"].iloc[0] == 201.0
+    assert merged.loc[merged["date"] == recent_date, "close"].iloc[0] == 210.0
 
 
 def test_kospi200_uses_naver_history_when_yahoo_is_unavailable(monkeypatch):
@@ -75,12 +75,47 @@ def test_kospi200_uses_naver_history_when_yahoo_is_unavailable(monkeypatch):
         }
     )
     monkeypatch.setattr(module, "_fetch_yahoo", lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("축약 응답")))
-    monkeypatch.setattr(module, "_fetch_naver_index", lambda _symbol: naver.copy())
+    monkeypatch.setattr(module, "_fetch_naver_index", lambda _symbol, **_kwargs: naver.copy())
 
     merged = module._fetch_price_history("^KS200")
 
     assert len(merged) == 320
     assert merged.iloc[-1]["close"] == 360.0
+
+
+def test_second_run_uses_incremental_range_and_persists_cache(monkeypatch, tmp_path):
+    module = load_els_module()
+    monkeypatch.setattr(module, "INDEX_HISTORY_CACHE_DIR", tmp_path)
+    dates = pd.date_range("2024-01-02", periods=300, freq="B")
+    historical = pd.DataFrame(
+        {"date": dates.strftime("%Y-%m-%d"), "close": np.linspace(100.0, 200.0, 300)}
+    )
+    next_date = (dates[-1] + pd.offsets.BDay(1)).strftime("%Y-%m-%d")
+    calls = []
+    recent = historical.tail(5).copy()
+
+    def fake_fetch(_symbol, range_value, **_kwargs):
+        calls.append(range_value)
+        return historical.copy() if range_value == "10y" else recent.copy()
+
+    monkeypatch.setattr(module, "_fetch_yahoo", fake_fetch)
+    first = module._fetch_price_history("^GSPC", cache_key="spx")
+    assert calls == ["10y", "3mo"]
+    assert len(first) == 300
+
+    calls.clear()
+    recent = pd.concat(
+        [historical.tail(5), pd.DataFrame([{"date": next_date, "close": 205.0}])],
+        ignore_index=True,
+    )
+    second = module._fetch_price_history("^GSPC", cache_key="spx")
+    metadata = module.load_history(tmp_path, "spx").metadata
+
+    assert calls == ["3mo"]
+    assert second.iloc[-1]["date"] == next_date
+    assert second.iloc[-1]["close"] == 205.0
+    assert metadata["fetchMode"] == "incremental"
+    assert metadata["fetchedRows"] == 6
 
 
 def test_yahoo_daily_rows_exclude_incomplete_exchange_session():
@@ -105,14 +140,18 @@ def test_yahoo_daily_rows_exclude_incomplete_exchange_session():
 
 def test_cached_incomplete_session_is_not_reintroduced(monkeypatch):
     module = load_els_module()
-    completed = pd.DataFrame({"date": ["2026-08-07"], "close": [65000.0]})
-    completed.attrs["excludedIncompleteSessionDate"] = "2026-08-10"
-    cached = pd.DataFrame({"date": ["2026-08-10"], "close": [66000.0]})
-    monkeypatch.setattr(module, "_fetch_yahoo", lambda _symbol, _range: completed.copy())
+    dates = pd.date_range("2024-01-02", periods=300, freq="B")
+    completed = pd.DataFrame(
+        {"date": dates.strftime("%Y-%m-%d"), "close": np.linspace(100.0, 200.0, 300)}
+    )
+    incomplete_date = (dates[-1] + pd.offsets.BDay(1)).strftime("%Y-%m-%d")
+    completed.attrs["excludedIncompleteSessionDate"] = incomplete_date
+    cached = pd.DataFrame({"date": [incomplete_date], "close": [210.0]})
+    monkeypatch.setattr(module, "_fetch_yahoo", lambda *_args, **_kwargs: completed.copy())
 
     merged = module._fetch_price_history("^N225", cached)
 
-    assert merged["date"].tolist() == ["2026-08-07"]
+    assert incomplete_date not in merged["date"].tolist()
 
 
 def test_trajectory_windows_include_one_week_momentum_period():
