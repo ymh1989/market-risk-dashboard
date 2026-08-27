@@ -716,6 +716,24 @@ def fetch_and_save_market_data(
     if len(df) < min_rows:
         raise RuntimeError(f"수집 데이터가 부족합니다: {len(df)} rows, 최소 {min_rows} rows 필요")
 
+    for source in metadata.get("sources", []):
+        source["collectionMode"] = collection_mode
+        source["fetchedRows"] = int(source.get("rows") or 0)
+        column = source.get("column")
+        if collection_mode != "incremental" or column not in df.columns:
+            continue
+        valid = df.loc[df[column].notna(), ["date", column]]
+        if valid.empty:
+            continue
+        source.update(
+            {
+                "rows": int(len(valid)),
+                "coverageRatio": round(len(valid) / max(len(df), 1), 4),
+                "firstDate": valid["date"].min().date().isoformat(),
+                "lastDate": valid["date"].max().date().isoformat(),
+            }
+        )
+
     metadata.update(
         {
             "collectionMode": collection_mode,

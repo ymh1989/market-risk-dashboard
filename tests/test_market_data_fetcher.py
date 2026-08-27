@@ -380,7 +380,20 @@ def test_market_data_file_is_incrementally_merged(monkeypatch, tmp_path):
                 "VIX": [18.0, float("nan"), 19.0],
             }
         )
-        return fetched, {"sources": [], "missingByColumn": {}}
+        return fetched, {
+            "sources": [
+                {
+                    "column": "KOSPI",
+                    "required": True,
+                    "status": "ok",
+                    "rows": 3,
+                    "coverageRatio": 1.0,
+                    "firstDate": "2026-08-17",
+                    "lastDate": "2026-08-21",
+                }
+            ],
+            "missingByColumn": {},
+        }
 
     monkeypatch.setattr(
         market_data_fetcher, "load_source_config", lambda _path: fake_source_config()
@@ -398,6 +411,12 @@ def test_market_data_file_is_incrementally_merged(monkeypatch, tmp_path):
     assert metadata["cachedRows"] == 1600
     assert metadata["fetchedRows"] == 3
     assert metadata["overlapDays"] == 14
+    source = metadata["sources"][0]
+    assert source["collectionMode"] == "incremental"
+    assert source["fetchedRows"] == 3
+    assert source["rows"] == 1601
+    assert source["firstDate"] == existing.iloc[0]["date"].date().isoformat()
+    assert source["lastDate"] == "2026-08-21"
     assert merged.iloc[-1]["date"] == pd.Timestamp("2026-08-21")
     overlap = merged.loc[merged["date"] == pd.Timestamp("2026-08-20")].iloc[0]
     assert overlap["KOSPI"] == 999.0
