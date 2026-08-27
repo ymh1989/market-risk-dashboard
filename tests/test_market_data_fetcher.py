@@ -346,3 +346,95 @@ def test_rebased_supplement_only_appends_after_primary_history():
     source = next(item for item in metadata["sources"] if item["column"] == "VIX")
     assert source["status"] == "supplemented"
     assert source["lastDate"] == "2024-01-04"
+
+def _long_market_frame(end: str = "2026-08-20", periods: int = 1600) -> pd.DataFrame:
+    dates = pd.bdate_range(end=end, periods=periods)
+    return pd.DataFrame(
+        {
+            "date": dates,
+            "KOSPI": range(2000, 2000 + periods),
+            "SPX": range(3000, 3000 + periods),
+            "SOX": range(4000, 4000 + periods),
+            "USDKRW": range(1000, 1000 + periods),
+            "VIX": [20.0] * periods,
+        }
+    )
+
+
+def test_market_data_file_is_incrementally_merged(monkeypatch, tmp_path):
+    output = tmp_path / "market_data.csv"
+    metadata_path = tmp_path / "market_data_sources.json"
+    existing = _long_market_frame()
+    existing.to_csv(output, index=False)
+    observed = {}
+
+    def fake_fetch(_config, range_value=None, start=None, end=None):
+        observed.update(range_value=range_value, start=start, end=end)
+        fetched = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2026-08-17", "2026-08-20", "2026-08-21"]),
+                "KOSPI": [900.0, 999.0, 1001.0],
+                "SPX": [800.0, 899.0, 901.0],
+                "SOX": [700.0, 799.0, 801.0],
+                "USDKRW": [1300.0, 1400.0, 1401.0],
+                "VIX": [18.0, float("nan"), 19.0],
+            }
+        )
+        return fetched, {"sources": [], "missingByColumn": {}}
+
+    monkeypatch.setattr(
+        market_data_fetcher, "load_source_config", lambda _path: fake_source_config()
+    )
+    monkeypatch.setattr(market_data_fetcher, "fetch_market_data", fake_fetch)
+
+    merged, metadata = market_data_fetcher.fetch_and_save_market_data(
+        "unused.yaml", output, metadata_path, min_rows=1500
+    )
+
+    assert observed["range_value"] is None
+    assert observed["start"] == "2026-08-06"
+    assert observed["end"] >= "2026-08-21"
+    assert metadata["collectionMode"] == "incremental"
+    assert metadata["cachedRows"] == 1600
+    assert metadata["fetchedRows"] == 3
+    assert metadata["overlapDays"] == 14
+    assert merged.iloc[-1]["date"] == pd.Timestamp("2026-08-21")
+    overlap = merged.loc[merged["date"] == pd.Timestamp("2026-08-20")].iloc[0]
+    assert overlap["KOSPI"] == 999.0
+    assert overlap["VIX"] == 20.0
+    assert not list(tmp_path.glob("*.tmp*"))
+
+
+def test_explicit_market_data_range_bypasses_incremental_cache(monkeypatch, tmp_path):
+    output = tmp_path / "market_data.csv"
+    metadata_path = tmp_path / "market_data_sources.json"
+    _long_market_frame().to_csv(output, index=False)
+    observed = {}
+
+    def fake_fetch(_config, range_value=None, start=None, end=None):
+        observed.update(range_value=range_value, start=start, end=end)
+        fetched = _long_market_frame(end="2026-08-21", periods=5)
+        return fetched, {"sources": [], "missingByColumn": {}}
+
+    monkeypatch.setattr(
+        market_data_fetcher, "load_source_config", lambda _path: fake_source_config()
+    )
+    monkeypatch.setattr(market_data_fetcher, "fetch_market_data", fake_fetch)
+
+    frame, metadata = market_data_fetcher.fetch_and_save_market_data(
+        "unused.yaml",
+        output,
+        metadata_path,
+        start="2026-08-01",
+        end="2026-08-21",
+        min_rows=1,
+    )
+
+    assert observed == {
+        "range_value": None,
+        "start": "2026-08-01",
+        "end": "2026-08-21",
+    }
+    assert len(frame) == 5
+    assert metadata["collectionMode"] == "explicit-range"
+    assert metadata["cachedRows"] == 0

@@ -45,6 +45,8 @@ make export-els-index-risk
 
 FRED 계열은 `.env`의 `FRED_API_KEY`가 있으면 공식 `fred/series/observations` JSON API를 우선 사용합니다. 키가 없거나 API가 실패하면 FRED 공개 CSV, 로컬 저장 캐시 순서로 대체하며 API 키는 로그와 산출물에 기록하지 않습니다.
 
+ML 장기 원자료 `data/raw/market_data.csv`도 증분 원장으로 관리합니다. 최초 실행만 설정 시작일인 1996년부터 적재하고, 이후 자동 갱신은 마지막 관측일보다 14일 앞에서 Yahoo·Naver·FRED를 다시 조회해 수정값과 신규 날짜만 병합합니다. `--range` 또는 `--start/--end`를 직접 지정한 수동 실행은 요청한 범위를 그대로 조회합니다. 저장은 임시 파일을 완성한 뒤 교체해 실행 중단 시 기존 원장을 보호합니다.
+
 ```bash
 python3 scripts/update_market_risk.py --check-fred-api
 ```

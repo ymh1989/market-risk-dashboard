@@ -31,7 +31,10 @@ jobs:
       - name: Restore incremental index history cache
         uses: actions/cache@v4
         with:
-          path: data/raw/index_history
+          path: |
+            data/raw/index_history
+            data/raw/market_data.csv
+            data/raw/market_data_sources.json
           key: index-history-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
             index-history-${{ runner.os }}-

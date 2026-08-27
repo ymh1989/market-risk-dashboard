@@ -25,6 +25,7 @@ NAVER_CHART_URL = "https://api.finance.naver.com/siseJson.naver"
 DEFAULT_SOURCE_CONFIG = Path("configs/data_sources.yaml")
 FRED_HISTORY_CACHE = Path(__file__).resolve().parents[2] / "data" / "market-history-cache.json"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_INCREMENTAL_OVERLAP_DAYS = 14
 
 
 @dataclass
@@ -594,6 +595,81 @@ def fetch_market_data(
     return merged, metadata
 
 
+def _load_incremental_market_base(path: Path, min_rows: int) -> pd.DataFrame | None:
+    """검증된 기존 원자료가 있으면 증분 적재의 기준 원장으로 읽는다."""
+
+    if not path.exists() or path.suffix != ".csv":
+        return None
+    try:
+        frame = pd.read_csv(path)
+        validate_market_columns(set(frame.columns))
+    except (OSError, ValueError, pd.errors.ParserError):
+        return None
+    frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+    frame = frame.dropna(subset=["date"]).sort_values("date")
+    frame = frame.drop_duplicates("date", keep="last").reset_index(drop=True)
+    if len(frame) < min_rows:
+        return None
+    for column in frame.columns:
+        if column != "date":
+            frame[column] = pd.to_numeric(frame[column], errors="coerce")
+    return frame
+
+
+def _merge_incremental_market_data(
+    existing: pd.DataFrame,
+    fetched: pd.DataFrame,
+) -> pd.DataFrame:
+    """신규 비결측값을 우선해 장기 원장과 겹친 최근 구간을 병합한다."""
+
+    old = existing.copy()
+    new = fetched.copy()
+    old["date"] = pd.to_datetime(old["date"], errors="coerce")
+    new["date"] = pd.to_datetime(new["date"], errors="coerce")
+    old = old.dropna(subset=["date"]).drop_duplicates("date", keep="last").set_index("date")
+    new = new.dropna(subset=["date"]).drop_duplicates("date", keep="last").set_index("date")
+    merged = new.combine_first(old).sort_index().reset_index()
+    ordered_columns = [
+        "date",
+        *[column for column in existing.columns if column != "date"],
+        *[
+            column
+            for column in fetched.columns
+            if column != "date" and column not in existing.columns
+        ],
+    ]
+    return merged.loc[:, ordered_columns]
+
+
+def _write_market_outputs_atomic(
+    frame: pd.DataFrame,
+    metadata: dict[str, Any],
+    output_path: Path,
+    metadata_path: Path,
+) -> None:
+    """중간 종료가 기존 원장과 메타데이터를 훼손하지 않도록 원자적으로 교체한다."""
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    metadata_path.parent.mkdir(parents=True, exist_ok=True)
+    frame_temp = output_path.with_name(
+        f".{output_path.stem}.{os.getpid()}.tmp{output_path.suffix}"
+    )
+    metadata_temp = metadata_path.with_name(
+        f".{metadata_path.stem}.{os.getpid()}.tmp{metadata_path.suffix}"
+    )
+    try:
+        save_frame(frame, frame_temp)
+        metadata_temp.write_text(
+            json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        os.replace(frame_temp, output_path)
+        os.replace(metadata_temp, metadata_path)
+    finally:
+        frame_temp.unlink(missing_ok=True)
+        metadata_temp.unlink(missing_ok=True)
+
+
 def fetch_and_save_market_data(
     source_config_path: str | Path,
     output_path: str | Path,
@@ -604,11 +680,63 @@ def fetch_and_save_market_data(
     min_rows: int = 1500,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     source_config = load_source_config(source_config_path)
-    df, metadata = fetch_market_data(source_config, range_value=range_value, start=start, end=end)
+    output = Path(output_path)
+    metadata_output = Path(metadata_path)
+    automatic_window = range_value is None and start is None and end is None
+    existing = _load_incremental_market_base(output, min_rows) if automatic_window else None
+    overlap_days = max(
+        1,
+        int(
+            (source_config.get("fetch") or {}).get(
+                "incremental_overlap_days", DEFAULT_INCREMENTAL_OVERLAP_DAYS
+            )
+        ),
+    )
+
+    fetch_start = start
+    fetch_end = end
+    collection_mode = "bootstrap" if automatic_window else "explicit-range"
+    if existing is not None:
+        latest_date = pd.Timestamp(existing["date"].max()).date()
+        fetch_start = (latest_date - timedelta(days=overlap_days)).isoformat()
+        fetch_end = (date.today() + timedelta(days=2)).isoformat()
+        collection_mode = "incremental"
+
+    fetched, metadata = fetch_market_data(
+        source_config,
+        range_value=range_value,
+        start=fetch_start,
+        end=fetch_end,
+    )
+    df = (
+        _merge_incremental_market_data(existing, fetched)
+        if existing is not None
+        else fetched
+    )
     if len(df) < min_rows:
         raise RuntimeError(f"수집 데이터가 부족합니다: {len(df)} rows, 최소 {min_rows} rows 필요")
-    save_frame(df, output_path)
-    metadata_output = Path(metadata_path)
-    metadata_output.parent.mkdir(parents=True, exist_ok=True)
-    metadata_output.write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    metadata.update(
+        {
+            "collectionMode": collection_mode,
+            "overlapDays": overlap_days if collection_mode == "incremental" else 0,
+            "cachedRows": int(len(existing)) if existing is not None else 0,
+            "cachedLastDate": (
+                existing["date"].max().date().isoformat()
+                if existing is not None
+                else None
+            ),
+            "fetchedRows": int(len(fetched)),
+            "rows": int(len(df)),
+            "columns": [column for column in df.columns if column != "date"],
+            "firstDate": df["date"].min().date().isoformat(),
+            "lastDate": df["date"].max().date().isoformat(),
+            "missingByColumn": {
+                column: int(df[column].isna().sum())
+                for column in df.columns
+                if column != "date"
+            },
+        }
+    )
+    _write_market_outputs_atomic(df, metadata, output, metadata_output)
     return df, metadata
