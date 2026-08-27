@@ -1,33 +1,33 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-27 07:31:50 KST",
+  "generatedAt": "2026-08-27 09:01:02 KST",
   "referenceDate": "2026-08-27",
   "status": "warning",
-  "score": 96.4,
+  "score": 96.8,
   "summary": {
     "checks": 247,
-    "ok": 229,
-    "warning": 18,
+    "ok": 231,
+    "warning": 16,
     "error": 0,
     "sourceSeriesExpected": 98,
     "sourceSeriesPresent": 98,
-    "freshSeries": 98,
-    "staleSeries": 0,
+    "freshSeries": 97,
+    "staleSeries": 1,
     "fallbackSeries": 14
   },
   "sourceGroups": [
     {
       "id": "yahoo",
       "label": "Yahoo Finance",
-      "status": "ok",
+      "status": "warning",
       "seriesExpected": 36,
       "seriesPresent": 36,
-      "freshCount": 36,
-      "staleCount": 0,
+      "freshCount": 35,
+      "staleCount": 1,
       "fallbackCount": 0,
-      "oldestLastDate": "2026-08-26",
-      "latestLastDate": "2026-08-26",
-      "detail": "36/36개 수집 · 허용시차 내 36개"
+      "oldestLastDate": "2026-08-21",
+      "latestLastDate": "2026-08-27",
+      "detail": "36/36개 수집 · 허용시차 내 35개"
     },
     {
       "id": "naver-equity",
@@ -38,8 +38,8 @@
       "freshCount": 7,
       "staleCount": 0,
       "fallbackCount": 0,
-      "oldestLastDate": "2026-08-26",
-      "latestLastDate": "2026-08-26",
+      "oldestLastDate": "2026-08-27",
+      "latestLastDate": "2026-08-27",
       "detail": "7/7개 수집 · 허용시차 내 7개"
     },
     {
@@ -65,7 +65,7 @@
       "staleCount": 0,
       "fallbackCount": 0,
       "oldestLastDate": "2026-08-14",
-      "latestLastDate": "2026-08-26",
+      "latestLastDate": "2026-08-27",
       "detail": "19/19개 수집 · 허용시차 내 19개"
     },
     {
@@ -96,6 +96,17 @@
     }
   ],
   "issues": [
+    {
+      "id": "source:yahoo:vix3m",
+      "category": "source",
+      "label": "Cboe 3-Month Volatility Index",
+      "status": "warning",
+      "detail": "최신 2026-08-21 · 영업일 시차 4일 · 관측치 1733개 · history-cache",
+      "groupId": "yahoo",
+      "lastDate": "2026-08-21",
+      "observations": 1733,
+      "fetchStatus": "history-cache"
+    },
     {
       "id": "source:m7:price:AAPL",
       "category": "source",
@@ -242,33 +253,6 @@
       "detail": "2026-08-25 · 2,926.0000 · 실시간 · live",
       "lastDate": "2026-08-25",
       "lagBusinessDays": 2
-    },
-    {
-      "id": "cache:naver-market-live:usdcny",
-      "category": "cache",
-      "label": "시장지표 최신값/usdcny",
-      "status": "warning",
-      "detail": "2026-08-25 · 6.7203 · 마감 · live",
-      "lastDate": "2026-08-25",
-      "lagBusinessDays": 2
-    },
-    {
-      "id": "cache:naver-market-live:usdjpy",
-      "category": "cache",
-      "label": "시장지표 최신값/usdjpy",
-      "status": "warning",
-      "detail": "2026-08-25 · 159.2100 · 마감 · live",
-      "lastDate": "2026-08-25",
-      "lagBusinessDays": 2
-    },
-    {
-      "id": "cache:naver-market-live:eurusd",
-      "category": "cache",
-      "label": "시장지표 최신값/eurusd",
-      "status": "warning",
-      "detail": "2026-08-25 · 1.1672 · 마감 · live",
-      "lastDate": "2026-08-25",
-      "lagBusinessDays": 2
     }
   ],
   "checks": [
@@ -310,10 +294,10 @@
       "category": "source",
       "label": "USD/KRW",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 519개 · yahoo",
+      "detail": "최신 2026-08-27 · 영업일 시차 0일 · 관측치 518개 · yahoo",
       "groupId": "yahoo",
-      "lastDate": "2026-08-26",
-      "observations": 519,
+      "lastDate": "2026-08-27",
+      "observations": 518,
       "fetchStatus": "yahoo"
     },
     {
@@ -331,12 +315,12 @@
       "id": "source:yahoo:vix3m",
       "category": "source",
       "label": "Cboe 3-Month Volatility Index",
-      "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 474개 · yahoo",
+      "status": "warning",
+      "detail": "최신 2026-08-21 · 영업일 시차 4일 · 관측치 1733개 · history-cache",
       "groupId": "yahoo",
-      "lastDate": "2026-08-26",
-      "observations": 474,
-      "fetchStatus": "yahoo"
+      "lastDate": "2026-08-21",
+      "observations": 1733,
+      "fetchStatus": "history-cache"
     },
     {
       "id": "source:yahoo:vvix",
@@ -365,10 +349,10 @@
       "category": "source",
       "label": "KODEX 200",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 482개 · yahoo",
+      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 481개 · yahoo",
       "groupId": "yahoo",
       "lastDate": "2026-08-26",
-      "observations": 482,
+      "observations": 481,
       "fetchStatus": "yahoo"
     },
     {
@@ -376,10 +360,10 @@
       "category": "source",
       "label": "KODEX Leverage",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 482개 · yahoo",
+      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 481개 · yahoo",
       "groupId": "yahoo",
       "lastDate": "2026-08-26",
-      "observations": 482,
+      "observations": 481,
       "fetchStatus": "yahoo"
     },
     {
@@ -519,10 +503,10 @@
       "category": "source",
       "label": "Samsung Electronics",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 484개 · yahoo",
+      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 483개 · yahoo",
       "groupId": "yahoo",
       "lastDate": "2026-08-26",
-      "observations": 484,
+      "observations": 483,
       "fetchStatus": "yahoo"
     },
     {
@@ -530,10 +514,10 @@
       "category": "source",
       "label": "SK hynix",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 484개 · yahoo",
+      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 483개 · yahoo",
       "groupId": "yahoo",
       "lastDate": "2026-08-26",
-      "observations": 484,
+      "observations": 483,
       "fetchStatus": "yahoo"
     },
     {
@@ -541,10 +525,10 @@
       "category": "source",
       "label": "Hanmi Semiconductor",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 484개 · yahoo",
+      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 483개 · yahoo",
       "groupId": "yahoo",
       "lastDate": "2026-08-26",
-      "observations": 484,
+      "observations": 483,
       "fetchStatus": "yahoo"
     },
     {
@@ -552,10 +536,10 @@
       "category": "source",
       "label": "DB HiTek",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 484개 · yahoo",
+      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 483개 · yahoo",
       "groupId": "yahoo",
       "lastDate": "2026-08-26",
-      "observations": 484,
+      "observations": 483,
       "fetchStatus": "yahoo"
     },
     {
@@ -563,10 +547,10 @@
       "category": "source",
       "label": "Leeno Industrial",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 484개 · yahoo",
+      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 483개 · yahoo",
       "groupId": "yahoo",
       "lastDate": "2026-08-26",
-      "observations": 484,
+      "observations": 483,
       "fetchStatus": "yahoo"
     },
     {
@@ -673,10 +657,10 @@
       "category": "source",
       "label": "Samsung Electronics",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 504개 · live",
+      "detail": "최신 2026-08-27 · 영업일 시차 0일 · 관측치 505개 · live",
       "groupId": "naver-equity",
-      "lastDate": "2026-08-26",
-      "observations": 504,
+      "lastDate": "2026-08-27",
+      "observations": 505,
       "fetchStatus": "live"
     },
     {
@@ -684,10 +668,10 @@
       "category": "source",
       "label": "SK hynix",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 504개 · live",
+      "detail": "최신 2026-08-27 · 영업일 시차 0일 · 관측치 505개 · live",
       "groupId": "naver-equity",
-      "lastDate": "2026-08-26",
-      "observations": 504,
+      "lastDate": "2026-08-27",
+      "observations": 505,
       "fetchStatus": "live"
     },
     {
@@ -695,10 +679,10 @@
       "category": "source",
       "label": "Hanmi Semiconductor",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 504개 · live",
+      "detail": "최신 2026-08-27 · 영업일 시차 0일 · 관측치 505개 · live",
       "groupId": "naver-equity",
-      "lastDate": "2026-08-26",
-      "observations": 504,
+      "lastDate": "2026-08-27",
+      "observations": 505,
       "fetchStatus": "live"
     },
     {
@@ -706,10 +690,10 @@
       "category": "source",
       "label": "DB HiTek",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 504개 · live",
+      "detail": "최신 2026-08-27 · 영업일 시차 0일 · 관측치 505개 · live",
       "groupId": "naver-equity",
-      "lastDate": "2026-08-26",
-      "observations": 504,
+      "lastDate": "2026-08-27",
+      "observations": 505,
       "fetchStatus": "live"
     },
     {
@@ -717,10 +701,10 @@
       "category": "source",
       "label": "Leeno Industrial",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 504개 · live",
+      "detail": "최신 2026-08-27 · 영업일 시차 0일 · 관측치 505개 · live",
       "groupId": "naver-equity",
-      "lastDate": "2026-08-26",
-      "observations": 504,
+      "lastDate": "2026-08-27",
+      "observations": 505,
       "fetchStatus": "live"
     },
     {
@@ -728,10 +712,10 @@
       "category": "source",
       "label": "KODEX 200",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 504개 · live",
+      "detail": "최신 2026-08-27 · 영업일 시차 0일 · 관측치 505개 · live",
       "groupId": "naver-equity",
-      "lastDate": "2026-08-26",
-      "observations": 504,
+      "lastDate": "2026-08-27",
+      "observations": 505,
       "fetchStatus": "live"
     },
     {
@@ -739,10 +723,10 @@
       "category": "source",
       "label": "KODEX Leverage",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 504개 · live",
+      "detail": "최신 2026-08-27 · 영업일 시차 0일 · 관측치 505개 · live",
       "groupId": "naver-equity",
-      "lastDate": "2026-08-26",
-      "observations": 504,
+      "lastDate": "2026-08-27",
+      "observations": 505,
       "fetchStatus": "live"
     },
     {
@@ -882,9 +866,9 @@
       "category": "source",
       "label": "달러/중국 위안",
       "status": "ok",
-      "detail": "최신 2026-08-25 · 영업일 시차 2일 · 관측치 780개 · live",
+      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 780개 · live",
       "groupId": "naver-market-index",
-      "lastDate": "2026-08-25",
+      "lastDate": "2026-08-26",
       "observations": 780,
       "fetchStatus": "live"
     },
@@ -893,9 +877,9 @@
       "category": "source",
       "label": "달러/일본 엔",
       "status": "ok",
-      "detail": "최신 2026-08-25 · 영업일 시차 2일 · 관측치 780개 · live",
+      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 780개 · live",
       "groupId": "naver-market-index",
-      "lastDate": "2026-08-25",
+      "lastDate": "2026-08-26",
       "observations": 780,
       "fetchStatus": "live"
     },
@@ -904,9 +888,9 @@
       "category": "source",
       "label": "유로/달러",
       "status": "ok",
-      "detail": "최신 2026-08-25 · 영업일 시차 2일 · 관측치 780개 · live",
+      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 780개 · live",
       "groupId": "naver-market-index",
-      "lastDate": "2026-08-25",
+      "lastDate": "2026-08-26",
       "observations": 780,
       "fetchStatus": "live"
     },
@@ -915,9 +899,9 @@
       "category": "source",
       "label": "원/달러",
       "status": "ok",
-      "detail": "최신 2026-08-26 · 영업일 시차 1일 · 관측치 780개 · live",
+      "detail": "최신 2026-08-27 · 영업일 시차 0일 · 관측치 780개 · live",
       "groupId": "naver-market-index",
-      "lastDate": "2026-08-26",
+      "lastDate": "2026-08-27",
       "observations": 780,
       "fetchStatus": "live"
     },
@@ -1358,24 +1342,24 @@
       "category": "artifact",
       "label": "시장리스크",
       "status": "ok",
-      "detail": "생성시각 2026-08-27 07:30 KST · 영업일 시차 0일",
-      "generatedAt": "2026-08-27 07:30 KST"
+      "detail": "생성시각 2026-08-27 09:00 KST · 영업일 시차 0일",
+      "generatedAt": "2026-08-27 09:00 KST"
     },
     {
       "id": "artifact:snapshot",
       "category": "artifact",
       "label": "원천 스냅샷",
       "status": "ok",
-      "detail": "생성시각 2026-08-27 07:30:39 KST · 영업일 시차 0일",
-      "generatedAt": "2026-08-27 07:30:39 KST"
+      "detail": "생성시각 2026-08-27 09:00:46 KST · 영업일 시차 0일",
+      "generatedAt": "2026-08-27 09:00:46 KST"
     },
     {
       "id": "artifact:timeseries",
       "category": "artifact",
       "label": "시장리스크 시계열",
       "status": "ok",
-      "detail": "생성시각 2026-08-27 07:30:39 KST · 영업일 시차 0일",
-      "generatedAt": "2026-08-27 07:30:39 KST"
+      "detail": "생성시각 2026-08-27 09:00:46 KST · 영업일 시차 0일",
+      "generatedAt": "2026-08-27 09:00:46 KST"
     },
     {
       "id": "artifact:backtest",
@@ -1438,8 +1422,8 @@
       "category": "artifact",
       "label": "Naver 시장지표 캐시",
       "status": "ok",
-      "detail": "생성시각 2026-08-27 07:31:50 KST · 영업일 시차 0일",
-      "generatedAt": "2026-08-27 07:31:50 KST"
+      "detail": "생성시각 2026-08-27 09:01:01 KST · 영업일 시차 0일",
+      "generatedAt": "2026-08-27 09:01:01 KST"
     },
     {
       "id": "cross:indicator-timeseries",
@@ -1677,7 +1661,7 @@
       "category": "alignment",
       "label": "국내주식 Yahoo·Naver 가격",
       "status": "ok",
-      "detail": "동일 기준일 비교 7개 · 최대 dbhitek 0.00%"
+      "detail": "동일 기준일 비교 0개 · 최대 - 0.00% · 장중 시차 감안"
     },
     {
       "id": "cross:kospi200-hmm-els-value",
@@ -2188,7 +2172,7 @@
       "category": "series",
       "label": "Naver 시장지표/btc",
       "status": "ok",
-      "detail": "1099개 관측치 · 날짜 정렬/중복 정상 · 유효값 1099/1099개"
+      "detail": "1100개 관측치 · 날짜 정렬/중복 정상 · 유효값 1100/1100개"
     },
     {
       "id": "cache:naver-market:us_10y2y_spread",
@@ -2273,7 +2257,7 @@
       "category": "cache",
       "label": "시장지표 최신값/copper",
       "status": "ok",
-      "detail": "2026-08-26 · 6.7100 · 10분 지연 · live",
+      "detail": "2026-08-26 · 6.7210 · 10분 지연 · live",
       "lastDate": "2026-08-26",
       "lagBusinessDays": 1
     },
@@ -2282,7 +2266,7 @@
       "category": "cache",
       "label": "시장지표 최신값/gold",
       "status": "ok",
-      "detail": "2026-08-26 · 4,667.7000 · 10분 지연 · live",
+      "detail": "2026-08-26 · 4,677.8000 · 10분 지연 · live",
       "lastDate": "2026-08-26",
       "lagBusinessDays": 1
     },
@@ -2299,35 +2283,35 @@
       "id": "cache:naver-market-live:usdcny",
       "category": "cache",
       "label": "시장지표 최신값/usdcny",
-      "status": "warning",
-      "detail": "2026-08-25 · 6.7203 · 마감 · live",
-      "lastDate": "2026-08-25",
-      "lagBusinessDays": 2
+      "status": "ok",
+      "detail": "2026-08-26 · 6.7225 · 마감 · live",
+      "lastDate": "2026-08-26",
+      "lagBusinessDays": 1
     },
     {
       "id": "cache:naver-market-live:usdjpy",
       "category": "cache",
       "label": "시장지표 최신값/usdjpy",
-      "status": "warning",
-      "detail": "2026-08-25 · 159.2100 · 마감 · live",
-      "lastDate": "2026-08-25",
-      "lagBusinessDays": 2
+      "status": "ok",
+      "detail": "2026-08-26 · 159.2700 · 마감 · live",
+      "lastDate": "2026-08-26",
+      "lagBusinessDays": 1
     },
     {
       "id": "cache:naver-market-live:eurusd",
       "category": "cache",
       "label": "시장지표 최신값/eurusd",
-      "status": "warning",
-      "detail": "2026-08-25 · 1.1672 · 마감 · live",
-      "lastDate": "2026-08-25",
-      "lagBusinessDays": 2
+      "status": "ok",
+      "detail": "2026-08-26 · 1.1648 · 마감 · live",
+      "lastDate": "2026-08-26",
+      "lagBusinessDays": 1
     },
     {
       "id": "cache:naver-market-live:usdkrw_naver",
       "category": "cache",
       "label": "시장지표 최신값/usdkrw_naver",
       "status": "ok",
-      "detail": "2026-08-27 · 1,386.0000 · 실시간 고시 · live",
+      "detail": "2026-08-27 · 1,384.5000 · 실시간 고시 · live",
       "lastDate": "2026-08-27",
       "lagBusinessDays": 0
     },
@@ -2336,7 +2320,7 @@
       "category": "cache",
       "label": "시장지표 최신값/us2y_naver",
       "status": "ok",
-      "detail": "2026-08-26 · 4.2090 · 실시간 · live",
+      "detail": "2026-08-26 · 4.2130 · 실시간 · live",
       "lastDate": "2026-08-26",
       "lagBusinessDays": 1
     },
@@ -2408,16 +2392,16 @@
       "category": "cache",
       "label": "시장지표 최신값/btc",
       "status": "ok",
-      "detail": "2026-08-26 · 109,646,000.0000 · 24시간 거래 · naver-crypto",
-      "lastDate": "2026-08-26",
-      "lagBusinessDays": 1
+      "detail": "2026-08-27 · 109,750,000.0000 · 24시간 거래 · naver-crypto",
+      "lastDate": "2026-08-27",
+      "lagBusinessDays": 0
     },
     {
       "id": "cache:naver-market-live:us_10y2y_spread",
       "category": "cache",
       "label": "시장지표 최신값/us_10y2y_spread",
       "status": "ok",
-      "detail": "2026-08-26 · 0.4400 · 장중 계산 · derived: live + live",
+      "detail": "2026-08-26 · 0.4360 · 장중 계산 · derived: live + live",
       "lastDate": "2026-08-26",
       "lagBusinessDays": 1
     },
@@ -2460,10 +2444,10 @@
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260827T073005-0730-fast",
-    "mode": "fast",
+    "runId": "20260827T090005-0900-live",
+    "mode": "live",
     "state": "generated",
-    "startedAt": "2026-08-27 07:30:05 KST",
-    "preparedAt": "2026-08-27 07:31:50 KST"
+    "startedAt": "2026-08-27 09:00:05 KST",
+    "preparedAt": "2026-08-27 09:01:02 KST"
   }
 }
