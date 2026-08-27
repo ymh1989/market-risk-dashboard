@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from scripts import export_hmm_regime
@@ -55,3 +56,24 @@ def test_hmm_price_history_merges_fresh_short_range_and_cache(monkeypatch):
 
     assert merged["date"].tolist() == ["2026-07-15", "2026-07-16", "2026-07-22", "2026-07-23"]
     assert merged.iloc[-1]["close"] == 108.0
+
+
+def test_kospi200_hmm_uses_naver_when_yahoo_history_fails(monkeypatch):
+    naver = pd.DataFrame(
+        {
+            "date": pd.date_range("2023-01-02", periods=400, freq="B").strftime("%Y-%m-%d"),
+            "close": np.linspace(300.0, 370.0, 400),
+        }
+    )
+    monkeypatch.setattr(
+        export_hmm_regime,
+        "_fetch_yahoo",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("축약 응답")),
+    )
+    monkeypatch.setattr(export_hmm_regime, "_fetch_naver_index", lambda _symbol: naver.copy())
+
+    merged = export_hmm_regime._fetch_price_history("^KS200")
+
+    assert len(merged) == 400
+    assert merged.iloc[-1]["close"] == 370.0
+    assert merged.attrs["priceSource"] == "Naver KPI200 + ELS 가격 캐시"

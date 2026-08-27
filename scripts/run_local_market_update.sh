@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="$ROOT/.env"
@@ -28,6 +28,9 @@ ONLY_AT_SCHEDULED_KST=0
 SCHEDULE_STATE_FILE=""
 SCHEDULED_TIME=""
 SCHEDULED_DAY_TYPE=""
+SCHEDULE_RUNNING_FILE=""
+SCHEDULE_FAILED_FILE=""
+CURRENT_STAGE="예약 확인"
 
 if [[ -f "$ENV_FILE" ]]; then
   set -a
@@ -135,6 +138,8 @@ is_scheduled_now() {
         return 1
       fi
       SCHEDULE_STATE_FILE="$state_file"
+      SCHEDULE_RUNNING_FILE="${state_file%.done}.running"
+      SCHEDULE_FAILED_FILE="${state_file%.done}.failed"
       SCHEDULED_TIME="$scheduled_time"
       return 0
     fi
@@ -147,6 +152,7 @@ is_scheduled_now() {
 mark_scheduled_done() {
   if [[ -n "$SCHEDULE_STATE_FILE" ]]; then
     printf "%s\n" "$(kst_now '+%Y-%m-%d %H:%M:%S KST')" > "$SCHEDULE_STATE_FILE"
+    rm -f "$SCHEDULE_RUNNING_FILE" "$SCHEDULE_FAILED_FILE"
   fi
 }
 
@@ -247,23 +253,53 @@ export MARKET_UPDATE_RUN_ID="$RUN_ID"
 
 mkdir -p "$LOG_DIR"
 LOCK_DIR="$LOG_DIR/.local-market-update.lock"
-if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-  echo "다른 로컬 시장리스크 갱신 작업이 실행 중입니다." >&2
-  exit 1
-fi
-
+LOCK_ACQUIRED=0
 WORKTREE=""
+
+record_schedule_running() {
+  if [[ -n "$SCHEDULE_RUNNING_FILE" ]]; then
+    printf "status=running\nrunId=%s\nmode=%s\nstartedAt=%s\n" \
+      "$RUN_ID" "$UPDATE_MODE" "$RUN_STARTED_AT" > "$SCHEDULE_RUNNING_FILE"
+    rm -f "$SCHEDULE_FAILED_FILE"
+  fi
+}
+
+record_schedule_failure() {
+  local exit_code="$1"
+  if [[ -n "$SCHEDULE_FAILED_FILE" && ! -f "$SCHEDULE_STATE_FILE" ]]; then
+    printf "status=failed\nexitCode=%s\nstage=%s\nfailedAt=%s\n" \
+      "$exit_code" "$CURRENT_STAGE" "$(kst_now '+%Y-%m-%d %H:%M:%S KST')" > "$SCHEDULE_FAILED_FILE"
+    rm -f "$SCHEDULE_RUNNING_FILE"
+  fi
+}
+
 cleanup() {
-  rm -rf "$LOCK_DIR"
+  local exit_code="$?"
+  if (( exit_code != 0 )); then
+    record_schedule_failure "$exit_code" || true
+  fi
+  if (( LOCK_ACQUIRED )); then
+    rm -rf "$LOCK_DIR"
+  fi
   if [[ -n "$WORKTREE" && -d "$WORKTREE" ]]; then
     git -C "$ROOT" worktree remove --force "$WORKTREE" >/dev/null 2>&1 || rm -rf "$WORKTREE"
   fi
+  return "$exit_code"
 }
 trap cleanup EXIT
+
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+  CURRENT_STAGE="중복 실행 잠금"
+  echo "다른 로컬 시장리스크 갱신 작업이 실행 중입니다." >&2
+  exit 1
+fi
+LOCK_ACQUIRED=1
+record_schedule_running
 
 WORKTREE="$(mktemp -d "${TMPDIR:-/tmp}/market-risk-update.XXXXXX")"
 rm -rf "$WORKTREE"
 
+CURRENT_STAGE="임시 워크트리 준비"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] $REMOTE/$BRANCH 기준 임시 worktree를 준비합니다."
 git -C "$ROOT" fetch "$REMOTE" "$BRANCH"
 git -C "$ROOT" worktree add --detach "$WORKTREE" "$REMOTE/$BRANCH"
@@ -369,6 +405,19 @@ update_kospi_breadth_data() {
   persist_local_data_cache
 }
 
+refresh_els_index_risk() {
+  if "$PYTHON_BIN" scripts/export_els_index_risk.py; then
+    return 0
+  fi
+  if [[ -s data/els-index-risk.json ]]; then
+    echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] ELS 원천 조회 실패로 직전 검증본을 유지합니다." >&2
+    return 0
+  fi
+  echo "ELS 지수 리스크 신규 산출과 직전 검증본 사용이 모두 불가능합니다." >&2
+  return 1
+}
+
+CURRENT_STAGE="시장데이터·지표"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 갱신 모드: $UPDATE_MODE"
 if [[ "$UPDATE_MODE" == "live" ]]; then
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 장중 경량 갱신: 현재 시장값과 위험점수만 갱신합니다."
@@ -411,10 +460,11 @@ if [[ "$UPDATE_MODE" == "full" ]]; then
 else
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] fast 모드: 스트레스 에피소드 히스토리 재계산을 생략합니다."
 fi
-python3 scripts/export_els_index_risk.py
+refresh_els_index_risk
 python3 scripts/export_hmm_regime.py
 MARKET_STAGE_COMPLETED_EPOCH="$(date +%s)"
 
+CURRENT_STAGE="ML 신호"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] ML risk-off 산출물을 갱신합니다."
 ML_STAGE_STARTED_EPOCH="$(date +%s)"
 "$PYTHON_BIN" -m kospi_risk.cli fetch-market-data --source-config configs/data_sources.yaml --output data/raw/market_data.csv --metadata data/raw/market_data_sources.json --min-rows 1500
@@ -452,6 +502,7 @@ if [[ "$UPDATE_MODE" != "krx" ]]; then
   "$PYTHON_BIN" scripts/update_market_risk.py --refresh-live-only
 fi
 
+CURRENT_STAGE="품질 검증"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 대시보드 데이터를 검증합니다."
 VALIDATION_STAGE_STARTED_EPOCH="$(date +%s)"
 "$PYTHON_BIN" scripts/audit_data_completeness.py --strict
@@ -519,6 +570,7 @@ prepare_atomic_publication() {
   "$PYTHON_BIN" scripts/prepare_atomic_publication.py "${ATOMIC_PUBLICATION_ARGS[@]}"
 }
 
+CURRENT_STAGE="게시 파일 준비"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 오프라인 HTML 스냅샷을 생성합니다."
 "$PYTHON_BIN" scripts/export_offline_dashboard.py --stable-only
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 게시 파일을 동일 runId로 검증하고 봉인합니다: $RUN_ID"
@@ -575,6 +627,7 @@ else
   push_update_commit
 fi
 
+CURRENT_STAGE="GitHub Pages 확인"
 for ((retry = 0; retry <= PAGES_DEPLOY_RETRIES; retry++)); do
   if wait_for_pages_deployment "$RUN_ID"; then
     mark_scheduled_done

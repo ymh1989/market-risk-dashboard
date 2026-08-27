@@ -96,6 +96,38 @@ def format_alert(
     )
 
 
+def format_schedule_alert(
+    *,
+    scheduled_at: datetime,
+    mode: str,
+    elapsed_minutes: int,
+    state: str,
+    log_file: str,
+) -> str:
+    """정기 갱신이 허용 시간을 넘긴 상황을 짧은 운영 알림으로 만든다."""
+
+    slot = scheduled_at.astimezone(KST)
+    log_tail = read_log_tail(log_file)
+    codex_prompt = (
+        f"market-lab {slot.strftime('%Y-%m-%d %H:%M')} {mode} 정기 갱신 지연을 점검해줘. "
+        f"현재상태={state}, 경과={elapsed_minutes}분. logs/{Path(log_file).name}와 "
+        "local-market-update 상태 파일을 확인하고 원인을 수정한 뒤 누락 갱신을 복구해줘."
+    )
+    return "\n".join(
+        [
+            "<b>[운영 지연] 시장리스크 정기 갱신</b>",
+            f"예약: {html.escape(slot.strftime('%Y-%m-%d %H:%M KST'))} · {html.escape(mode)}",
+            f"경과: {elapsed_minutes}분",
+            f"상태: {html.escape(state)}",
+            "",
+            "<b>마지막 로그</b>",
+            f"<pre>{html.escape(log_tail)}</pre>",
+            "<b>Codex 붙여넣기</b>",
+            f"<code>{html.escape(codex_prompt)}</code>",
+        ]
+    )
+
+
 def send_message(message: str, token: str, chat_id: str) -> None:
     data = urllib.parse.urlencode(
         {

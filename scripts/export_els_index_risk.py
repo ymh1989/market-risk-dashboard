@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import ast
 import json
 import math
+import time
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -15,8 +17,13 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_FILE = ROOT / "data" / "els-index-risk.json"
 STRESS_EPISODES_FILE = ROOT / "data" / "market-stress-episodes.json"
-YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d"
+YAHOO_CHART_URLS = (
+    "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d",
+    "https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d",
+)
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-els-index-risk/0.1)"
+NAVER_SISE_URL = "https://api.finance.naver.com/siseJson.naver"
+NAVER_INDEX_SYMBOLS = {"^KS200": "KPI200"}
 TRAJECTORY_WINDOWS = {"oneWeekPoints": 5, "oneMonthPoints": 22, "threeMonthPoints": 66}
 EPISODE_MAX_POINTS = 48
 
@@ -108,33 +115,92 @@ def _yahoo_daily_rows(result: dict, now_timestamp: float | None = None) -> tuple
 
 
 def _fetch_yahoo(symbol: str, range_value: str = "10y") -> pd.DataFrame:
+    """Yahoo 축약·일시 오류에 대비해 호스트를 바꿔 최대 3회 조회한다."""
+
     encoded_symbol = urllib.parse.quote(symbol, safe="")
+    errors = []
+    for attempt in range(3):
+        request = urllib.request.Request(
+            YAHOO_CHART_URLS[attempt % len(YAHOO_CHART_URLS)].format(
+                symbol=encoded_symbol,
+                range_value=range_value,
+            ),
+            headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=20) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+
+            chart = payload.get("chart", {})
+            if chart.get("error"):
+                raise RuntimeError(f"{symbol}: {chart['error']}")
+            result = chart["result"][0]
+            rows, incomplete_date = _yahoo_daily_rows(result)
+            frame = pd.DataFrame(rows).drop_duplicates("date").sort_values("date").reset_index(drop=True)
+            frame.attrs["excludedIncompleteSessionDate"] = incomplete_date
+            if len(frame) < 260:
+                raise RuntimeError(
+                    f"{symbol}: ELS index risk needs at least 260 observations, got {len(frame)}"
+                )
+            return frame
+        except Exception as error:  # 원천의 축약 JSON·HTTP 오류를 같은 재시도 정책으로 다룬다.
+            errors.append(str(error))
+            if attempt < 2:
+                time.sleep(1.5 * (attempt + 1))
+    raise RuntimeError(f"{symbol}: Yahoo 3회 조회 실패 ({'; '.join(errors)})")
+
+
+def _fetch_naver_index(symbol: str, lookback_days: int = 3700) -> pd.DataFrame:
+    """Yahoo KOSPI200 장애 시 Naver KPI200 장기 일봉을 사용한다."""
+
+    naver_symbol = NAVER_INDEX_SYMBOLS.get(symbol)
+    if not naver_symbol:
+        raise RuntimeError(f"{symbol}: Naver 대체 심볼이 없습니다.")
+    now = datetime.now(ZoneInfo("Asia/Seoul"))
+    params = urllib.parse.urlencode(
+        {
+            "symbol": naver_symbol,
+            "requestType": 1,
+            "startTime": (now - timedelta(days=lookback_days)).strftime("%Y%m%d"),
+            "endTime": now.strftime("%Y%m%d"),
+            "timeframe": "day",
+        }
+    )
     request = urllib.request.Request(
-        YAHOO_CHART_URL.format(symbol=encoded_symbol, range_value=range_value),
-        headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+        f"{NAVER_SISE_URL}?{params}",
+        headers={"User-Agent": USER_AGENT, "Accept": "text/plain"},
     )
     with urllib.request.urlopen(request, timeout=20) as response:
-        payload = json.loads(response.read().decode("utf-8"))
-
-    chart = payload.get("chart", {})
-    if chart.get("error"):
-        raise RuntimeError(f"{symbol}: {chart['error']}")
-    result = chart["result"][0]
-    rows, incomplete_date = _yahoo_daily_rows(result)
-    frame = pd.DataFrame(rows).drop_duplicates("date").sort_values("date").reset_index(drop=True)
-    frame.attrs["excludedIncompleteSessionDate"] = incomplete_date
+        raw = response.read().decode("utf-8", errors="ignore").strip()
+    rows = ast.literal_eval(raw)
+    values = [
+        {"date": datetime.strptime(str(row[0]), "%Y%m%d").date().isoformat(), "close": float(row[4])}
+        for row in rows[1:]
+        if isinstance(row, list) and len(row) >= 5 and row[4] not in (None, "")
+    ]
+    frame = pd.DataFrame(values).drop_duplicates("date").sort_values("date").reset_index(drop=True)
     if len(frame) < 260:
-        raise RuntimeError(f"{symbol}: ELS index risk needs at least 260 observations, got {len(frame)}")
+        raise RuntimeError(f"{symbol}: Naver KPI200 관측치가 부족합니다: {len(frame)}")
     return frame
 
 
 def _fetch_price_history(symbol: str, cached_prices: pd.DataFrame | None = None) -> pd.DataFrame:
-    historical = _fetch_yahoo(symbol, "10y")
-    recent = _fetch_yahoo(symbol, "2y")
+    try:
+        historical = _fetch_yahoo(symbol, "10y")
+        price_source = "Yahoo Finance"
+    except Exception:
+        historical = _fetch_naver_index(symbol)
+        price_source = "Naver KPI200"
     frames = [historical]
     if cached_prices is not None and not cached_prices.empty:
         frames.append(cached_prices[["date", "close"]])
-    frames.append(recent)
+    recent = pd.DataFrame(columns=["date", "close"])
+    if price_source == "Yahoo Finance":
+        try:
+            recent = _fetch_yahoo(symbol, "2y")
+            frames.append(recent)
+        except Exception:
+            pass
     merged = (
         pd.concat(frames, ignore_index=True)
         .drop_duplicates("date", keep="last")
@@ -148,6 +214,7 @@ def _fetch_price_history(symbol: str, cached_prices: pd.DataFrame | None = None)
     }
     if excluded_dates:
         merged = merged.loc[~merged["date"].isin(excluded_dates)].reset_index(drop=True)
+    merged.attrs["priceSource"] = price_source
     return merged
 
 
@@ -230,7 +297,9 @@ def _reading(latest: pd.Series, score: float) -> str:
 
 
 def _index_payload(spec: dict[str, str], cached_prices: pd.DataFrame | None = None) -> tuple[dict, pd.DataFrame]:
-    frame = _features(_fetch_price_history(spec["symbol"], cached_prices))
+    price = _fetch_price_history(spec["symbol"], cached_prices)
+    price_source = price.attrs.get("priceSource", "Yahoo Finance")
+    frame = _features(price)
     latest = frame.dropna(subset=["els_risk_score"]).iloc[-1]
     latest_year = int(str(latest["date"])[:4])
     ytd_prices = frame.loc[pd.to_datetime(frame["date"]).dt.year == latest_year, ["date", "close"]]
@@ -251,6 +320,7 @@ def _index_payload(spec: dict[str, str], cached_prices: pd.DataFrame | None = No
     return (
         {
             **spec,
+            "priceSource": price_source,
             "lastDate": latest["date"],
             "lastClose": _round(latest["close"], 2),
             "score": _round(score, 2),

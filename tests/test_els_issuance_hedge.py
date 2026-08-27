@@ -66,6 +66,23 @@ def test_long_history_is_merged_with_fresher_recent_prices(monkeypatch):
     assert merged.loc[merged["date"] == "2026-07-21", "close"].iloc[0] == 210.0
 
 
+def test_kospi200_uses_naver_history_when_yahoo_is_unavailable(monkeypatch):
+    module = load_els_module()
+    naver = pd.DataFrame(
+        {
+            "date": pd.date_range("2024-01-02", periods=320, freq="B").strftime("%Y-%m-%d"),
+            "close": np.linspace(300.0, 360.0, 320),
+        }
+    )
+    monkeypatch.setattr(module, "_fetch_yahoo", lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("축약 응답")))
+    monkeypatch.setattr(module, "_fetch_naver_index", lambda _symbol: naver.copy())
+
+    merged = module._fetch_price_history("^KS200")
+
+    assert len(merged) == 320
+    assert merged.iloc[-1]["close"] == 360.0
+
+
 def test_yahoo_daily_rows_exclude_incomplete_exchange_session():
     module = load_els_module()
     session_start = int(datetime(2026, 8, 10, 0, 0, tzinfo=timezone.utc).timestamp())
