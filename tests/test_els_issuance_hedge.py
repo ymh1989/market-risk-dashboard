@@ -83,6 +83,35 @@ def test_kospi200_uses_naver_history_when_yahoo_is_unavailable(monkeypatch):
     assert merged.iloc[-1]["close"] == 360.0
 
 
+def test_partial_kospi200_ytd_cache_triggers_full_bootstrap(monkeypatch):
+    module = load_els_module()
+    partial = pd.DataFrame(
+        {
+            "date": pd.date_range("2026-01-02", periods=160, freq="B").strftime("%Y-%m-%d"),
+            "close": np.linspace(300.0, 360.0, 160),
+        }
+    )
+    historical = pd.DataFrame(
+        {
+            "date": pd.date_range("2024-01-02", periods=320, freq="B").strftime("%Y-%m-%d"),
+            "close": np.linspace(250.0, 370.0, 320),
+        }
+    )
+    observed = {}
+
+    def fake_naver(_symbol, **kwargs):
+        observed.update(kwargs)
+        return historical.copy()
+
+    monkeypatch.setattr(module, "_fetch_naver_index", fake_naver)
+
+    merged = module._fetch_price_history("^KS200", partial)
+
+    assert observed["start_date"] is None
+    assert observed["min_rows"] == 260
+    assert len(merged) >= 320
+
+
 def test_second_run_uses_incremental_range_and_persists_cache(monkeypatch, tmp_path):
     module = load_els_module()
     monkeypatch.setattr(module, "INDEX_HISTORY_CACHE_DIR", tmp_path)

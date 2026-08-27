@@ -77,6 +77,34 @@ def test_kospi200_hmm_uses_naver_when_yahoo_history_fails(monkeypatch):
     assert merged.attrs["priceSource"] == "Naver KPI200 + 증분 캐시"
 
 
+def test_hmm_partial_kospi200_cache_triggers_full_bootstrap(monkeypatch):
+    partial = pd.DataFrame(
+        {
+            "date": pd.date_range("2026-01-02", periods=160, freq="B").strftime("%Y-%m-%d"),
+            "close": np.linspace(300.0, 360.0, 160),
+        }
+    )
+    historical = pd.DataFrame(
+        {
+            "date": pd.date_range("2023-01-02", periods=400, freq="B").strftime("%Y-%m-%d"),
+            "close": np.linspace(250.0, 370.0, 400),
+        }
+    )
+    observed = {}
+
+    def fake_naver(_symbol, **kwargs):
+        observed.update(kwargs)
+        return historical.copy()
+
+    monkeypatch.setattr(export_hmm_regime, "_fetch_naver_index", fake_naver)
+
+    merged = export_hmm_regime._fetch_price_history("^KS200", partial)
+
+    assert observed["start_date"] is None
+    assert observed["min_rows"] == 320
+    assert len(merged) >= 400
+
+
 def test_hmm_reuses_fresh_els_incremental_cache(monkeypatch, tmp_path):
     history = pd.DataFrame(
         {

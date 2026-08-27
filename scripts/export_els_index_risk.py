@@ -229,7 +229,11 @@ def _fetch_price_history(
 
     try:
         if symbol in NAVER_INDEX_SYMBOLS:
-            start = incremental_start_date(existing, INCREMENTAL_OVERLAP_DAYS)
+            start = (
+                incremental_start_date(existing, INCREMENTAL_OVERLAP_DAYS)
+                if has_long_cache
+                else None
+            )
             fetched = _fetch_naver_index(
                 symbol,
                 start_date=start.isoformat() if start else None,

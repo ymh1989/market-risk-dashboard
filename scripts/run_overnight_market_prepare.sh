@@ -130,7 +130,8 @@ export PYTHONUNBUFFERED=1
 export PYTHONPATH="$WORKTREE/src"
 export PYTHONWARNINGS="${PYTHONWARNINGS:-ignore:Skipping features without any observed values:UserWarning}"
 export MPLCONFIGDIR="${MPLCONFIGDIR:-$WORKTREE/.cache/matplotlib}"
-mkdir -p "$MPLCONFIGDIR" data/raw data/processed models
+export INDEX_HISTORY_CACHE_DIR="${INDEX_HISTORY_CACHE_DIR:-$ROOT/data/raw/index_history}"
+mkdir -p "$MPLCONFIGDIR" "$INDEX_HISTORY_CACHE_DIR" data/raw data/processed models
 
 PREVIOUS_MARKET_DATA="$ROOT/data/raw/market_data.csv"
 if [[ -f "$PREVIOUS_MARKET_DATA" ]]; then
