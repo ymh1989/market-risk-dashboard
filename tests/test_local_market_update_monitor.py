@@ -3,7 +3,11 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from scripts.monitor_local_market_update import find_schedule_alerts, settings_from_env
-from scripts.send_operations_alert import format_schedule_alert
+from scripts.send_operations_alert import (
+    format_schedule_alert,
+    operations_bot_token,
+    operations_chat_ids,
+)
 
 
 KST = ZoneInfo("Asia/Seoul")
@@ -116,3 +120,21 @@ def test_schedule_alert_message_is_codex_ready(tmp_path):
     assert "Codex 붙여넣기" in message
     assert "^KS200 관측치 1개" in message
     assert len(message) < 3000
+
+
+def test_operations_alert_never_falls_back_to_risk_news_credentials():
+    risk_news_only = {
+        "TELEGRAM_BOT_TOKEN": "risk-news-token",
+        "TELEGRAM_CHAT_ID": "risk-news-chat",
+        "TELEGRAM_CHAT_IDS": "risk-news-chat,team-chat",
+    }
+    dedicated = {
+        **risk_news_only,
+        "MARKET_OPERATIONS_TELEGRAM_BOT_TOKEN": "finance-engineering-token",
+        "MARKET_OPERATIONS_TELEGRAM_CHAT_IDS": "private-finance-chat",
+    }
+
+    assert operations_bot_token(risk_news_only) == ""
+    assert operations_chat_ids(risk_news_only) == []
+    assert operations_bot_token(dedicated) == "finance-engineering-token"
+    assert operations_chat_ids(dedicated) == ["private-finance-chat"]

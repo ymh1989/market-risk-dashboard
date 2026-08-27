@@ -17,11 +17,11 @@ set -a
 source "$ENV_FILE"
 set +a
 
-if [[ -z "${TELEGRAM_BOT_TOKEN:-}" ]]; then
-  echo "정기 갱신 지연 알림에 필요한 TELEGRAM_BOT_TOKEN이 없습니다." >&2
+if [[ -z "${MARKET_OPERATIONS_TELEGRAM_BOT_TOKEN:-}" ]]; then
+  echo "정기 갱신 지연 알림에 필요한 MARKET_OPERATIONS_TELEGRAM_BOT_TOKEN이 없습니다." >&2
   exit 1
 fi
-if [[ -z "${MARKET_OPERATIONS_TELEGRAM_CHAT_IDS:-${MARKET_OPERATIONS_TELEGRAM_CHAT_ID:-${TELEGRAM_CHAT_ID:-}}}" ]]; then
+if [[ -z "${MARKET_OPERATIONS_TELEGRAM_CHAT_IDS:-${MARKET_OPERATIONS_TELEGRAM_CHAT_ID:-}}" ]]; then
   echo "금융공학뉴스 텔레그램 chat id가 없습니다." >&2
   exit 1
 fi

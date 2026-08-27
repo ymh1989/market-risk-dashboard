@@ -8,6 +8,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Mapping
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,11 +34,18 @@ def load_env_file(path: Path = ENV_FILE) -> None:
             os.environ[key] = value
 
 
-def operations_chat_ids() -> list[str]:
+def operations_bot_token(environ: Mapping[str, str] = os.environ) -> str:
+    """일반 뉴스 봇과 분리된 운영 알림 전용 봇 토큰을 반환한다."""
+
+    return environ.get("MARKET_OPERATIONS_TELEGRAM_BOT_TOKEN", "").strip()
+
+
+def operations_chat_ids(environ: Mapping[str, str] = os.environ) -> list[str]:
+    """운영 알림 전용 채팅만 반환하며 일반 뉴스 채팅으로 대체하지 않는다."""
+
     configured = (
-        os.environ.get("MARKET_OPERATIONS_TELEGRAM_CHAT_IDS")
-        or os.environ.get("MARKET_OPERATIONS_TELEGRAM_CHAT_ID")
-        or os.environ.get("TELEGRAM_CHAT_ID")
+        environ.get("MARKET_OPERATIONS_TELEGRAM_CHAT_IDS")
+        or environ.get("MARKET_OPERATIONS_TELEGRAM_CHAT_ID")
         or ""
     )
     return list(dict.fromkeys(value.strip() for value in configured.split(",") if value.strip()))
@@ -45,7 +53,12 @@ def operations_chat_ids() -> list[str]:
 
 def _redact(text: str) -> str:
     sanitized = text
-    for name in ("TELEGRAM_BOT_TOKEN", "KRX_PW", "FRED_API_KEY"):
+    for name in (
+        "MARKET_OPERATIONS_TELEGRAM_BOT_TOKEN",
+        "TELEGRAM_BOT_TOKEN",
+        "KRX_PW",
+        "FRED_API_KEY",
+    ):
         secret = os.environ.get(name)
         if secret:
             sanitized = sanitized.replace(secret, "[REDACTED]")
@@ -173,10 +186,10 @@ def main() -> None:
     if args.dry_run:
         print(message)
         return
-    token = os.environ.get("TELEGRAM_BOT_TOKEN") or ""
+    token = operations_bot_token()
     chat_ids = operations_chat_ids()
     if not token or not chat_ids:
-        raise SystemExit("TELEGRAM_BOT_TOKEN과 운영 알림 chat id가 필요합니다.")
+        raise SystemExit("운영 알림 전용 봇 토큰과 금융공학뉴스 chat id가 필요합니다.")
     for chat_id in chat_ids:
         send_message(message, token, chat_id)
     print(f"운영 실패 알림 발송 완료: {len(chat_ids)}개 채팅")

@@ -510,6 +510,8 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert 'CURRENT_STAGE="미국장 EOD 수집"' in overnight_run
     assert 'CURRENT_STAGE="원천 품질·과거값 대조"' in overnight_run
     assert "send_operations_alert.py" in overnight_run
+    assert "MARKET_OPERATIONS_TELEGRAM_BOT_TOKEN" in operations_alert
+    assert 'or os.environ.get("TELEGRAM_CHAT_ID")' not in operations_alert
     assert "Codex 붙여넣기" in operations_alert
     assert 'export INDEX_HISTORY_CACHE_DIR="${INDEX_HISTORY_CACHE_DIR:-$ROOT/data/raw/index_history}"' in run_script
     assert "incremental_start_date" in index_history_cache

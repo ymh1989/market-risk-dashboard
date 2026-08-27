@@ -17,11 +17,11 @@ set -a
 source "$ENV_FILE"
 set +a
 
-if [[ -z "${TELEGRAM_BOT_TOKEN:-}" ]]; then
-  echo "야간 실패 알림에 필요한 TELEGRAM_BOT_TOKEN이 없습니다." >&2
+if [[ -z "${MARKET_OPERATIONS_TELEGRAM_BOT_TOKEN:-}" ]]; then
+  echo "야간 실패 알림에 필요한 MARKET_OPERATIONS_TELEGRAM_BOT_TOKEN이 없습니다." >&2
   exit 1
 fi
-if [[ -z "${MARKET_OPERATIONS_TELEGRAM_CHAT_IDS:-${MARKET_OPERATIONS_TELEGRAM_CHAT_ID:-${TELEGRAM_CHAT_ID:-}}}" ]]; then
+if [[ -z "${MARKET_OPERATIONS_TELEGRAM_CHAT_IDS:-${MARKET_OPERATIONS_TELEGRAM_CHAT_ID:-}}" ]]; then
   echo "금융공학뉴스 텔레그램 chat id가 없습니다." >&2
   exit 1
 fi
@@ -100,6 +100,6 @@ launchctl enable "gui/$(id -u)/$LABEL"
 echo "$LABEL LaunchAgent를 설치했습니다."
 echo "화~토 05:40·06:40 KST에 깨우고 뉴욕 DST에 맞는 한 슬롯만 실행합니다."
 echo "서머타임: 05:40 KST · 표준시간: 06:40 KST"
-echo "실패 알림: MARKET_OPERATIONS_TELEGRAM_CHAT_ID(S), 미설정 시 TELEGRAM_CHAT_ID"
+echo "실패 알림: 금융공학뉴스 전용 봇 · MARKET_OPERATIONS_TELEGRAM_CHAT_ID(S)"
 echo "plist: $PLIST"
 echo "log: $LOG_DIR/overnight-market-prepare.launchd.log"

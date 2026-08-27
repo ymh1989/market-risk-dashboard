@@ -13,6 +13,7 @@ try:
     from send_operations_alert import (
         format_schedule_alert,
         load_env_file,
+        operations_bot_token,
         operations_chat_ids,
         send_message,
     )
@@ -20,6 +21,7 @@ except ModuleNotFoundError:  # pytest에서 저장소 루트 패키지로 불러
     from scripts.send_operations_alert import (
         format_schedule_alert,
         load_env_file,
+        operations_bot_token,
         operations_chat_ids,
         send_message,
     )
@@ -214,10 +216,10 @@ def main() -> None:
         print("정기 갱신 지연 없음")
         return
 
-    token = os.environ.get("TELEGRAM_BOT_TOKEN") or ""
+    token = operations_bot_token()
     chat_ids = operations_chat_ids()
     if not args.dry_run and (not token or not chat_ids):
-        raise SystemExit("TELEGRAM_BOT_TOKEN과 금융공학뉴스 chat id가 필요합니다.")
+        raise SystemExit("운영 알림 전용 봇 토큰과 금융공학뉴스 chat id가 필요합니다.")
 
     for alert in alerts:
         message = format_schedule_alert(
