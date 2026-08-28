@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-28 07:31:38 KST",
+  "generatedAt": "2026-08-28 09:00:57 KST",
   "current": {
-    "runId": "20260828T073005-0730-fast",
+    "runId": "20260828T090001-0900-live",
     "status": "success",
-    "mode": "fast",
+    "mode": "live",
     "trigger": "scheduled",
-    "scheduledTime": "07:30",
-    "startedAt": "2026-08-28 07:30:05 KST",
-    "completedAt": "2026-08-28 07:31:38 KST",
-    "durationSeconds": 93,
-    "dataAsOf": "2026-08-27",
-    "dashboardGeneratedAt": "2026-08-28 07:30 KST",
+    "scheduledTime": "09:00",
+    "startedAt": "2026-08-28 09:00:01 KST",
+    "completedAt": "2026-08-28 09:00:57 KST",
+    "durationSeconds": 56,
+    "dataAsOf": "2026-08-28",
+    "dashboardGeneratedAt": "2026-08-28 09:00 KST",
     "mlGeneratedAt": "2026-08-28 07:31 KST",
-    "qualityScore": 96.2,
+    "qualityScore": 96.8,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
@@ -118,21 +118,21 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 50,
-      "detail": "시장 데이터 수집, 위험점수, M7 프록시, ELS·HMM 산출"
+      "durationSeconds": 52,
+      "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
-      "durationSeconds": 28,
-      "detail": "특성 생성, 모델 학습, 예측 및 OOS 검증"
+      "durationSeconds": 0,
+      "detail": "직전 확정 ML·HMM 산출물 재사용"
     },
     {
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 0,
+      "durationSeconds": 1,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -148,7 +148,7 @@
       "id": "yahoo",
       "label": "Yahoo Finance",
       "status": "ok",
-      "lastDate": "2026-08-27",
+      "lastDate": "2026-08-28",
       "seriesCount": 36,
       "detail": "36/36개 수집 · 허용시차 내 36개",
       "oldestLastDate": "2026-08-27",
@@ -172,7 +172,7 @@
       "id": "naver-market-index",
       "label": "Naver 시장지표",
       "status": "ok",
-      "lastDate": "2026-08-27",
+      "lastDate": "2026-08-28",
       "seriesCount": 19,
       "detail": "19/19개 수집 · 허용시차 내 19개",
       "oldestLastDate": "2026-08-14",
@@ -230,7 +230,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-08-28 07:30 KST"
+      "generatedAt": "2026-08-28 09:00 KST"
     },
     {
       "id": "ml",
@@ -278,17 +278,17 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-08-28 07:31:38 KST"
+      "generatedAt": "2026-08-28 09:00:57 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 96.2,
+    "score": 96.8,
     "referenceDate": "2026-08-28",
     "summary": {
       "checks": 247,
-      "ok": 228,
-      "warning": 19,
+      "ok": 231,
+      "warning": 16,
       "error": 0,
       "sourceSeriesExpected": 98,
       "sourceSeriesPresent": 98,
@@ -413,7 +413,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "확산 미확인",
-      "score": 34.3,
+      "score": 33.8,
       "tone": "good",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -429,6 +429,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20260828T090001-0900-live",
+      "status": "success",
+      "mode": "live",
+      "trigger": "scheduled",
+      "scheduledTime": "09:00",
+      "startedAt": "2026-08-28 09:00:01 KST",
+      "completedAt": "2026-08-28 09:00:57 KST",
+      "durationSeconds": 56,
+      "dataAsOf": "2026-08-28",
+      "dashboardGeneratedAt": "2026-08-28 09:00 KST",
+      "mlGeneratedAt": "2026-08-28 07:31 KST",
+      "qualityScore": 96.8,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20260828T073005-0730-fast",
       "status": "success",
@@ -863,29 +878,14 @@
       "mlGeneratedAt": "2026-08-25 07:31 KST",
       "qualityScore": 97.1,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20260825T120005-1200-live",
-      "status": "success",
-      "mode": "live",
-      "trigger": "scheduled",
-      "scheduledTime": "12:00",
-      "startedAt": "2026-08-25 12:00:05 KST",
-      "completedAt": "2026-08-25 12:00:50 KST",
-      "durationSeconds": 45,
-      "dataAsOf": "2026-08-25",
-      "dashboardGeneratedAt": "2026-08-25 12:00 KST",
-      "mlGeneratedAt": "2026-08-25 07:31 KST",
-      "qualityScore": 96.9,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260828T073005-0730-fast",
-    "mode": "fast",
+    "runId": "20260828T090001-0900-live",
+    "mode": "live",
     "state": "generated",
-    "startedAt": "2026-08-28 07:30:05 KST",
-    "preparedAt": "2026-08-28 07:31:38 KST"
+    "startedAt": "2026-08-28 09:00:01 KST",
+    "preparedAt": "2026-08-28 09:00:57 KST"
   }
 }
