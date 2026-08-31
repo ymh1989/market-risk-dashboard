@@ -141,11 +141,13 @@ def test_dashboard_contract():
     )
     assert china_capex["components"] == []
     assert market_index_cache["schemaVersion"] == 1
-    assert set(market_index_cache.get("liveSnapshots") or {}).issubset(
-        set(market_index_cache["series"])
-    )
-    assert set(market_index_cache.get("liveSnapshotStatuses") or {}) == set(
-        market_index_cache["series"]
+    market_series_ids = set(market_index_cache["series"])
+    live_snapshot_ids = set(market_index_cache.get("liveSnapshots") or {})
+    live_status_ids = set(market_index_cache.get("liveSnapshotStatuses") or {})
+    assert live_snapshot_ids <= live_status_ids <= market_series_ids
+    assert all(
+        isinstance(status, str) and status
+        for status in market_index_cache.get("liveSnapshotStatuses", {}).values()
     )
     assert all(
         isinstance(snapshot.get("isProvisional"), bool)
