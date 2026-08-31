@@ -22,6 +22,8 @@ TIMESERIES_FILE = ROOT / "data" / "market-risk-timeseries.json"
 HISTORY_CACHE_FILE = ROOT / "data" / "market-history-cache.json"
 NAVER_MARKET_INDEX_CACHE_FILE = ROOT / "data" / "naver-marketindex-history.json"
 M7_CREDIT_FILE = ROOT / "data" / "m7-credit-proxy.json"
+MARKET_DATA_FILE = ROOT / "data" / "raw" / "market_data.csv"
+MARKET_DATA_METADATA_FILE = ROOT / "data" / "raw" / "market_data_sources.json"
 YAHOO_CHART_URLS = (
     "https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d",
     "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_value}&interval=1d",
@@ -40,6 +42,15 @@ USER_AGENT = "Mozilla/5.0 (compatible; market-lab-risk-dashboard/0.1)"
 KST = timezone(timedelta(hours=9))
 FRED_FETCH_ATTEMPTS = 3
 FRED_FETCH_STATUS = {}
+
+LOCAL_MARKET_YAHOO_COLUMNS = {
+    "kospi": "KOSPI",
+    "spx": "SPX",
+    "sox": "SOX",
+    "usdkrw": "USDKRW",
+    "vix": "VIX",
+    "us10y": "US10Y",
+}
 
 TICKERS = {
     "kospi": {"symbol": "^KS11", "label": "KOSPI"},
@@ -569,6 +580,163 @@ def fetch_yahoo_chart_with_fallback(symbol, cached_series=None, range_value="2y"
         flush=True,
     )
     return merged_series, "yahoo+history-cache"
+
+
+def _merge_price_series(base_series, supplemental_series):
+    merged = {
+        point["date"]: point
+        for point in base_series or []
+        if isinstance(point, dict)
+        and point.get("date")
+        and isinstance(point.get("close"), (int, float))
+    }
+    merged.update(
+        {
+            point["date"]: point
+            for point in supplemental_series or []
+            if isinstance(point, dict)
+            and point.get("date")
+            and isinstance(point.get("close"), (int, float))
+        }
+    )
+    return [merged[date] for date in sorted(merged)]
+
+
+def load_verified_local_yahoo_series(data_file=None, metadata_file=None):
+    """검증된 ML 원자료에서 대시보드 Yahoo 시계열의 최신 EOD를 읽습니다."""
+
+    data_path = Path(data_file or MARKET_DATA_FILE)
+    metadata_path = Path(metadata_file or MARKET_DATA_METADATA_FILE)
+    if not data_path.exists() or not metadata_path.exists():
+        return {}
+    try:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    sources = {
+        str(source.get("column")): source
+        for source in metadata.get("sources") or []
+        if isinstance(source, dict)
+    }
+    allowed_columns = {
+        column
+        for column in LOCAL_MARKET_YAHOO_COLUMNS.values()
+        if str((sources.get(column) or {}).get("status")) in {"ok", "supplemented"}
+    }
+    if not allowed_columns:
+        return {}
+
+    by_column = {column: [] for column in allowed_columns}
+    try:
+        with data_path.open(encoding="utf-8") as handle:
+            for row in csv.DictReader(handle):
+                date = str(row.get("date") or "")
+                if not date:
+                    continue
+                for column in allowed_columns:
+                    raw_value = row.get(column)
+                    if raw_value in (None, "", "."):
+                        continue
+                    try:
+                        close = float(raw_value)
+                    except ValueError:
+                        continue
+                    if math.isfinite(close):
+                        by_column[column].append(
+                            {"date": date, "close": close, "volume": None}
+                        )
+    except OSError:
+        return {}
+
+    verified = {}
+    for key, column in LOCAL_MARKET_YAHOO_COLUMNS.items():
+        points = by_column.get(column) or []
+        if not points:
+            continue
+        expected_last_date = str((sources.get(column) or {}).get("lastDate") or "")
+        if expected_last_date and points[-1]["date"] != expected_last_date:
+            continue
+        verified[key] = points
+    return verified
+
+
+def supplement_yahoo_series_from_market_data(
+    series_map,
+    fetch_statuses,
+    data_file=None,
+    metadata_file=None,
+):
+    """Yahoo chart 응답이 늦을 때 동일 원천의 검증된 ML EOD로 최신일을 보강합니다."""
+
+    augmented = dict(series_map)
+    statuses = dict(fetch_statuses)
+    local_series = load_verified_local_yahoo_series(data_file, metadata_file)
+    for key, supplemental in local_series.items():
+        current = augmented.get(key) or []
+        if current and supplemental[-1]["date"] <= current[-1]["date"]:
+            continue
+        first_date = current[0]["date"] if current else ""
+        recent_supplemental = [
+            point for point in supplemental if not first_date or point["date"] >= first_date
+        ]
+        previous_date = current[-1]["date"] if current else "없음"
+        augmented[key] = _merge_price_series(current, recent_supplemental)
+        statuses[key] = f"{statuses.get(key, 'yahoo')}+market-data"
+        print(
+            f"Yahoo ML 원자료 EOD 보강: {TICKERS[key]['symbol']} "
+            f"({previous_date} -> {augmented[key][-1]['date']})",
+            flush=True,
+        )
+    return augmented, statuses
+
+
+def update_market_history_cache(series_map, naver_map, fred_map, output_file=None):
+    """현재 검증 시계열을 장기 캐시에 증분 병합해 아침 브리핑 날짜를 맞춥니다."""
+
+    output_path = Path(output_file or HISTORY_CACHE_FILE)
+    try:
+        payload = json.loads(output_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    for section, fresh_map in (
+        ("yahoo", series_map),
+        ("naver", naver_map),
+        ("fred", fred_map),
+    ):
+        existing_map = payload.get(section) if isinstance(payload.get(section), dict) else {}
+        merged_map = dict(existing_map)
+        for key, points in fresh_map.items():
+            merged_map[key] = _merge_price_series(existing_map.get(key, []), points)
+        payload[section] = merged_map
+    all_dates = [
+        point["date"]
+        for section in ("yahoo", "naver", "fred")
+        for points in payload[section].values()
+        for point in points[:1]
+    ]
+    payload.update(
+        {
+            "schemaVersion": 2,
+            "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
+            "source": "Yahoo Finance, Naver Finance equity, and FRED endpoints · verified incremental merge",
+            "startDate": min(all_dates) if all_dates else payload.get("startDate"),
+        }
+    )
+    output_path.write_text(json.dumps(payload, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def yahoo_snapshot_source(fetch_status):
+    if "market-data" in str(fetch_status):
+        return "Yahoo Finance + verified market_data.csv EOD"
+    if fetch_status == "yahoo+naver":
+        return "Yahoo Finance + Naver Finance index"
+    if fetch_status == "yahoo+history-cache":
+        return "Yahoo Finance + previous verified history cache"
+    if fetch_status == "history-cache":
+        return "Previous verified Yahoo Finance history cache"
+    return "Yahoo Finance"
 
 
 def fetch_naver_chart(symbol, lookback_days=760, start_date=None, end_date=None):
@@ -4169,19 +4337,7 @@ def write_snapshot(
                 "lastClose": round(series_map[key][-1]["close"], 4),
                 "observations": len(series_map[key]),
                 "fetchStatus": yahoo_fetch_statuses.get(key, "yahoo"),
-                "source": (
-                    "Yahoo Finance + Naver Finance index"
-                    if yahoo_fetch_statuses.get(key) == "yahoo+naver"
-                    else (
-                        "Yahoo Finance + previous verified history cache"
-                        if yahoo_fetch_statuses.get(key) == "yahoo+history-cache"
-                        else (
-                            "Previous verified Yahoo Finance history cache"
-                            if yahoo_fetch_statuses.get(key) == "history-cache"
-                            else "Yahoo Finance"
-                        )
-                    )
-                ),
+                "source": yahoo_snapshot_source(yahoo_fetch_statuses.get(key, "yahoo")),
             }
             for key, config in TICKERS.items()
         },
@@ -4296,6 +4452,11 @@ def main():
     fred_map = fetch_configured_series(
         FRED_SERIES, fetch_fred_series_with_fallback, max_workers=3
     )
+    series_map, yahoo_fetch_statuses = supplement_yahoo_series_from_market_data(
+        series_map,
+        yahoo_fetch_statuses,
+    )
+    update_market_history_cache(series_map, naver_map, fred_map)
     indicators = build_indicators(
         series_map,
         naver_map,

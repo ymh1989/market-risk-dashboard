@@ -29,6 +29,8 @@ from scripts.update_market_risk import (
     shipping_cost_pressure_score,
     us_market_breadth_component_points,
     volatility_term_structure_component_points,
+    supplement_yahoo_series_from_market_data,
+    update_market_history_cache,
     yen_carry_unwind_component_points,
 )
 
@@ -617,3 +619,71 @@ def test_series_quality_reports_basis_point_difference():
     assert quality["overlapCount"] == 2
     assert quality["meanAbsoluteDifferenceBp"] == 0.3
     assert quality["maxAbsoluteDifferenceBp"] == 0.4
+
+
+def test_market_data_eod_supplements_yahoo_cache_and_updates_history(tmp_path):
+    data_file = tmp_path / "market_data.csv"
+    metadata_file = tmp_path / "market_data_sources.json"
+    history_file = tmp_path / "market-history-cache.json"
+    data_file.write_text(
+        "date,SPX,SOX,VIX,US10Y\n"
+        "2026-08-28,100,200,15,4.70\n"
+        "2026-08-31,101,198,14,4.75\n",
+        encoding="utf-8",
+    )
+    metadata_file.write_text(
+        json.dumps(
+            {
+                "sources": [
+                    {
+                        "column": column,
+                        "status": "ok",
+                        "lastDate": "2026-08-31",
+                    }
+                    for column in ("SPX", "SOX", "VIX", "US10Y")
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    stale = {
+        "spx": [{"date": "2026-08-28", "close": 100.0, "volume": 1}],
+        "sox": [{"date": "2026-08-28", "close": 200.0, "volume": 1}],
+        "vix": [{"date": "2026-08-28", "close": 15.0, "volume": 1}],
+        "us10y": [{"date": "2026-08-28", "close": 4.7, "volume": 1}],
+    }
+
+    supplemented, statuses = supplement_yahoo_series_from_market_data(
+        stale,
+        {key: "yahoo" for key in stale},
+        data_file,
+        metadata_file,
+    )
+
+    assert {key: points[-1]["date"] for key, points in supplemented.items()} == {
+        key: "2026-08-31" for key in stale
+    }
+    assert all(status.endswith("+market-data") for status in statuses.values())
+
+    history_file.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 2,
+                "yahoo": {"spx": [{"date": "2020-01-02", "close": 80.0}]},
+                "naver": {},
+                "fred": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    update_market_history_cache(
+        supplemented,
+        {"samsung": [{"date": "2026-08-31", "close": 100000.0}]},
+        {"us2y": [{"date": "2026-08-31", "close": 4.3}]},
+        history_file,
+    )
+    history = json.loads(history_file.read_text(encoding="utf-8"))
+
+    assert history["yahoo"]["spx"][0]["date"] == "2020-01-02"
+    assert history["yahoo"]["spx"][-1]["date"] == "2026-08-31"
+    assert history["generatedAt"].endswith("KST")

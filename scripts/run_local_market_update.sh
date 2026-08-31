@@ -538,13 +538,11 @@ ATOMIC_PUBLICATION_ARGS=(
 if [[ "$UPDATE_MODE" == "fast" ]]; then
   ATOMIC_PUBLICATION_ARGS+=(
     --reused-file data/market-stress-episodes.json
-    --reused-file data/market-history-cache.json
   )
 elif [[ "$UPDATE_MODE" == "live" ]]; then
   ATOMIC_PUBLICATION_ARGS+=(
     --reused-file data/market-risk-backtest.json
     --reused-file data/market-stress-episodes.json
-    --reused-file data/market-history-cache.json
     --reused-file data/els-index-risk.json
     --reused-file data/hmm-regime.json
     --reused-file data/ml-risk-signal.json
