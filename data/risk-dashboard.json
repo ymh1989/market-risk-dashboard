@@ -3,7 +3,7 @@
     "title": "통합 리스크 모니터링 대시보드",
     "subtitle": "시장 조기경보 · 신용리스크 확장 준비 · 유동성리스크 확장 준비",
     "asOf": "2026-09-03",
-    "generatedAt": "2026-09-03 15:03 KST",
+    "generatedAt": "2026-09-03 15:37 KST",
     "source": "Yahoo Finance, Naver Finance equity/market-index, and FRED endpoints via scripts/update_market_risk.py"
   },
   "tabs": [
@@ -192,13 +192,13 @@
           "name": "KOSPI 가격 스트레스",
           "category": "한국주식",
           "group": "crash",
-          "value": 71.7,
+          "value": 72.0,
           "unit": "score",
           "weight": 0.11,
           "trend": "down",
-          "detail": "KOSPI 6,596.81, 20일 수익률 -0.02%, 20일 변동성 +44.77%, 고점대비 -27.62%",
+          "detail": "KOSPI 6,579.48, 20일 수익률 -0.28%, 20일 변동성 +44.74%, 고점대비 -27.81%",
           "source": "Yahoo Finance chart: ^KS11",
-          "contribution": 7.89,
+          "contribution": 7.92,
           "contributionPct": 11.0
         },
         {
@@ -206,13 +206,13 @@
           "name": "KOSDAQ 성장주 스트레스",
           "category": "한국주식",
           "group": "crash",
-          "value": 68.0,
+          "value": 68.5,
           "unit": "score",
           "weight": 0.07,
           "trend": "down",
-          "detail": "KOSDAQ 793.81, 20일 수익률 -0.72%, 20일 변동성 +36.14%",
+          "detail": "KOSDAQ 790.21, 20일 수익률 -1.17%, 20일 변동성 +36.37%",
           "source": "Yahoo Finance chart: ^KQ11",
-          "contribution": 4.76,
+          "contribution": 4.8,
           "contributionPct": 7.0
         },
         {
@@ -220,13 +220,13 @@
           "name": "원/달러 환율 압력",
           "category": "외환",
           "group": "macro",
-          "value": 17.5,
+          "value": 17.3,
           "unit": "score",
           "weight": 0.06,
           "trend": "down",
-          "detail": "USD/KRW 1,360.08, 20일 변화율 -4.30%, 2년 분위 6.7",
+          "detail": "USD/KRW 1,358.78, 20일 변화율 -4.39%, 2년 분위 6.4",
           "source": "Yahoo Finance chart: KRW=X",
-          "contribution": 1.05,
+          "contribution": 1.04,
           "contributionPct": 6.0
         },
         {
@@ -276,13 +276,13 @@
           "name": "미국 금융여건 긴축 압력",
           "category": "금융여건",
           "group": "macro",
-          "value": 49.8,
+          "value": 47.0,
           "unit": "score",
           "weight": 0.03,
-          "trend": "flat",
+          "trend": "down",
           "detail": "STLFSI -0.85, NFCI -0.56, 미 2년 4.39%, 10Y-2Y 0.40%p",
           "source": "FRED: STLFSI4, NFCI, DGS2, T10Y2Y",
-          "contribution": 1.49,
+          "contribution": 1.41,
           "contributionPct": 3.0
         },
         {
@@ -318,11 +318,11 @@
           "name": "원화 환산 에너지 수입비용",
           "category": "에너지/환율",
           "group": "macro",
-          "value": 76.5,
+          "value": 76.3,
           "unit": "score",
           "weight": 0.02,
           "trend": "up",
-          "detail": "브렌트유 $95.63, USD/KRW 1,360.08, 원화 환산 배럴당 비용 130,064.45원, 최근 20개 관측치 변화 +3.59%. 유가와 원화 약세가 동시에 기업 마진·물가·금리 부담으로 전이되는 경로를 측정합니다.",
+          "detail": "브렌트유 $95.63, USD/KRW 1,358.78, 원화 환산 배럴당 비용 129,940.13원, 최근 20개 관측치 변화 +3.49%. 유가와 원화 약세가 동시에 기업 마진·물가·금리 부담으로 전이되는 경로를 측정합니다.",
           "source": "Naver market index: LCOcv1; Yahoo Finance: KRW=X",
           "contribution": 1.53,
           "contributionPct": 2.0
@@ -352,7 +352,7 @@
           "unit": "score",
           "weight": 0.0,
           "trend": "down",
-          "detail": "한국 3년 3.940%, 미국 2년 4.386%, 금리차 -0.446%p·20개 관측치 변화 +0.068%p, USD/KRW 1,360.08·20개 관측치 -4.30%. 금리차 축소와 원화 약세의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
+          "detail": "한국 3년 3.940%, 미국 2년 4.386%, 금리차 -0.446%p·20개 관측치 변화 +0.068%p, USD/KRW 1,358.78·20개 관측치 -4.39%. 금리차 축소와 원화 약세의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
           "source": "Naver market index: KR3YT=RR, US2YT=RR; Yahoo Finance: KRW=X",
           "contribution": 0.0,
           "contributionPct": 0.0
@@ -450,13 +450,13 @@
           "name": "한국 AI 반도체 쏠림/스트레스",
           "category": "AI 반도체",
           "group": "ai_semi",
-          "value": 60.0,
+          "value": 59.1,
           "unit": "score",
           "weight": 0.1,
           "trend": "flat",
-          "detail": "5개 한국 반도체 basket, 삼성전자 247,500.00, SK하이닉스 1,591,000.00, 반도체 60일 상대성과 -13.33%, 쏠림점수 44.4",
+          "detail": "5개 한국 반도체 basket, 삼성전자 250,250.00, SK하이닉스 1,604,000.00, 반도체 60일 상대성과 -12.63%, 쏠림점수 42.1",
           "source": "Yahoo Finance chart: 005930.KS, 000660.KS, 042700.KS, 000990.KS, 058470.KQ, ^KS11",
-          "contribution": 6.0,
+          "contribution": 5.91,
           "contributionPct": 10.0
         },
         {
@@ -478,13 +478,13 @@
           "name": "거래량 과열/위축 압력",
           "category": "유동성",
           "group": "liquidity",
-          "value": 57.7,
+          "value": 60.2,
           "unit": "score",
           "weight": 0.07,
           "trend": "flat",
-          "detail": "주요 반도체·KODEX ETF 거래량의 60일 평균 대비 평균 괴리 -35.23%, 최대 괴리 +7.71%",
+          "detail": "주요 반도체·KODEX ETF 거래량의 60일 평균 대비 평균 괴리 -29.03%, 최대 괴리 +14.88%",
           "source": "Naver Finance chart: 005930, 000660, 042700, 069500, 122630",
-          "contribution": 4.04,
+          "contribution": 4.21,
           "contributionPct": 7.0
         },
         {
@@ -492,13 +492,13 @@
           "name": "삼성전자·하이닉스 단일종목 레버리지",
           "category": "단일종목/레버리지",
           "group": "overheating",
-          "value": 68.2,
+          "value": 67.9,
           "unit": "score",
           "weight": 0.04,
           "trend": "down",
-          "detail": "삼성전자 247,500.00, SK하이닉스 1,591,000.00, 20일 수익률 삼성 +0.61%·하이닉스 -4.62%, KOSPI 대비 변동성 배율 삼성 1.61x·하이닉스 1.84x",
+          "detail": "삼성전자 250,250.00, SK하이닉스 1,604,000.00, 20일 수익률 삼성 +1.73%·하이닉스 -3.84%, KOSPI 대비 변동성 배율 삼성 1.61x·하이닉스 1.84x",
           "source": "Yahoo Finance chart: 005930.KS, 000660.KS, ^KS11",
-          "contribution": 2.73,
+          "contribution": 2.72,
           "contributionPct": 4.0
         },
         {
@@ -565,36 +565,36 @@
         {
           "id": "ai_semi",
           "label": "AI Semi",
-          "score": 54.3,
+          "score": 53.9,
           "weight": 0.26,
-          "contribution": 14.12,
+          "contribution": 14.03,
           "indicatorCount": 3,
           "observationCount": 0
         },
         {
           "id": "crash",
           "label": "Crash Stress",
-          "score": 70.3,
+          "score": 70.6,
           "weight": 0.18,
-          "contribution": 12.65,
+          "contribution": 12.72,
           "indicatorCount": 2,
           "observationCount": 0
         },
         {
           "id": "macro",
           "label": "Macro",
-          "score": 40.0,
+          "score": 39.6,
           "weight": 0.3,
-          "contribution": 11.98,
+          "contribution": 11.89,
           "indicatorCount": 9,
           "observationCount": 7
         },
         {
           "id": "overheating",
           "label": "Overheating",
-          "score": 60.9,
+          "score": 60.8,
           "weight": 0.09,
-          "contribution": 5.49,
+          "contribution": 5.48,
           "indicatorCount": 2,
           "observationCount": 0
         },
@@ -610,9 +610,9 @@
         {
           "id": "liquidity",
           "label": "Liquidity",
-          "score": 57.7,
+          "score": 60.2,
           "weight": 0.07,
-          "contribution": 4.04,
+          "contribution": 4.21,
           "indicatorCount": 1,
           "observationCount": 0
         }
@@ -622,7 +622,7 @@
           "id": "ai-roi",
           "title": "AI 투자 ROI 회의론",
           "status": "관찰",
-          "score": 48.5,
+          "score": 48.4,
           "tone": "watch",
           "decision": "기존 가중지표 유지",
           "components": [
@@ -643,15 +643,15 @@
             {
               "id": "korea_ai_semiconductor_concentration",
               "name": "한국 AI 반도체 쏠림/스트레스",
-              "value": 60.0,
+              "value": 59.1,
               "weight": 0.2,
-              "contribution": 12.0
+              "contribution": 11.82
             }
           ],
           "evidence": [
             "빅테크 AI 수요 우려 40.6",
             "글로벌 AI 반도체 56.8",
-            "한국 AI 반도체 60.0"
+            "한국 AI 반도체 59.1"
           ],
           "assessment": "반도체 가격 스트레스와 빅테크 수요 신호를 분리합니다. 반도체 조정이 크더라도 빅테크 수요 신호가 동반 악화되지 않으면 ROI 붕괴로 단정하지 않습니다. 실적·CAPEX·매출 추정치 데이터가 없는 현재는 가중치를 늘리지 않습니다.",
           "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검"
@@ -660,7 +660,7 @@
           "id": "geopolitics-reinflation",
           "title": "지정학·재인플레이션",
           "status": "부담 높음",
-          "score": 88.7,
+          "score": 88.6,
           "tone": "danger",
           "decision": "관찰지표 보강",
           "components": [
@@ -674,13 +674,13 @@
             {
               "id": "energy_import_cost_pressure",
               "name": "원화 환산 에너지 수입비용",
-              "value": 76.5,
+              "value": 76.3,
               "weight": 0.45,
-              "contribution": 34.43
+              "contribution": 34.34
             }
           ],
           "evidence": [
-            "원화 환산 에너지 비용 76.5",
+            "원화 환산 에너지 비용 76.3",
             "원자재·농산물 재인플레이션 98.7"
           ],
           "assessment": "유가 단일 상승과 광의 물가 확산을 분리합니다. 원자재·농산물의 5일 흐름이 꺾여도 20일 누적압력이 높으면 즉시 해소로 보지 않습니다.",
@@ -689,9 +689,9 @@
         {
           "id": "macro-rates",
           "title": "매크로 금리 불확실성",
-          "status": "부담 높음",
-          "score": 76.0,
-          "tone": "danger",
+          "status": "주의",
+          "score": 74.9,
+          "tone": "caution",
           "decision": "기존 가중지표 유지",
           "components": [
             {
@@ -704,14 +704,14 @@
             {
               "id": "us_financial_conditions_stress",
               "name": "미국 금융여건 긴축 압력",
-              "value": 49.8,
+              "value": 47.0,
               "weight": 0.4,
-              "contribution": 19.92
+              "contribution": 18.8
             }
           ],
           "evidence": [
             "글로벌 금리 압력 93.5",
-            "미국 금융여건 49.8"
+            "미국 금융여건 47.0"
           ],
           "assessment": "시장금리 레벨과 금융여건을 함께 봅니다. 지정학 완화가 예상되더라도 실제 금리와 금융여건 점수가 낮아지기 전에는 부담 완화를 선반영하지 않습니다.",
           "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -720,7 +720,7 @@
           "id": "flow-deleveraging",
           "title": "옵션 헤지·디레버리징",
           "status": "확산 미확인",
-          "score": 30.1,
+          "score": 30.6,
           "tone": "good",
           "decision": "관찰지표 보강",
           "components": [
@@ -734,9 +734,9 @@
             {
               "id": "trading_activity_heat",
               "name": "거래량 과열/위축 압력",
-              "value": 57.7,
+              "value": 60.2,
               "weight": 0.2,
-              "contribution": 11.54
+              "contribution": 12.04
             },
             {
               "id": "us_market_breadth_watch",
@@ -749,7 +749,7 @@
           "evidence": [
             "옵션 기간구조 41.3",
             "미국 증시 폭 악화 0.0",
-            "거래 유동성 57.7"
+            "거래 유동성 60.2"
           ],
           "assessment": "VIX 기간구조와 동일가중 상대성과로 공포와 하락 확산을 교차 확인합니다. 동일가중 상대성과가 강하면 대형 기술주 조정은 확인하되 시장 전반 디레버리징으로 판정하지 않습니다. 딜러 델타·감마, 기관 포지션과 IPO 자금흡수의 직접 관측값은 아닙니다.",
           "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -775,7 +775,7 @@
         "name": "M7 Credit Stress Proxy",
         "latest": {
           "as_of": "2026-09-02",
-          "updated_at_kst": "2026-09-03T07:31:06+09:00",
+          "updated_at_kst": "2026-09-03T15:36:21+09:00",
           "score": 14.7,
           "score_band": "Low",
           "score_band_label": "낮음",
@@ -808,9 +808,9 @@
             "close": 254.97999572753906,
             "return_1d": 0.0002353583831189443,
             "return_5d": -0.020362698158193582,
-            "rolling_beta": 0.652681197290943,
-            "residual_1d": -0.00123871710636092,
-            "residual_5d": -0.018680338215258836,
+            "rolling_beta": 0.6526812010449696,
+            "residual_1d": -0.001238717114839201,
+            "residual_5d": -0.018680337966176623,
             "drawdown_60d": 0.10224630099797272,
             "quality_flag": "ok",
             "rank": 1
@@ -820,9 +820,9 @@
             "close": 337.1199951171875,
             "return_1d": 0.006268300914516356,
             "return_5d": -0.014269020125182719,
-            "rolling_beta": 0.7215813272448103,
-            "residual_1d": 0.00461908153954801,
-            "residual_5d": -0.012375975208365097,
+            "rolling_beta": 0.7215813038126877,
+            "residual_1d": 0.004619081592468286,
+            "residual_5d": -0.012375975471984543,
             "drawdown_60d": 0.10732159257072926,
             "quality_flag": "ok",
             "rank": 2
@@ -832,9 +832,9 @@
             "close": 496.82000732421875,
             "return_1d": -0.008382862523551915,
             "return_5d": 0.0009066063852731787,
-            "rolling_beta": 0.4428500123732361,
-            "residual_1d": -0.009418350894227,
-            "residual_5d": 0.0022312520313368875,
+            "rolling_beta": 0.44285005870051786,
+            "residual_1d": -0.009418350998854847,
+            "residual_5d": 0.0022312522554084405,
             "drawdown_60d": 0.03253952255827297,
             "quality_flag": "ok",
             "rank": 3
@@ -844,9 +844,9 @@
             "close": 592.8499755859375,
             "return_1d": 0.024734673664881024,
             "return_5d": 0.029003298699356028,
-            "rolling_beta": 0.6920233271352826,
-            "residual_1d": 0.02287082409355766,
-            "residual_5d": 0.03056395497344208,
+            "rolling_beta": 0.6920234742697418,
+            "residual_1d": 0.02287082376126185,
+            "residual_5d": 0.030563955947375855,
             "drawdown_60d": 0.12983813871753513,
             "quality_flag": "ok",
             "rank": 4
@@ -856,9 +856,9 @@
             "close": 324.9599914550781,
             "return_1d": -0.000522909067699362,
             "return_5d": 0.03672030243994584,
-            "rolling_beta": 0.1620924274922887,
-            "residual_1d": -0.0008891234620371355,
-            "residual_5d": 0.03640459108726923,
+            "rolling_beta": 0.16209251913260903,
+            "residual_1d": -0.0008891236690022094,
+            "residual_5d": 0.03640459139520584,
             "drawdown_60d": 0.043635977926625324,
             "quality_flag": "ok",
             "rank": 5
@@ -868,9 +868,9 @@
             "close": 357.010009765625,
             "return_1d": 0.002583654236838928,
             "return_5d": 0.03235788041296073,
-            "rolling_beta": 1.5166508195024677,
-            "residual_1d": -0.0008449575802150335,
-            "residual_5d": 0.03654142252374359,
+            "rolling_beta": 1.5166507626795753,
+            "residual_1d": -0.000844957451883377,
+            "residual_5d": 0.03654142154662464,
             "drawdown_60d": 0.16056896305528823,
             "quality_flag": "ok",
             "rank": 6
@@ -880,9 +880,9 @@
             "close": 224.41000366210938,
             "return_1d": 0.03205482497444945,
             "return_5d": 0.07035199724488828,
-            "rolling_beta": 1.184457605820543,
-            "residual_1d": 0.028876752439813594,
-            "residual_5d": 0.07161816078156946,
+            "rolling_beta": 1.1844576061878977,
+            "residual_1d": 0.02887675243898394,
+            "residual_5d": 0.07161816051652582,
             "drawdown_60d": 0.015659233846535447,
             "quality_flag": "ok",
             "rank": 7
@@ -991,10 +991,10 @@
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260903T150001-1500-live",
-    "mode": "live",
+    "runId": "20260903T153504-1535-full",
+    "mode": "full",
     "state": "generated",
-    "startedAt": "2026-09-03 15:00:01 KST",
-    "preparedAt": "2026-09-03 15:03:42 KST"
+    "startedAt": "2026-09-03 15:35:04 KST",
+    "preparedAt": "2026-09-03 15:42:30 KST"
   }
 }
