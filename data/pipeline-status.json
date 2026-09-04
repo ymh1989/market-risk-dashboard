@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-04 07:31:37 KST",
+  "generatedAt": "2026-09-04 09:02:35 KST",
   "current": {
-    "runId": "20260904T073005-0730-fast",
+    "runId": "20260904T090004-0900-live",
     "status": "success",
-    "mode": "fast",
+    "mode": "live",
     "trigger": "scheduled",
-    "scheduledTime": "07:30",
-    "startedAt": "2026-09-04 07:30:05 KST",
-    "completedAt": "2026-09-04 07:31:37 KST",
-    "durationSeconds": 92,
-    "dataAsOf": "2026-09-03",
-    "dashboardGeneratedAt": "2026-09-04 07:30 KST",
+    "scheduledTime": "09:00",
+    "startedAt": "2026-09-04 09:00:04 KST",
+    "completedAt": "2026-09-04 09:02:35 KST",
+    "durationSeconds": 151,
+    "dataAsOf": "2026-09-04",
+    "dashboardGeneratedAt": "2026-09-04 09:02 KST",
     "mlGeneratedAt": "2026-09-04 07:31 KST",
-    "qualityScore": 96.0,
+    "qualityScore": 95.7,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
@@ -118,21 +118,21 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 48,
-      "detail": "시장 데이터 수집, 위험점수, M7 프록시, ELS·HMM 산출"
+      "durationSeconds": 147,
+      "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
-      "durationSeconds": 28,
-      "detail": "특성 생성, 모델 학습, 예측 및 OOS 검증"
+      "durationSeconds": 0,
+      "detail": "직전 확정 ML·HMM 산출물 재사용"
     },
     {
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 0,
+      "durationSeconds": 1,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -148,7 +148,7 @@
       "id": "yahoo",
       "label": "Yahoo Finance",
       "status": "ok",
-      "lastDate": "2026-09-03",
+      "lastDate": "2026-09-04",
       "seriesCount": 36,
       "detail": "36/36개 수집 · 허용시차 내 36개",
       "oldestLastDate": "2026-09-03",
@@ -160,10 +160,10 @@
       "id": "naver-equity",
       "label": "Naver 국내주식",
       "status": "ok",
-      "lastDate": "2026-09-03",
+      "lastDate": "2026-09-04",
       "seriesCount": 7,
       "detail": "7/7개 수집 · 허용시차 내 7개",
-      "oldestLastDate": "2026-09-03",
+      "oldestLastDate": "2026-09-04",
       "freshCount": 7,
       "staleCount": 0,
       "fallbackCount": 0
@@ -172,7 +172,7 @@
       "id": "naver-market-index",
       "label": "Naver 시장지표",
       "status": "warning",
-      "lastDate": "2026-09-03",
+      "lastDate": "2026-09-04",
       "seriesCount": 19,
       "detail": "19/19개 수집 · 허용시차 내 18개",
       "oldestLastDate": "2026-08-14",
@@ -183,14 +183,14 @@
     {
       "id": "fred",
       "label": "FRED",
-      "status": "ok",
+      "status": "warning",
       "lastDate": "2026-09-03",
       "seriesCount": 5,
-      "detail": "5/5개 수집 · 허용시차 내 5개",
+      "detail": "5/5개 수집 · 허용시차 내 5개 · 대체값 4개",
       "oldestLastDate": "2026-08-28",
       "freshCount": 5,
       "staleCount": 0,
-      "fallbackCount": 0
+      "fallbackCount": 4
     },
     {
       "id": "krx-breadth",
@@ -230,7 +230,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-09-04 07:30 KST"
+      "generatedAt": "2026-09-04 09:02 KST"
     },
     {
       "id": "ml",
@@ -278,25 +278,69 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-09-04 07:31:37 KST"
+      "generatedAt": "2026-09-04 09:02:35 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 96.0,
+    "score": 95.7,
     "referenceDate": "2026-09-04",
     "summary": {
       "checks": 247,
-      "ok": 227,
-      "warning": 20,
+      "ok": 226,
+      "warning": 21,
       "error": 0,
       "sourceSeriesExpected": 98,
       "sourceSeriesPresent": 98,
       "freshSeries": 96,
       "staleSeries": 2,
-      "fallbackSeries": 13
+      "fallbackSeries": 17
     },
     "issues": [
+      {
+        "id": "source:fred:us2y",
+        "category": "source",
+        "label": "US 2Y Treasury",
+        "status": "warning",
+        "detail": "최신 2026-09-02 · 영업일 시차 2일 · 관측치 7285개 · cached",
+        "groupId": "fred",
+        "lastDate": "2026-09-02",
+        "observations": 7285,
+        "fetchStatus": "cached"
+      },
+      {
+        "id": "source:fred:us_yield_curve_10y2y",
+        "category": "source",
+        "label": "US 10Y-2Y Treasury Spread",
+        "status": "warning",
+        "detail": "최신 2026-09-03 · 영업일 시차 1일 · 관측치 7286개 · cached",
+        "groupId": "fred",
+        "lastDate": "2026-09-03",
+        "observations": 7286,
+        "fetchStatus": "cached"
+      },
+      {
+        "id": "source:fred:us_financial_stress_stlfsi",
+        "category": "source",
+        "label": "St. Louis Fed Financial Stress Index",
+        "status": "warning",
+        "detail": "최신 2026-08-28 · 영업일 시차 5일 · 관측치 1513개 · cached",
+        "groupId": "fred",
+        "lastDate": "2026-08-28",
+        "observations": 1513,
+        "fetchStatus": "cached"
+      },
+      {
+        "id": "source:fred:us_financial_conditions_nfci",
+        "category": "source",
+        "label": "Chicago Fed National Financial Conditions Index",
+        "status": "warning",
+        "detail": "최신 2026-08-28 · 영업일 시차 5일 · 관측치 1513개 · cached",
+        "groupId": "fred",
+        "lastDate": "2026-08-28",
+        "observations": 1513,
+        "fetchStatus": "cached"
+      },
       {
         "id": "source:naver-market-index:scfi",
         "category": "source",
@@ -339,46 +383,6 @@
         "groupId": "m7-credit",
         "lastDate": "2026-09-03",
         "fetchStatus": "dashboard_yahoo"
-      },
-      {
-        "id": "source:m7:price:GOOGL",
-        "category": "source",
-        "label": "price:GOOGL",
-        "status": "warning",
-        "detail": "최신 2026-09-03 · 영업일 시차 1일 · dashboard_yahoo",
-        "groupId": "m7-credit",
-        "lastDate": "2026-09-03",
-        "fetchStatus": "dashboard_yahoo"
-      },
-      {
-        "id": "source:m7:price:HYG",
-        "category": "source",
-        "label": "price:HYG",
-        "status": "warning",
-        "detail": "최신 2026-09-03 · 영업일 시차 1일 · dashboard_yahoo",
-        "groupId": "m7-credit",
-        "lastDate": "2026-09-03",
-        "fetchStatus": "dashboard_yahoo"
-      },
-      {
-        "id": "source:m7:price:IEF",
-        "category": "source",
-        "label": "price:IEF",
-        "status": "warning",
-        "detail": "최신 2026-09-03 · 영업일 시차 1일 · dashboard_yahoo",
-        "groupId": "m7-credit",
-        "lastDate": "2026-09-03",
-        "fetchStatus": "dashboard_yahoo"
-      },
-      {
-        "id": "source:m7:price:IGIB",
-        "category": "source",
-        "label": "price:IGIB",
-        "status": "warning",
-        "detail": "최신 2026-09-03 · 영업일 시차 1일 · dashboard_yahoo",
-        "groupId": "m7-credit",
-        "lastDate": "2026-09-03",
-        "fetchStatus": "dashboard_yahoo"
       }
     ]
   },
@@ -396,7 +400,7 @@
       "id": "geopolitics-reinflation",
       "title": "지정학·재인플레이션",
       "status": "부담 높음",
-      "score": 87.8,
+      "score": 86.7,
       "tone": "danger",
       "decision": "관찰지표 보강",
       "operation": "DBC·DBA 관찰카드 유지 · 기존 에너지 가중치 변경 없음"
@@ -405,7 +409,7 @@
       "id": "macro-rates",
       "title": "매크로 금리 불확실성",
       "status": "주의",
-      "score": 67.1,
+      "score": 68.5,
       "tone": "caution",
       "decision": "기존 가중지표 유지",
       "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -414,7 +418,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "확산 미확인",
-      "score": 25.0,
+      "score": 32.2,
       "tone": "good",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -430,6 +434,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20260904T090004-0900-live",
+      "status": "success",
+      "mode": "live",
+      "trigger": "scheduled",
+      "scheduledTime": "09:00",
+      "startedAt": "2026-09-04 09:00:04 KST",
+      "completedAt": "2026-09-04 09:02:35 KST",
+      "durationSeconds": 151,
+      "dataAsOf": "2026-09-04",
+      "dashboardGeneratedAt": "2026-09-04 09:02 KST",
+      "mlGeneratedAt": "2026-09-04 07:31 KST",
+      "qualityScore": 95.7,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20260904T073005-0730-fast",
       "status": "success",
@@ -864,29 +883,14 @@
       "mlGeneratedAt": "2026-09-01 07:31 KST",
       "qualityScore": 96.3,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20260901T090005-0900-live",
-      "status": "success",
-      "mode": "live",
-      "trigger": "scheduled",
-      "scheduledTime": "09:00",
-      "startedAt": "2026-09-01 09:00:05 KST",
-      "completedAt": "2026-09-01 09:02:34 KST",
-      "durationSeconds": 149,
-      "dataAsOf": "2026-09-01",
-      "dashboardGeneratedAt": "2026-09-01 09:02 KST",
-      "mlGeneratedAt": "2026-09-01 07:31 KST",
-      "qualityScore": 95.5,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260904T073005-0730-fast",
-    "mode": "fast",
+    "runId": "20260904T090004-0900-live",
+    "mode": "live",
     "state": "generated",
-    "startedAt": "2026-09-04 07:30:05 KST",
-    "preparedAt": "2026-09-04 07:31:37 KST"
+    "startedAt": "2026-09-04 09:00:04 KST",
+    "preparedAt": "2026-09-04 09:02:35 KST"
   }
 }
