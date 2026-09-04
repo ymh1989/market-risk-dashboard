@@ -287,8 +287,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260826-2" in html
-    assert "app.js?v=20260826-2" in html
+    assert "styles.css?v=20260905-1" in html
+    assert "app.js?v=20260905-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -379,8 +379,14 @@ def test_summary_exposes_zero_weight_market_shock_decomposition():
     assert "function breadthCollapseScore" in app_source
     assert "function stressAcceleration" in app_source
     assert "function classifyMarketShock" in app_source
+    assert "function buildMarketParticipationContext" in app_source
+    assert "function marketParticipationState" in app_source
+    assert "function renderSimilarStressContext" in app_source
     assert "if (latest.date === currentDate)" in app_source
     assert "시장 충격 분해" in app_source
+    assert "같은 점수, 다른 시장 반응" in app_source
+    assert "종합점수는 관측 부담 · 상승률 전망 아님" in app_source
+    assert 'label: "상승 참여"' in app_source
     assert "기존 종합점수·가중치·경보단계 변경 없음" in app_source
     assert "선행 EPS·실적 수정폭 미연결" not in app_source
     assert '"자료 부족"' not in app_source
@@ -388,11 +394,13 @@ def test_summary_exposes_zero_weight_market_shock_decomposition():
     assert "시장확산 45% · KRX 직접 수급 30% · 기존 Liquidity 25%" in app_source
     assert "외국인 45% · 기관 35% · 프로그램 20%" in app_source
     assert "직접 순매수 누락 · 기존 외국인 보유비중 Flow proxy로 대체" in app_source
-    assert "${renderShockDecomposition(market, timeseries, breadthData)}" in app_source
+    assert "${renderShockDecomposition(market, timeseries, breadthData, participation)}" in app_source
     assert ".shock-decomposition {" in styles
     assert ".shock-grid {" in styles
     assert "grid-template-columns: repeat(3, minmax(0, 1fr));" in styles
     assert ".shock-diagnosis" in styles
+    assert ".stress-context {" in styles
+    assert ".stress-context__metrics" in styles
 
 
 def test_operation_mode_distinguishes_active_and_completed_runs():

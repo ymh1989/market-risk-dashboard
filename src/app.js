@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260826-2";
+const ASSET_VERSION = "20260905-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -3973,7 +3973,211 @@ function summaryCrashTone(probability, metrics) {
   return "watch";
 }
 
-function renderDecisionCockpit(data, timeseries, mlRisk, hmmRegime) {
+function median(values) {
+  const sorted = values
+    .filter((value) => value !== null && value !== undefined && value !== "")
+    .map(Number)
+    .filter(Number.isFinite)
+    .sort((left, right) => left - right);
+  if (!sorted.length) return null;
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? sorted[middle]
+    : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function finiteNumberOrNull(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function trailingReturnPct(points, index, offset, valueKey = "kospiClose") {
+  if (index < offset) return null;
+  const current = Number(points[index]?.[valueKey]);
+  const previous = Number(points[index - offset]?.[valueKey]);
+  if (!Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) return null;
+  return (current / previous - 1) * 100;
+}
+
+function marketParticipationState(current) {
+  const return5dPct = finiteNumberOrNull(current?.return5dPct);
+  const breadthMa5Pct = finiteNumberOrNull(current?.breadthMa5Pct);
+  const breadthMa20Pct = finiteNumberOrNull(current?.breadthMa20Pct);
+  const directFlowPressure = finiteNumberOrNull(current?.directFlowPressure);
+  const positiveSignals = [
+    return5dPct === null ? null : return5dPct > 0.5,
+    breadthMa5Pct === null ? null : breadthMa5Pct > 0,
+    breadthMa20Pct === null ? null : breadthMa20Pct > 0,
+    directFlowPressure === null ? null : directFlowPressure < 50
+  ].filter((value) => value !== null);
+  const weakSignals = [
+    return5dPct === null ? null : return5dPct <= 0,
+    breadthMa5Pct === null ? null : breadthMa5Pct < 0,
+    directFlowPressure === null ? null : directFlowPressure >= 55
+  ].filter((value) => value !== null);
+  const positiveCount = positiveSignals.filter(Boolean).length;
+  const weakCount = weakSignals.filter(Boolean).length;
+
+  if (positiveSignals.length < 2 || weakSignals.length < 2) {
+    return {
+      label: "확인 필요",
+      tone: "watch",
+      note: "가격·시장폭·직접수급 중 가용값 부족"
+    };
+  }
+
+  if (positiveCount >= 3 && weakCount === 0) {
+    return {
+      label: "상승 동행",
+      tone: "good",
+      note: "가격·시장폭·직접수급이 함께 개선"
+    };
+  }
+  if (weakCount >= 2) {
+    return {
+      label: "상승 확인 약함",
+      tone: "caution",
+      note: "낮은 스트레스 점수를 상승 신호로 해석하지 않음"
+    };
+  }
+  return {
+    label: positiveCount >= 2 ? "회복 확인 중" : "혼조 확인",
+    tone: "watch",
+    note: "가격·시장폭·직접수급의 추가 동행 확인"
+  };
+}
+
+function buildMarketParticipationContext(market, timeseries, breadthData) {
+  const breadthPoints = [...(breadthData?.series ?? [])]
+    .filter((point) => Number.isFinite(Number(point.kospiClose)))
+    .sort((left, right) => dateMs(left.date) - dateMs(right.date));
+  if (breadthPoints.length < 21) return null;
+
+  const latestIndex = breadthPoints.length - 1;
+  const latest = breadthPoints[latestIndex];
+  const current = {
+    date: latest.date,
+    return5dPct: trailingReturnPct(breadthPoints, latestIndex, 5),
+    return20dPct: trailingReturnPct(breadthPoints, latestIndex, 20),
+    breadthMa5Pct: finiteNumberOrNull(latest.breadthMa5Pct),
+    breadthMa20Pct: finiteNumberOrNull(latest.breadthMa20Pct),
+    directFlowPressure: finiteNumberOrNull(latest.directFlowPressure)
+  };
+  current.state = marketParticipationState(current);
+
+  const composite = buildCompositeSeries(market, timeseries);
+  const scoreByDate = new Map(composite.map((point) => [point.date, Number(point.value)]));
+  const currentScore = Number(
+    scoreByDate.get(latest.date) ?? market?.score ?? composite.at(-1)?.value
+  );
+  if (!Number.isFinite(currentScore)) return { current, comparison: null };
+
+  const recentExclusion = 20;
+  const comparisonEnd = latestIndex - recentExclusion;
+  const candidates = breadthPoints
+    .slice(20, Math.max(20, comparisonEnd + 1))
+    .map((point, offset) => {
+      const index = offset + 20;
+      const score = scoreByDate.get(point.date);
+      if (!Number.isFinite(score) || Math.abs(score - currentScore) > 2) return null;
+      return {
+        date: point.date,
+        score,
+        return5dPct: trailingReturnPct(breadthPoints, index, 5),
+        return20dPct: trailingReturnPct(breadthPoints, index, 20),
+        breadthMa5Pct: finiteNumberOrNull(point.breadthMa5Pct),
+        breadthMa20Pct: finiteNumberOrNull(point.breadthMa20Pct),
+        directFlowPressure: finiteNumberOrNull(point.directFlowPressure)
+      };
+    })
+    .filter(Boolean);
+
+  if (candidates.length < 4) {
+    return { current, currentScore, comparison: null };
+  }
+
+  return {
+    current,
+    currentScore,
+    comparison: {
+      count: candidates.length,
+      startDate: candidates[0].date,
+      endDate: candidates.at(-1).date,
+      return5dPct: median(candidates.map((item) => item.return5dPct)),
+      return20dPct: median(candidates.map((item) => item.return20dPct)),
+      breadthMa5Pct: median(candidates.map((item) => item.breadthMa5Pct)),
+      breadthMa20Pct: median(candidates.map((item) => item.breadthMa20Pct)),
+      directFlowPressure: median(candidates.map((item) => item.directFlowPressure))
+    }
+  };
+}
+
+function renderSimilarStressContext(context) {
+  if (!context?.current || !context?.comparison) return "";
+  const { current, comparison, currentScore } = context;
+  const rows = [
+    {
+      label: "KOSPI 5D",
+      current: formatSignedPct(current.return5dPct),
+      comparison: formatSignedPct(comparison.return5dPct)
+    },
+    {
+      label: "KOSPI 20D",
+      current: formatSignedPct(current.return20dPct),
+      comparison: formatSignedPct(comparison.return20dPct)
+    },
+    {
+      label: "확산도 5D",
+      current: formatSignedPct(current.breadthMa5Pct),
+      comparison: formatSignedPct(comparison.breadthMa5Pct)
+    },
+    {
+      label: "직접 수급 압력",
+      current:
+        current.directFlowPressure === null
+          ? "-"
+          : `${formatNumber(current.directFlowPressure, 1)}점`,
+      comparison:
+        comparison.directFlowPressure === null
+          ? "-"
+          : `${formatNumber(comparison.directFlowPressure, 1)}점`
+    }
+  ];
+
+  return `
+    <section class="stress-context" aria-label="현재와 과거 유사 시장리스크 점수 비교">
+      <header class="stress-context__header">
+        <div>
+          <span class="eyebrow">Same Score, Different Tape</span>
+          <h3>같은 점수, 다른 시장 반응</h3>
+        </div>
+        <strong class="stress-context__state stress-context__state--${current.state.tone}">${current.state.label}</strong>
+        <p>${current.state.note}</p>
+      </header>
+      <div class="stress-context__metrics">
+        ${rows
+          .map(
+            (row) => `
+              <article>
+                <span>${row.label}</span>
+                <strong>${row.current}</strong>
+                <small>유사점수 중앙값 ${row.comparison}</small>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+      <footer>
+        <span>현재 ${Number(currentScore).toFixed(1)}점 ±2p · 과거 ${comparison.count}일</span>
+        <span>${formatShortDate(comparison.startDate)}~${formatShortDate(comparison.endDate)} · 최근 20거래일 제외</span>
+        <strong>종합점수는 관측 부담 · 상승률 전망 아님</strong>
+      </footer>
+    </section>
+  `;
+}
+
+function renderDecisionCockpit(data, timeseries, mlRisk, hmmRegime, participation) {
   const market = data.sections.find((section) => section.id === "market");
   if (!market) return "";
 
@@ -3981,9 +4185,6 @@ function renderDecisionCockpit(data, timeseries, mlRisk, hmmRegime) {
   const latestComposite = composite[composite.length - 1];
   const change1d = latestComposite ? valueChange(latestComposite.value, composite, 1) : null;
   const change1w = latestComposite ? valueChange(latestComposite.value, composite, 5) : null;
-  const topContributor = [...(market.indicators ?? [])]
-    .filter(isScoredIndicator)
-    .sort((left, right) => Number(right.contribution ?? 0) - Number(left.contribution ?? 0))[0];
   const crashProbability = Number(mlRisk?.latest?.crash5d5pctProbabilityPct);
   const crashMetrics = mlRisk?.metrics?.crash5d5pct ?? {};
   const hmmBasket = hmmRegime?.basket;
@@ -4001,16 +4202,16 @@ function renderDecisionCockpit(data, timeseries, mlRisk, hmmRegime) {
         ${createMetricCard({
           label: "시장 스트레스",
           value: `${market.level.label} · ${Number(market.score).toFixed(1)}`,
-          meta: `1D ${formatPointDelta(change1d)} · 1W ${formatPointDelta(change1w)}`,
+          meta: `1D ${formatPointDelta(change1d)} · 1W ${formatPointDelta(change1w)} · 수익률 전망 아님`,
           tone: market.level.tone
         })}
         ${createMetricCard({
-          label: "최대 점수 기여",
-          value: topContributor ? `+${Number(topContributor.contribution ?? 0).toFixed(2)}점` : "-",
-          meta: topContributor
-            ? `${topContributor.name} · 현재 ${clampScore(topContributor.value).toFixed(1)}`
-            : "가중 지표 확인 필요",
-          tone: topContributor && clampScore(topContributor.value) >= 75 ? "danger" : "caution"
+          label: "상승 참여",
+          value: participation?.current?.state?.label ?? "확인 필요",
+          meta: participation?.current
+            ? `KOSPI 5D ${formatSignedPct(participation.current.return5dPct)} · 확산 ${formatSignedPct(participation.current.breadthMa5Pct)} · 수급 ${participation.current.directFlowPressure === null ? "-" : formatNumber(participation.current.directFlowPressure, 1)}`
+            : "가격·시장폭·직접수급 확인 필요",
+          tone: participation?.current?.state?.tone ?? "watch"
         })}
         ${createMetricCard({
           label: "5D -5% 급락확률",
@@ -4299,7 +4500,7 @@ function shockMetric({ label, value, level, meta, note }) {
   `;
 }
 
-function renderShockDecomposition(market, timeseries, breadthData) {
+function renderShockDecomposition(market, timeseries, breadthData, participation) {
   const priceShock = groupScore(market, "crash");
   const macroConfirmation = groupScore(market, "macro");
   const fallbackFlowScore = groupScore(market, "flow");
@@ -4322,7 +4523,6 @@ function renderShockDecomposition(market, timeseries, breadthData) {
     acceleration
   });
   const breadthDate = breadthData?.latest?.date ?? "-";
-
   return `
     <section class="shock-decomposition" aria-labelledby="shock-decomposition-title">
       <header class="shock-decomposition__header">
@@ -4363,6 +4563,8 @@ function renderShockDecomposition(market, timeseries, breadthData) {
           note: "금리·환율·변동성·신용·원자재"
         })}
       </div>
+
+      ${renderSimilarStressContext(participation)}
 
       <div class="shock-decomposition__footer">
         <div class="shock-acceleration shock-acceleration--${acceleration.tone}">
@@ -4790,10 +4992,11 @@ function renderMarketBreadthPage(breadthData) {
 function renderSummary(data, timeseries, mlRisk, elsRisk, hmmRegime, breadthData) {
   const market = data.sections.find((section) => section.id === "market");
   market.asOf = data.metadata.asOf;
+  const participation = buildMarketParticipationContext(market, timeseries, breadthData);
 
   return `
-    ${renderDecisionCockpit(data, timeseries, mlRisk, hmmRegime)}
-    ${renderShockDecomposition(market, timeseries, breadthData)}
+    ${renderDecisionCockpit(data, timeseries, mlRisk, hmmRegime, participation)}
+    ${renderShockDecomposition(market, timeseries, breadthData, participation)}
     ${renderScoreAttribution(market, timeseries)}
     ${renderBreadthSummaryPanel(breadthData)}
     ${renderMlRiskSignalPanel(mlRisk, market, elsRisk)}

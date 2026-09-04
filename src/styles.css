@@ -7673,6 +7673,90 @@ a {
   border-bottom: 1px solid var(--line);
 }
 
+.stress-context {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.85fr) minmax(0, 2fr);
+  gap: 18px 24px;
+  align-items: stretch;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 16px 0;
+}
+
+.stress-context__header {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+}
+
+.stress-context__header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.stress-context__header p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.stress-context__state {
+  width: fit-content;
+  margin-top: 4px;
+  border-left: 3px solid var(--blue);
+  padding-left: 9px;
+  font-size: 0.9rem;
+}
+
+.stress-context__state--good { border-left-color: var(--green); }
+.stress-context__state--caution { border-left-color: var(--amber); }
+
+.stress-context__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.stress-context__metrics article {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  gap: 4px;
+  padding: 4px 15px;
+}
+
+.stress-context__metrics article + article {
+  border-left: 1px solid var(--line);
+}
+
+.stress-context__metrics span,
+.stress-context__metrics small,
+.stress-context footer {
+  color: var(--muted);
+  font-size: 0.67rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.stress-context__metrics strong {
+  font-size: 1.08rem;
+  line-height: 1.2;
+}
+
+.stress-context footer {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 15px;
+  border-top: 1px dashed var(--line);
+  padding-top: 11px;
+}
+
+.stress-context footer strong {
+  color: var(--ink);
+}
+
 .shock-metric {
   position: relative;
   display: grid;
@@ -7800,6 +7884,23 @@ a {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .stress-context {
+    grid-template-columns: 1fr;
+  }
+
+  .stress-context__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stress-context__metrics article:nth-child(3) {
+    border-left: 0;
+  }
+
+  .stress-context__metrics article:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+  }
+
   .shock-metric:nth-child(3) {
     border-left: 0;
   }
@@ -7825,6 +7926,17 @@ a {
   .shock-grid,
   .shock-decomposition__footer {
     grid-template-columns: 1fr;
+  }
+
+  .stress-context__metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .stress-context__metrics article + article,
+  .stress-context__metrics article:nth-child(3) {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+    padding-top: 11px;
   }
 
   .shock-metric + .shock-metric,
