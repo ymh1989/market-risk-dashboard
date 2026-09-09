@@ -131,12 +131,12 @@ def test_prepare_publication_accepts_krx_mode_with_reused_non_krx_artifacts(tmp_
         mode="krx",
         started_at=STARTED_AT,
         artifact_paths=ARTIFACTS,
-        reused_paths=[Path("data/market-stress-episodes.json")],
         prepared_at=PREPARED_AT,
     )
 
     assert manifest["mode"] == "krx"
-    assert manifest["reusedCount"] == 1
+    assert manifest["reusedCount"] == 2
+    assert manifest["reusePolicy"]["implicitCount"] == 2
     assert verify_publication(tmp_path, expected_run_id=RUN_ID)["status"] == "ready"
 
 
@@ -161,18 +161,44 @@ def test_prepare_failure_does_not_touch_existing_files(tmp_path):
     assert not (tmp_path / "data/publication-manifest.json").exists()
 
 
-def test_prepare_rejects_stale_file_not_declared_as_reused(tmp_path):
+def test_full_prepare_rejects_stale_file_not_declared_as_reused(tmp_path):
     make_publication_candidate(tmp_path)
 
     with pytest.raises(PublicationError, match="신규 산출물이 아닙니다"):
         prepare_publication(
             tmp_path,
             run_id=RUN_ID,
-            mode="fast",
+            mode="full",
             started_at=STARTED_AT,
             artifact_paths=ARTIFACTS,
             prepared_at=PREPARED_AT,
         )
+
+
+def test_krx_policy_reuses_new_non_krx_artifact_without_runner_argument(tmp_path):
+    make_publication_candidate(tmp_path)
+    funding_path = Path("data/kb-market-funds.json")
+    write_json(
+        tmp_path,
+        funding_path,
+        {
+            "generatedAt": "2026-08-19 11:00:00 KST",
+            "latest": {"date": "2026-08-18"},
+        },
+    )
+
+    manifest = prepare_publication(
+        tmp_path,
+        run_id=RUN_ID,
+        mode="krx",
+        started_at=STARTED_AT,
+        artifact_paths=ARTIFACTS + (funding_path,),
+        prepared_at=PREPARED_AT,
+    )
+
+    funding = json.loads((tmp_path / funding_path).read_text(encoding="utf-8"))
+    assert funding["publication"]["state"] == "reused"
+    assert str(funding_path) in manifest["reusePolicy"]["implicitPaths"]
 
 
 def test_verify_detects_file_changed_after_manifest(tmp_path):

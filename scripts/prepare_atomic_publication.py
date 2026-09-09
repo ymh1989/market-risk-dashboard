@@ -35,6 +35,35 @@ STATIC_ARTIFACTS = (Path("reports/market-risk-dashboard-offline.html"),)
 DEFAULT_ARTIFACTS = JSON_ARTIFACTS + STATIC_ARTIFACTS
 REQUIRED_PIPELINE_STATUS = Path("data/pipeline-status.json")
 REQUIRED_QUALITY_STATUS = Path("data/data-quality.json")
+PARTIAL_MODE_REUSED_ARTIFACTS = {
+    "fast": {
+        Path("data/market-stress-episodes.json"),
+    },
+    "live": {
+        Path("data/market-risk-backtest.json"),
+        Path("data/market-stress-episodes.json"),
+        Path("data/els-index-risk.json"),
+        Path("data/hmm-regime.json"),
+        Path("data/ml-risk-signal.json"),
+        Path("data/m7-credit-proxy.json"),
+        Path("data/kb-market-funds.json"),
+        Path("data/kospi-breadth.json"),
+    },
+    "krx": {
+        Path("data/risk-dashboard.json"),
+        Path("data/market-risk-snapshot.json"),
+        Path("data/market-risk-timeseries.json"),
+        Path("data/naver-marketindex-history.json"),
+        Path("data/market-risk-backtest.json"),
+        Path("data/market-stress-episodes.json"),
+        Path("data/market-history-cache.json"),
+        Path("data/els-index-risk.json"),
+        Path("data/hmm-regime.json"),
+        Path("data/ml-risk-signal.json"),
+        Path("data/m7-credit-proxy.json"),
+        Path("data/kb-market-funds.json"),
+    },
+}
 
 
 class PublicationError(RuntimeError):
@@ -268,6 +297,9 @@ def prepare_publication(
     unknown_reused = reused - set(artifacts)
     if unknown_reused:
         raise PublicationError(f"재사용 파일이 게시 목록에 없습니다: {sorted(map(str, unknown_reused))}")
+    policy_reused = PARTIAL_MODE_REUSED_ARTIFACTS.get(mode, set()) & set(artifacts)
+    implicit_reused = policy_reused - reused
+    reused.update(policy_reused)
 
     payloads: dict[Path, dict[str, Any]] = {}
     for relative in artifacts:
@@ -337,6 +369,11 @@ def prepare_publication(
                 "sourceTimesValid": True,
                 "allJsonStamped": True,
                 "checksumsVerified": True,
+            },
+            "reusePolicy": {
+                "mode": mode,
+                "implicitCount": len(implicit_reused),
+                "implicitPaths": sorted(str(path) for path in implicit_reused),
             },
             "artifacts": artifact_rows,
         }
