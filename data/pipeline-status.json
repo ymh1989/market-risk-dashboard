@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-09 18:55:00 KST",
+  "generatedAt": "2026-09-09 19:47:19 KST",
   "current": {
-    "runId": "codex-kofia-kb-20260909-1847",
+    "runId": "20260909T194715-manual-krx",
     "status": "success",
-    "mode": "full",
+    "mode": "krx",
     "trigger": "manual",
     "scheduledTime": null,
-    "startedAt": "2026-09-09 18:47:00 KST",
-    "completedAt": "2026-09-09 18:55:00 KST",
-    "durationSeconds": 480,
+    "startedAt": "2026-09-09 19:47:15 KST",
+    "completedAt": "2026-09-09 19:47:19 KST",
+    "durationSeconds": 4,
     "dataAsOf": "2026-09-09",
     "dashboardGeneratedAt": "2026-09-09 18:52 KST",
     "mlGeneratedAt": "2026-09-09 15:38 KST",
@@ -118,21 +118,21 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 353,
-      "detail": "시장 데이터 수집, 위험점수, M7·KB 시장자금, ELS·HMM 산출"
+      "durationSeconds": 2,
+      "detail": "KRX 외국인·기관·프로그램 당일 확정치 갱신"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
       "durationSeconds": 0,
-      "detail": "특성 생성, 모델 학습, 예측 및 OOS 검증"
+      "detail": "직전 확정 ML·HMM 산출물 재사용"
     },
     {
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 1,
+      "durationSeconds": 0,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -195,7 +195,7 @@
     {
       "id": "krx-breadth",
       "label": "KRX Market Breadth",
-      "status": "warning",
+      "status": "ok",
       "lastDate": "2026-09-09",
       "seriesCount": 655,
       "detail": "KOSPI 상승·하락·보합 종목 수 · pykrx EOD"
@@ -205,7 +205,7 @@
       "label": "ML 입력 원천",
       "status": "warning",
       "lastDate": "2026-09-09",
-      "oldestLastDate": "2026-08-19",
+      "oldestLastDate": "2026-08-28",
       "seriesCount": 17,
       "freshCount": 16,
       "staleCount": 1,
@@ -290,13 +290,13 @@
       "id": "breadth",
       "label": "KOSPI 시장 내부강도",
       "status": "ok",
-      "generatedAt": "2026-09-09 15:35:28 KST"
+      "generatedAt": "2026-09-09 19:47:18 KST"
     },
     {
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-09-09 18:53:51 KST"
+      "generatedAt": "2026-09-09 19:47:19 KST"
     }
   ],
   "quality": {
@@ -375,10 +375,10 @@
         "category": "source",
         "label": "CSI 300",
         "status": "warning",
-        "detail": "yahoo · skipped_low_coverage · 최신 2026-08-19 · 관측치 1253개 · 커버리지 16.3%",
+        "detail": "yahoo · skipped_low_coverage · 최신 2026-09-09 · 관측치 1개 · 커버리지 6.7%",
         "groupId": "ml-input",
-        "lastDate": "2026-08-19",
-        "observations": 1253,
+        "lastDate": "2026-09-09",
+        "observations": 1,
         "fetchStatus": "skipped_low_coverage",
         "required": false
       },
@@ -461,6 +461,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20260909T194715-manual-krx",
+      "status": "success",
+      "mode": "krx",
+      "trigger": "manual",
+      "scheduledTime": null,
+      "startedAt": "2026-09-09 19:47:15 KST",
+      "completedAt": "2026-09-09 19:47:19 KST",
+      "durationSeconds": 4,
+      "dataAsOf": "2026-09-09",
+      "dashboardGeneratedAt": "2026-09-09 18:52 KST",
+      "mlGeneratedAt": "2026-09-09 15:38 KST",
+      "qualityScore": 96.2,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "codex-kofia-kb-20260909-1847",
       "status": "success",
@@ -895,29 +910,14 @@
       "mlGeneratedAt": "2026-09-05 07:49 KST",
       "qualityScore": 97.0,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20260907T090005-0900-live",
-      "status": "success",
-      "mode": "live",
-      "trigger": "scheduled",
-      "scheduledTime": "09:00",
-      "startedAt": "2026-09-07 09:00:05 KST",
-      "completedAt": "2026-09-07 09:01:34 KST",
-      "durationSeconds": 89,
-      "dataAsOf": "2026-09-07",
-      "dashboardGeneratedAt": "2026-09-07 09:01 KST",
-      "mlGeneratedAt": "2026-09-05 07:49 KST",
-      "qualityScore": 96.7,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "codex-kofia-kb-20260909-1847",
-    "mode": "full",
+    "runId": "20260909T194715-manual-krx",
+    "mode": "krx",
     "state": "generated",
-    "startedAt": "2026-09-09 18:47:00 KST",
-    "preparedAt": "2026-09-09 18:54:34 KST"
+    "startedAt": "2026-09-09 19:47:15 KST",
+    "preparedAt": "2026-09-09 19:47:19 KST"
   }
 }
