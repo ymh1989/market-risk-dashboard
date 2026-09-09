@@ -452,6 +452,8 @@ update_kospi_breadth_data "$BREADTH_END_DATE"
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] M7 공개시장 신용스트레스 프록시를 갱신합니다."
 "$PYTHON_BIN" -m m7_credit_proxy.pipeline --update-latest
+echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] KB 증시주변자금 최종일을 갱신합니다."
+"$PYTHON_BIN" scripts/update_kb_market_funds.py
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 시장리스크 데이터를 갱신합니다."
 MARKET_STAGE_STARTED_EPOCH="$(date +%s)"
 make update-market-risk
@@ -547,6 +549,7 @@ elif [[ "$UPDATE_MODE" == "live" ]]; then
     --reused-file data/hmm-regime.json
     --reused-file data/ml-risk-signal.json
     --reused-file data/m7-credit-proxy.json
+    --reused-file data/kb-market-funds.json
     --reused-file data/kospi-breadth.json
   )
 elif [[ "$UPDATE_MODE" == "krx" ]]; then
@@ -562,6 +565,7 @@ elif [[ "$UPDATE_MODE" == "krx" ]]; then
     --reused-file data/hmm-regime.json
     --reused-file data/ml-risk-signal.json
     --reused-file data/m7-credit-proxy.json
+    --reused-file data/kb-market-funds.json
   )
 fi
 
@@ -614,6 +618,7 @@ PUBLISH_FILES=(
   data/pipeline-status.json
   data/publication-manifest.json
   data/m7-credit-proxy.json
+  data/kb-market-funds.json
   data/kospi-breadth.json
   reports/market-risk-dashboard-offline.html
 )

@@ -22,6 +22,7 @@ TIMESERIES_FILE = ROOT / "data" / "market-risk-timeseries.json"
 HISTORY_CACHE_FILE = ROOT / "data" / "market-history-cache.json"
 NAVER_MARKET_INDEX_CACHE_FILE = ROOT / "data" / "naver-marketindex-history.json"
 M7_CREDIT_FILE = ROOT / "data" / "m7-credit-proxy.json"
+KB_MARKET_FUNDS_FILE = ROOT / "data" / "kb-market-funds.json"
 MARKET_DATA_FILE = ROOT / "data" / "raw" / "market_data.csv"
 MARKET_DATA_METADATA_FILE = ROOT / "data" / "raw" / "market_data_sources.json"
 YAHOO_CHART_URLS = (
@@ -437,6 +438,29 @@ def load_m7_credit_proxy():
     return payload
 
 
+def load_kb_market_funds():
+    if not KB_MARKET_FUNDS_FILE.exists():
+        print(
+            f"{KB_MARKET_FUNDS_FILE.relative_to(ROOT)} 파일이 없어 KB 시장자금 관찰카드를 생략합니다.",
+            flush=True,
+        )
+        return None
+    try:
+        payload = json.loads(KB_MARKET_FUNDS_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        print(f"KB 시장자금 파일을 읽지 못했습니다: {error}", flush=True)
+        return None
+    latest = payload.get("latest") or {}
+    score = latest.get("score")
+    if not isinstance(score, (int, float)) or not 0 <= score <= 100:
+        print("KB 시장자금 최신 점수가 없거나 0~100 범위를 벗어났습니다.", flush=True)
+        return None
+    if not isinstance(payload.get("series"), list) or not payload["series"]:
+        print("KB 시장자금 시계열이 없어 관찰카드를 생략합니다.", flush=True)
+        return None
+    return payload
+
+
 def m7_credit_indicator(payload):
     latest = payload["latest"]
     top_driver = latest.get("top_driver") or {}
@@ -485,6 +509,77 @@ def m7_credit_indicator(payload):
             latest.get("disclaimer"),
         ],
         "source": "기존 대시보드 가격 피드 · OFR FSI · U.S. Treasury",
+    }
+
+
+def kb_market_funds_indicator(payload):
+    latest = payload["latest"]
+    amounts = latest.get("amountsKrwBillion") or {}
+    derived = latest.get("derived") or {}
+    rates = latest.get("ratesPct") or {}
+    rows = payload.get("series") or []
+    prior_score = float(rows[-2]["score"]) if len(rows) > 1 else float(latest["score"])
+    score = float(latest["score"])
+    score_change = score - prior_score
+    trend = "up" if score_change > 0.5 else "down" if score_change < -0.5 else "flat"
+
+    def trillion(field):
+        value = amounts.get(field)
+        return float(value) / 1000 if isinstance(value, (int, float)) else math.nan
+
+    def pct(field):
+        value = derived.get(field)
+        return float(value) if isinstance(value, (int, float)) else math.nan
+
+    bbb_aa = derived.get("bbbAaSpreadPctp")
+    cp_cd = derived.get("cpCdSpreadPctp")
+    spread_detail = (
+        f"회사채 BBB-AA {float(bbb_aa):.3f}%p · CP-CD {float(cp_cd):.3f}%p"
+        if isinstance(bbb_aa, (int, float)) and isinstance(cp_cd, (int, float))
+        else "국내 회사채·단기자금 스프레드 일부 미수집"
+    )
+    return {
+        "id": "kb_domestic_funding_watch",
+        "name": "국내 레버리지·대기자금",
+        "category": "관찰/수급·신용",
+        "group": "flow",
+        "role": "observation",
+        "value": round_score(score),
+        "unit": "score",
+        "weight": 0.0,
+        "trend": trend,
+        "asOf": latest.get("date"),
+        "quality": "bootstrap" if len(rows) < 60 else "history-normalized",
+        "detail": [
+            (
+                f"고객예탁금 {trillion('customerDeposits'):.2f}조원 "
+                f"({pct('customerDepositsChangePct'):+.2f}%) · 신용잔고 "
+                f"{trillion('creditBalance'):.2f}조원 ({pct('creditBalanceChangePct'):+.2f}%)"
+            ),
+            (
+                f"신용/예탁금 {pct('creditToDepositsPct'):.1f}% · 미수금 "
+                f"{trillion('receivables'):.2f}조원 · 미수/예탁금 "
+                f"{pct('receivablesToDepositsPct'):.2f}%"
+            ),
+            spread_detail,
+            (
+                f"KB 최종일 {latest.get('date') or '-'} · 누적 {len(rows)}일 · "
+                f"{'고정 위험구간으로 초기 관찰' if len(rows) < 60 else '당시까지의 expanding 혼합 정규화'}"
+            ),
+        ],
+        "source": "KB증권 OpenAPI: IVA10370 증시주변자금동향",
+        "sourceUrl": "https://openapi.kbsec.com/apidoc_b2c",
+        "metrics": {
+            "customerDepositsKrwTrillion": round(trillion("customerDeposits"), 3),
+            "creditBalanceKrwTrillion": round(trillion("creditBalance"), 3),
+            "receivablesKrwTrillion": round(trillion("receivables"), 3),
+            "creditToDepositsPct": round(pct("creditToDepositsPct"), 3),
+            "receivablesToDepositsPct": round(pct("receivablesToDepositsPct"), 3),
+            "corporateAa3yPct": rates.get("corporateAa3y"),
+            "corporateBbb3yPct": rates.get("corporateBbb3y"),
+            "cp91dPct": rates.get("cp91d"),
+            "cd91dPct": rates.get("cd91d"),
+        },
     }
 
 
@@ -3331,6 +3426,7 @@ def build_timeseries(
     fred_map,
     market_index_map=None,
     m7_credit_proxy=None,
+    kb_market_funds=None,
     limit=120,
     step=1,
 ):
@@ -3427,6 +3523,15 @@ def build_timeseries(
             for point in m7_credit_proxy.get("series", [])
             if point.get("date")
             and isinstance(point.get("combined_score"), (int, float))
+        ][-limit::step]
+    if kb_market_funds:
+        timeseries["kb_domestic_funding_watch"] = [
+            {
+                "date": point["date"],
+                "value": round_score(float(point["score"])),
+            }
+            for point in kb_market_funds.get("series", [])
+            if point.get("date") and isinstance(point.get("score"), (int, float))
         ][-limit::step]
     return timeseries
 
@@ -3590,7 +3695,7 @@ def build_observation_journal(indicators):
     rates_score = composite_score(rates_specs)
     flow_score = composite_score(flow_specs)
 
-    return [
+    journal = [
         {
             "id": "ai-roi",
             "title": "AI 투자 ROI 회의론",
@@ -3687,6 +3792,37 @@ def build_observation_journal(indicators):
             "operation": "TrendForce·기업 공시·내부 산업자료 연결 후보로 관리",
         },
     ]
+    if "kb_domestic_funding_watch" in by_id:
+        funding_specs = [
+            ("kb_domestic_funding_watch", 0.5),
+            ("foreign_ownership_pressure", 0.3),
+            ("trading_activity_heat", 0.2),
+        ]
+        funding_score = composite_score(funding_specs)
+        journal.insert(
+            3,
+            {
+                "id": "domestic-funding-leverage",
+                "title": "국내 레버리지·대기자금",
+                "status": status(funding_score),
+                "score": round_score(funding_score),
+                "tone": tone(funding_score),
+                "decision": "직접 시장통계 관찰",
+                "components": components(funding_specs),
+                "evidence": [
+                    f"KB 신용·예탁금 {score('kb_domestic_funding_watch'):.1f}",
+                    f"외국인 보유비중 이탈 {score('foreign_ownership_pressure'):.1f}",
+                    f"거래 유동성 {score('trading_activity_heat'):.1f}",
+                ],
+                "assessment": (
+                    "신용잔고가 예탁금보다 빠르게 늘고 미수금 비중까지 높아지면 반대매매 취약성이 "
+                    "커진 것으로 봅니다. 다만 급락 뒤 신용잔고 감소는 부담 완화가 아니라 강제 청산의 "
+                    "결과일 수 있어 외국인 수급·거래량·시장 breadth와 함께 확인합니다."
+                ),
+                "operation": "연결일 이후 일별 누적 · 60개 관측과 OOS 검증 전 가중치 0 유지",
+            },
+        )
+    return journal
 
 
 def build_indicators(
@@ -3695,6 +3831,7 @@ def build_indicators(
     fred_map,
     market_index_map,
     m7_credit_proxy=None,
+    kb_market_funds=None,
 ):
     kospi = equity_stress_score(series_map["kospi"])
     kosdaq = equity_stress_score(series_map["kosdaq"])
@@ -4150,6 +4287,8 @@ def build_indicators(
     ]
     if m7_credit_proxy:
         indicators.append(m7_credit_indicator(m7_credit_proxy))
+    if kb_market_funds:
+        indicators.append(kb_market_funds_indicator(kb_market_funds))
     return indicators
 
 
@@ -4159,6 +4298,7 @@ def update_dashboard(
     market_index_map,
     indicators,
     m7_credit_proxy=None,
+    kb_market_funds=None,
 ):
     dashboard = json.loads(DASHBOARD_FILE.read_text(encoding="utf-8"))
     generated_at = datetime.now(KST).strftime("%Y-%m-%d %H:%M KST")
@@ -4172,7 +4312,7 @@ def update_dashboard(
     dashboard["metadata"]["asOf"] = as_of
     dashboard["metadata"]["generatedAt"] = generated_at
     dashboard["metadata"]["source"] = (
-        "Yahoo Finance, Naver Finance equity/market-index, and FRED endpoints via scripts/update_market_risk.py"
+        "Yahoo Finance, Naver Finance equity/market-index, FRED, and KB Securities OpenAPI endpoints"
     )
 
     market = next(section for section in dashboard["sections"] if section["id"] == "market")
@@ -4182,11 +4322,11 @@ def update_dashboard(
         "외국인 보유비중, 거래량, "
         "대형 반도체 단일종목 레버리지성 스트레스, 빅테크 AI 수요 우려, "
         "AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다. 엔 캐리 청산, "
-        "한미 금리차·원화 압력, 미·일 10년 금리차, 옵션 기간구조, 미국 증시 폭, M7 공개시장 "
-        "신용스트레스 프록시와 광의 "
+        "한미 금리차·원화 압력, 미·일 10년 금리차, 옵션 기간구조, 미국 증시 폭, 국내 신용·예탁금, "
+        "M7 공개시장 신용스트레스 프록시와 광의 "
         "재인플레이션은 종합점수와 분리한 연구 관찰카드로 제공합니다."
     )
-    market["model"]["version"] = "market-risk-v9-m7-credit-observation"
+    market["model"]["version"] = "market-risk-v10-kb-funding-observation"
     market["model"]["methodology"] = (
         "각 시계열의 최대 2년 히스토리에서 레벨, 20개 관측치 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 "
         "분위수 점수, z-score 정규분포 변환 점수, median/MAD 기반 robust z-score 변환 점수로 "
@@ -4218,6 +4358,7 @@ def update_dashboard(
         "SCFI, BDTI, BDI, Brent, iron ore, copper, gold, USD/KRW, USD/CNY, USD/JPY, US/JP/KR Treasury yields",
         "VIX3M, VVIX, RSP/SPY, QQEW/QQQ, DBC/DBA observation proxies",
         "M7 adjusted prices, IGIB/LQD/HYG/IEF, OFR FSI, U.S. Treasury yield curve",
+        "KB Securities OpenAPI IVA10370 customer deposits, credit balance, receivables, MMF, and Korean money-market rates",
     ]
     market["model"]["references"] = [
         {
@@ -4288,6 +4429,10 @@ def update_dashboard(
             "label": "U.S. Treasury daily yield curve XML feed",
             "url": "https://home.treasury.gov/treasury-daily-interest-rate-xml-feed",
         },
+        {
+            "label": "KB Securities OpenAPI IVA10370 market funds",
+            "url": "https://openapi.kbsec.com/apidoc_b2c",
+        },
     ]
     market["m7CreditProxy"] = (
         {
@@ -4300,6 +4445,17 @@ def update_dashboard(
         if m7_credit_proxy
         else None
     )
+    market["kbMarketFunds"] = (
+        {
+            "name": kb_market_funds.get("name"),
+            "latest": kb_market_funds.get("latest"),
+            "source": kb_market_funds.get("source"),
+            "methodology": kb_market_funds.get("methodology"),
+            "limitations": kb_market_funds.get("limitations"),
+        }
+        if kb_market_funds
+        else None
+    )
     market["groupScores"] = group_scores
     market["indicators"] = enriched_indicators
     market["observationJournal"] = build_observation_journal(enriched_indicators)
@@ -4308,6 +4464,7 @@ def update_dashboard(
         "점수 75 이상 또는 핵심 지표 2개 이상 경고 시 투자위원회 보고 대상을 자동 지정합니다.",
         "연구 관찰카드는 OOS 개선이 확인되기 전까지 종합점수와 고위험 지표 수에 포함하지 않습니다.",
         "M7 Credit Stress Proxy는 실제 CDS가 아니며 데이터 품질과 선행성을 검증한 뒤에만 가중 승격합니다.",
+        "KB 신용·예탁금 관찰카드는 연결일 이후 시계열을 누적하고 60개 관측과 OOS 검증 전에는 가중치 0을 유지합니다.",
         "시장 의견의 완화·반등 전망은 점수에 선반영하지 않고 실제 가격·금리·기간구조의 확인 신호로 검증합니다.",
         "운영 배포에서는 Yahoo/Naver proxy를 KRX, 한국은행 ECOS, 금융투자협회, 내부 포지션/외국인 수급 데이터로 교체할 수 있습니다.",
     ]
@@ -4324,11 +4481,12 @@ def write_snapshot(
     indicators,
     yahoo_fetch_statuses,
     m7_credit_proxy=None,
+    kb_market_funds=None,
 ):
     enriched_indicators, group_scores = enrich_indicators(indicators)
     snapshot = {
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "source": "Yahoo Finance, Naver Finance equity/market-index, and FRED endpoints",
+        "source": "Yahoo Finance, Naver Finance equity/market-index, FRED, and KB Securities OpenAPI endpoints",
         "yahooSymbols": {
             key: {
                 "symbol": config["symbol"],
@@ -4393,6 +4551,25 @@ def write_snapshot(
             if m7_credit_proxy
             else None
         ),
+        "kbMarketFunds": (
+            {
+                "provider": "KB증권 OpenAPI",
+                "api": "IVA10370",
+                "label": "증시주변자금동향",
+                "lastDate": kb_market_funds["latest"].get("date"),
+                "retrievedAt": kb_market_funds["latest"].get("retrievedAt"),
+                "observations": len(kb_market_funds.get("series") or []),
+                "fetchStatus": kb_market_funds.get("fetchStatus") or "direct",
+                "scoreStatus": (
+                    "history-normalized"
+                    if len(kb_market_funds.get("series") or []) >= 60
+                    else "bootstrap-observation"
+                ),
+                "amountUnit": (kb_market_funds.get("source") or {}).get("amountUnit"),
+            }
+            if kb_market_funds
+            else None
+        ),
         "groupScores": group_scores,
         "indicators": enriched_indicators,
     }
@@ -4405,10 +4582,11 @@ def write_timeseries(
     fred_map,
     market_index_map,
     m7_credit_proxy=None,
+    kb_market_funds=None,
 ):
     timeseries = {
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "source": "Yahoo Finance, Naver Finance equity/market-index, and FRED endpoints",
+        "source": "Yahoo Finance, Naver Finance equity/market-index, FRED, and KB Securities OpenAPI endpoints",
         "window": "recent 120 observations per indicator",
         "unit": "risk score",
         "series": build_timeseries(
@@ -4417,6 +4595,7 @@ def write_timeseries(
             fred_map,
             market_index_map,
             m7_credit_proxy=m7_credit_proxy,
+            kb_market_funds=kb_market_funds,
         ),
     }
     TIMESERIES_FILE.write_text(json.dumps(timeseries, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -4424,6 +4603,7 @@ def write_timeseries(
 
 def main():
     m7_credit_proxy = load_m7_credit_proxy()
+    kb_market_funds = load_kb_market_funds()
     print("Yahoo Finance 시계열을 조회합니다.", flush=True)
     cached_yahoo_map = load_history_yahoo_series_map()
     cached_yahoo_by_symbol = {
@@ -4463,6 +4643,7 @@ def main():
         fred_map,
         market_index_map,
         m7_credit_proxy=m7_credit_proxy,
+        kb_market_funds=kb_market_funds,
     )
     update_dashboard(
         series_map,
@@ -4470,6 +4651,7 @@ def main():
         market_index_map,
         indicators,
         m7_credit_proxy=m7_credit_proxy,
+        kb_market_funds=kb_market_funds,
     )
     write_snapshot(
         series_map,
@@ -4480,6 +4662,7 @@ def main():
         indicators,
         yahoo_fetch_statuses,
         m7_credit_proxy,
+        kb_market_funds,
     )
     write_timeseries(
         series_map,
@@ -4487,6 +4670,7 @@ def main():
         fred_map,
         market_index_map,
         m7_credit_proxy=m7_credit_proxy,
+        kb_market_funds=kb_market_funds,
     )
 
     total_weight = sum(indicator["weight"] for indicator in indicators)

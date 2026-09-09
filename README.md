@@ -6,7 +6,7 @@ app_file: index.html
 
 # 통합 리스크 모니터링 대시보드
 
-시장리스크와 ELS 발행·헤지 환경을 함께 점검하는 정적 대시보드입니다. 시장 종합점수에 반영되는 18개 가중지표와 연구용 관찰지표 7개, 스트레스 사례, KOSPI ML risk-off 신호, SPX·SX5E·NKY·HSCEI·KOSPI200 ELS 리스크를 한 화면에서 확인할 수 있습니다. 별도 프런트엔드 빌드 도구 없이 `index.html`, `src/*`, `data/*.json`으로 실행됩니다.
+시장리스크와 ELS 발행·헤지 환경을 함께 점검하는 정적 대시보드입니다. 시장 종합점수에 반영되는 18개 가중지표와 연구용 관찰지표 8개, 스트레스 사례, KOSPI ML risk-off 신호, SPX·SX5E·NKY·HSCEI·KOSPI200 ELS 리스크를 한 화면에서 확인할 수 있습니다. 별도 프런트엔드 빌드 도구 없이 `index.html`, `src/*`, `data/*.json`으로 실행됩니다.
 
 운영 페이지: [https://ymh1989.github.io/market-risk-dashboard/](https://ymh1989.github.io/market-risk-dashboard/)
 
@@ -35,13 +35,14 @@ pytest -q
 
 ```bash
 make update-m7-credit-proxy
+make update-kb-market-funds
 make update-market-risk
 make backtest-market-risk
 make analyze-stress-episodes
 make export-els-index-risk
 ```
 
-이 명령들은 Yahoo Finance, Naver Finance 주식·시장지표 엔드포인트, FRED에서 데이터를 받아 시장리스크 점수, 감사용 스냅샷, 최근 시계열, 백테스트, 과거 스트레스 사례와 ELS 기초지수별 리스크를 갱신합니다. 현재 모델은 한국 시장지표, 수급·거래량, 글로벌 크레딧·위험선호, 미국 신용스프레드·금융여건, 운임·원자재·국제환율, AI 반도체 및 빅테크 AI 수요 지표를 함께 사용합니다.
+이 명령들은 Yahoo Finance, Naver Finance 주식·시장지표 엔드포인트, FRED와 KB증권 OpenAPI에서 데이터를 받아 시장리스크 점수, 감사용 스냅샷, 최근 시계열, 백테스트, 과거 스트레스 사례와 ELS 기초지수별 리스크를 갱신합니다. 현재 모델은 한국 시장지표, 수급·거래량, 국내 증시주변자금, 글로벌 크레딧·위험선호, 미국 신용스프레드·금융여건, 운임·원자재·국제환율, AI 반도체 및 빅테크 AI 수요 지표를 함께 사용합니다.
 
 FRED 계열은 `.env`의 `FRED_API_KEY`가 있으면 공식 `fred/series/observations` JSON API를 우선 사용합니다. 키가 없거나 API가 실패하면 FRED 공개 CSV, 로컬 저장 캐시 순서로 대체하며 API 키는 로그와 산출물에 기록하지 않습니다.
 
@@ -62,7 +63,27 @@ python3 scripts/update_market_risk.py --check-fred-api
 - 글로벌 proxy: HYG/LQD 신용스프레드 proxy, EEM 신흥국 위험선호 proxy
 - 교차자산 전이: SCFI·BDTI 비용압력과 BDI 실물수요의 괴리, 브렌트유의 원화 환산 비용, USD/CNY·철광석을 결합한 중국 경기 압력
 - 보조 원자재: 구리/금 상대가격을 중국 경기 카드의 상세값으로 제공하되 별도 점수는 부여하지 않습니다.
-- 연구 관찰카드: 엔 캐리, 한미·미일 금리차, 옵션 기간구조, 미국 증시 폭, 광의 재인플레이션과 `M7 Credit Stress Proxy`를 0~100점으로 표시합니다. 일곱 카드는 가중치 0으로 종합점수·위험군 점수·고위험 지표 수에서 제외합니다.
+- 연구 관찰카드: 국내 신용·예탁금, 엔 캐리, 한미·미일 금리차, 옵션 기간구조, 미국 증시 폭, 광의 재인플레이션과 `M7 Credit Stress Proxy`를 0~100점으로 표시합니다. 여덟 카드는 가중치 0으로 종합점수·위험군 점수·고위험 지표 수에서 제외합니다.
+
+## KB 증시주변자금 관찰카드
+
+`국내 레버리지·대기자금`은 KB증권 OpenAPI의 `증시주변자금동향(최종일)(IVA10370)` 시장 전체 집계값을 사용합니다. 개인 계좌 평가액·보유종목·예수금은 읽거나 게시하지 않습니다.
+
+- 신용잔고/고객예탁금 45%: 대기자금 대비 레버리지 규모
+- 신용잔고 일간 증감률 25%: 레버리지 유입·청산 속도
+- 미수금/고객예탁금 20%: 단기 결제·반대매매 취약성
+- 고객예탁금 일간 감소 10%: 현금 완충력 약화
+- 보조값: MMF, 선물예수금, 회사채 BBB-AA 및 CP-CD 스프레드
+
+KB API는 최종일 한 건만 제공하므로 연결일부터 매일 날짜 중복 없이 누적합니다. 처음 60개 관측은 고정 위험구간으로만 점수화하고, 이후에는 각 날짜까지의 자료만 사용하는 expanding 혼합 정규화로 전환합니다. OOS 하락 탐지력과 오경보율 개선이 확인되기 전까지 종합점수 가중치는 0입니다.
+
+키를 복사하지 않고 hobby 프로젝트의 환경파일을 함께 쓰려면 market-lab의 `.env`에 아래처럼 경로만 지정합니다.
+
+```bash
+KB_OPENAPI_ENV_FILE=/Users/minhyunyoo/projects/hobby/finance-engineering-telegram-bot/.env
+```
+
+금액 필드는 원천값과 시장 총액 대조에 따라 십억원 단위로 표시하되, 공식 응답 명세에 단위 표기가 없어 원천값도 함께 보존합니다. 비율 산식은 금액 단위에 영향을 받지 않습니다. 조회 실패 시 직전 검증값을 `stale-fallback`으로 표시하고 실제 관측일을 유지합니다.
 
 ## 시장 충격 분해
 
@@ -376,11 +397,14 @@ make run-news-bot
 - `data/data-quality.json`: 원천별 완비성·최신성, 캐시 상태와 산출물 정렬 검사 결과를 저장합니다.
 - `data/pipeline-status.json`: 예약 스케줄, 최근 성공, 단계별 소요시간, 데이터 소스 신선도와 실행 이력을 저장합니다.
 - `data/m7-credit-proxy.json`: M7 신용스트레스 프록시의 공개 점수·구성종목·품질 메타데이터를 저장합니다.
+- `data/kb-market-funds.json`: KB 고객예탁금·신용잔고·미수금과 관찰점수의 일별 누적값을 저장합니다.
 - `src/risk-model.js`: 점수 계산과 등급 판정 로직입니다.
 - `src/app.js`: JSON 데이터를 읽어 화면을 렌더링합니다.
 - `src/styles.css`: 대시보드 레이아웃과 시각 스타일입니다.
 - `scripts/update_market_risk.py`: 외부 데이터를 가져와 시장리스크 지표를 재계산합니다.
 - `src/m7_credit_proxy/pipeline.py`: M7·회사채 ETF·OFR·미 국채·SEC 자료를 검증하고 프록시를 산출합니다.
+- `src/kospi_risk/kb_market_funds.py`: KB 시장 집계 응답 검증·비율 계산·누수 없는 관찰점수를 담당합니다.
+- `scripts/update_kb_market_funds.py`: KB 최종일을 조회해 날짜별 원장을 원자적으로 갱신합니다.
 - `scripts/export_els_index_risk.py`: ELS 5개 기초지수 및 basket 리스크를 계산합니다.
 - `scripts/export_ml_risk_signal.py`: 연구용 ML 결과를 홈페이지용 JSON으로 변환합니다.
 - `scripts/audit_data_completeness.py`: 원천·캐시·산출물의 완비성과 최신성을 검사하고 오류 시 배포를 차단합니다.

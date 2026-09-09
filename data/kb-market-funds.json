@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "name": "KB 증시주변자금동향",
+  "generatedAt": "2026-09-09 17:38:29 KST",
+  "fetchStatus": "direct",
+  "lastFetchError": null,
+  "source": {
+    "provider": "KB증권 OpenAPI",
+    "api": "IVA10370",
+    "endpoint": "/api/v1/iva10370",
+    "frequency": "일별 최종일",
+    "amountUnit": "KRW billion",
+    "amountUnitNote": "금액 원천값은 십억원 단위로 보존하며 비율 산식은 단위에 영향을 받지 않습니다."
+  },
+  "latest": {
+    "date": "2026-09-07",
+    "retrievedAt": "2026-09-09 17:38:29 KST",
+    "amountsKrwBillion": {
+      "customerDeposits": 93925.0,
+      "customerDepositsChange": 375.0,
+      "receivables": 1146.0,
+      "receivablesChange": 94.0,
+      "creditBalance": 33190.0,
+      "creditBalanceChange": -405.0,
+      "futuresDeposits": 42406.0,
+      "futuresDepositsChange": 1882.0,
+      "stockFunds": 340118.0,
+      "stockFundsChange": 6910.0,
+      "bondFunds": 212460.0,
+      "bondFundsChange": 305.0,
+      "mixedFunds": 47696.0,
+      "mixedFundsChange": 188.0,
+      "mmf": 266303.0,
+      "mmfChange": -785.0
+    },
+    "ratesPct": {
+      "corporateAa3y": 4.581,
+      "corporateBbb3y": 10.388,
+      "cd91d": 3.12,
+      "cp91d": 3.23,
+      "treasury3y": 3.91,
+      "treasury10y": 4.401
+    },
+    "derived": {
+      "creditToDepositsPct": 35.33670481767368,
+      "receivablesToDepositsPct": 1.2201224381155178,
+      "customerDepositsChangePct": 0.4008551576696953,
+      "creditBalanceChangePct": -1.2055365381753236,
+      "receivablesChangePct": 8.935361216730039,
+      "futuresDepositsChangePct": 4.644161484552364,
+      "bbbAaSpreadPctp": 5.8069999999999995,
+      "cpCdSpreadPctp": 0.10999999999999988
+    },
+    "score": 46.2,
+    "scoreMode": "fixed-anchor-bootstrap",
+    "scoreComponents": [
+      {
+        "id": "creditToDepositsPct",
+        "value": 35.3367,
+        "score": 61.3,
+        "weight": 0.45
+      },
+      {
+        "id": "creditBalanceChangePct",
+        "value": -1.2055,
+        "score": 19.9,
+        "weight": 0.25
+      },
+      {
+        "id": "receivablesToDepositsPct",
+        "value": 1.2201,
+        "score": 48.0,
+        "weight": 0.2
+      },
+      {
+        "id": "customerDepositsChangePct",
+        "value": 0.4009,
+        "score": 40.0,
+        "weight": 0.1
+      }
+    ]
+  },
+  "series": [
+    {
+      "date": "2026-09-07",
+      "retrievedAt": "2026-09-09 17:38:29 KST",
+      "amountsKrwBillion": {
+        "customerDeposits": 93925.0,
+        "customerDepositsChange": 375.0,
+        "receivables": 1146.0,
+        "receivablesChange": 94.0,
+        "creditBalance": 33190.0,
+        "creditBalanceChange": -405.0,
+        "futuresDeposits": 42406.0,
+        "futuresDepositsChange": 1882.0,
+        "stockFunds": 340118.0,
+        "stockFundsChange": 6910.0,
+        "bondFunds": 212460.0,
+        "bondFundsChange": 305.0,
+        "mixedFunds": 47696.0,
+        "mixedFundsChange": 188.0,
+        "mmf": 266303.0,
+        "mmfChange": -785.0
+      },
+      "ratesPct": {
+        "corporateAa3y": 4.581,
+        "corporateBbb3y": 10.388,
+        "cd91d": 3.12,
+        "cp91d": 3.23,
+        "treasury3y": 3.91,
+        "treasury10y": 4.401
+      },
+      "derived": {
+        "creditToDepositsPct": 35.33670481767368,
+        "receivablesToDepositsPct": 1.2201224381155178,
+        "customerDepositsChangePct": 0.4008551576696953,
+        "creditBalanceChangePct": -1.2055365381753236,
+        "receivablesChangePct": 8.935361216730039,
+        "futuresDepositsChangePct": 4.644161484552364,
+        "bbbAaSpreadPctp": 5.8069999999999995,
+        "cpCdSpreadPctp": 0.10999999999999988
+      },
+      "score": 46.2,
+      "scoreMode": "fixed-anchor-bootstrap",
+      "scoreComponents": [
+        {
+          "id": "creditToDepositsPct",
+          "value": 35.3367,
+          "score": 61.3,
+          "weight": 0.45
+        },
+        {
+          "id": "creditBalanceChangePct",
+          "value": -1.2055,
+          "score": 19.9,
+          "weight": 0.25
+        },
+        {
+          "id": "receivablesToDepositsPct",
+          "value": 1.2201,
+          "score": 48.0,
+          "weight": 0.2
+        },
+        {
+          "id": "customerDepositsChangePct",
+          "value": 0.4009,
+          "score": 40.0,
+          "weight": 0.1
+        }
+      ]
+    }
+  ],
+  "methodology": {
+    "role": "observation",
+    "aggregateWeight": 0,
+    "components": [
+      {
+        "id": "creditToDepositsPct",
+        "weight": 0.45,
+        "meaning": "신용잔고/고객예탁금"
+      },
+      {
+        "id": "creditBalanceChangePct",
+        "weight": 0.25,
+        "meaning": "신용잔고 일간 증감률"
+      },
+      {
+        "id": "receivablesToDepositsPct",
+        "weight": 0.2,
+        "meaning": "미수금/고객예탁금"
+      },
+      {
+        "id": "customerDepositsChangePct",
+        "weight": 0.1,
+        "meaning": "고객예탁금 일간 감소"
+      }
+    ],
+    "bootstrap": "60개 미만은 고정 위험구간, 이후에는 각 시점까지의 expanding 혼합 정규화",
+    "leakageControl": "날짜 t의 점수는 t까지 저장된 관측치만 사용"
+  },
+  "limitations": [
+    "KB API는 최종일 한 건만 제공하므로 연결일 이후부터 시계열이 누적됩니다.",
+    "신용잔고 감소는 부담 완화일 수도 있고 급락 중 강제 청산 결과일 수도 있어 가격·breadth와 함께 봅니다.",
+    "가중치 0의 관찰지표이며 충분한 OOS 검증 전에는 종합점수에 반영하지 않습니다."
+  ]
+}

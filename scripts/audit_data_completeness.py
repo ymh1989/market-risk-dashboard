@@ -46,6 +46,7 @@ ARTIFACTS = {
     "hmm": ("HMM 레짐", ROOT / "data" / "hmm-regime.json"),
     "ml": ("ML 위험신호", ROOT / "data" / "ml-risk-signal.json"),
     "m7": ("M7 신용스트레스 프록시", ROOT / "data" / "m7-credit-proxy.json"),
+    "kbFunds": ("KB 증시주변자금", ROOT / "data" / "kb-market-funds.json"),
     "marketHistory": ("장기 시장 캐시", ROOT / "data" / "market-history-cache.json"),
     "naverMarketHistory": ("Naver 시장지표 캐시", ROOT / "data" / "naver-marketindex-history.json"),
 }
@@ -467,7 +468,8 @@ def artifact_checks(
             detail = "생성시각 메타데이터가 없습니다."
         else:
             lag = business_day_lag(generated_date, reference_date)
-            status = source_freshness_status(lag, 1, 3)
+            warning_lag, error_lag = (7, 15) if artifact_id == "kbFunds" else (1, 3)
+            status = source_freshness_status(lag, warning_lag, error_lag)
             detail = f"생성시각 {generated_at} · 영업일 시차 {lag}일"
         checks.append(
             make_check(
@@ -557,13 +559,59 @@ def cross_artifact_checks(
         )
     )
 
+    kb_funds = data.get("kbFunds") or {}
+    kb_latest = kb_funds.get("latest") or {}
+    kb_rows = kb_funds.get("series") or []
+    checks.append(
+        validate_series_rows(
+            "series:kb-funds:score",
+            "KB 국내 레버리지·대기자금 점수",
+            kb_rows,
+            min_rows=1,
+            value_key="score",
+        )
+    )
+    kb_indicator = next(
+        (
+            item
+            for item in market_section.get("indicators", [])
+            if item.get("id") == "kb_domestic_funding_watch"
+        ),
+        {},
+    )
+    kb_trend = (timeseries.get("series") or {}).get("kb_domestic_funding_watch") or []
+    kb_score = kb_latest.get("score")
+    kb_aligned = (
+        isinstance(kb_score, (int, float))
+        and kb_rows
+        and kb_indicator
+        and kb_trend
+        and kb_latest.get("date") == kb_rows[-1].get("date") == kb_trend[-1].get("date")
+        and math.isclose(float(kb_indicator.get("value")), float(kb_score), abs_tol=0.11)
+        and math.isclose(float(kb_trend[-1].get("value")), float(kb_score), abs_tol=0.11)
+    )
+    checks.append(
+        make_check(
+            "cross:kb-funds-dashboard",
+            "alignment",
+            "KB 시장자금·관찰카드·시계열",
+            "ok" if kb_aligned else "error",
+            (
+                f"원천 {kb_latest.get('date', '-')} {kb_score if kb_score is not None else '-'}점 · "
+                f"카드 {kb_indicator.get('value', '-')}점 · "
+                f"시계열 {kb_trend[-1].get('date', '-') if kb_trend else '-'}"
+            ),
+        )
+    )
+
     for item_id, rows in (timeseries.get("series") or {}).items():
+        minimum_rows = 1 if item_id == "kb_domestic_funding_watch" else 60
         checks.append(
             validate_series_rows(
                 f"series:market:{item_id}",
                 f"{item_id} 추이",
                 rows,
-                min_rows=60,
+                min_rows=minimum_rows,
                 value_key="value",
             )
         )
@@ -912,6 +960,21 @@ def build_report(now: datetime | None = None) -> dict[str, Any]:
         m7_group, m7_checks = assess_m7_source_group(data["m7"], reference_date)
         groups.append(m7_group)
         checks.extend(m7_checks)
+
+    kb_snapshot = snapshot.get("kbMarketFunds")
+    if kb_snapshot:
+        kb_group, kb_checks = assess_source_group(
+            "kb-market-funds",
+            "KB 증시주변자금",
+            {"iva10370": kb_snapshot},
+            {"iva10370": {"label": "IVA10370 증시주변자금동향"}},
+            reference_date,
+            warning_lag=3,
+            error_lag=7,
+            min_observations=1,
+        )
+        groups.append(kb_group)
+        checks.extend(kb_checks)
 
     checks.extend(artifact_checks(data, reference_date))
     checks.extend(cross_artifact_checks(data, now))

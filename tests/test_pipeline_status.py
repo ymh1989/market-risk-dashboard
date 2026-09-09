@@ -166,4 +166,4 @@ def test_pipeline_status_can_refresh_research_log_without_fabricating_a_run(tmp_
     assert payload["schedule"] == previous["schedule"]
     assert payload["stages"] == previous["stages"]
     assert payload["history"] == previous["history"]
-    assert len(payload["researchLog"]) == 5
+    assert len(payload["researchLog"]) == 6

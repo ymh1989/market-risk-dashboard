@@ -3419,9 +3419,13 @@ function sourceCatalog(snapshot) {
     ["FRED", snapshot.fredSeries],
     ["Naver Market Index", snapshot.naverMarketIndexes]
   ];
-  return catalogs.flatMap(([provider, records]) =>
-    Object.entries(records ?? {}).map(([id, record]) => ({ id, provider, ...record }))
+  const records = catalogs.flatMap(([provider, sourceRecords]) =>
+    Object.entries(sourceRecords ?? {}).map(([id, record]) => ({ id, provider, ...record }))
   );
+  if (snapshot.kbMarketFunds) {
+    records.push({ id: "kb-market-funds", ...snapshot.kbMarketFunds });
+  }
+  return records;
 }
 
 function indicatorSourceRecords(indicator, snapshot) {
@@ -3441,6 +3445,9 @@ function indicatorSourceRecords(indicator, snapshot) {
       coveragePct: snapshot.m7CreditProxy.latest.coveragePct,
       fetchStatus: snapshot.m7CreditProxy.latest.qualityStatus
     });
+  }
+  if (indicator.id === "kb_domestic_funding_watch" && snapshot?.kbMarketFunds) {
+    matches.push({ id: "kb-market-funds", ...snapshot.kbMarketFunds });
   }
   return matches.filter(
     (record, index, all) =>
@@ -3465,6 +3472,9 @@ function sourceEnhancementNote(indicator) {
   }
   if (indicator.id === "m7_credit_stress_proxy") {
     return "OFR FSI·미 국채금리·회사채 ETF 보강";
+  }
+  if (indicator.id === "kb_domestic_funding_watch") {
+    return "개인 계좌와 분리된 시장 전체 집계값";
   }
   return "소스 변경 이력 없음";
 }
@@ -3569,6 +3579,10 @@ const indicatorDirectionMeanings = {
   m7_credit_stress_proxy: {
     up: "M7 고유 주가손실과 공개 신용시장 스트레스 동반 확대",
     down: "M7 고유손실과 공개 신용시장 부담 완화"
+  },
+  kb_domestic_funding_watch: {
+    up: "신용·미수 부담이 예탁금 완충력보다 빠르게 확대",
+    down: "신용·미수 부담 완화 또는 고객예탁금 완충력 개선"
   }
 };
 
@@ -5462,7 +5476,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
       ? [
           "핵심: 주가지수 · 환율 · 변동성 · 금리 · 크레딧 · 수급",
           "확장: 운임 · 에너지 · 중국 수요 · AI 반도체",
-          "관찰 전용: 엔 캐리 · 금리차 · 옵션 기간구조 · 시장 폭 · 재인플레이션"
+          "관찰 전용: 국내 신용·예탁금 · 엔 캐리 · 금리차 · 옵션 기간구조 · 시장 폭 · 재인플레이션 · M7 신용"
         ]
       : section.description;
 

@@ -28,6 +28,7 @@ JSON_ARTIFACTS = (
     Path("data/data-quality.json"),
     Path("data/pipeline-status.json"),
     Path("data/m7-credit-proxy.json"),
+    Path("data/kb-market-funds.json"),
     Path("data/kospi-breadth.json"),
 )
 STATIC_ARTIFACTS = (Path("reports/market-risk-dashboard-offline.html"),)

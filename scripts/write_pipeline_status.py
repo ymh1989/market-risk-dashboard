@@ -127,6 +127,7 @@ def artifact_status(data):
         ("backtest", "시장 백테스트", data["backtest"].get("generatedAt")),
         ("stress", "스트레스 이력", data["stress"].get("generatedAt")),
         ("m7", "M7 신용스트레스 프록시", data["m7"].get("generatedAt")),
+        ("kb-funds", "KB 증시주변자금", data.get("kbFunds", {}).get("generatedAt")),
         ("breadth", "KOSPI 시장 내부강도", data["breadth"].get("generatedAt")),
         ("quality", "데이터 완비성", data["quality"].get("generatedAt")),
     ]
@@ -151,7 +152,7 @@ def stage_status(args):
                 else (
                     "장중 가격·금리·환율·원자재와 위험점수 갱신"
                     if live_mode
-                    else "시장 데이터 수집, 위험점수, M7 프록시, ELS·HMM 산출"
+                    else "시장 데이터 수집, 위험점수, M7·KB 시장자금, ELS·HMM 산출"
                 )
             ),
         },
@@ -214,6 +215,7 @@ def build_payload(args):
         "backtest": read_json(ROOT / "data" / "market-risk-backtest.json"),
         "stress": read_json(ROOT / "data" / "market-stress-episodes.json"),
         "m7": read_json(ROOT / "data" / "m7-credit-proxy.json"),
+        "kbFunds": read_json(ROOT / "data" / "kb-market-funds.json"),
         "breadth": read_json(ROOT / "data" / "kospi-breadth.json"),
         "quality": read_json(DATA_QUALITY_FILE),
     }

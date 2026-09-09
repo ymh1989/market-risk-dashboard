@@ -107,14 +107,16 @@ def test_dashboard_contract():
         "us_market_breadth_watch",
         "broad_reinflation_watch",
         "m7_credit_stress_proxy",
+        "kb_domestic_funding_watch",
     }
     assert all(float(indicator["weight"]) == 0 for indicator in observations)
-    assert len(market["observationJournal"]) == 5
+    assert len(market["observationJournal"]) == 6
     assert {item["id"] for item in market["observationJournal"]} == {
         "ai-roi",
         "geopolitics-reinflation",
         "macro-rates",
         "flow-deleveraging",
+        "domestic-funding-leverage",
         "china-memory-capex",
     }
     assert next(
@@ -133,7 +135,8 @@ def test_dashboard_contract():
         ) < 0.06
         assert all(component["id"] in timeseries_ids for component in item["components"])
         assert all(
-            len(timeseries["series"][component["id"]]) >= 60
+            len(timeseries["series"][component["id"]])
+            >= (1 if component["id"] == "kb_domestic_funding_watch" else 60)
             for component in item["components"]
         )
     china_capex = next(
@@ -204,7 +207,8 @@ def test_dashboard_contract():
         assert indicator["contribution"] >= 0, f"{indicator['id']} should include contribution"
         assert indicator["source"], f"{indicator['id']} should include a source"
         points = timeseries["series"].get(indicator["id"], [])
-        assert len(points) >= 60, f"{indicator['id']} should expose enough trend points"
+        minimum_points = 1 if indicator["id"] == "kb_domestic_funding_watch" else 60
+        assert len(points) >= minimum_points, f"{indicator['id']} should expose enough trend points"
         assert all(0 <= point["value"] <= 100 for point in points), f"{indicator['id']} trend scores must be 0~100"
 
     assert backtest["sampleCount"] >= 60
@@ -499,6 +503,7 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert "--reused-file data/market-stress-episodes.json" in run_script
     assert "--reused-file data/market-history-cache.json" in run_script
     assert "--reused-file data/kospi-breadth.json" in run_script
+    assert "--reused-file data/kb-market-funds.json" in run_script
     assert "data/publication-manifest.json" in run_script
     assert "pages_publication_run_id()" in run_script
     assert "PUBLISH_FILES=(" in run_script
@@ -506,6 +511,7 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert "MARKET_UPDATE_RUN_ID=gha-${{ github.run_id }}-${{ github.run_attempt }}" in workflow
     assert "scripts/prepare_atomic_publication.py" in workflow
     assert "--reused-file data/kospi-breadth.json" in workflow
+    assert "--reused-file data/kb-market-funds.json" in workflow
     assert "data/publication-manifest.json" in workflow
     assert 'SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"' in installer
     assert 'TIMES="${LOCAL_MARKET_UPDATE_TIMES:-07:30,09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35,18:30}"' in installer
@@ -993,16 +999,17 @@ def test_pipeline_status_contract():
     assert {source["id"] for source in status["sources"]} == {
         "yahoo",
         "naver-equity",
-            "naver-market-index",
-            "fred",
-            "ml-input",
-            "m7-credit",
-            "krx-breadth",
-        }
+        "naver-market-index",
+        "fred",
+        "ml-input",
+        "m7-credit",
+        "kb-market-funds",
+        "krx-breadth",
+    }
     assert len(status["artifacts"]) >= 9
     assert any(item["id"] == "breadth" and item["status"] == "ok" for item in status["artifacts"])
     assert status["quality"]["score"] >= 0
-    assert len(status["researchLog"]) == 5
+    assert len(status["researchLog"]) == 6
     assert all(item["decision"] and item["operation"] for item in status["researchLog"])
     assert status["history"]
     assert quality["schemaVersion"] == 1
