@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-09 17:39:55 KST",
-  "source": "Yahoo Finance, Naver Finance equity/market-index, FRED, and KB Securities OpenAPI endpoints",
+  "generatedAt": "2026-09-09 18:52:53 KST",
+  "source": "Yahoo Finance, Naver Finance, FRED, KOFIA FreeSIS, and KB Securities OpenAPI endpoints",
   "yahooSymbols": {
     "kospi": {
       "symbol": "^KS11",
@@ -33,7 +33,7 @@
       "symbol": "KRW=X",
       "label": "USD/KRW",
       "lastDate": "2026-09-09",
-      "lastClose": 1336.9,
+      "lastClose": 1336.98,
       "observations": 518,
       "fetchStatus": "yahoo",
       "source": "Yahoo Finance"
@@ -42,7 +42,7 @@
       "symbol": "^VIX",
       "label": "VIX",
       "lastDate": "2026-09-09",
-      "lastClose": 15.78,
+      "lastClose": 15.94,
       "observations": 504,
       "fetchStatus": "yahoo",
       "source": "Yahoo Finance"
@@ -398,7 +398,7 @@
       "label": "US 2Y Treasury",
       "lastDate": "2026-09-04",
       "lastClose": 4.37,
-      "observations": 1944,
+      "observations": 7287,
       "fetchSource": "fred_cache",
       "fetchStatus": "cached",
       "fetchWarning": "직접 조회 실패: The read operation timed out"
@@ -408,7 +408,7 @@
       "label": "US 10Y-2Y Treasury Spread",
       "lastDate": "2026-09-08",
       "lastClose": 0.41,
-      "observations": 1945,
+      "observations": 7288,
       "fetchSource": "fred_cache",
       "fetchStatus": "cached",
       "fetchWarning": "직접 조회 실패: The read operation timed out"
@@ -418,7 +418,7 @@
       "label": "US High Yield OAS",
       "lastDate": "2026-09-07",
       "lastClose": 2.68,
-      "observations": 785,
+      "observations": 739,
       "fetchSource": "fred_cache",
       "fetchStatus": "cached",
       "fetchWarning": "직접 조회 실패: The read operation timed out"
@@ -428,7 +428,7 @@
       "label": "St. Louis Fed Financial Stress Index",
       "lastDate": "2026-08-28",
       "lastClose": -0.8526,
-      "observations": 405,
+      "observations": 1513,
       "fetchSource": "fred_cache",
       "fetchStatus": "cached",
       "fetchWarning": "직접 조회 실패: The read operation timed out"
@@ -438,7 +438,7 @@
       "label": "Chicago Fed National Financial Conditions Index",
       "lastDate": "2026-08-28",
       "lastClose": -0.558,
-      "observations": 405,
+      "observations": 1513,
       "fetchSource": "fred_cache",
       "fetchStatus": "cached",
       "fetchWarning": "직접 조회 실패: The read operation timed out"
@@ -563,7 +563,7 @@
       "fetchStatus": "live",
       "firstDate": "2023-07-03",
       "lastDate": "2026-09-09",
-      "lastClose": 1337.3,
+      "lastClose": 1337.7,
       "observations": 780
     },
     "us2y_naver": {
@@ -658,12 +658,12 @@
   "qualityChecks": {
     "naverUs2yVsFredDgs2": {
       "overlapCount": 252,
-      "firstDate": "2025-09-03",
+      "firstDate": "2025-08-12",
       "lastDate": "2026-09-04",
-      "levelCorrelation": 0.9989,
-      "dailyChangeCorrelation": 0.9397,
-      "meanDifferenceBp": 0.611,
-      "meanAbsoluteDifferenceBp": 1.038,
+      "levelCorrelation": 0.9987,
+      "dailyChangeCorrelation": 0.9395,
+      "meanDifferenceBp": 0.683,
+      "meanAbsoluteDifferenceBp": 1.082,
       "maxAbsoluteDifferenceBp": 6.9,
       "referenceLast": 4.37,
       "candidateLast": 4.379
@@ -943,15 +943,79 @@
     ]
   },
   "kbMarketFunds": {
-    "provider": "KB증권 OpenAPI",
-    "api": "IVA10370",
-    "label": "증시주변자금동향",
-    "lastDate": "2026-09-07",
-    "retrievedAt": "2026-09-09 17:38:29 KST",
-    "observations": 1,
+    "provider": "금융투자협회 FreeSIS + KB증권 OpenAPI",
+    "api": "STATSCU0100000060·0070 + IVA10370",
+    "label": "국내 증시주변자금 원장",
+    "lastDate": "2026-09-08",
+    "retrievedAt": "2026-09-09 18:47:20 KST",
+    "observations": 1226,
     "fetchStatus": "direct",
-    "scoreStatus": "bootstrap-observation",
-    "amountUnit": "KRW billion"
+    "scoreStatus": "history-normalized",
+    "amountUnit": "KRW million",
+    "firstDate": "2021-09-09",
+    "sourceStatus": {
+      "kofiaHistory": "direct",
+      "kbLatest": "reconciliation-failed"
+    },
+    "reconciliation": {
+      "status": "failed",
+      "overlapDate": "2026-09-08",
+      "absoluteToleranceKrwMillion": 1000,
+      "relativeTolerancePct": 0.1,
+      "fields": [
+        {
+          "field": "customerDeposits",
+          "kofiaKrwMillion": 96986329.0,
+          "kbKrwMillion": 93925000.0,
+          "absoluteDifferenceKrwMillion": 3061329.0,
+          "relativeDifferencePct": 3.156454,
+          "matched": false
+        },
+        {
+          "field": "receivables",
+          "kofiaKrwMillion": 881867.0,
+          "kbKrwMillion": 881000.0,
+          "absoluteDifferenceKrwMillion": 867.0,
+          "relativeDifferencePct": 0.098314,
+          "matched": true
+        },
+        {
+          "field": "creditBalance",
+          "kofiaKrwMillion": 32738698.0,
+          "kbKrwMillion": 32738000.0,
+          "absoluteDifferenceKrwMillion": 698.0,
+          "relativeDifferencePct": 0.002132,
+          "matched": true
+        },
+        {
+          "field": "futuresDeposits",
+          "kofiaKrwMillion": 43160449.0,
+          "kbKrwMillion": 43160000.0,
+          "absoluteDifferenceKrwMillion": 449.0,
+          "relativeDifferencePct": 0.00104,
+          "matched": true
+        }
+      ],
+      "failedFields": [
+        "customerDeposits"
+      ]
+    },
+    "sources": [
+      {
+        "provider": "금융투자협회 FreeSIS",
+        "label": "증시자금·신용공여 일별 원장",
+        "lastDate": "2026-09-08",
+        "observations": 1226,
+        "fetchStatus": "direct"
+      },
+      {
+        "provider": "KB증권 OpenAPI",
+        "label": "IVA10370 최종일 보강",
+        "lastDate": "2026-09-08",
+        "observations": 1,
+        "fetchStatus": "reconciliation-failed"
+      }
+    ]
   },
   "groupScores": [
     {
@@ -966,9 +1030,9 @@
     {
       "id": "macro",
       "label": "Macro",
-      "score": 41.6,
+      "score": 41.8,
       "weight": 0.3,
-      "contribution": 12.48,
+      "contribution": 12.55,
       "indicatorCount": 9,
       "observationCount": 7
     },
@@ -1047,7 +1111,7 @@
       "unit": "score",
       "weight": 0.06,
       "trend": "down",
-      "detail": "USD/KRW 1,336.90, 20일 변화율 -5.33%, 2년 분위 2.2",
+      "detail": "USD/KRW 1,336.98, 20일 변화율 -5.33%, 2년 분위 2.2",
       "source": "Yahoo Finance chart: KRW=X",
       "contribution": 0.91,
       "contributionPct": 6.0
@@ -1057,13 +1121,13 @@
       "name": "글로벌 변동성 압력",
       "category": "변동성",
       "group": "macro",
-      "value": 46.4,
+      "value": 48.2,
       "unit": "score",
       "weight": 0.05,
       "trend": "up",
-      "detail": "VIX 15.78, 20일 변화율 +8.45%, 2년 분위 26.3",
+      "detail": "VIX 15.94, 20일 변화율 +9.55%, 2년 분위 28.4",
       "source": "Yahoo Finance chart: ^VIX",
-      "contribution": 2.32,
+      "contribution": 2.41,
       "contributionPct": 5.0
     },
     {
@@ -1085,13 +1149,13 @@
       "name": "미국 신용스프레드 스트레스",
       "category": "신용/크레딧",
       "group": "macro",
-      "value": 29.6,
+      "value": 29.8,
       "unit": "score",
       "weight": 0.05,
       "trend": "flat",
-      "detail": "미국 하이일드 OAS 2.68%, 최근 20개 관측치 변화 -0.02%p, 위험분위 16.4",
+      "detail": "미국 하이일드 OAS 2.68%, 최근 20개 관측치 변화 -0.02%p, 위험분위 16.2",
       "source": "FRED: BAMLH0A0HYM2",
-      "contribution": 1.48,
+      "contribution": 1.49,
       "contributionPct": 5.0
     },
     {
@@ -1099,13 +1163,13 @@
       "name": "미국 금융여건 긴축 압력",
       "category": "금융여건",
       "group": "macro",
-      "value": 49.7,
+      "value": 48.6,
       "unit": "score",
       "weight": 0.03,
       "trend": "up",
       "detail": "STLFSI -0.85, NFCI -0.56, 미 2년 4.37%, 10Y-2Y 0.41%p",
       "source": "FRED: STLFSI4, NFCI, DGS2, T10Y2Y",
-      "contribution": 1.49,
+      "contribution": 1.46,
       "contributionPct": 3.0
     },
     {
@@ -1141,11 +1205,11 @@
       "name": "원화 환산 에너지 수입비용",
       "category": "에너지/환율",
       "group": "macro",
-      "value": 69.1,
+      "value": 69.2,
       "unit": "score",
       "weight": 0.02,
       "trend": "up",
-      "detail": "브렌트유 $97.92, USD/KRW 1,336.90, 원화 환산 배럴당 비용 130,909.25원, 최근 20개 관측치 변화 +1.83%. 유가와 원화 약세가 동시에 기업 마진·물가·금리 부담으로 전이되는 경로를 측정합니다.",
+      "detail": "브렌트유 $97.92, USD/KRW 1,336.98, 원화 환산 배럴당 비용 130,917.08원, 최근 20개 관측치 변화 +1.84%. 유가와 원화 약세가 동시에 기업 마진·물가·금리 부담으로 전이되는 경로를 측정합니다.",
       "source": "Naver market index: LCOcv1; Yahoo Finance: KRW=X",
       "contribution": 1.38,
       "contributionPct": 2.0
@@ -1156,11 +1220,11 @@
       "category": "관찰/글로벌 수급",
       "group": "macro",
       "role": "observation",
-      "value": 67.3,
+      "value": 68.0,
       "unit": "score",
       "weight": 0.0,
       "trend": "up",
-      "detail": "USD/JPY 153.99, 5개 관측치 변화 -3.85%, VIX 15.78·5개 관측치 +3.82%, SPX 5개 관측치 -0.16%. 엔화 급강세·VIX 상승·SPX 하락의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
+      "detail": "USD/JPY 153.99, 5개 관측치 변화 -3.85%, VIX 15.94·5개 관측치 +4.87%, SPX 5개 관측치 -0.16%. 엔화 급강세·VIX 상승·SPX 하락의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
       "source": "Naver market index: USDJPY; Yahoo Finance: ^VIX, ^GSPC",
       "contribution": 0.0,
       "contributionPct": 0.0
@@ -1175,7 +1239,7 @@
       "unit": "score",
       "weight": 0.0,
       "trend": "flat",
-      "detail": "한국 3년 3.903%, 미국 2년 4.398%, 금리차 -0.495%p·20개 관측치 변화 -0.079%p, USD/KRW 1,336.90·20개 관측치 -5.33%. 금리차 축소와 원화 약세의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
+      "detail": "한국 3년 3.903%, 미국 2년 4.398%, 금리차 -0.495%p·20개 관측치 변화 -0.079%p, USD/KRW 1,336.98·20개 관측치 -5.33%. 금리차 축소와 원화 약세의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
       "source": "Naver market index: KR3YT=RR, US2YT=RR; Yahoo Finance: KRW=X",
       "contribution": 0.0,
       "contributionPct": 0.0
@@ -1381,26 +1445,34 @@
       "category": "관찰/수급·신용",
       "group": "flow",
       "role": "observation",
-      "value": 46.2,
+      "value": 30.6,
       "unit": "score",
       "weight": 0.0,
-      "trend": "flat",
-      "asOf": "2026-09-07",
-      "quality": "bootstrap",
+      "trend": "down",
+      "asOf": "2026-09-08",
+      "quality": "history-normalized",
       "detail": [
-        "고객예탁금 93.92조원 (+0.40%) · 신용잔고 33.19조원 (-1.21%)",
-        "신용/예탁금 35.3% · 미수금 1.15조원 · 미수/예탁금 1.22%",
-        "회사채 BBB-AA 5.807%p · CP-CD 0.110%p",
-        "KB 최종일 2026-09-07 · 누적 1일 · 고정 위험구간으로 초기 관찰"
+        "고객예탁금 96.99조원 (+3.26%) · 신용잔고 32.74조원 (-1.36%)",
+        "신용/예탁금 33.8% · 미수금 0.88조원 · 미수/예탁금 0.91%",
+        "회사채 BBB-AA 5.807%p · CP-CD 0.110%p · KB 2026-09-07",
+        "FreeSIS 확정일 2026-09-08 · KB 2026-09-08 불일치 제외 · 누적 1226일 · 당시까지의 expanding 혼합 정규화"
       ],
-      "source": "KB증권 OpenAPI: IVA10370 증시주변자금동향",
-      "sourceUrl": "https://openapi.kbsec.com/apidoc_b2c",
+      "source": "금융투자협회 FreeSIS: 증시자금·신용공여 추이 · KB증권 OpenAPI: IVA10370 최종일",
+      "sourceUrl": "https://freesis.kofia.or.kr/stat/main.do",
+      "sourceUrls": [
+        "https://freesis.kofia.or.kr/stat/main.do",
+        "https://openapi.kbsec.com/apidoc_b2c"
+      ],
+      "sourceStatus": {
+        "kofiaHistory": "direct",
+        "kbLatest": "reconciliation-failed"
+      },
       "metrics": {
-        "customerDepositsKrwTrillion": 93.925,
-        "creditBalanceKrwTrillion": 33.19,
-        "receivablesKrwTrillion": 1.146,
-        "creditToDepositsPct": 35.337,
-        "receivablesToDepositsPct": 1.22,
+        "customerDepositsKrwTrillion": 96.986,
+        "creditBalanceKrwTrillion": 32.739,
+        "receivablesKrwTrillion": 0.882,
+        "creditToDepositsPct": 33.756,
+        "receivablesToDepositsPct": 0.909,
         "corporateAa3yPct": 4.581,
         "corporateBbb3yPct": 10.388,
         "cp91dPct": 3.23,
@@ -1412,10 +1484,10 @@
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260909T173800-manual-kb-live",
-    "mode": "live",
+    "runId": "codex-kofia-kb-20260909-1847",
+    "mode": "full",
     "state": "generated",
-    "startedAt": "2026-09-09 17:38:00 KST",
-    "preparedAt": "2026-09-09 17:49:09 KST"
+    "startedAt": "2026-09-09 18:47:00 KST",
+    "preparedAt": "2026-09-09 18:54:34 KST"
   }
 }

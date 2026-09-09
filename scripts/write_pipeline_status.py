@@ -127,7 +127,11 @@ def artifact_status(data):
         ("backtest", "시장 백테스트", data["backtest"].get("generatedAt")),
         ("stress", "스트레스 이력", data["stress"].get("generatedAt")),
         ("m7", "M7 신용스트레스 프록시", data["m7"].get("generatedAt")),
-        ("kb-funds", "KB 증시주변자금", data.get("kbFunds", {}).get("generatedAt")),
+        (
+            "kb-funds",
+            "FreeSIS·KB 증시주변자금",
+            data.get("kbFunds", {}).get("generatedAt"),
+        ),
         ("breadth", "KOSPI 시장 내부강도", data["breadth"].get("generatedAt")),
         ("quality", "데이터 완비성", data["quality"].get("generatedAt")),
     ]

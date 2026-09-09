@@ -46,7 +46,10 @@ ARTIFACTS = {
     "hmm": ("HMM 레짐", ROOT / "data" / "hmm-regime.json"),
     "ml": ("ML 위험신호", ROOT / "data" / "ml-risk-signal.json"),
     "m7": ("M7 신용스트레스 프록시", ROOT / "data" / "m7-credit-proxy.json"),
-    "kbFunds": ("KB 증시주변자금", ROOT / "data" / "kb-market-funds.json"),
+    "kbFunds": (
+        "FreeSIS·KB 증시주변자금",
+        ROOT / "data" / "kb-market-funds.json",
+    ),
     "marketHistory": ("장기 시장 캐시", ROOT / "data" / "market-history-cache.json"),
     "naverMarketHistory": ("Naver 시장지표 캐시", ROOT / "data" / "naver-marketindex-history.json"),
 }
@@ -565,9 +568,9 @@ def cross_artifact_checks(
     checks.append(
         validate_series_rows(
             "series:kb-funds:score",
-            "KB 국내 레버리지·대기자금 점수",
+            "FreeSIS·KB 국내 레버리지·대기자금 점수",
             kb_rows,
-            min_rows=1,
+            min_rows=500,
             value_key="score",
         )
     )
@@ -594,7 +597,7 @@ def cross_artifact_checks(
         make_check(
             "cross:kb-funds-dashboard",
             "alignment",
-            "KB 시장자금·관찰카드·시계열",
+            "FreeSIS·KB 시장자금·관찰카드·시계열",
             "ok" if kb_aligned else "error",
             (
                 f"원천 {kb_latest.get('date', '-')} {kb_score if kb_score is not None else '-'}점 · "
@@ -603,9 +606,35 @@ def cross_artifact_checks(
             ),
         )
     )
+    reconciliation = kb_funds.get("reconciliation") or {}
+    reconciliation_status = reconciliation.get("status") or "missing"
+    checks.append(
+        make_check(
+            "cross:kb-funds-reconciliation",
+            "alignment",
+            "FreeSIS·KB 동일일 금액 대조",
+            (
+                "ok"
+                if reconciliation_status == "matched"
+                else "warning"
+                if reconciliation_status in {"not-requested", "no-overlap", "failed"}
+                else "error"
+            ),
+            (
+                f"상태 {reconciliation_status} · "
+                f"대조일 {reconciliation.get('overlapDate') or '-'} · "
+                f"필드 {len(reconciliation.get('fields') or [])}개"
+                + (
+                    f" · 불일치 {', '.join(reconciliation.get('failedFields') or [])}"
+                    if reconciliation.get("failedFields")
+                    else ""
+                )
+            ),
+        )
+    )
 
     for item_id, rows in (timeseries.get("series") or {}).items():
-        minimum_rows = 1 if item_id == "kb_domestic_funding_watch" else 60
+        minimum_rows = 60
         checks.append(
             validate_series_rows(
                 f"series:market:{item_id}",
@@ -965,13 +994,17 @@ def build_report(now: datetime | None = None) -> dict[str, Any]:
     if kb_snapshot:
         kb_group, kb_checks = assess_source_group(
             "kb-market-funds",
-            "KB 증시주변자금",
-            {"iva10370": kb_snapshot},
-            {"iva10370": {"label": "IVA10370 증시주변자금동향"}},
+            "FreeSIS·KB 증시주변자금",
+            {"market-funds-ledger": kb_snapshot},
+            {
+                "market-funds-ledger": {
+                    "label": "FreeSIS 과거 원장·KB 최종일 보강"
+                }
+            },
             reference_date,
             warning_lag=3,
             error_lag=7,
-            min_observations=1,
+            min_observations=500,
         )
         groups.append(kb_group)
         checks.extend(kb_checks)

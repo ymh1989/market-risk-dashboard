@@ -136,7 +136,7 @@ def test_dashboard_contract():
         assert all(component["id"] in timeseries_ids for component in item["components"])
         assert all(
             len(timeseries["series"][component["id"]])
-            >= (1 if component["id"] == "kb_domestic_funding_watch" else 60)
+            >= 60
             for component in item["components"]
         )
     china_capex = next(
@@ -207,7 +207,7 @@ def test_dashboard_contract():
         assert indicator["contribution"] >= 0, f"{indicator['id']} should include contribution"
         assert indicator["source"], f"{indicator['id']} should include a source"
         points = timeseries["series"].get(indicator["id"], [])
-        minimum_points = 1 if indicator["id"] == "kb_domestic_funding_watch" else 60
+        minimum_points = 60
         assert len(points) >= minimum_points, f"{indicator['id']} should expose enough trend points"
         assert all(0 <= point["value"] <= 100 for point in points), f"{indicator['id']} trend scores must be 0~100"
 
@@ -511,7 +511,8 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert "MARKET_UPDATE_RUN_ID=gha-${{ github.run_id }}-${{ github.run_attempt }}" in workflow
     assert "scripts/prepare_atomic_publication.py" in workflow
     assert "--reused-file data/kospi-breadth.json" in workflow
-    assert "--reused-file data/kb-market-funds.json" in workflow
+    assert "scripts/update_kb_market_funds.py --kofia-only --strict" in workflow
+    assert "--reused-file data/kb-market-funds.json" not in workflow
     assert "data/publication-manifest.json" in workflow
     assert 'SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"' in installer
     assert 'TIMES="${LOCAL_MARKET_UPDATE_TIMES:-07:30,09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35,18:30}"' in installer

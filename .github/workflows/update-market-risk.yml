@@ -42,6 +42,7 @@ jobs:
       - name: Refresh market risk data
         run: |
           python3 -m m7_credit_proxy.pipeline --update-latest
+          python3 scripts/update_kb_market_funds.py --kofia-only --strict
           make update-market-risk
           make backtest-market-risk
           REFRESH_STRESS_CACHE=1 make analyze-stress-episodes
@@ -71,7 +72,6 @@ jobs:
             --run-id "$MARKET_UPDATE_RUN_ID" \
             --mode full \
             --started-at "$MARKET_UPDATE_STARTED_AT" \
-            --reused-file data/kb-market-funds.json \
             --reused-file data/kospi-breadth.json
           python3 tests/smoke_test.py
 

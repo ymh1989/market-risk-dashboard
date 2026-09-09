@@ -452,7 +452,7 @@ update_kospi_breadth_data "$BREADTH_END_DATE"
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] M7 공개시장 신용스트레스 프록시를 갱신합니다."
 "$PYTHON_BIN" -m m7_credit_proxy.pipeline --update-latest
-echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] KB 증시주변자금 최종일을 갱신합니다."
+echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] FreeSIS 과거 원장과 KB 증시주변자금 최종일을 갱신합니다."
 "$PYTHON_BIN" scripts/update_kb_market_funds.py
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 시장리스크 데이터를 갱신합니다."
 MARKET_STAGE_STARTED_EPOCH="$(date +%s)"

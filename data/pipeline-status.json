@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-09 17:49:00 KST",
+  "generatedAt": "2026-09-09 18:55:00 KST",
   "current": {
-    "runId": "20260909T173800-manual-kb-live",
+    "runId": "codex-kofia-kb-20260909-1847",
     "status": "success",
-    "mode": "live",
+    "mode": "full",
     "trigger": "manual",
     "scheduledTime": null,
-    "startedAt": "2026-09-09 17:38:00 KST",
-    "completedAt": "2026-09-09 17:49:00 KST",
-    "durationSeconds": 660,
+    "startedAt": "2026-09-09 18:47:00 KST",
+    "completedAt": "2026-09-09 18:55:00 KST",
+    "durationSeconds": 480,
     "dataAsOf": "2026-09-09",
-    "dashboardGeneratedAt": "2026-09-09 17:39 KST",
+    "dashboardGeneratedAt": "2026-09-09 18:52 KST",
     "mlGeneratedAt": "2026-09-09 15:38 KST",
-    "qualityScore": 96.4,
+    "qualityScore": 96.2,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
@@ -118,21 +118,21 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 120,
-      "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
+      "durationSeconds": 353,
+      "detail": "시장 데이터 수집, 위험점수, M7·KB 시장자금, ELS·HMM 산출"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
       "durationSeconds": 0,
-      "detail": "직전 확정 ML·HMM 산출물 재사용"
+      "detail": "특성 생성, 모델 학습, 예측 및 OOS 검증"
     },
     {
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 25,
+      "durationSeconds": 1,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -226,10 +226,10 @@
     },
     {
       "id": "kb-market-funds",
-      "label": "KB 증시주변자금",
+      "label": "FreeSIS·KB 증시주변자금",
       "status": "ok",
-      "lastDate": "2026-09-07",
-      "oldestLastDate": "2026-09-07",
+      "lastDate": "2026-09-08",
+      "oldestLastDate": "2026-09-08",
       "seriesCount": 1,
       "freshCount": 1,
       "staleCount": 0,
@@ -242,7 +242,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-09-09 17:39 KST"
+      "generatedAt": "2026-09-09 18:52 KST"
     },
     {
       "id": "ml",
@@ -282,9 +282,9 @@
     },
     {
       "id": "kb-funds",
-      "label": "KB 증시주변자금",
+      "label": "FreeSIS·KB 증시주변자금",
       "status": "ok",
-      "generatedAt": "2026-09-09 17:38:29 KST"
+      "generatedAt": "2026-09-09 18:47:20 KST"
     },
     {
       "id": "breadth",
@@ -296,17 +296,17 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-09-09 17:43:25 KST"
+      "generatedAt": "2026-09-09 18:53:51 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 96.4,
+    "score": 96.2,
     "referenceDate": "2026-09-09",
     "summary": {
-      "checks": 252,
+      "checks": 253,
       "ok": 234,
-      "warning": 18,
+      "warning": 19,
       "error": 0,
       "sourceSeriesExpected": 99,
       "sourceSeriesPresent": 99,
@@ -320,10 +320,10 @@
         "category": "source",
         "label": "US 2Y Treasury",
         "status": "warning",
-        "detail": "최신 2026-09-04 · 영업일 시차 3일 · 관측치 1944개 · cached",
+        "detail": "최신 2026-09-04 · 영업일 시차 3일 · 관측치 7287개 · cached",
         "groupId": "fred",
         "lastDate": "2026-09-04",
-        "observations": 1944,
+        "observations": 7287,
         "fetchStatus": "cached"
       },
       {
@@ -331,10 +331,10 @@
         "category": "source",
         "label": "US 10Y-2Y Treasury Spread",
         "status": "warning",
-        "detail": "최신 2026-09-08 · 영업일 시차 1일 · 관측치 1945개 · cached",
+        "detail": "최신 2026-09-08 · 영업일 시차 1일 · 관측치 7288개 · cached",
         "groupId": "fred",
         "lastDate": "2026-09-08",
-        "observations": 1945,
+        "observations": 7288,
         "fetchStatus": "cached"
       },
       {
@@ -342,10 +342,10 @@
         "category": "source",
         "label": "US High Yield OAS",
         "status": "warning",
-        "detail": "최신 2026-09-07 · 영업일 시차 2일 · 관측치 785개 · cached",
+        "detail": "최신 2026-09-07 · 영업일 시차 2일 · 관측치 739개 · cached",
         "groupId": "fred",
         "lastDate": "2026-09-07",
-        "observations": 785,
+        "observations": 739,
         "fetchStatus": "cached"
       },
       {
@@ -353,10 +353,10 @@
         "category": "source",
         "label": "St. Louis Fed Financial Stress Index",
         "status": "warning",
-        "detail": "최신 2026-08-28 · 영업일 시차 8일 · 관측치 405개 · cached",
+        "detail": "최신 2026-08-28 · 영업일 시차 8일 · 관측치 1513개 · cached",
         "groupId": "fred",
         "lastDate": "2026-08-28",
-        "observations": 405,
+        "observations": 1513,
         "fetchStatus": "cached"
       },
       {
@@ -364,10 +364,10 @@
         "category": "source",
         "label": "Chicago Fed National Financial Conditions Index",
         "status": "warning",
-        "detail": "최신 2026-08-28 · 영업일 시차 8일 · 관측치 405개 · cached",
+        "detail": "최신 2026-08-28 · 영업일 시차 8일 · 관측치 1513개 · cached",
         "groupId": "fred",
         "lastDate": "2026-08-28",
-        "observations": 405,
+        "observations": 1513,
         "fetchStatus": "cached"
       },
       {
@@ -427,7 +427,7 @@
       "id": "macro-rates",
       "title": "매크로 금리 불확실성",
       "status": "주의",
-      "score": 70.9,
+      "score": 70.5,
       "tone": "caution",
       "decision": "기존 가중지표 유지",
       "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -435,9 +435,9 @@
     {
       "id": "domestic-funding-leverage",
       "title": "국내 레버리지·대기자금",
-      "status": "관찰",
-      "score": 43.0,
-      "tone": "watch",
+      "status": "확산 미확인",
+      "score": 35.2,
+      "tone": "good",
       "decision": "직접 시장통계 관찰",
       "operation": "연결일 이후 일별 누적 · 60개 관측과 OOS 검증 전 가중치 0 유지"
     },
@@ -461,6 +461,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "codex-kofia-kb-20260909-1847",
+      "status": "success",
+      "mode": "full",
+      "trigger": "manual",
+      "scheduledTime": null,
+      "startedAt": "2026-09-09 18:47:00 KST",
+      "completedAt": "2026-09-09 18:55:00 KST",
+      "durationSeconds": 480,
+      "dataAsOf": "2026-09-09",
+      "dashboardGeneratedAt": "2026-09-09 18:52 KST",
+      "mlGeneratedAt": "2026-09-09 15:38 KST",
+      "qualityScore": 96.2,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20260909T173800-manual-kb-live",
       "status": "success",
@@ -895,29 +910,14 @@
       "mlGeneratedAt": "2026-09-05 07:49 KST",
       "qualityScore": 96.7,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20260905T073003-0730-full",
-      "status": "success",
-      "mode": "full",
-      "trigger": "scheduled",
-      "scheduledTime": "07:30",
-      "startedAt": "2026-09-05 07:30:03 KST",
-      "completedAt": "2026-09-05 07:49:37 KST",
-      "durationSeconds": 1174,
-      "dataAsOf": "2026-09-04",
-      "dashboardGeneratedAt": "2026-09-05 07:30 KST",
-      "mlGeneratedAt": "2026-09-05 07:49 KST",
-      "qualityScore": 97.4,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260909T173800-manual-kb-live",
-    "mode": "live",
+    "runId": "codex-kofia-kb-20260909-1847",
+    "mode": "full",
     "state": "generated",
-    "startedAt": "2026-09-09 17:38:00 KST",
-    "preparedAt": "2026-09-09 17:49:09 KST"
+    "startedAt": "2026-09-09 18:47:00 KST",
+    "preparedAt": "2026-09-09 18:54:34 KST"
   }
 }

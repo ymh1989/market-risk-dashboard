@@ -3447,7 +3447,17 @@ function indicatorSourceRecords(indicator, snapshot) {
     });
   }
   if (indicator.id === "kb_domestic_funding_watch" && snapshot?.kbMarketFunds) {
-    matches.push({ id: "kb-market-funds", ...snapshot.kbMarketFunds });
+    const fundingSources = snapshot.kbMarketFunds.sources ?? [];
+    if (fundingSources.length) {
+      matches.push(
+        ...fundingSources.map((record, index) => ({
+          id: `kb-market-funds-${index}`,
+          ...record
+        }))
+      );
+    } else {
+      matches.push({ id: "kb-market-funds", ...snapshot.kbMarketFunds });
+    }
   }
   return matches.filter(
     (record, index, all) =>
@@ -3457,6 +3467,7 @@ function indicatorSourceRecords(indicator, snapshot) {
 
 function sourceValueState(record) {
   const status = String(record.fetchStatus ?? "").toLowerCase();
+  if (status.includes("reconciliation-failed")) return "불일치 · 보강 제외";
   if (status.includes("live")) return "잠정 · 실시간";
   if (status.includes("fallback") || status.includes("cached") || status.includes("대체")) return "대체값";
   if (status.includes("naver") && status.includes("yahoo")) return "EOD · 이중 확인";
@@ -3474,7 +3485,7 @@ function sourceEnhancementNote(indicator) {
     return "OFR FSI·미 국채금리·회사채 ETF 보강";
   }
   if (indicator.id === "kb_domestic_funding_watch") {
-    return "개인 계좌와 분리된 시장 전체 집계값";
+    return "FreeSIS 5년 원장 · KB 최종일 동일일 대조";
   }
   return "소스 변경 이력 없음";
 }
@@ -3630,9 +3641,12 @@ function renderIndicatorSourceDetail(indicator, provenance) {
   const records = indicatorSourceRecords(indicator, provenance?.snapshot);
   const qualityNotes = indicatorQualityNotes(indicator, provenance?.quality);
   const normalization = provenance?.model?.normalization;
-  const normalizationText = normalization
-    ? `최대 2년 · 분위수 ${Number(normalization.percentileWeight) * 100}% · z ${Number(normalization.zScoreWeight) * 100}% · robust z ${Number(normalization.robustZScoreWeight) * 100}%`
-    : "최대 2년 · 가용 관측치 기준";
+  const normalizationText =
+    indicator.id === "kb_domestic_funding_watch"
+      ? "최근 5년 · 각 시점까지 expanding 분위수 40% · z 30% · robust z 30%"
+      : normalization
+        ? `최대 2년 · 분위수 ${Number(normalization.percentileWeight) * 100}% · z ${Number(normalization.zScoreWeight) * 100}% · robust z ${Number(normalization.robustZScoreWeight) * 100}%`
+        : "최대 2년 · 가용 관측치 기준";
   const detailId = `source-detail-${indicator.id}`;
   return `
     <button

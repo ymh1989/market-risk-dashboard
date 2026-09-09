@@ -42,7 +42,7 @@ make analyze-stress-episodes
 make export-els-index-risk
 ```
 
-이 명령들은 Yahoo Finance, Naver Finance 주식·시장지표 엔드포인트, FRED와 KB증권 OpenAPI에서 데이터를 받아 시장리스크 점수, 감사용 스냅샷, 최근 시계열, 백테스트, 과거 스트레스 사례와 ELS 기초지수별 리스크를 갱신합니다. 현재 모델은 한국 시장지표, 수급·거래량, 국내 증시주변자금, 글로벌 크레딧·위험선호, 미국 신용스프레드·금융여건, 운임·원자재·국제환율, AI 반도체 및 빅테크 AI 수요 지표를 함께 사용합니다.
+이 명령들은 Yahoo Finance, Naver Finance 주식·시장지표 엔드포인트, FRED, 금융투자협회 FreeSIS와 KB증권 OpenAPI에서 데이터를 받아 시장리스크 점수, 감사용 스냅샷, 최근 시계열, 백테스트, 과거 스트레스 사례와 ELS 기초지수별 리스크를 갱신합니다. 현재 모델은 한국 시장지표, 수급·거래량, 국내 증시주변자금, 글로벌 크레딧·위험선호, 미국 신용스프레드·금융여건, 운임·원자재·국제환율, AI 반도체 및 빅테크 AI 수요 지표를 함께 사용합니다.
 
 FRED 계열은 `.env`의 `FRED_API_KEY`가 있으면 공식 `fred/series/observations` JSON API를 우선 사용합니다. 키가 없거나 API가 실패하면 FRED 공개 CSV, 로컬 저장 캐시 순서로 대체하며 API 키는 로그와 산출물에 기록하지 않습니다.
 
@@ -65,9 +65,15 @@ python3 scripts/update_market_risk.py --check-fred-api
 - 보조 원자재: 구리/금 상대가격을 중국 경기 카드의 상세값으로 제공하되 별도 점수는 부여하지 않습니다.
 - 연구 관찰카드: 국내 신용·예탁금, 엔 캐리, 한미·미일 금리차, 옵션 기간구조, 미국 증시 폭, 광의 재인플레이션과 `M7 Credit Stress Proxy`를 0~100점으로 표시합니다. 여덟 카드는 가중치 0으로 종합점수·위험군 점수·고위험 지표 수에서 제외합니다.
 
-## KB 증시주변자금 관찰카드
+## 국내 증시주변자금 관찰카드
 
-`국내 레버리지·대기자금`은 KB증권 OpenAPI의 `증시주변자금동향(최종일)(IVA10370)` 시장 전체 집계값을 사용합니다. 개인 계좌 평가액·보유종목·예수금은 읽거나 게시하지 않습니다.
+`국내 레버리지·대기자금`은 두 공개·시장 집계 원천을 결합합니다. 개인 계좌 평가액·보유종목·예수금은 읽거나 게시하지 않습니다.
+
+- 과거 원장: 금융투자협회 FreeSIS `증시자금추이(STATSCU0100000060)`와 `신용공여 잔고 추이(STATSCU0100000070)` 최근 5년 일별값
+- 최신 보강: KB증권 OpenAPI `증시주변자금동향(최종일)(IVA10370)` 한 건
+- 원천 우선순위: 같은 날짜의 예탁금·신용잔고·미수금·선물예수금은 백만원 단위 FreeSIS 값 우선
+- 동일일 검증: KB 십억원 값을 백만원으로 환산한 뒤 절대 10억원 또는 상대 0.1% 이내일 때만 보강
+- 증분 갱신: 최초 5년 백필, 이후 FreeSIS 마지막 관측일보다 14일 앞에서 수정값과 신규 날짜만 재조회
 
 - 신용잔고/고객예탁금 45%: 대기자금 대비 레버리지 규모
 - 신용잔고 일간 증감률 25%: 레버리지 유입·청산 속도
@@ -75,7 +81,13 @@ python3 scripts/update_market_risk.py --check-fred-api
 - 고객예탁금 일간 감소 10%: 현금 완충력 약화
 - 보조값: MMF, 선물예수금, 회사채 BBB-AA 및 CP-CD 스프레드
 
-KB API는 최종일 한 건만 제공하므로 연결일부터 매일 날짜 중복 없이 누적합니다. 처음 60개 관측은 고정 위험구간으로만 점수화하고, 이후에는 각 날짜까지의 자료만 사용하는 expanding 혼합 정규화로 전환합니다. OOS 하락 탐지력과 오경보율 개선이 확인되기 전까지 종합점수 가중치는 0입니다.
+FreeSIS 금액은 백만원을 기준 원장으로 보존하고 화면 호환용 십억원 값을 함께 생성합니다. 점수는 각 날짜까지의 자료만 사용하는 expanding 혼합 정규화로 다시 계산하므로 미래값을 사용하지 않습니다. OOS 하락 탐지력과 오경보율 개선이 확인되기 전까지 종합점수 가중치는 0입니다.
+
+인증 없이 FreeSIS 원장만 갱신하려면 다음 명령을 사용합니다. GitHub Actions도 이 경로로 과거 원장과 최신 확정일을 갱신합니다.
+
+```bash
+PYTHONPATH=src python3 scripts/update_kb_market_funds.py --kofia-only --strict
+```
 
 키를 복사하지 않고 hobby 프로젝트의 환경파일을 함께 쓰려면 market-lab의 `.env`에 아래처럼 경로만 지정합니다.
 
@@ -397,14 +409,15 @@ make run-news-bot
 - `data/data-quality.json`: 원천별 완비성·최신성, 캐시 상태와 산출물 정렬 검사 결과를 저장합니다.
 - `data/pipeline-status.json`: 예약 스케줄, 최근 성공, 단계별 소요시간, 데이터 소스 신선도와 실행 이력을 저장합니다.
 - `data/m7-credit-proxy.json`: M7 신용스트레스 프록시의 공개 점수·구성종목·품질 메타데이터를 저장합니다.
-- `data/kb-market-funds.json`: KB 고객예탁금·신용잔고·미수금과 관찰점수의 일별 누적값을 저장합니다.
+- `data/kb-market-funds.json`: FreeSIS 5년 예탁금·신용잔고·미수금 원장, KB 최신 보강값, 동일일 대조 결과와 관찰점수를 저장합니다.
 - `src/risk-model.js`: 점수 계산과 등급 판정 로직입니다.
 - `src/app.js`: JSON 데이터를 읽어 화면을 렌더링합니다.
 - `src/styles.css`: 대시보드 레이아웃과 시각 스타일입니다.
 - `scripts/update_market_risk.py`: 외부 데이터를 가져와 시장리스크 지표를 재계산합니다.
 - `src/m7_credit_proxy/pipeline.py`: M7·회사채 ETF·OFR·미 국채·SEC 자료를 검증하고 프록시를 산출합니다.
-- `src/kospi_risk/kb_market_funds.py`: KB 시장 집계 응답 검증·비율 계산·누수 없는 관찰점수를 담당합니다.
-- `scripts/update_kb_market_funds.py`: KB 최종일을 조회해 날짜별 원장을 원자적으로 갱신합니다.
+- `src/kospi_risk/kofia_market_funds.py`: FreeSIS 공개 조회, 백만원 단위 검증, 5년·증분 백필을 담당합니다.
+- `src/kospi_risk/kb_market_funds.py`: KB 시장 집계 응답, 동일일 원천 대조, 우선순위 병합과 누수 없는 관찰점수를 담당합니다.
+- `scripts/update_kb_market_funds.py`: FreeSIS 과거 원장과 KB 최종일을 결합해 날짜별 원장을 원자적으로 갱신합니다.
 - `scripts/export_els_index_risk.py`: ELS 5개 기초지수 및 basket 리스크를 계산합니다.
 - `scripts/export_ml_risk_signal.py`: 연구용 ML 결과를 홈페이지용 JSON으로 변환합니다.
 - `scripts/audit_data_completeness.py`: 원천·캐시·산출물의 완비성과 최신성을 검사하고 오류 시 배포를 차단합니다.

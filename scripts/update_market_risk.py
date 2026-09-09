@@ -516,7 +516,6 @@ def kb_market_funds_indicator(payload):
     latest = payload["latest"]
     amounts = latest.get("amountsKrwBillion") or {}
     derived = latest.get("derived") or {}
-    rates = latest.get("ratesPct") or {}
     rows = payload.get("series") or []
     prior_score = float(rows[-2]["score"]) if len(rows) > 1 else float(latest["score"])
     score = float(latest["score"])
@@ -531,12 +530,37 @@ def kb_market_funds_indicator(payload):
         value = derived.get(field)
         return float(value) if isinstance(value, (int, float)) else math.nan
 
-    bbb_aa = derived.get("bbbAaSpreadPctp")
-    cp_cd = derived.get("cpCdSpreadPctp")
+    rate_row = next(
+        (
+            row
+            for row in reversed(rows)
+            if isinstance((row.get("derived") or {}).get("bbbAaSpreadPctp"), (int, float))
+            and isinstance((row.get("derived") or {}).get("cpCdSpreadPctp"), (int, float))
+        ),
+        None,
+    )
+    rate_derived = (rate_row or {}).get("derived") or {}
+    rates = (rate_row or {}).get("ratesPct") or {}
+    bbb_aa = rate_derived.get("bbbAaSpreadPctp")
+    cp_cd = rate_derived.get("cpCdSpreadPctp")
     spread_detail = (
         f"회사채 BBB-AA {float(bbb_aa):.3f}%p · CP-CD {float(cp_cd):.3f}%p"
+        f" · KB {rate_row.get('date')}"
         if isinstance(bbb_aa, (int, float)) and isinstance(cp_cd, (int, float))
         else "국내 회사채·단기자금 스프레드 일부 미수집"
+    )
+    source_status = payload.get("sourceStatus") or {}
+    reconciliation = payload.get("reconciliation") or {}
+    kb_rows = [
+        row
+        for row in rows
+        if "KB Securities OpenAPI" in (row.get("sourceProviders") or [])
+    ]
+    kb_last_date = kb_rows[-1].get("date") if kb_rows else "-"
+    kb_status_detail = (
+        f"KB {reconciliation.get('overlapDate') or '-'} 불일치 제외"
+        if reconciliation.get("status") == "failed"
+        else f"KB 보강일 {kb_last_date}"
     )
     return {
         "id": "kb_domestic_funding_watch",
@@ -563,12 +587,18 @@ def kb_market_funds_indicator(payload):
             ),
             spread_detail,
             (
-                f"KB 최종일 {latest.get('date') or '-'} · 누적 {len(rows)}일 · "
+                f"FreeSIS 확정일 {latest.get('date') or '-'} · {kb_status_detail} · "
+                f"누적 {len(rows)}일 · "
                 f"{'고정 위험구간으로 초기 관찰' if len(rows) < 60 else '당시까지의 expanding 혼합 정규화'}"
             ),
         ],
-        "source": "KB증권 OpenAPI: IVA10370 증시주변자금동향",
-        "sourceUrl": "https://openapi.kbsec.com/apidoc_b2c",
+        "source": "금융투자협회 FreeSIS: 증시자금·신용공여 추이 · KB증권 OpenAPI: IVA10370 최종일",
+        "sourceUrl": "https://freesis.kofia.or.kr/stat/main.do",
+        "sourceUrls": [
+            "https://freesis.kofia.or.kr/stat/main.do",
+            "https://openapi.kbsec.com/apidoc_b2c",
+        ],
+        "sourceStatus": source_status,
         "metrics": {
             "customerDepositsKrwTrillion": round(trillion("customerDeposits"), 3),
             "creditBalanceKrwTrillion": round(trillion("creditBalance"), 3),
@@ -4326,7 +4356,7 @@ def update_dashboard(
         "M7 공개시장 신용스트레스 프록시와 광의 "
         "재인플레이션은 종합점수와 분리한 연구 관찰카드로 제공합니다."
     )
-    market["model"]["version"] = "market-risk-v10-kb-funding-observation"
+    market["model"]["version"] = "market-risk-v11-kofia-kb-funding-history"
     market["model"]["methodology"] = (
         "각 시계열의 최대 2년 히스토리에서 레벨, 20개 관측치 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 "
         "분위수 점수, z-score 정규분포 변환 점수, median/MAD 기반 robust z-score 변환 점수로 "
@@ -4430,7 +4460,11 @@ def update_dashboard(
             "url": "https://home.treasury.gov/treasury-daily-interest-rate-xml-feed",
         },
         {
-            "label": "KB Securities OpenAPI IVA10370 market funds",
+            "label": "KOFIA FreeSIS market funds history",
+            "url": "https://freesis.kofia.or.kr/stat/main.do",
+        },
+        {
+            "label": "KB Securities OpenAPI IVA10370 latest market funds",
             "url": "https://openapi.kbsec.com/apidoc_b2c",
         },
     ]
@@ -4450,6 +4484,9 @@ def update_dashboard(
             "name": kb_market_funds.get("name"),
             "latest": kb_market_funds.get("latest"),
             "source": kb_market_funds.get("source"),
+            "sourceStatus": kb_market_funds.get("sourceStatus"),
+            "reconciliation": kb_market_funds.get("reconciliation"),
+            "historyDiagnostics": kb_market_funds.get("historyDiagnostics"),
             "methodology": kb_market_funds.get("methodology"),
             "limitations": kb_market_funds.get("limitations"),
         }
@@ -4464,7 +4501,7 @@ def update_dashboard(
         "점수 75 이상 또는 핵심 지표 2개 이상 경고 시 투자위원회 보고 대상을 자동 지정합니다.",
         "연구 관찰카드는 OOS 개선이 확인되기 전까지 종합점수와 고위험 지표 수에 포함하지 않습니다.",
         "M7 Credit Stress Proxy는 실제 CDS가 아니며 데이터 품질과 선행성을 검증한 뒤에만 가중 승격합니다.",
-        "KB 신용·예탁금 관찰카드는 연결일 이후 시계열을 누적하고 60개 관측과 OOS 검증 전에는 가중치 0을 유지합니다.",
+        "국내 신용·예탁금 관찰카드는 FreeSIS 5년 원장과 KB 최종일을 대조하고 OOS 검증 전에는 가중치 0을 유지합니다.",
         "시장 의견의 완화·반등 전망은 점수에 선반영하지 않고 실제 가격·금리·기간구조의 확인 신호로 검증합니다.",
         "운영 배포에서는 Yahoo/Naver proxy를 KRX, 한국은행 ECOS, 금융투자협회, 내부 포지션/외국인 수급 데이터로 교체할 수 있습니다.",
     ]
@@ -4486,7 +4523,7 @@ def write_snapshot(
     enriched_indicators, group_scores = enrich_indicators(indicators)
     snapshot = {
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "source": "Yahoo Finance, Naver Finance equity/market-index, FRED, and KB Securities OpenAPI endpoints",
+        "source": "Yahoo Finance, Naver Finance, FRED, KOFIA FreeSIS, and KB Securities OpenAPI endpoints",
         "yahooSymbols": {
             key: {
                 "symbol": config["symbol"],
@@ -4553,9 +4590,9 @@ def write_snapshot(
         ),
         "kbMarketFunds": (
             {
-                "provider": "KB증권 OpenAPI",
-                "api": "IVA10370",
-                "label": "증시주변자금동향",
+                "provider": "금융투자협회 FreeSIS + KB증권 OpenAPI",
+                "api": "STATSCU0100000060·0070 + IVA10370",
+                "label": "국내 증시주변자금 원장",
                 "lastDate": kb_market_funds["latest"].get("date"),
                 "retrievedAt": kb_market_funds["latest"].get("retrievedAt"),
                 "observations": len(kb_market_funds.get("series") or []),
@@ -4566,6 +4603,45 @@ def write_snapshot(
                     else "bootstrap-observation"
                 ),
                 "amountUnit": (kb_market_funds.get("source") or {}).get("amountUnit"),
+                "firstDate": (kb_market_funds.get("series") or [{}])[0].get("date"),
+                "sourceStatus": kb_market_funds.get("sourceStatus"),
+                "reconciliation": kb_market_funds.get("reconciliation"),
+                "sources": [
+                    {
+                        "provider": "금융투자협회 FreeSIS",
+                        "label": "증시자금·신용공여 일별 원장",
+                        "lastDate": kb_market_funds["latest"].get("date"),
+                        "observations": len(kb_market_funds.get("series") or []),
+                        "fetchStatus": (kb_market_funds.get("sourceStatus") or {}).get(
+                            "kofiaHistory", "unknown"
+                        ),
+                    },
+                    {
+                        "provider": "KB증권 OpenAPI",
+                        "label": "IVA10370 최종일 보강",
+                        "lastDate": (
+                            (kb_market_funds.get("reconciliation") or {}).get("overlapDate")
+                            if (kb_market_funds.get("reconciliation") or {}).get("status")
+                            == "failed"
+                            else next(
+                                (
+                                    row.get("date")
+                                    for row in reversed(kb_market_funds.get("series") or [])
+                                    if "KB Securities OpenAPI"
+                                    in (row.get("sourceProviders") or [])
+                                ),
+                                None,
+                            )
+                        ),
+                        "observations": sum(
+                            "KB Securities OpenAPI" in (row.get("sourceProviders") or [])
+                            for row in kb_market_funds.get("series") or []
+                        ),
+                        "fetchStatus": (kb_market_funds.get("sourceStatus") or {}).get(
+                            "kbLatest", "unknown"
+                        ),
+                    },
+                ],
             }
             if kb_market_funds
             else None
@@ -4586,7 +4662,7 @@ def write_timeseries(
 ):
     timeseries = {
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "source": "Yahoo Finance, Naver Finance equity/market-index, FRED, and KB Securities OpenAPI endpoints",
+        "source": "Yahoo Finance, Naver Finance, FRED, KOFIA FreeSIS, and KB Securities OpenAPI endpoints",
         "window": "recent 120 observations per indicator",
         "unit": "risk score",
         "series": build_timeseries(

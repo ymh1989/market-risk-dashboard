@@ -7,6 +7,7 @@ import statistics
 import time
 import urllib.error
 import urllib.request
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from ipaddress import ip_address
@@ -49,6 +50,14 @@ RATE_FIELDS = {
 
 class KbMarketFundsError(RuntimeError):
     """외부에 표시해도 인증정보가 노출되지 않는 KB OpenAPI 오류입니다."""
+
+
+class KbMarketFundsReconciliationError(KbMarketFundsError):
+    """FreeSIS와 KB 동일일 값이 허용오차를 벗어난 경우의 구조화 오류입니다."""
+
+    def __init__(self, message: str, reconciliation: dict[str, Any]) -> None:
+        super().__init__(message)
+        self.reconciliation = reconciliation
 
 
 @dataclass(frozen=True)
@@ -182,8 +191,13 @@ def parse_market_funds_response(
         "date": observed_date,
         "retrievedAt": retrieved_at.astimezone(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
         "amountsKrwBillion": amounts,
+        "amountsKrwMillion": {
+            key: (round(float(value) * 1000, 6) if value is not None else None)
+            for key, value in amounts.items()
+        },
         "ratesPct": rates,
         "derived": derived,
+        "sourceProviders": ["KB Securities OpenAPI"],
     }
 
 
@@ -264,37 +278,289 @@ def score_market_funds_series(rows: list[dict[str, Any]]) -> list[dict[str, Any]
     return scored
 
 
-def update_market_funds_payload(
-    existing: dict[str, Any] | None,
-    snapshot: dict[str, Any],
+CORE_AMOUNT_FIELDS = (
+    "customerDeposits",
+    "receivables",
+    "creditBalance",
+    "futuresDeposits",
+)
+CHANGE_FIELDS = {
+    "customerDeposits": "customerDepositsChange",
+    "receivables": "receivablesChange",
+    "creditBalance": "creditBalanceChange",
+    "futuresDeposits": "futuresDepositsChange",
+}
+
+
+def _amounts_in_million(row: dict[str, Any]) -> dict[str, float | None]:
+    million = row.get("amountsKrwMillion")
+    if isinstance(million, dict):
+        return {
+            key: (float(value) if isinstance(value, (int, float)) else None)
+            for key, value in million.items()
+        }
+    billion = row.get("amountsKrwBillion") or {}
+    return {
+        key: (float(value) * 1000 if isinstance(value, (int, float)) else None)
+        for key, value in billion.items()
+    }
+
+
+def _refresh_units_and_derived(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    refreshed = []
+    previous_amounts: dict[str, float | None] | None = None
+    for source_row in sorted(rows, key=lambda item: item["date"]):
+        row = deepcopy(source_row)
+        amounts_million = _amounts_in_million(row)
+        amounts_billion = {
+            key: (round(value / 1000, 6) if value is not None else None)
+            for key, value in amounts_million.items()
+        }
+
+        if previous_amounts is not None:
+            for amount_field, change_field in CHANGE_FIELDS.items():
+                current = amounts_million.get(amount_field)
+                previous = previous_amounts.get(amount_field)
+                if current is not None and previous is not None:
+                    change = current - previous
+                    amounts_million[change_field] = change
+                    amounts_billion[change_field] = round(change / 1000, 6)
+
+        customer_deposits = amounts_million.get("customerDeposits")
+        credit_balance = amounts_million.get("creditBalance")
+        receivables = amounts_million.get("receivables")
+        rates = row.get("ratesPct") or {}
+        row["amountsKrwMillion"] = amounts_million
+        row["amountsKrwBillion"] = amounts_billion
+        row["derived"] = {
+            "creditToDepositsPct": (_ratio(credit_balance, customer_deposits) or 0.0) * 100,
+            "receivablesToDepositsPct": (_ratio(receivables, customer_deposits) or 0.0) * 100,
+            "customerDepositsChangePct": _change_pct(
+                customer_deposits, amounts_million.get("customerDepositsChange")
+            ),
+            "creditBalanceChangePct": _change_pct(
+                credit_balance, amounts_million.get("creditBalanceChange")
+            ),
+            "receivablesChangePct": _change_pct(
+                receivables, amounts_million.get("receivablesChange")
+            ),
+            "futuresDepositsChangePct": _change_pct(
+                amounts_million.get("futuresDeposits"),
+                amounts_million.get("futuresDepositsChange"),
+            ),
+            "bbbAaSpreadPctp": (
+                rates.get("corporateBbb3y") - rates.get("corporateAa3y")
+                if isinstance(rates.get("corporateBbb3y"), (int, float))
+                and isinstance(rates.get("corporateAa3y"), (int, float))
+                else None
+            ),
+            "cpCdSpreadPctp": (
+                rates.get("cp91d") - rates.get("cd91d")
+                if isinstance(rates.get("cp91d"), (int, float))
+                and isinstance(rates.get("cd91d"), (int, float))
+                else None
+            ),
+        }
+        row["sourceProviders"] = list(
+            dict.fromkeys(row.get("sourceProviders") or ["KB Securities OpenAPI"])
+        )
+        refreshed.append(row)
+        previous_amounts = amounts_million
+    return refreshed
+
+
+def reconcile_kb_with_kofia(
+    kofia_row: dict[str, Any],
+    kb_row: dict[str, Any],
     *,
-    generated_at: datetime | None = None,
-    fetch_status: str = "direct",
-    last_fetch_error: str | None = None,
+    absolute_tolerance_krw_million: float = 1000,
+    relative_tolerance_pct: float = 0.1,
 ) -> dict[str, Any]:
-    """기존 일별 기록에 새 최종일을 병합하고 날짜 중복을 제거합니다."""
+    """동일 기준일의 KB 반올림값이 FreeSIS 고정밀 값과 허용오차 내인지 확인합니다."""
+    if kofia_row.get("date") != kb_row.get("date"):
+        raise KbMarketFundsError("KB와 FreeSIS 기준일이 달라 동일일 대조를 수행할 수 없습니다.")
+    kofia_amounts = _amounts_in_million(kofia_row)
+    kb_amounts = _amounts_in_million(kb_row)
+    fields = []
+    failures = []
+    for field in CORE_AMOUNT_FIELDS:
+        kofia_value = kofia_amounts.get(field)
+        kb_value = kb_amounts.get(field)
+        if kofia_value is None or kb_value is None:
+            continue
+        absolute = abs(kofia_value - kb_value)
+        relative = absolute / abs(kofia_value) * 100 if kofia_value else 0.0
+        matched = absolute <= absolute_tolerance_krw_million or relative <= relative_tolerance_pct
+        detail = {
+            "field": field,
+            "kofiaKrwMillion": round(kofia_value, 3),
+            "kbKrwMillion": round(kb_value, 3),
+            "absoluteDifferenceKrwMillion": round(absolute, 3),
+            "relativeDifferencePct": round(relative, 6),
+            "matched": matched,
+        }
+        fields.append(detail)
+        if not matched:
+            failures.append(detail)
+    if not fields:
+        raise KbMarketFundsError("KB와 FreeSIS에서 대조 가능한 공통 금액 필드를 찾지 못했습니다.")
+    if failures:
+        labels = ", ".join(item["field"] for item in failures)
+        raise KbMarketFundsReconciliationError(
+            f"KB와 FreeSIS 동일일 금액 대조가 허용오차를 벗어났습니다: {labels}",
+            {
+                "status": "failed",
+                "overlapDate": kofia_row["date"],
+                "absoluteToleranceKrwMillion": absolute_tolerance_krw_million,
+                "relativeTolerancePct": relative_tolerance_pct,
+                "fields": fields,
+                "failedFields": [item["field"] for item in failures],
+            },
+        )
+    return {
+        "status": "matched",
+        "overlapDate": kofia_row["date"],
+        "absoluteToleranceKrwMillion": absolute_tolerance_krw_million,
+        "relativeTolerancePct": relative_tolerance_pct,
+        "fields": fields,
+    }
+
+
+def _merge_source_rows(
+    existing: dict[str, Any] | None,
+    kofia_rows: list[dict[str, Any]],
+    kb_snapshot: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     rows_by_date = {
-        str(row.get("date")): row
+        str(row.get("date")): deepcopy(row)
         for row in (existing or {}).get("series", [])
         if isinstance(row, dict) and row.get("date")
     }
-    rows_by_date[snapshot["date"]] = snapshot
-    rows = score_market_funds_series(list(rows_by_date.values()))[-1100:]
+    if (existing or {}).get("schemaVersion") == 1:
+        for row in rows_by_date.values():
+            row["sourceProviders"] = ["KB Securities OpenAPI"]
+            row["sourceSnapshots"] = {
+                "kb": {
+                    "date": row.get("date"),
+                    "retrievedAt": row.get("retrievedAt"),
+                    "amountsKrwMillion": _amounts_in_million(row),
+                    "ratesPct": deepcopy(row.get("ratesPct") or {}),
+                }
+            }
+    for row in kofia_rows:
+        observed_date = str(row["date"])
+        prior = rows_by_date.get(observed_date, {})
+        merged = {**prior, **deepcopy(row)}
+        merged["ratesPct"] = prior.get("ratesPct") or row.get("ratesPct") or {}
+        providers = ["KOFIA FreeSIS"]
+        prior_providers = prior.get("sourceProviders") or []
+        if "KB Securities OpenAPI" in prior_providers:
+            providers.append("KB Securities OpenAPI")
+        merged["sourceProviders"] = providers
+        rows_by_date[observed_date] = merged
+
+    reconciliation = {
+        "status": "not-requested" if kb_snapshot is None else "no-overlap",
+        "overlapDate": None,
+        "fields": [],
+    }
+    if kb_snapshot is not None:
+        observed_date = str(kb_snapshot["date"])
+        if observed_date in rows_by_date and "KOFIA FreeSIS" in (
+            rows_by_date[observed_date].get("sourceProviders") or []
+        ):
+            kofia_row = rows_by_date[observed_date]
+            reconciliation = reconcile_kb_with_kofia(kofia_row, kb_snapshot)
+            kofia_million = _amounts_in_million(kofia_row)
+            kb_million = _amounts_in_million(kb_snapshot)
+            for field, value in kb_million.items():
+                if field not in CORE_AMOUNT_FIELDS and field not in CHANGE_FIELDS.values():
+                    kofia_million[field] = value
+            kofia_row["amountsKrwMillion"] = kofia_million
+            kofia_row["ratesPct"] = deepcopy(kb_snapshot.get("ratesPct") or {})
+            kofia_row["retrievedAt"] = max(
+                str(kofia_row.get("retrievedAt") or ""),
+                str(kb_snapshot.get("retrievedAt") or ""),
+            )
+            kofia_row["sourceProviders"] = ["KOFIA FreeSIS", "KB Securities OpenAPI"]
+            kofia_row.setdefault("sourceSnapshots", {})["kb"] = {
+                "date": kb_snapshot.get("date"),
+                "retrievedAt": kb_snapshot.get("retrievedAt"),
+                "amountsKrwMillion": _amounts_in_million(kb_snapshot),
+                "ratesPct": deepcopy(kb_snapshot.get("ratesPct") or {}),
+            }
+        else:
+            kb_row = deepcopy(kb_snapshot)
+            kb_row.setdefault("sourceSnapshots", {})["kb"] = {
+                "date": kb_snapshot.get("date"),
+                "retrievedAt": kb_snapshot.get("retrievedAt"),
+                "amountsKrwMillion": _amounts_in_million(kb_snapshot),
+                "ratesPct": deepcopy(kb_snapshot.get("ratesPct") or {}),
+            }
+            rows_by_date[observed_date] = kb_row
+
+    return list(rows_by_date.values()), reconciliation
+
+
+def build_market_funds_payload(
+    existing: dict[str, Any] | None,
+    *,
+    kofia_rows: list[dict[str, Any]] | None = None,
+    kb_snapshot: dict[str, Any] | None = None,
+    generated_at: datetime | None = None,
+    source_status: dict[str, str] | None = None,
+    source_errors: dict[str, str] | None = None,
+    history_diagnostics: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """FreeSIS 과거 원장과 KB 최신값을 검증·병합해 공개 산출물을 만듭니다."""
+    merged_rows, reconciliation = _merge_source_rows(
+        existing, kofia_rows or [], kb_snapshot
+    )
+    refreshed = _refresh_units_and_derived(merged_rows)
+    if not refreshed:
+        raise KbMarketFundsError("시장자금 원장에 게시 가능한 관측치가 없습니다.")
+    rows = score_market_funds_series(refreshed)[-1400:]
     generated_at = generated_at or datetime.now(KST)
+    source_status = source_status or {}
+    source_errors = source_errors or {}
+    successful = [status for status in source_status.values() if status == "direct"]
+    fetch_status = "direct" if successful else "stale-fallback"
+    error_text = " | ".join(
+        f"{source}: {message}" for source, message in source_errors.items() if message
+    ) or None
+    ledger_diagnostics = {
+        **(history_diagnostics or {}),
+        "ledgerRows": len(rows),
+        "ledgerFirstDate": rows[0]["date"],
+        "ledgerLastDate": rows[-1]["date"],
+    }
     return {
-        "schemaVersion": 1,
-        "name": "KB 증시주변자금동향",
+        "schemaVersion": 2,
+        "name": "국내 증시주변자금 원장",
         "generatedAt": generated_at.astimezone(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
         "fetchStatus": fetch_status,
-        "lastFetchError": last_fetch_error,
-        "source": {
-            "provider": "KB증권 OpenAPI",
-            "api": "IVA10370",
-            "endpoint": MARKET_FUNDS_PATH,
-            "frequency": "일별 최종일",
-            "amountUnit": "KRW billion",
-            "amountUnitNote": "금액 원천값은 십억원 단위로 보존하며 비율 산식은 단위에 영향을 받지 않습니다.",
+        "lastFetchError": error_text,
+        "sourceStatus": {
+            "kofiaHistory": source_status.get("kofia", "not-requested"),
+            "kbLatest": source_status.get("kb", "not-requested"),
         },
+        "sourceErrors": source_errors,
+        "source": {
+            "provider": "금융투자협회 FreeSIS + KB증권 OpenAPI",
+            "historyProvider": "금융투자협회 FreeSIS",
+            "historyServices": ["STATSCU0100000060", "STATSCU0100000070"],
+            "historyUrl": "https://freesis.kofia.or.kr/stat/main.do",
+            "latestProvider": "KB증권 OpenAPI",
+            "latestApi": "IVA10370",
+            "latestEndpoint": MARKET_FUNDS_PATH,
+            "latestUrl": "https://openapi.kbsec.com/apidoc_b2c",
+            "frequency": "일별",
+            "amountUnit": "KRW million",
+            "amountUnitNote": "FreeSIS 원장은 백만원, KB 최종일은 십억원을 백만원으로 환산해 동일일 대조합니다.",
+            "selectionRule": "동일일 핵심 금액은 FreeSIS 고정밀 값 우선, KB는 최신일·부가 금리 보강",
+        },
+        "historyDiagnostics": ledger_diagnostics,
+        "reconciliation": reconciliation,
         "latest": rows[-1],
         "series": rows,
         "methodology": {
@@ -306,15 +572,36 @@ def update_market_funds_payload(
                 {"id": "receivablesToDepositsPct", "weight": 0.20, "meaning": "미수금/고객예탁금"},
                 {"id": "customerDepositsChangePct", "weight": 0.10, "meaning": "고객예탁금 일간 감소"},
             ],
-            "bootstrap": "60개 미만은 고정 위험구간, 이후에는 각 시점까지의 expanding 혼합 정규화",
+            "normalization": "최소 60개부터 각 시점까지의 expanding 분위수 40%·z 30%·robust z 30%",
+            "bootstrap": "60개 미만은 고정 위험구간",
             "leakageControl": "날짜 t의 점수는 t까지 저장된 관측치만 사용",
+            "reconciliation": "동일일 핵심 금액은 절대 10억원 또는 상대 0.1% 이내일 때만 결합",
         },
         "limitations": [
-            "KB API는 최종일 한 건만 제공하므로 연결일 이후부터 시계열이 누적됩니다.",
+            "FreeSIS 예탁금·신용융자는 결제일·집계 기준의 일별 확정치로 장중 수급과 시차가 있습니다.",
+            "KB API는 최종일 한 건만 제공하며 FreeSIS보다 늦게 갱신될 수 있습니다.",
             "신용잔고 감소는 부담 완화일 수도 있고 급락 중 강제 청산 결과일 수도 있어 가격·breadth와 함께 봅니다.",
-            "가중치 0의 관찰지표이며 충분한 OOS 검증 전에는 종합점수에 반영하지 않습니다.",
+            "가중치 0의 관찰지표이며 OOS 검증 전에는 종합점수에 반영하지 않습니다.",
         ],
     }
+
+
+def update_market_funds_payload(
+    existing: dict[str, Any] | None,
+    snapshot: dict[str, Any],
+    *,
+    generated_at: datetime | None = None,
+    fetch_status: str = "direct",
+    last_fetch_error: str | None = None,
+) -> dict[str, Any]:
+    """기존 호출부 호환용 KB 최종일 병합 함수입니다."""
+    return build_market_funds_payload(
+        existing,
+        kb_snapshot=snapshot,
+        generated_at=generated_at,
+        source_status={"kb": fetch_status},
+        source_errors={"kb": last_fetch_error} if last_fetch_error else {},
+    )
 
 
 class KbOpenApiClient:
