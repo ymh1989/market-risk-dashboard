@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10 10:46 KST",
+  "generatedAt": "2026-09-10 15:37 KST",
   "methodology": "최근 3년 내외 관측치만 사용해 3상태 Gaussian HMM을 적합합니다. 상태는 단순 변동성 크기가 아니라 20일 수익률, 60일 낙폭, 20일 실현변동성, 국가별 변동성지수 또는 실현변동성 대체값으로 안정·고변동성 활황·위험회피로 사후 매핑합니다.",
   "designNote": "전 기간 변동성 분위수만 쓰면 최근 KOSPI처럼 상승 모멘텀과 고변동성이 같이 나타나는 장을 항상 주의로 볼 수 있어, 상승 모멘텀과 낙폭을 함께 넣어 발행 기회성 고변동성과 위험회피를 분리합니다.",
   "basket": {
@@ -22,7 +22,7 @@
       "region": "미국",
       "symbol": "^GSPC",
       "priceSource": "Yahoo Finance + 증분 캐시",
-      "historyCacheStatus": "bootstrap",
+      "historyCacheStatus": "shared-cache",
       "volSymbol": "^VIX",
       "volSource": "VIX",
       "lastDate": "2026-09-09",
@@ -653,7 +653,7 @@
           "date": "2026-05-15",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 7.6,
+          "issuerScore": 7.59,
           "riskOffProbabilityPct": 0.0,
           "highVolBullProbabilityPct": 16.88,
           "return20dPct": 3.96,
@@ -1458,7 +1458,7 @@
       "region": "유럽",
       "symbol": "^STOXX50E",
       "priceSource": "Yahoo Finance + 증분 캐시",
-      "historyCacheStatus": "bootstrap",
+      "historyCacheStatus": "shared-cache",
       "volSymbol": null,
       "volSource": "20D 실현변동성",
       "lastDate": "2026-09-09",
@@ -2894,11 +2894,11 @@
       "region": "일본",
       "symbol": "^N225",
       "priceSource": "Yahoo Finance + 증분 캐시",
-      "historyCacheStatus": "bootstrap",
+      "historyCacheStatus": "shared-cache",
       "volSymbol": null,
       "volSource": "20D 실현변동성",
       "lastDate": "2026-09-10",
-      "lastClose": 64325.61,
+      "lastClose": 65131.82,
       "regime": "안정",
       "tone": "good",
       "confidencePct": 100.0,
@@ -2909,15 +2909,15 @@
         "위험회피": 0.0
       },
       "metrics": {
-        "return5dPct": 0.17,
-        "return20dPct": -5.83,
-        "realizedVol20dPct": 22.4,
-        "realizedVolRank252d": 23.8,
-        "drawdown60dPct": -11.11,
-        "drawdown252dPct": -11.11,
-        "volProxy": 22.4,
-        "volProxyRank252d": 23.8,
-        "volProxyChange20dPct": -38.79
+        "return5dPct": 1.43,
+        "return20dPct": -4.65,
+        "realizedVol20dPct": 22.12,
+        "realizedVolRank252d": 22.6,
+        "drawdown60dPct": -10.0,
+        "drawdown252dPct": -10.0,
+        "volProxy": 22.12,
+        "volProxyRank252d": 22.6,
+        "volProxyChange20dPct": -39.55
       },
       "reading": "가격 모멘텀과 변동성 압력이 상대적으로 안정적입니다. 발행 조건보다 기존 북 관리 부담이 낮은 구간입니다.",
       "series": [
@@ -4255,9 +4255,9 @@
           "date": "2026-09-02",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 14.42,
+          "issuerScore": 15.23,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 32.04,
+          "highVolBullProbabilityPct": 33.83,
           "return20dPct": 0.58,
           "realizedVol20dPct": 25.62
         },
@@ -4318,8 +4318,8 @@
           "issuerScore": 0.0,
           "riskOffProbabilityPct": 0.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -5.83,
-          "realizedVol20dPct": 22.4
+          "return20dPct": -4.65,
+          "realizedVol20dPct": 22.12
         }
       ]
     },
@@ -4330,40 +4330,50 @@
       "region": "중국/HK",
       "symbol": "^HSCE",
       "priceSource": "Yahoo Finance + 증분 캐시",
-      "historyCacheStatus": "bootstrap",
+      "historyCacheStatus": "shared-cache",
       "volSymbol": null,
       "volSource": "20D 실현변동성",
-      "lastDate": "2026-09-10",
-      "lastClose": 8254.17,
+      "lastDate": "2026-09-09",
+      "lastClose": 8369.05,
       "regime": "고변동성 활황",
       "tone": "caution",
       "confidencePct": 100.0,
-      "issuerScore": 44.98,
+      "issuerScore": 45.0,
       "probabilities": {
-        "안정": 0.04,
-        "고변동성 활황": 99.96,
+        "안정": 0.01,
+        "고변동성 활황": 99.99,
         "위험회피": 0.0
       },
       "metrics": {
-        "return5dPct": -1.56,
-        "return20dPct": -2.04,
-        "realizedVol20dPct": 15.71,
-        "realizedVolRank252d": 6.7,
-        "drawdown60dPct": -4.6,
-        "drawdown252dPct": -15.12,
-        "volProxy": 15.71,
-        "volProxyRank252d": 6.7,
-        "volProxyChange20dPct": -22.77
+        "return5dPct": -0.96,
+        "return20dPct": -0.91,
+        "realizedVol20dPct": 14.99,
+        "realizedVolRank252d": 4.0,
+        "drawdown60dPct": -3.27,
+        "drawdown252dPct": -13.94,
+        "volProxy": 14.99,
+        "volProxyRank252d": 4.0,
+        "volProxyChange20dPct": -28.75
       },
-      "reading": "20일 수익률 -2.0%, 실현변동성 15.7%입니다. 단순 고변동성 주의가 아니라 신규 발행 조건과 헤지 비용이 동시에 커지는 활황성 변동성 구간으로 해석합니다.",
+      "reading": "20일 수익률 -0.9%, 실현변동성 15.0%입니다. 단순 고변동성 주의가 아니라 신규 발행 조건과 헤지 비용이 동시에 커지는 활황성 변동성 구간으로 해석합니다.",
       "series": [
+        {
+          "date": "2026-02-12",
+          "regime": "고변동성 활황",
+          "tone": "caution",
+          "issuerScore": 32.92,
+          "riskOffProbabilityPct": 0.0,
+          "highVolBullProbabilityPct": 73.16,
+          "return20dPct": -0.99,
+          "realizedVol20dPct": 19.52
+        },
         {
           "date": "2026-02-13",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 7.07,
+          "issuerScore": 6.51,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 15.71,
+          "highVolBullProbabilityPct": 14.48,
           "return20dPct": -2.04,
           "realizedVol20dPct": 20.2
         },
@@ -4371,9 +4381,9 @@
           "date": "2026-02-16",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 2.69,
+          "issuerScore": 2.35,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 5.98,
+          "highVolBullProbabilityPct": 5.21,
           "return20dPct": -0.7,
           "realizedVol20dPct": 20.02
         },
@@ -4381,9 +4391,9 @@
           "date": "2026-02-20",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.29,
+          "issuerScore": 0.24,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 0.64,
+          "highVolBullProbabilityPct": 0.53,
           "return20dPct": -1.49,
           "realizedVol20dPct": 20.42
         },
@@ -4391,9 +4401,9 @@
           "date": "2026-02-23",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.03,
+          "issuerScore": 0.02,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 0.06,
+          "highVolBullProbabilityPct": 0.05,
           "return20dPct": 0.82,
           "realizedVol20dPct": 22.58
         },
@@ -4401,8 +4411,8 @@
           "date": "2026-02-24",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.01,
-          "riskOffProbabilityPct": 0.01,
+          "issuerScore": 0.0,
+          "riskOffProbabilityPct": 0.0,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": -1.17,
           "realizedVol20dPct": 23.79
@@ -4411,8 +4421,8 @@
           "date": "2026-02-25",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.01,
-          "riskOffProbabilityPct": 0.01,
+          "issuerScore": 0.0,
+          "riskOffProbabilityPct": 0.0,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": -1.38,
           "realizedVol20dPct": 23.74
@@ -4421,8 +4431,8 @@
           "date": "2026-02-26",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.02,
-          "riskOffProbabilityPct": 0.02,
+          "issuerScore": 0.01,
+          "riskOffProbabilityPct": 0.01,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": -3.64,
           "realizedVol20dPct": 25.2
@@ -4743,7 +4753,7 @@
           "tone": "good",
           "issuerScore": 0.0,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 0.01,
+          "highVolBullProbabilityPct": 0.0,
           "return20dPct": 1.01,
           "realizedVol20dPct": 23.81
         },
@@ -4761,7 +4771,7 @@
           "date": "2026-04-20",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.01,
+          "issuerScore": 0.0,
           "riskOffProbabilityPct": 0.0,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": 0.72,
@@ -4771,9 +4781,9 @@
           "date": "2026-04-21",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.03,
+          "issuerScore": 0.01,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 0.06,
+          "highVolBullProbabilityPct": 0.03,
           "return20dPct": 2.85,
           "realizedVol20dPct": 23.29
         },
@@ -4781,9 +4791,9 @@
           "date": "2026-04-22",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.37,
-          "riskOffProbabilityPct": 0.01,
-          "highVolBullProbabilityPct": 0.81,
+          "issuerScore": 0.16,
+          "riskOffProbabilityPct": 0.0,
+          "highVolBullProbabilityPct": 0.36,
           "return20dPct": 2.66,
           "realizedVol20dPct": 23.47
         },
@@ -4791,9 +4801,9 @@
           "date": "2026-04-23",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 30.64,
+          "issuerScore": 24.56,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 68.08,
+          "highVolBullProbabilityPct": 54.57,
           "return20dPct": 5.11,
           "realizedVol20dPct": 20.46
         },
@@ -4801,9 +4811,9 @@
           "date": "2026-04-24",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 43.68,
+          "issuerScore": 42.6,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 97.08,
+          "highVolBullProbabilityPct": 94.67,
           "return20dPct": 3.25,
           "realizedVol20dPct": 19.01
         },
@@ -4811,9 +4821,9 @@
           "date": "2026-04-27",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 44.78,
+          "issuerScore": 44.58,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 99.52,
+          "highVolBullProbabilityPct": 99.08,
           "return20dPct": 2.02,
           "realizedVol20dPct": 18.81
         },
@@ -4821,9 +4831,9 @@
           "date": "2026-04-28",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 44.98,
+          "issuerScore": 44.96,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 99.95,
+          "highVolBullProbabilityPct": 99.91,
           "return20dPct": 3.04,
           "realizedVol20dPct": 17.46
         },
@@ -4833,7 +4843,7 @@
           "tone": "caution",
           "issuerScore": 44.99,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 99.98,
+          "highVolBullProbabilityPct": 99.97,
           "return20dPct": 4.16,
           "realizedVol20dPct": 18.38
         },
@@ -4841,9 +4851,9 @@
           "date": "2026-04-30",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 44.93,
+          "issuerScore": 44.9,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 99.85,
+          "highVolBullProbabilityPct": 99.78,
           "return20dPct": 3.37,
           "realizedVol20dPct": 19.03
         },
@@ -4853,7 +4863,7 @@
           "tone": "caution",
           "issuerScore": 44.99,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 99.99,
+          "highVolBullProbabilityPct": 99.98,
           "return20dPct": 4.78,
           "realizedVol20dPct": 19.2
         },
@@ -4863,7 +4873,7 @@
           "tone": "caution",
           "issuerScore": 44.99,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 99.99,
+          "highVolBullProbabilityPct": 99.98,
           "return20dPct": 2.65,
           "realizedVol20dPct": 18.71
         },
@@ -4873,7 +4883,7 @@
           "tone": "caution",
           "issuerScore": 45.0,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 100.0,
+          "highVolBullProbabilityPct": 99.99,
           "return20dPct": 4.07,
           "realizedVol20dPct": 18.66
         },
@@ -5051,9 +5061,9 @@
           "date": "2026-06-02",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 44.92,
+          "issuerScore": 44.91,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 99.82,
+          "highVolBullProbabilityPct": 99.8,
           "return20dPct": -0.13,
           "realizedVol20dPct": 18.13
         },
@@ -5061,9 +5071,9 @@
           "date": "2026-06-03",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 37.9,
+          "issuerScore": 37.56,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 84.22,
+          "highVolBullProbabilityPct": 83.46,
           "return20dPct": -1.53,
           "realizedVol20dPct": 19.28
         },
@@ -5071,9 +5081,9 @@
           "date": "2026-06-04",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 20.53,
+          "issuerScore": 20.6,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 45.62,
+          "highVolBullProbabilityPct": 45.79,
           "return20dPct": -3.4,
           "realizedVol20dPct": 19.32
         },
@@ -5081,9 +5091,9 @@
           "date": "2026-06-05",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 9.51,
+          "issuerScore": 10.0,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 21.13,
+          "highVolBullProbabilityPct": 22.23,
           "return20dPct": -5.41,
           "realizedVol20dPct": 18.56
         },
@@ -5091,9 +5101,9 @@
           "date": "2026-06-08",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 1.72,
+          "issuerScore": 1.92,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 3.82,
+          "highVolBullProbabilityPct": 4.26,
           "return20dPct": -6.16,
           "realizedVol20dPct": 18.81
         },
@@ -5101,9 +5111,9 @@
           "date": "2026-06-09",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.33,
+          "issuerScore": 0.39,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 0.73,
+          "highVolBullProbabilityPct": 0.86,
           "return20dPct": -6.3,
           "realizedVol20dPct": 18.79
         },
@@ -5111,9 +5121,9 @@
           "date": "2026-06-10",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.09,
+          "issuerScore": 0.11,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 0.2,
+          "highVolBullProbabilityPct": 0.24,
           "return20dPct": -6.35,
           "realizedVol20dPct": 18.78
         },
@@ -5221,8 +5231,8 @@
           "date": "2026-06-26",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.02,
-          "riskOffProbabilityPct": 0.02,
+          "issuerScore": 0.0,
+          "riskOffProbabilityPct": 0.0,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": -10.8,
           "realizedVol20dPct": 22.03
@@ -5231,8 +5241,8 @@
           "date": "2026-06-29",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.5,
-          "riskOffProbabilityPct": 0.5,
+          "issuerScore": 0.13,
+          "riskOffProbabilityPct": 0.13,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": -9.74,
           "realizedVol20dPct": 23.34
@@ -5241,8 +5251,8 @@
           "date": "2026-06-30",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.36,
-          "riskOffProbabilityPct": 0.36,
+          "issuerScore": 0.08,
+          "riskOffProbabilityPct": 0.08,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": -11.16,
           "realizedVol20dPct": 22.68
@@ -5291,8 +5301,8 @@
           "date": "2026-07-08",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.05,
-          "riskOffProbabilityPct": 0.05,
+          "issuerScore": 0.02,
+          "riskOffProbabilityPct": 0.02,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": -3.08,
           "realizedVol20dPct": 25.76
@@ -5301,8 +5311,8 @@
           "date": "2026-07-09",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.08,
-          "riskOffProbabilityPct": 0.08,
+          "issuerScore": 0.02,
+          "riskOffProbabilityPct": 0.02,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": -3.93,
           "realizedVol20dPct": 25.97
@@ -5311,8 +5321,8 @@
           "date": "2026-07-10",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.09,
-          "riskOffProbabilityPct": 0.09,
+          "issuerScore": 0.03,
+          "riskOffProbabilityPct": 0.03,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": -3.36,
           "realizedVol20dPct": 26.09
@@ -5321,8 +5331,8 @@
           "date": "2026-07-13",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.07,
-          "riskOffProbabilityPct": 0.07,
+          "issuerScore": 0.02,
+          "riskOffProbabilityPct": 0.02,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": -1.84,
           "realizedVol20dPct": 25.83
@@ -5331,8 +5341,8 @@
           "date": "2026-07-14",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.02,
-          "riskOffProbabilityPct": 0.02,
+          "issuerScore": 0.0,
+          "riskOffProbabilityPct": 0.0,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": -3.24,
           "realizedVol20dPct": 24.84
@@ -5341,8 +5351,8 @@
           "date": "2026-07-15",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 0.4,
-          "riskOffProbabilityPct": 0.4,
+          "issuerScore": 0.06,
+          "riskOffProbabilityPct": 0.06,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": -2.28,
           "realizedVol20dPct": 25.17
@@ -5351,8 +5361,8 @@
           "date": "2026-07-16",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 4.56,
-          "riskOffProbabilityPct": 4.56,
+          "issuerScore": 1.11,
+          "riskOffProbabilityPct": 1.11,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": 0.95,
           "realizedVol20dPct": 25.22
@@ -5361,8 +5371,8 @@
           "date": "2026-07-17",
           "regime": "안정",
           "tone": "good",
-          "issuerScore": 22.56,
-          "riskOffProbabilityPct": 22.56,
+          "issuerScore": 10.57,
+          "riskOffProbabilityPct": 10.57,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": -0.09,
           "realizedVol20dPct": 26.12
@@ -5371,8 +5381,8 @@
           "date": "2026-07-20",
           "regime": "위험회피",
           "tone": "danger",
-          "issuerScore": 92.83,
-          "riskOffProbabilityPct": 92.83,
+          "issuerScore": 77.84,
+          "riskOffProbabilityPct": 77.84,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": 5.09,
           "realizedVol20dPct": 26.98
@@ -5381,8 +5391,8 @@
           "date": "2026-07-21",
           "regime": "위험회피",
           "tone": "danger",
-          "issuerScore": 99.49,
-          "riskOffProbabilityPct": 99.49,
+          "issuerScore": 95.21,
+          "riskOffProbabilityPct": 95.21,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": 5.63,
           "realizedVol20dPct": 26.78
@@ -5391,8 +5401,8 @@
           "date": "2026-07-22",
           "regime": "위험회피",
           "tone": "danger",
-          "issuerScore": 99.92,
-          "riskOffProbabilityPct": 99.92,
+          "issuerScore": 98.48,
+          "riskOffProbabilityPct": 98.48,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": 6.34,
           "realizedVol20dPct": 26.15
@@ -5401,8 +5411,8 @@
           "date": "2026-07-23",
           "regime": "위험회피",
           "tone": "danger",
-          "issuerScore": 99.99,
-          "riskOffProbabilityPct": 99.99,
+          "issuerScore": 99.83,
+          "riskOffProbabilityPct": 99.83,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": 7.57,
           "realizedVol20dPct": 26.32
@@ -5411,8 +5421,8 @@
           "date": "2026-07-24",
           "regime": "위험회피",
           "tone": "danger",
-          "issuerScore": 99.99,
-          "riskOffProbabilityPct": 99.99,
+          "issuerScore": 99.95,
+          "riskOffProbabilityPct": 99.95,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": 8.71,
           "realizedVol20dPct": 25.31
@@ -5421,8 +5431,8 @@
           "date": "2026-07-27",
           "regime": "위험회피",
           "tone": "danger",
-          "issuerScore": 100.0,
-          "riskOffProbabilityPct": 99.99,
+          "issuerScore": 99.98,
+          "riskOffProbabilityPct": 99.98,
           "highVolBullProbabilityPct": 0.01,
           "return20dPct": 12.12,
           "realizedVol20dPct": 23.8
@@ -5431,9 +5441,9 @@
           "date": "2026-07-28",
           "regime": "위험회피",
           "tone": "danger",
-          "issuerScore": 99.95,
-          "riskOffProbabilityPct": 99.92,
-          "highVolBullProbabilityPct": 0.07,
+          "issuerScore": 99.9,
+          "riskOffProbabilityPct": 99.86,
+          "highVolBullProbabilityPct": 0.08,
           "return20dPct": 10.93,
           "realizedVol20dPct": 23.29
         },
@@ -5442,8 +5452,8 @@
           "regime": "위험회피",
           "tone": "danger",
           "issuerScore": 99.99,
-          "riskOffProbabilityPct": 99.99,
-          "highVolBullProbabilityPct": 0.01,
+          "riskOffProbabilityPct": 99.98,
+          "highVolBullProbabilityPct": 0.02,
           "return20dPct": 14.09,
           "realizedVol20dPct": 23.61
         },
@@ -5461,9 +5471,9 @@
           "date": "2026-07-31",
           "regime": "위험회피",
           "tone": "danger",
-          "issuerScore": 100.0,
-          "riskOffProbabilityPct": 99.99,
-          "highVolBullProbabilityPct": 0.01,
+          "issuerScore": 99.99,
+          "riskOffProbabilityPct": 99.98,
+          "highVolBullProbabilityPct": 0.02,
           "return20dPct": 11.85,
           "realizedVol20dPct": 23.85
         },
@@ -5471,9 +5481,9 @@
           "date": "2026-08-03",
           "regime": "위험회피",
           "tone": "danger",
-          "issuerScore": 99.68,
-          "riskOffProbabilityPct": 99.42,
-          "highVolBullProbabilityPct": 0.57,
+          "issuerScore": 99.28,
+          "riskOffProbabilityPct": 98.78,
+          "highVolBullProbabilityPct": 1.11,
           "return20dPct": 10.75,
           "realizedVol20dPct": 23.61
         },
@@ -5481,9 +5491,9 @@
           "date": "2026-08-04",
           "regime": "위험회피",
           "tone": "danger",
-          "issuerScore": 96.88,
-          "riskOffProbabilityPct": 94.43,
-          "highVolBullProbabilityPct": 5.44,
+          "issuerScore": 94.68,
+          "riskOffProbabilityPct": 91.22,
+          "highVolBullProbabilityPct": 7.7,
           "return20dPct": 10.35,
           "realizedVol20dPct": 23.86
         },
@@ -5491,9 +5501,9 @@
           "date": "2026-08-05",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 44.98,
+          "issuerScore": 44.95,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 99.95,
+          "highVolBullProbabilityPct": 99.88,
           "return20dPct": 6.43,
           "realizedVol20dPct": 19.87
         },
@@ -5503,7 +5513,7 @@
           "tone": "caution",
           "issuerScore": 45.0,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 100.0,
+          "highVolBullProbabilityPct": 99.99,
           "return20dPct": 6.27,
           "realizedVol20dPct": 20.01
         },
@@ -5513,7 +5523,7 @@
           "tone": "caution",
           "issuerScore": 45.0,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 100.0,
+          "highVolBullProbabilityPct": 99.99,
           "return20dPct": 6.12,
           "realizedVol20dPct": 20.0
         },
@@ -5531,9 +5541,9 @@
           "date": "2026-08-11",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 45.0,
+          "issuerScore": 44.99,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 99.99,
+          "highVolBullProbabilityPct": 99.98,
           "return20dPct": 5.25,
           "realizedVol20dPct": 20.8
         },
@@ -5541,9 +5551,9 @@
           "date": "2026-08-12",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 44.97,
+          "issuerScore": 44.95,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 99.94,
+          "highVolBullProbabilityPct": 99.9,
           "return20dPct": 3.2,
           "realizedVol20dPct": 21.04
         },
@@ -5551,9 +5561,9 @@
           "date": "2026-08-13",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 44.96,
+          "issuerScore": 44.95,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 99.92,
+          "highVolBullProbabilityPct": 99.88,
           "return20dPct": 1.3,
           "realizedVol20dPct": 20.34
         },
@@ -5561,7 +5571,7 @@
           "date": "2026-08-14",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 45.0,
+          "issuerScore": 44.99,
           "riskOffProbabilityPct": 0.0,
           "highVolBullProbabilityPct": 99.99,
           "return20dPct": 2.51,
@@ -5743,19 +5753,9 @@
           "tone": "caution",
           "issuerScore": 45.0,
           "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 100.0,
+          "highVolBullProbabilityPct": 99.99,
           "return20dPct": -0.91,
           "realizedVol20dPct": 14.99
-        },
-        {
-          "date": "2026-09-10",
-          "regime": "고변동성 활황",
-          "tone": "caution",
-          "issuerScore": 44.98,
-          "riskOffProbabilityPct": 0.0,
-          "highVolBullProbabilityPct": 99.96,
-          "return20dPct": -2.04,
-          "realizedVol20dPct": 15.71
         }
       ]
     },
@@ -5766,11 +5766,11 @@
       "region": "한국",
       "symbol": "^KS200",
       "priceSource": "Naver KPI200 + 증분 캐시",
-      "historyCacheStatus": "bootstrap",
+      "historyCacheStatus": "shared-cache",
       "volSymbol": "KOREA-O2901P",
       "volSource": "VKOSPI",
       "lastDate": "2026-09-10",
-      "lastClose": 1096.75,
+      "lastClose": 1112.13,
       "regime": "위험회피",
       "tone": "danger",
       "confidencePct": 100.0,
@@ -5781,17 +5781,17 @@
         "위험회피": 100.0
       },
       "metrics": {
-        "return5dPct": 6.19,
-        "return20dPct": 6.54,
-        "realizedVol20dPct": 49.57,
+        "return5dPct": 7.68,
+        "return20dPct": 8.08,
+        "realizedVol20dPct": 48.78,
         "realizedVolRank252d": 53.6,
-        "drawdown60dPct": -25.76,
-        "drawdown252dPct": -25.76,
-        "volProxy": 48.4,
-        "volProxyRank252d": 48.0,
-        "volProxyChange20dPct": -14.31
+        "drawdown60dPct": -24.71,
+        "drawdown252dPct": -24.71,
+        "volProxy": 47.28,
+        "volProxyRank252d": 46.8,
+        "volProxyChange20dPct": -16.29
       },
-      "reading": "60일 고점 대비 -25.8%이고 VKOSPI 기반 변동성 압력이 높습니다. 기존 북의 순연·델타/베가 헤지 부담을 우선 점검할 구간입니다.",
+      "reading": "60일 고점 대비 -24.7%이고 VKOSPI 기반 변동성 압력이 높습니다. 기존 북의 순연·델타/베가 헤지 부담을 우선 점검할 구간입니다.",
       "series": [
         {
           "date": "2026-02-13",
@@ -5877,9 +5877,9 @@
           "date": "2026-03-03",
           "regime": "위험회피",
           "tone": "danger",
-          "issuerScore": 75.11,
-          "riskOffProbabilityPct": 54.75,
-          "highVolBullProbabilityPct": 45.25,
+          "issuerScore": 75.14,
+          "riskOffProbabilityPct": 54.8,
+          "highVolBullProbabilityPct": 45.2,
           "return20dPct": 13.27,
           "realizedVol20dPct": 56.58
         },
@@ -5988,8 +5988,8 @@
           "regime": "위험회피",
           "tone": "danger",
           "issuerScore": 98.63,
-          "riskOffProbabilityPct": 97.51,
-          "highVolBullProbabilityPct": 2.49,
+          "riskOffProbabilityPct": 97.5,
+          "highVolBullProbabilityPct": 2.5,
           "return20dPct": 8.86,
           "realizedVol20dPct": 78.6
         },
@@ -6197,7 +6197,7 @@
           "date": "2026-04-16",
           "regime": "위험회피",
           "tone": "danger",
-          "issuerScore": 87.46,
+          "issuerScore": 87.47,
           "riskOffProbabilityPct": 77.21,
           "highVolBullProbabilityPct": 22.79,
           "return20dPct": 8.75,
@@ -6208,8 +6208,8 @@
           "regime": "위험회피",
           "tone": "danger",
           "issuerScore": 80.35,
-          "riskOffProbabilityPct": 64.27,
-          "highVolBullProbabilityPct": 35.73,
+          "riskOffProbabilityPct": 64.28,
+          "highVolBullProbabilityPct": 35.72,
           "return20dPct": 7.99,
           "realizedVol20dPct": 63.07
         },
@@ -6217,9 +6217,9 @@
           "date": "2026-04-20",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 49.96,
-          "riskOffProbabilityPct": 9.03,
-          "highVolBullProbabilityPct": 90.97,
+          "issuerScore": 49.98,
+          "riskOffProbabilityPct": 9.06,
+          "highVolBullProbabilityPct": 90.94,
           "return20dPct": 16.26,
           "realizedVol20dPct": 57.16
         },
@@ -6227,7 +6227,7 @@
           "date": "2026-04-21",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 45.44,
+          "issuerScore": 45.45,
           "riskOffProbabilityPct": 0.81,
           "highVolBullProbabilityPct": 99.19,
           "return20dPct": 16.27,
@@ -6517,9 +6517,9 @@
           "date": "2026-06-05",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 55.67,
-          "riskOffProbabilityPct": 19.4,
-          "highVolBullProbabilityPct": 80.6,
+          "issuerScore": 55.69,
+          "riskOffProbabilityPct": 19.43,
+          "highVolBullProbabilityPct": 80.57,
           "return20dPct": 14.82,
           "realizedVol20dPct": 58.82
         },
@@ -6638,8 +6638,8 @@
           "regime": "고변동성 활황",
           "tone": "caution",
           "issuerScore": 76.24,
-          "riskOffProbabilityPct": 56.79,
-          "highVolBullProbabilityPct": 43.21,
+          "riskOffProbabilityPct": 56.8,
+          "highVolBullProbabilityPct": 43.2,
           "return20dPct": 7.8,
           "realizedVol20dPct": 77.06
         },
@@ -6647,7 +6647,7 @@
           "date": "2026-06-24",
           "regime": "고변동성 활황",
           "tone": "caution",
-          "issuerScore": 68.98,
+          "issuerScore": 68.99,
           "riskOffProbabilityPct": 43.61,
           "highVolBullProbabilityPct": 56.39,
           "return20dPct": 8.65,
@@ -6658,8 +6658,8 @@
           "regime": "고변동성 활황",
           "tone": "caution",
           "issuerScore": 60.3,
-          "riskOffProbabilityPct": 27.81,
-          "highVolBullProbabilityPct": 72.19,
+          "riskOffProbabilityPct": 27.83,
+          "highVolBullProbabilityPct": 72.17,
           "return20dPct": 11.96,
           "realizedVol20dPct": 79.55
         },
@@ -6830,8 +6830,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -27.34,
-          "realizedVol20dPct": 87.46
+          "return20dPct": -27.01,
+          "realizedVol20dPct": 87.86
         },
         {
           "date": "2026-07-22",
@@ -6840,8 +6840,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -18.27,
-          "realizedVol20dPct": 80.8
+          "return20dPct": -18.14,
+          "realizedVol20dPct": 81.12
         },
         {
           "date": "2026-07-23",
@@ -6850,8 +6850,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -17.76,
-          "realizedVol20dPct": 81.3
+          "return20dPct": -18.11,
+          "realizedVol20dPct": 81.14
         },
         {
           "date": "2026-07-24",
@@ -6860,8 +6860,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -27.41,
-          "realizedVol20dPct": 79.03
+          "return20dPct": -27.43,
+          "realizedVol20dPct": 78.53
         },
         {
           "date": "2026-07-27",
@@ -6870,8 +6870,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -21.75,
-          "realizedVol20dPct": 77.69
+          "return20dPct": -21.72,
+          "realizedVol20dPct": 77.21
         },
         {
           "date": "2026-07-28",
@@ -6880,8 +6880,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -30.08,
-          "realizedVol20dPct": 86.08
+          "return20dPct": -29.87,
+          "realizedVol20dPct": 85.29
         },
         {
           "date": "2026-07-29",
@@ -6890,8 +6890,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -35.28,
-          "realizedVol20dPct": 86.78
+          "return20dPct": -35.36,
+          "realizedVol20dPct": 86.28
         },
         {
           "date": "2026-07-30",
@@ -6901,7 +6901,7 @@
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": -34.66,
-          "realizedVol20dPct": 86.76
+          "realizedVol20dPct": 86.27
         },
         {
           "date": "2026-07-31",
@@ -6910,8 +6910,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -14.17,
-          "realizedVol20dPct": 113.01
+          "return20dPct": -13.92,
+          "realizedVol20dPct": 113.49
         },
         {
           "date": "2026-08-03",
@@ -6920,8 +6920,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -24.06,
-          "realizedVol20dPct": 111.22
+          "return20dPct": -24.31,
+          "realizedVol20dPct": 112.08
         },
         {
           "date": "2026-08-04",
@@ -6930,8 +6930,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -22.67,
-          "realizedVol20dPct": 111.55
+          "return20dPct": -22.75,
+          "realizedVol20dPct": 112.47
         },
         {
           "date": "2026-08-05",
@@ -6940,8 +6940,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -15.26,
-          "realizedVol20dPct": 111.7
+          "return20dPct": -14.86,
+          "realizedVol20dPct": 112.97
         },
         {
           "date": "2026-08-06",
@@ -6951,7 +6951,7 @@
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": -15.15,
-          "realizedVol20dPct": 111.63
+          "realizedVol20dPct": 113.16
         },
         {
           "date": "2026-08-07",
@@ -6960,8 +6960,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -16.67,
-          "realizedVol20dPct": 111.48
+          "return20dPct": -16.69,
+          "realizedVol20dPct": 113.01
         },
         {
           "date": "2026-08-10",
@@ -6970,8 +6970,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -18.29,
-          "realizedVol20dPct": 111.0
+          "return20dPct": -18.18,
+          "realizedVol20dPct": 112.55
         },
         {
           "date": "2026-08-11",
@@ -6980,8 +6980,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -8.47,
-          "realizedVol20dPct": 105.79
+          "return20dPct": -8.38,
+          "realizedVol20dPct": 107.4
         },
         {
           "date": "2026-08-12",
@@ -6990,8 +6990,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -5.75,
-          "realizedVol20dPct": 106.88
+          "return20dPct": -5.79,
+          "realizedVol20dPct": 108.4
         },
         {
           "date": "2026-08-13",
@@ -7000,8 +7000,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -7.96,
-          "realizedVol20dPct": 105.18
+          "return20dPct": -8.57,
+          "realizedVol20dPct": 106.4
         },
         {
           "date": "2026-08-14",
@@ -7010,8 +7010,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": 1.65,
-          "realizedVol20dPct": 102.25
+          "return20dPct": 1.51,
+          "realizedVol20dPct": 103.71
         },
         {
           "date": "2026-08-18",
@@ -7021,7 +7021,7 @@
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": 4.79,
-          "realizedVol20dPct": 100.98
+          "realizedVol20dPct": 102.43
         },
         {
           "date": "2026-08-19",
@@ -7030,8 +7030,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -5.66,
-          "realizedVol20dPct": 102.85
+          "return20dPct": -6.09,
+          "realizedVol20dPct": 104.03
         },
         {
           "date": "2026-08-20",
@@ -7040,8 +7040,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": 0.07,
-          "realizedVol20dPct": 105.68
+          "return20dPct": -0.09,
+          "realizedVol20dPct": 106.85
         },
         {
           "date": "2026-08-21",
@@ -7050,8 +7050,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -2.67,
-          "realizedVol20dPct": 104.71
+          "return20dPct": -2.26,
+          "realizedVol20dPct": 106.18
         },
         {
           "date": "2026-08-24",
@@ -7060,8 +7060,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -0.15,
-          "realizedVol20dPct": 103.1
+          "return20dPct": -0.13,
+          "realizedVol20dPct": 104.89
         },
         {
           "date": "2026-08-25",
@@ -7070,8 +7070,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -0.8,
-          "realizedVol20dPct": 103.03
+          "return20dPct": -0.84,
+          "realizedVol20dPct": 104.81
         },
         {
           "date": "2026-08-26",
@@ -7080,8 +7080,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": 13.27,
-          "realizedVol20dPct": 93.29
+          "return20dPct": 12.92,
+          "realizedVol20dPct": 95.65
         },
         {
           "date": "2026-08-27",
@@ -7090,8 +7090,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": 22.7,
-          "realizedVol20dPct": 89.61
+          "return20dPct": 22.86,
+          "realizedVol20dPct": 91.62
         },
         {
           "date": "2026-08-28",
@@ -7101,7 +7101,7 @@
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": 22.14,
-          "realizedVol20dPct": 89.81
+          "realizedVol20dPct": 91.87
         },
         {
           "date": "2026-08-31",
@@ -7110,8 +7110,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": 2.39,
-          "realizedVol20dPct": 55.82
+          "return20dPct": 2.09,
+          "realizedVol20dPct": 57.51
         },
         {
           "date": "2026-09-01",
@@ -7120,8 +7120,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": 8.98,
-          "realizedVol20dPct": 51.26
+          "return20dPct": 9.34,
+          "realizedVol20dPct": 52.15
         },
         {
           "date": "2026-09-02",
@@ -7130,8 +7130,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": 3.15,
-          "realizedVol20dPct": 53.6
+          "return20dPct": 3.27,
+          "realizedVol20dPct": 54.41
         },
         {
           "date": "2026-09-03",
@@ -7140,8 +7140,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": -0.56,
-          "realizedVol20dPct": 51.84
+          "return20dPct": -1.02,
+          "realizedVol20dPct": 52.04
         },
         {
           "date": "2026-09-04",
@@ -7151,7 +7151,7 @@
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
           "return20dPct": 6.98,
-          "realizedVol20dPct": 48.08
+          "realizedVol20dPct": 47.61
         },
         {
           "date": "2026-09-07",
@@ -7160,8 +7160,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": 13.38,
-          "realizedVol20dPct": 50.64
+          "return20dPct": 13.41,
+          "realizedVol20dPct": 50.19
         },
         {
           "date": "2026-09-08",
@@ -7170,8 +7170,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": 12.5,
-          "realizedVol20dPct": 50.79
+          "return20dPct": 12.36,
+          "realizedVol20dPct": 50.35
         },
         {
           "date": "2026-09-09",
@@ -7180,8 +7180,8 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": 12.88,
-          "realizedVol20dPct": 50.83
+          "return20dPct": 12.77,
+          "realizedVol20dPct": 50.4
         },
         {
           "date": "2026-09-10",
@@ -7190,18 +7190,18 @@
           "issuerScore": 100.0,
           "riskOffProbabilityPct": 100.0,
           "highVolBullProbabilityPct": 0.0,
-          "return20dPct": 6.54,
-          "realizedVol20dPct": 49.57
+          "return20dPct": 8.08,
+          "realizedVol20dPct": 48.78
         }
       ]
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260910T150001-1500-live",
-    "mode": "live",
-    "state": "reused",
-    "startedAt": "2026-09-10 15:00:01 KST",
-    "preparedAt": "2026-09-10 15:02:23 KST"
+    "runId": "20260910T153503-1535-full",
+    "mode": "full",
+    "state": "generated",
+    "startedAt": "2026-09-10 15:35:03 KST",
+    "preparedAt": "2026-09-10 15:55:10 KST"
   }
 }
