@@ -312,7 +312,8 @@ export PYTHONWARNINGS="${PYTHONWARNINGS:-ignore:Skipping features without any ob
 export MPLCONFIGDIR="${MPLCONFIGDIR:-$WORKTREE/.cache/matplotlib}"
 export M7_CREDIT_RAW_DIR="${M7_CREDIT_RAW_DIR:-$ROOT/data/raw/m7_credit_proxy}"
 export INDEX_HISTORY_CACHE_DIR="${INDEX_HISTORY_CACHE_DIR:-$ROOT/data/raw/index_history}"
-mkdir -p "$MPLCONFIGDIR" "$INDEX_HISTORY_CACHE_DIR"
+VKOSPI_CACHE_DIR="${VKOSPI_CACHE_DIR:-$ROOT/data/cache/vkospi}"
+mkdir -p "$MPLCONFIGDIR" "$INDEX_HISTORY_CACHE_DIR" "$VKOSPI_CACHE_DIR"
 
 seed_local_data_cache() {
   local filename source_file
@@ -334,7 +335,7 @@ seed_local_data_cache() {
   fi
   mkdir -p "$WORKTREE/data/raw/vkospi"
   for filename in stockplus_vkospi.csv stockplus_vkospi.metadata.json; do
-    source_file="$ROOT/data/raw/vkospi/$filename"
+    source_file="$VKOSPI_CACHE_DIR/$filename"
     if [[ -f "$source_file" ]]; then
       cp -p "$source_file" "$WORKTREE/data/raw/vkospi/$filename"
     fi
@@ -362,11 +363,11 @@ persist_local_data_cache() {
   if [[ -f "$WORKTREE/data/quality/kospi_breadth_update.json" ]]; then
     cp -p "$WORKTREE/data/quality/kospi_breadth_update.json" "$ROOT/data/quality/kospi_breadth_update.json"
   fi
-  mkdir -p "$ROOT/data/raw/vkospi"
+  mkdir -p "$VKOSPI_CACHE_DIR"
   for filename in stockplus_vkospi.csv stockplus_vkospi.metadata.json; do
     source_file="$WORKTREE/data/raw/vkospi/$filename"
     if [[ -f "$source_file" ]]; then
-      cp -p "$source_file" "$ROOT/data/raw/vkospi/$filename"
+      cp -p "$source_file" "$VKOSPI_CACHE_DIR/$filename"
     fi
   done
   if [[ -f "$WORKTREE/data/cache/walk_forward_backtest.joblib" ]]; then
