@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260910-1";
+const ASSET_VERSION = "20260910-2";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -4748,6 +4748,83 @@ function renderBreadthPriceChart(breadthData) {
   `;
 }
 
+function renderBreadthVkospiChart(breadthData) {
+  const points = breadthData?.series ?? [];
+  const hasVkospi = points.some((point) => Number.isFinite(Number(point.vkospi)));
+  if (points.length < 2 || !hasVkospi) return "";
+  const chartWidth = 760;
+  const plotLeft = 64;
+  const plotRight = 696;
+  const plotWidth = plotRight - plotLeft;
+  const plotTop = 20;
+  const plotBottom = 184;
+  const chartId = registerInteractiveChart({
+    width: chartWidth,
+    plotLeft,
+    plotRight,
+    series: [
+      {
+        label: "KOSPI",
+        points,
+        valueKey: "kospiClose",
+        color: "var(--blue)",
+        format: (value) => formatNumber(value, 2)
+      },
+      {
+        label: "VKOSPI",
+        points,
+        valueKey: "vkospi",
+        color: "var(--red)",
+        format: (value) => formatNumber(value, 2)
+      }
+    ]
+  });
+  const layers = chartRangeOptions
+    .map((range) => {
+      const domain = chartRangeDomain([points], range.id);
+      const visible = pointsWithinDomain(points, domain, "kospiClose");
+      const kospiDomain = numericChartDomain(visible, "kospiClose", 0.1);
+      const vkospiDomain = numericChartDomain(visible, "vkospi", 0.14);
+      const axis = renderMonthAxisFromDomain(domain, plotWidth, plotTop, plotBottom, 207);
+      const yPositions = [plotTop, (plotTop + plotBottom) / 2, plotBottom];
+      const kospiTicks = [kospiDomain.max, (kospiDomain.max + kospiDomain.min) / 2, kospiDomain.min];
+      const vkospiTicks = [vkospiDomain.max, (vkospiDomain.max + vkospiDomain.min) / 2, vkospiDomain.min];
+      return `
+        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 ${chartWidth} 210" role="img" aria-label="왼쪽 KOSPI 축과 오른쪽 VKOSPI 축 비교">
+          <g transform="translate(${plotLeft} 0)">
+            ${axis.grid}
+            <path class="breadth-chart__grid" d="M 0 ${plotTop} L ${plotWidth} ${plotTop} M 0 ${(plotTop + plotBottom) / 2} L ${plotWidth} ${(plotTop + plotBottom) / 2} M 0 ${plotBottom} L ${plotWidth} ${plotBottom}"></path>
+            <path class="breadth-chart__kospi-halo" d="${datedValuePath(points, "kospiClose", domain, kospiDomain, plotWidth, plotTop, plotBottom)}"></path>
+            <path class="breadth-chart__kospi" d="${datedValuePath(points, "kospiClose", domain, kospiDomain, plotWidth, plotTop, plotBottom)}"></path>
+            <path class="breadth-chart__vkospi" d="${datedValuePath(points, "vkospi", domain, vkospiDomain, plotWidth, plotTop, plotBottom)}"></path>
+            ${axis.labels}
+          </g>
+          <text class="breadth-chart__axis-title is-kospi" x="4" y="13">KOSPI</text>
+          ${kospiTicks.map((value, index) => `<text class="breadth-chart__axis-value is-kospi" x="4" y="${yPositions[index] + 4}">${formatNumber(value)}</text>`).join("")}
+          <text class="breadth-chart__axis-title is-vkospi" x="756" y="13" text-anchor="end">VKOSPI</text>
+          ${vkospiTicks.map((value, index) => `<text class="breadth-chart__axis-value is-vkospi" x="756" y="${yPositions[index] + 4}" text-anchor="end">${formatNumber(value, 1)}</text>`).join("")}
+          ${renderChartCursorLine(plotTop, plotBottom)}
+        </svg>
+      `;
+    })
+    .join("");
+
+  return `
+    <article class="breadth-chart-card breadth-chart-card--dual-axis">
+      <header>
+        <div><span class="eyebrow">Price & Fear Gauge</span><h3>KOSPI와 VKOSPI</h3></div>
+        <div class="breadth-chart-legend"><span><i class="is-kospi"></i>KOSPI · 왼쪽</span><span><i class="is-vkospi"></i>VKOSPI · 오른쪽</span></div>
+      </header>
+      <div class="breadth-chart" data-timeseries-chart="${chartId}">
+        ${renderChartRangeControls(chartId)}
+        ${layers}
+        ${renderChartTooltip()}
+      </div>
+      <p class="breadth-chart-card__note">VKOSPI 상승 = KOSPI200 옵션시장의 기대 변동성 확대 · 지수 하락·확산 위축과 동행할 때 패닉 확인 강도 상승</p>
+    </article>
+  `;
+}
+
 function renderBreadthAdChart(breadthData) {
   const points = breadthData?.series ?? [];
   if (points.length < 2) return "";
@@ -5139,6 +5216,9 @@ function renderMarketBreadthPage(breadthData, marketFunds) {
   const qualityLabel = quality.status === "ok" ? "정상" : quality.status === "warning" ? "주의" : "확인 필요";
   const investorFlowLabel = breadthData.source?.investorFlowStatus === "available" ? "연결" : "미연결";
   const programFlowLabel = breadthData.source?.programFlowStatus === "available" ? "연결" : "미연결";
+  const vkospiMerged = breadthData.source?.vkospiStatus === "merged" && latest.vkospi != null;
+  const vkospiValueStatus = breadthData.source?.vkospiValueStatus === "provisional" ? "잠정" : "EOD";
+  const vkospiQualityLabel = breadthData.source?.vkospiQualityStatus === "warning" ? "캐시 확인" : "정상";
   return `
     <section class="breadth-page">
       <div class="section-heading breadth-page__heading">
@@ -5154,11 +5234,12 @@ function renderMarketBreadthPage(breadthData, marketFunds) {
         </div>
       </div>
 
-      <div class="breadth-metrics">
+      <div class="breadth-metrics ${vkospiMerged ? "breadth-metrics--with-vkospi" : ""}">
         <article><span>일간 확산도 (%)</span><strong>${formatSignedPct(latest.breadthPct)}</strong><small>5일 ${formatSignedPct(latest.breadthMa5Pct)} · 20일 ${formatSignedPct(latest.breadthMa20Pct)}</small></article>
         <article><span>상승 / 하락</span><strong>${formatNumber(latest.up)} / ${formatNumber(latest.down)}</strong><small>보합 ${formatNumber(latest.flat)} · 전체 ${formatNumber(latest.total)}</small></article>
         <article><span>당일 순확산 (Net)</span><strong>${latest.netBreadth > 0 ? "+" : ""}${formatNumber(latest.netBreadth)}종목</strong><small>상승-하락 · 비율 ${formatNumber(latest.adRatio, 2)}</small></article>
         <article><span>AD 누적선-20일선</span><strong>${formatSignedThousands(latest.adDistance20)}</strong><small>AD ${formatSignedThousands(latest.adLine)} · 20D ${formatSignedThousands(latest.adMa20)}</small></article>
+        ${vkospiMerged ? `<article class="is-vkospi"><span>VKOSPI</span><strong>${formatNumber(latest.vkospi, 2)}</strong><small>전일 ${formatSignedPct(latest.vkospiChangePct)} · ${vkospiValueStatus}</small></article>` : ""}
       </div>
 
       <section class="breadth-flow-panel" aria-label="KRX 직접 수급 판독">
@@ -5217,6 +5298,7 @@ function renderMarketBreadthPage(breadthData, marketFunds) {
 
       <div class="breadth-chart-grid">
         ${renderBreadthPriceChart(breadthData)}
+        ${renderBreadthVkospiChart(breadthData)}
         ${renderBreadthAdChart(breadthData)}
         ${renderBreadthFlowChart(breadthData)}
       </div>
@@ -5232,19 +5314,23 @@ function renderMarketBreadthPage(breadthData, marketFunds) {
             <div><dt>수집 실패</dt><dd>${formatNumber(quality.failedDates?.length ?? 0)}일</dd></div>
             <div><dt>외국인·기관</dt><dd>${investorFlowLabel}</dd></div>
             <div><dt>프로그램</dt><dd>${programFlowLabel}</dd></div>
+            <div><dt>VKOSPI</dt><dd>${vkospiMerged ? `${vkospiQualityLabel} · ${breadthData.source.vkospiLastObservationDate}` : "미연결"}</dd></div>
           </dl>
         </div>
         <div>
           <span class="eyebrow">Source & Limits</span>
-          <h3>KRX 원천 · pykrx</h3>
+          <h3>KRX 원천 · pykrx${vkospiMerged ? " + 증권플러스" : ""}</h3>
           ${renderNarrativeList([
             "stock.get_market_ohlcv(date, market=KOSPI)",
             "투자자 순매수: get_market_trading_value_by_date · 거래대금",
             "프로그램 순매수: KRX MDCSTAT02601 · 차익+비차익 전체",
             "우선주·SPAC·REIT 포함 가능 · ETF·ETN 제외",
             "화면 집계와 종목 분류·기준시각에 따라 차이 가능",
-            "VKOSPI 미결합 · risk-on·panic 확정 판정 보류"
+            vkospiMerged
+              ? `VKOSPI: 증권플러스 ${breadthData.source.vkospiSecurityId} · ${formatNumber(breadthData.source.vkospiObservations)}개 일봉 · 결측 보간 없음`
+              : "VKOSPI 미결합 · risk-on·panic 확정 판정 보류"
           ], "narrative-list--compact")}
+          ${vkospiMerged && breadthData.source.vkospiUrl ? `<a class="breadth-source-link" href="${breadthData.source.vkospiUrl}" target="_blank" rel="noopener noreferrer">VKOSPI 원천 페이지 <span aria-hidden="true">↗</span></a>` : ""}
         </div>
       </section>
     </section>

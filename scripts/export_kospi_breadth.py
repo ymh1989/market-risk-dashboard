@@ -102,7 +102,11 @@ def build_breadth_payload(frame: pd.DataFrame, metadata: dict | None = None) -> 
     quality = metadata.get("quality") or {}
     latest = data.iloc[-1]
     state = _state(latest)
-    vkospi_merged = bool(metadata.get("vkospiMerged")) and "vkospi" in data.columns
+    vkospi_merged = (
+        bool(metadata.get("vkospiMerged"))
+        and "vkospi" in data.columns
+        and data["vkospi"].notna().any()
+    )
     latest_date = latest["date"].date().isoformat()
     first_date = data.iloc[0]["date"].date().isoformat()
     generated_at = metadata.get("generatedAt") or datetime.now(
@@ -124,6 +128,16 @@ def build_breadth_payload(frame: pd.DataFrame, metadata: dict | None = None) -> 
         )
     if not vkospi_merged:
         interpretations.append("VKOSPI 미결합 · 공포지수 조합 판정은 보류")
+    else:
+        latest_vkospi = _number(latest.get("vkospi"), 2)
+        latest_vkospi_change = _percent(latest.get("vkospi_change"), 2)
+        interpretations.append(
+            f"VKOSPI {latest_vkospi:.2f} · 전일 {latest_vkospi_change:+.2f}%"
+            if latest_vkospi is not None and latest_vkospi_change is not None
+            else f"VKOSPI {latest_vkospi:.2f}"
+            if latest_vkospi is not None
+            else "VKOSPI 최근 관측치 확인 필요"
+        )
 
     direct_flow_pressure = _number(latest.get("direct_flow_pressure"), 1)
     if direct_flow_pressure is None:
@@ -184,7 +198,7 @@ def build_breadth_payload(frame: pd.DataFrame, metadata: dict | None = None) -> 
         series.append(item)
 
     return {
-        "schemaVersion": 2,
+        "schemaVersion": 3,
         "generatedAt": generated_at,
         "source": {
             "provider": "KRX",
@@ -195,6 +209,16 @@ def build_breadth_payload(frame: pd.DataFrame, metadata: dict | None = None) -> 
             "frequency": "EOD",
             "universe": "pykrx KOSPI 주식 응답 · ETF/ETN 제외",
             "vkospiStatus": "merged" if vkospi_merged else "not_available",
+            "vkospiProvider": metadata.get("vkospiProvider"),
+            "vkospiLabel": metadata.get("vkospiSource"),
+            "vkospiSecurityId": metadata.get("vkospiSecurityId"),
+            "vkospiUrl": metadata.get("vkospiSourceUrl"),
+            "vkospiLastObservationDate": metadata.get("vkospiLatestDate"),
+            "vkospiSourceLastObservationDate": metadata.get("vkospiSourceLatestDate"),
+            "vkospiObservations": metadata.get("vkospiObservations", 0),
+            "vkospiValueStatus": metadata.get("vkospiValueStatus"),
+            "vkospiQualityStatus": metadata.get("vkospiQualityStatus"),
+            "vkospiSourceError": metadata.get("vkospiSourceError"),
             "investorFlowStatus": metadata.get("investorFlowStatus", "not_available"),
             "programFlowStatus": metadata.get("programFlowStatus", "not_available"),
             "programFlowCoverageStart": metadata.get("programFlowCoverageStart"),
@@ -253,6 +277,8 @@ def build_breadth_payload(frame: pd.DataFrame, metadata: dict | None = None) -> 
             ),
             "programSellPressure": _number(latest.get("program_sell_pressure"), 1),
             "directFlowPressure": direct_flow_pressure,
+            "vkospi": _number(latest.get("vkospi"), 2) if vkospi_merged else None,
+            "vkospiChangePct": _percent(latest.get("vkospi_change"), 2) if vkospi_merged else None,
             "interpretation": interpretations,
         },
         "methodology": [
@@ -264,6 +290,7 @@ def build_breadth_payload(frame: pd.DataFrame, metadata: dict | None = None) -> 
             "매도압력 분위수: 5거래일 순매수 누계를 직전 최대 252거래일과 비교",
             "최소 60개 과거 관측 필요 · 각 날짜까지 공개된 값만 사용",
             "장 마감 EOD 기준 · 장중 판정 아님",
+            "VKOSPI: 증권플러스 공개 일봉 · 날짜 기준 결합 · 결측값 임의 보간 없음",
         ],
         "series": series,
     }

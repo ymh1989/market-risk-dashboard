@@ -817,6 +817,7 @@ def _update_metadata(
     fetch_attrs: dict[str, object],
     *,
     vkospi_merged: bool,
+    vkospi_metadata: dict[str, object] | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     latest = frame.sort_values("date").iloc[-1] if not frame.empty else None
@@ -837,6 +838,24 @@ def _update_metadata(
         if "program_net_buy_value" in frame.columns
         else pd.Series(dtype="datetime64[ns]")
     )
+    vkospi_metadata = vkospi_metadata or {}
+    vkospi_source = vkospi_metadata.get("source") or {}
+    vkospi_period = vkospi_metadata.get("period") or {}
+    vkospi_quality = vkospi_metadata.get("quality") or {}
+    vkospi_dates = (
+        frame.loc[frame["vkospi"].notna(), "date"]
+        if vkospi_merged and "vkospi" in frame.columns
+        else pd.Series(dtype="datetime64[ns]")
+    )
+    vkospi_latest_date = (
+        None if vkospi_dates.empty else pd.to_datetime(vkospi_dates).max().date().isoformat()
+    )
+    source_vkospi_latest_date = vkospi_period.get("endDate")
+    vkospi_value_status = (
+        vkospi_quality.get("latestValueStatus")
+        if vkospi_latest_date == source_vkospi_latest_date
+        else "eod"
+    )
     payload = {
         "generatedAt": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S KST"),
         "source": "pykrx stock.get_market_ohlcv(date, market='KOSPI')",
@@ -856,6 +875,16 @@ def _update_metadata(
         "programFlowFailedDates": fetch_attrs.get("program_flow_failed_dates", []),
         "programFlowEmptyDates": fetch_attrs.get("program_flow_empty_dates", []),
         "vkospiMerged": vkospi_merged,
+        "vkospiSource": vkospi_source.get("label") if vkospi_merged else None,
+        "vkospiProvider": vkospi_source.get("provider") if vkospi_merged else None,
+        "vkospiSecurityId": vkospi_source.get("securityId") if vkospi_merged else None,
+        "vkospiSourceUrl": vkospi_source.get("pageUrl") if vkospi_merged else None,
+        "vkospiLatestDate": vkospi_latest_date,
+        "vkospiSourceLatestDate": source_vkospi_latest_date if vkospi_merged else None,
+        "vkospiObservations": int(len(vkospi_dates)),
+        "vkospiValueStatus": vkospi_value_status if vkospi_merged else None,
+        "vkospiQualityStatus": vkospi_quality.get("status") if vkospi_merged else None,
+        "vkospiSourceError": vkospi_quality.get("sourceError") if vkospi_merged else None,
         "adLineBase": "저장된 첫 관측일의 net_breadth부터 누적",
         "quality": quality,
     }
@@ -868,6 +897,7 @@ def update_breadth_data(
     start_date: str | date | datetime | pd.Timestamp | None = None,
     end_date: str | date | datetime | pd.Timestamp | None = None,
     vkospi: pd.DataFrame | str | Path | None = None,
+    vkospi_metadata_path: str | Path | None = None,
     raw_output_dir: str | Path | None = None,
     metadata_path: str | Path | None = None,
     refresh_from_start: bool = False,
@@ -1105,6 +1135,14 @@ def update_breadth_data(
                 LOGGER.warning("KOSPI 프로그램 순매수 결합 실패 · 기존 값 보존 · %s", error)
 
     result = calculate_direct_flow_metrics(result)
+    vkospi_metadata: dict[str, object] = {}
+    if vkospi_metadata_path and Path(vkospi_metadata_path).exists():
+        try:
+            loaded_metadata = json.loads(Path(vkospi_metadata_path).read_text(encoding="utf-8"))
+            if isinstance(loaded_metadata, dict):
+                vkospi_metadata = loaded_metadata
+        except (json.JSONDecodeError, OSError) as error:
+            LOGGER.warning("VKOSPI 메타데이터를 읽지 못했습니다 · %s", error)
     vkospi_source = vkospi
     if vkospi_source is None and not existing.empty and "vkospi" in existing.columns:
         vkospi_source = existing[["date", "vkospi"]]
@@ -1140,7 +1178,10 @@ def update_breadth_data(
             result,
             quality,
             fetch_attrs,
-            vkospi_merged="vkospi" in result.columns,
+            vkospi_merged=bool(
+                "vkospi" in result.columns and result["vkospi"].notna().any()
+            ),
+            vkospi_metadata=vkospi_metadata,
         )
     result.attrs.update(fetch_attrs)
     result.attrs["quality"] = quality

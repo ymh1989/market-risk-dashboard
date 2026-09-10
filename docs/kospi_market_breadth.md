@@ -67,7 +67,24 @@ make update-kospi-breadth KOSPI_BREADTH_START=2025-01-01
 
 ## VKOSPI 결합
 
-현재 프로젝트에는 검증된 일별 VKOSPI 원천이 없습니다. KOSPI200 HMM은 현재 20일 실현변동성을 대체값으로 사용합니다. breadth 모듈은 VKOSPI를 임의 생성하거나 실현변동성으로 바꾸지 않습니다.
+VKOSPI는 증권플러스의 코스피200 변동성지수 종목 `KOREA-O2901P` 공개 일봉 API를 사용합니다. 화면용 재배포 시세이므로 KRX 공식 원장과 같은 등급으로 보지 않으며, 원천 페이지·보안 ID·최근 관측일·조회 상태를 운영 JSON에 함께 남깁니다.
+
+```bash
+PYTHONPATH=src python3 scripts/update_vkospi.py
+```
+
+- 최초 적재: 2009-01-01 이후 일봉, 1회 최대 500건 페이지네이션
+- 증분 적재: 기존 마지막 날에서 10일 전부터 중첩 조회
+- 원천 장애: 직전 검증 캐시 보존, 품질상태 `warning`
+- 결측 처리: 임의 생성·선형 보간·실현변동성 대체 없음
+- 장중 실행: 당일 값은 `잠정`, 16:00 KST 이후 조회값은 `EOD`
+
+수집 파일은 아래 경로에 저장합니다.
+
+- 일봉 캐시: `data/raw/vkospi/stockplus_vkospi.csv`
+- 원천·품질 메타데이터: `data/raw/vkospi/stockplus_vkospi.metadata.json`
+
+KOSPI200 HMM은 이 캐시를 우선 변동성 지수로 사용합니다. 파일이 없거나 품질검사를 통과하지 못할 때만 Yahoo·Investing 조회를 시도하고, 모두 실패하면 20일 실현변동성을 대체값으로 사용합니다.
 
 다음 컬럼 중 하나를 가진 CSV 또는 Parquet만 선택적으로 결합합니다.
 
@@ -77,7 +94,8 @@ make update-kospi-breadth KOSPI_BREADTH_START=2025-01-01
 ```bash
 PYTHONPATH=src python3 -m kospi_risk.cli update-kospi-breadth \
   --output data/processed/kospi_breadth.parquet \
-  --vkospi data/raw/vkospi_daily.csv
+  --vkospi data/raw/vkospi/stockplus_vkospi.csv \
+  --vkospi-metadata data/raw/vkospi/stockplus_vkospi.metadata.json
 ```
 
 VKOSPI 파일을 생략하면 결과에 `vkospi`, `vkospi_change` 컬럼과 세 번째 차트를 만들지 않습니다.

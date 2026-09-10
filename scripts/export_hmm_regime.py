@@ -47,6 +47,10 @@ YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?ra
 NAVER_SISE_URL = "https://api.finance.naver.com/siseJson.naver"
 NAVER_INDEX_SYMBOLS = {"^KS200": "KPI200"}
 INVESTING_VKOSPI_HISTORY_URL = "https://kr.investing.com/indices/kospi-volatility-historical-data"
+STOCKPLUS_VKOSPI_FILE = Path(
+    os.environ.get("STOCKPLUS_VKOSPI_FILE")
+    or ROOT / "data" / "raw" / "vkospi" / "stockplus_vkospi.csv"
+)
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-hmm-regime/0.1)"
 RANGE_VALUE = "5y"
 FIT_WINDOW = 756
@@ -63,8 +67,9 @@ INDICES = [
         "id": "kospi200",
         "symbol": "^KS200",
         "volSymbols": ["^VKOSPI"],
+        "stockplusVol": {"symbol": "KOREA-O2901P", "label": "VKOSPI (증권플러스 공개 시세)"},
         "investingVol": {"url": INVESTING_VKOSPI_HISTORY_URL, "symbol": "KSVKOSPI", "label": "VKOSPI (Investing.com)"},
-        "preferInvestingVol": True,
+        "preferStockplusVol": True,
         "label": "KOSPI200",
         "name": "KOSPI 200",
         "region": "한국",
@@ -287,6 +292,21 @@ def _fetch_investing_historical(url: str, min_rows: int = 5) -> pd.DataFrame:
     return frame
 
 
+def _load_stockplus_vkospi(min_rows: int = 80) -> pd.DataFrame:
+    if not STOCKPLUS_VKOSPI_FILE.exists():
+        raise RuntimeError(f"증권플러스 VKOSPI 캐시가 없습니다: {STOCKPLUS_VKOSPI_FILE}")
+    frame = pd.read_csv(STOCKPLUS_VKOSPI_FILE)
+    if not {"date", "vkospi"} <= set(frame.columns):
+        raise RuntimeError("증권플러스 VKOSPI 캐시에 date, vkospi 컬럼이 필요합니다.")
+    frame = frame[["date", "vkospi"]].rename(columns={"vkospi": "close"})
+    frame["date"] = pd.to_datetime(frame["date"], errors="coerce").dt.strftime("%Y-%m-%d")
+    frame["close"] = pd.to_numeric(frame["close"], errors="coerce")
+    frame = frame.dropna().drop_duplicates("date", keep="last").sort_values("date").reset_index(drop=True)
+    if len(frame) < min_rows:
+        raise RuntimeError(f"증권플러스 VKOSPI 관측치가 부족합니다: {len(frame)}")
+    return frame
+
+
 def _fetch_vol_proxy(spec: dict) -> tuple[pd.DataFrame | None, str | None, str | None]:
     def fetch_investing_vol() -> tuple[pd.DataFrame | None, str | None, str | None]:
         investing_vol = spec.get("investingVol")
@@ -297,6 +317,17 @@ def _fetch_vol_proxy(spec: dict) -> tuple[pd.DataFrame | None, str | None, str |
             investing_vol["symbol"],
             investing_vol["label"],
         )
+
+    stockplus_vol = spec.get("stockplusVol")
+    if spec.get("preferStockplusVol") and stockplus_vol:
+        try:
+            return (
+                _load_stockplus_vkospi(),
+                stockplus_vol["symbol"],
+                stockplus_vol["label"],
+            )
+        except Exception:
+            pass
 
     if spec.get("preferInvestingVol"):
         try:

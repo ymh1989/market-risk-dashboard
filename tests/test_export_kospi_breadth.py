@@ -98,9 +98,36 @@ def test_build_payload_exports_direct_krx_flow_in_eok_units() -> None:
         {"investorFlowStatus": "available", "programFlowStatus": "available"},
     )
 
-    assert payload["schemaVersion"] == 2
+    assert payload["schemaVersion"] == 3
     assert payload["source"]["investorFlowStatus"] == "available"
     assert payload["latest"]["foreignNetBuyEok"] == -1200.0
     assert payload["latest"]["foreignNetBuy5dEok"] == -5000.0
     assert payload["latest"]["directFlowPressure"] == 72.8
     assert payload["series"][-1]["programNetBuy5dEok"] == -2000.0
+
+
+def test_build_payload_exports_vkospi_source_and_latest_value() -> None:
+    frame = sample_frame()
+    frame["vkospi"] = [20.0 + index * 0.1 for index in range(len(frame))]
+    frame["vkospi_change"] = frame["vkospi"].pct_change()
+    payload = build_breadth_payload(
+        frame,
+        {
+            "vkospiMerged": True,
+            "vkospiProvider": "Stockplus",
+            "vkospiSource": "증권플러스 공개 시세",
+            "vkospiSecurityId": "KOREA-O2901P",
+            "vkospiSourceUrl": "https://www.stockplus.com/m/stocks/KOREA-O2901P",
+            "vkospiLatestDate": frame.iloc[-1]["date"].date().isoformat(),
+            "vkospiObservations": 22,
+            "vkospiValueStatus": "eod",
+            "vkospiQualityStatus": "ok",
+        },
+    )
+
+    assert payload["source"]["vkospiStatus"] == "merged"
+    assert payload["source"]["vkospiProvider"] == "Stockplus"
+    assert payload["source"]["vkospiSecurityId"] == "KOREA-O2901P"
+    assert payload["latest"]["vkospi"] == 22.1
+    assert payload["series"][-1]["vkospi"] == 22.1
+    assert any("VKOSPI 22.10" in item for item in payload["latest"]["interpretation"])

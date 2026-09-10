@@ -7057,6 +7057,11 @@ a {
 .breadth-metrics article:nth-child(2) { border-top-color: var(--green); }
 .breadth-metrics article:nth-child(3) { border-top-color: var(--amber); }
 .breadth-metrics article:nth-child(4) { border-top-color: var(--blue); }
+.breadth-metrics article.is-vkospi { border-top-color: var(--red); }
+
+.breadth-metrics--with-vkospi {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
 
 .breadth-metrics span,
 .breadth-metrics small {
@@ -7335,7 +7340,8 @@ a {
 .breadth-chart__funding-deposits,
 .breadth-chart__funding-credit,
 .breadth-chart__funding-score,
-.breadth-chart__funding-ratio {
+.breadth-chart__funding-ratio,
+.breadth-chart__vkospi {
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -7418,6 +7424,11 @@ a {
   stroke-width: 1.8;
 }
 
+.breadth-chart__vkospi {
+  stroke: var(--red);
+  stroke-width: 2.15;
+}
+
 .breadth-chart-card--flow {
   grid-column: 1 / -1;
 }
@@ -7471,6 +7482,10 @@ a {
   fill: var(--amber);
 }
 
+.breadth-chart__axis-title.is-vkospi {
+  fill: var(--red);
+}
+
 .breadth-chart-card--dual-axis .chart-month-label {
   fill: color-mix(in srgb, var(--ink) 72%, var(--muted));
   font-size: 12px;
@@ -7510,6 +7525,24 @@ a {
 .breadth-chart-legend .is-funding-credit,
 .breadth-chart-legend .is-funding-score { background: var(--red); }
 .breadth-chart-legend .is-funding-ratio { background: var(--amber); }
+.breadth-chart-legend .is-vkospi { background: var(--red); }
+
+.breadth-source-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  margin-top: 12px;
+  color: var(--blue);
+  font-size: 0.7rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.breadth-source-link:hover,
+.breadth-source-link:focus-visible {
+  text-decoration: underline;
+}
 
 .breadth-chart-card__note {
   margin: 8px 0 0;

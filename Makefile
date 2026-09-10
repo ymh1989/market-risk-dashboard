@@ -1,4 +1,4 @@
-.PHONY: serve test audit-data update-m7-credit-proxy update-kb-market-funds update-market-risk update-kospi-breadth backtest-market-risk analyze-stress-episodes export-offline send-news-digest install-news-digest run-local-market-update install-local-market-update run-overnight-market-prepare install-overnight-market-prepare
+.PHONY: serve test audit-data update-m7-credit-proxy update-kb-market-funds update-market-risk update-vkospi update-kospi-breadth backtest-market-risk analyze-stress-episodes export-offline send-news-digest install-news-digest run-local-market-update install-local-market-update run-overnight-market-prepare install-overnight-market-prepare
 
 KOSPI_BREADTH_START ?= 2024-01-01
 
@@ -20,8 +20,11 @@ update-kb-market-funds:
 update-market-risk:
 	python3 scripts/update_market_risk.py
 
+update-vkospi:
+	PYTHONPATH=src python3 scripts/update_vkospi.py
+
 update-kospi-breadth:
-	PYTHONPATH=src .venv-breadth/bin/python -m kospi_risk.cli update-kospi-breadth --start $(KOSPI_BREADTH_START)
+	PYTHONPATH=src .venv-breadth/bin/python -m kospi_risk.cli update-kospi-breadth --start $(KOSPI_BREADTH_START) --vkospi data/raw/vkospi/stockplus_vkospi.csv --vkospi-metadata data/raw/vkospi/stockplus_vkospi.metadata.json
 
 backtest-market-risk:
 	python3 scripts/backtest_market_risk.py

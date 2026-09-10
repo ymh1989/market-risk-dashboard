@@ -70,6 +70,7 @@ def source_status(snapshot, quality=None, breadth=None):
     if breadth:
         breadth_quality = breadth.get("quality") or {}
         breadth_period = breadth.get("period") or {}
+        breadth_source = breadth.get("source") or {}
         sources.append(
             {
                 "id": "krx-breadth",
@@ -80,6 +81,29 @@ def source_status(snapshot, quality=None, breadth=None):
                 "detail": "KOSPI 상승·하락·보합 종목 수 · pykrx EOD",
             }
         )
+        if breadth_source.get("vkospiStatus") == "merged":
+            vkospi_value_status = (
+                "잠정"
+                if breadth_source.get("vkospiValueStatus") == "provisional"
+                else "EOD"
+            )
+            sources.append(
+                {
+                    "id": "stockplus-vkospi",
+                    "label": "증권플러스 VKOSPI",
+                    "status": (
+                        "ok"
+                        if breadth_source.get("vkospiQualityStatus") == "ok"
+                        else "warning"
+                    ),
+                    "lastDate": breadth_source.get("vkospiLastObservationDate"),
+                    "seriesCount": breadth_source.get("vkospiObservations"),
+                    "detail": (
+                        f"{breadth_source.get('vkospiSecurityId') or 'KOREA-O2901P'} "
+                        f"공개 일봉 · {vkospi_value_status}"
+                    ),
+                }
+            )
     quality_groups = {item.get("id"): item for item in (quality or {}).get("sourceGroups", [])}
     for source in sources:
         group = quality_groups.get(source["id"])

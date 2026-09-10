@@ -133,3 +133,22 @@ def test_hmm_reuses_fresh_els_incremental_cache(monkeypatch, tmp_path):
     assert len(merged) == 400
     assert merged.attrs["historyCacheStatus"] == "shared-cache"
     assert merged.attrs["priceSource"] == "Yahoo Finance + 증분 캐시"
+
+
+def test_kospi200_hmm_prefers_stockplus_vkospi_cache(monkeypatch, tmp_path):
+    cache = tmp_path / "stockplus_vkospi.csv"
+    pd.DataFrame(
+        {
+            "date": pd.date_range("2025-01-02", periods=100, freq="B").strftime("%Y-%m-%d"),
+            "vkospi": np.linspace(18.0, 24.0, 100),
+        }
+    ).to_csv(cache, index=False)
+    monkeypatch.setattr(export_hmm_regime, "STOCKPLUS_VKOSPI_FILE", cache)
+    spec = next(item for item in export_hmm_regime.INDICES if item["id"] == "kospi200")
+
+    frame, symbol, label = export_hmm_regime._fetch_vol_proxy(spec)
+
+    assert frame is not None and len(frame) == 100
+    assert symbol == "KOREA-O2901P"
+    assert label == "VKOSPI (증권플러스 공개 시세)"
+    assert frame.iloc[-1]["close"] == 24.0

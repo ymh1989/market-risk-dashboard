@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-10 10:01:33 KST",
+  "generatedAt": "2026-09-10 10:55:50 KST",
   "current": {
-    "runId": "20260910T100005-1000-live",
+    "runId": "20260910T103000-vkospi-full",
     "status": "success",
-    "mode": "live",
-    "trigger": "scheduled",
-    "scheduledTime": "10:00",
-    "startedAt": "2026-09-10 10:00:05 KST",
-    "completedAt": "2026-09-10 10:01:33 KST",
-    "durationSeconds": 88,
+    "mode": "full",
+    "trigger": "manual",
+    "scheduledTime": null,
+    "startedAt": "2026-09-10 10:30:00 KST",
+    "completedAt": "2026-09-10 10:52:44 KST",
+    "durationSeconds": 1364,
     "dataAsOf": "2026-09-10",
     "dashboardGeneratedAt": "2026-09-10 10:01 KST",
     "mlGeneratedAt": "2026-09-10 07:32 KST",
@@ -118,21 +118,21 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 83,
-      "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
+      "durationSeconds": 50,
+      "detail": "시장 데이터 수집, 위험점수, M7·KB 시장자금, ELS·HMM 산출"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
-      "durationSeconds": 0,
-      "detail": "직전 확정 ML·HMM 산출물 재사용"
+      "durationSeconds": 10,
+      "detail": "특성 생성, 모델 학습, 예측 및 OOS 검증"
     },
     {
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 1,
+      "durationSeconds": 35,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -201,11 +201,23 @@
       "detail": "KOSPI 상승·하락·보합 종목 수 · pykrx EOD"
     },
     {
+      "id": "stockplus-vkospi",
+      "label": "증권플러스 VKOSPI",
+      "status": "ok",
+      "lastDate": "2026-09-09",
+      "seriesCount": 655,
+      "detail": "1/1개 수집 · 허용시차 내 1개",
+      "oldestLastDate": "2026-09-09",
+      "freshCount": 1,
+      "staleCount": 0,
+      "fallbackCount": 0
+    },
+    {
       "id": "ml-input",
       "label": "ML 입력 원천",
       "status": "warning",
       "lastDate": "2026-09-09",
-      "oldestLastDate": "2026-08-28",
+      "oldestLastDate": "2026-08-19",
       "seriesCount": 17,
       "freshCount": 16,
       "staleCount": 1,
@@ -260,7 +272,7 @@
       "id": "hmm",
       "label": "HMM 레짐",
       "status": "ok",
-      "generatedAt": "2026-09-10 07:31 KST"
+      "generatedAt": "2026-09-10 10:46 KST"
     },
     {
       "id": "backtest",
@@ -290,13 +302,13 @@
       "id": "breadth",
       "label": "KOSPI 시장 내부강도",
       "status": "ok",
-      "generatedAt": "2026-09-10 07:30:09 KST"
+      "generatedAt": "2026-09-10 10:45:55 KST"
     },
     {
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-09-10 10:01:32 KST"
+      "generatedAt": "2026-09-10 10:55:42 KST"
     }
   ],
   "quality": {
@@ -304,13 +316,13 @@
     "score": 96.4,
     "referenceDate": "2026-09-10",
     "summary": {
-      "checks": 252,
-      "ok": 234,
+      "checks": 253,
+      "ok": 235,
       "warning": 18,
       "error": 0,
-      "sourceSeriesExpected": 99,
-      "sourceSeriesPresent": 99,
-      "freshSeries": 98,
+      "sourceSeriesExpected": 100,
+      "sourceSeriesPresent": 100,
+      "freshSeries": 99,
       "staleSeries": 1,
       "fallbackSeries": 15
     },
@@ -342,10 +354,10 @@
         "category": "source",
         "label": "CSI 300",
         "status": "warning",
-        "detail": "yahoo · skipped_low_coverage · 최신 2026-09-09 · 관측치 1개 · 커버리지 7.1%",
+        "detail": "yahoo · skipped_low_coverage · 최신 2026-08-19 · 관측치 1253개 · 커버리지 16.3%",
         "groupId": "ml-input",
-        "lastDate": "2026-09-09",
-        "observations": 1,
+        "lastDate": "2026-08-19",
+        "observations": 1253,
         "fetchStatus": "skipped_low_coverage",
         "required": false
       },
@@ -458,6 +470,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20260910T103000-vkospi-full",
+      "status": "success",
+      "mode": "full",
+      "trigger": "manual",
+      "scheduledTime": null,
+      "startedAt": "2026-09-10 10:30:00 KST",
+      "completedAt": "2026-09-10 10:52:44 KST",
+      "durationSeconds": 1364,
+      "dataAsOf": "2026-09-10",
+      "dashboardGeneratedAt": "2026-09-10 10:01 KST",
+      "mlGeneratedAt": "2026-09-10 07:32 KST",
+      "qualityScore": 96.4,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20260910T100005-1000-live",
       "status": "success",
@@ -892,29 +919,14 @@
       "mlGeneratedAt": "2026-09-05 07:49 KST",
       "qualityScore": 97.2,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20260907T130005-1300-live",
-      "status": "success",
-      "mode": "live",
-      "trigger": "scheduled",
-      "scheduledTime": "13:00",
-      "startedAt": "2026-09-07 13:00:05 KST",
-      "completedAt": "2026-09-07 13:01:18 KST",
-      "durationSeconds": 73,
-      "dataAsOf": "2026-09-07",
-      "dashboardGeneratedAt": "2026-09-07 13:01 KST",
-      "mlGeneratedAt": "2026-09-05 07:49 KST",
-      "qualityScore": 97.2,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260910T100005-1000-live",
-    "mode": "live",
+    "runId": "20260910T103000-vkospi-full",
+    "mode": "full",
     "state": "generated",
-    "startedAt": "2026-09-10 10:00:05 KST",
-    "preparedAt": "2026-09-10 10:01:38 KST"
+    "startedAt": "2026-09-10 10:30:00 KST",
+    "preparedAt": "2026-09-10 10:56:06 KST"
   }
 }

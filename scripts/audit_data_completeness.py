@@ -52,6 +52,7 @@ ARTIFACTS = {
     ),
     "marketHistory": ("장기 시장 캐시", ROOT / "data" / "market-history-cache.json"),
     "naverMarketHistory": ("Naver 시장지표 캐시", ROOT / "data" / "naver-marketindex-history.json"),
+    "breadth": ("KOSPI 시장 내부강도", ROOT / "data" / "kospi-breadth.json"),
 }
 
 STATUS_RANK = {"ok": 0, "warning": 1, "error": 2}
@@ -1008,6 +1009,43 @@ def build_report(now: datetime | None = None) -> dict[str, Any]:
         )
         groups.append(kb_group)
         checks.extend(kb_checks)
+
+    breadth = data.get("breadth") or {}
+    breadth_source = breadth.get("source") or {}
+    if breadth_source.get("vkospiStatus") == "merged":
+        vkospi_group, vkospi_checks = assess_source_group(
+            "stockplus-vkospi",
+            "증권플러스 VKOSPI",
+            {
+                "KOREA-O2901P": {
+                    "lastDate": breadth_source.get("vkospiLastObservationDate"),
+                    "observations": breadth_source.get("vkospiObservations"),
+                    "fetchStatus": (
+                        "live"
+                        if breadth_source.get("vkospiQualityStatus") == "ok"
+                        else "cached"
+                    ),
+                }
+            },
+            {"KOREA-O2901P": {"label": "코스피200 변동성지수"}},
+            reference_date,
+            warning_lag=2,
+            error_lag=5,
+            min_observations=500,
+        )
+        groups.append(vkospi_group)
+        checks.extend(vkospi_checks)
+    else:
+        checks.append(
+            make_check(
+                "source:stockplus-vkospi:KOREA-O2901P",
+                "source",
+                "코스피200 변동성지수",
+                "error",
+                "VKOSPI 일봉이 시장 내부강도 데이터에 결합되지 않았습니다.",
+                groupId="stockplus-vkospi",
+            )
+        )
 
     checks.extend(artifact_checks(data, reference_date))
     checks.extend(cross_artifact_checks(data, now))

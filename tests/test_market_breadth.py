@@ -284,6 +284,31 @@ def test_update_breadth_data_only_fetches_dates_after_existing_tail(tmp_path: Pa
     assert payload["quality"]["status"] == "warning"
 
 
+def test_update_metadata_serializes_vkospi_merge_flag(tmp_path: Path):
+    output = tmp_path / "kospi_breadth.parquet"
+    metadata = tmp_path / "breadth_quality.json"
+
+    def index_fetcher(start_key: str, end_key: str) -> pd.DataFrame:
+        dates = pd.bdate_range(pd.Timestamp(start_key), pd.Timestamp(end_key))
+        return pd.DataFrame({"종가": [2500.0] * len(dates)}, index=dates)
+
+    update_breadth_data(
+        output,
+        start_date="2026-01-02",
+        end_date="2026-01-02",
+        vkospi=pd.DataFrame({"date": ["2026-01-02"], "vkospi": [20.0]}),
+        metadata_path=metadata,
+        fetch_flows=False,
+        sleep_seconds=0,
+        ohlcv_fetcher=lambda _: daily_ohlcv([1, -1, 0]),
+        index_fetcher=index_fetcher,
+        sleep_fn=lambda _: None,
+    )
+
+    payload = json.loads(metadata.read_text(encoding="utf-8"))
+    assert payload["vkospiMerged"] is True
+
+
 def test_update_backfills_direct_flows_and_reuses_cached_values(tmp_path: Path):
     output = tmp_path / "kospi_breadth.parquet"
     metadata = tmp_path / "breadth_quality.json"

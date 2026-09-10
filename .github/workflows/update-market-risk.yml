@@ -41,6 +41,7 @@ jobs:
 
       - name: Refresh market risk data
         run: |
+          python3 scripts/update_vkospi.py
           python3 -m m7_credit_proxy.pipeline --update-latest
           python3 scripts/update_kb_market_funds.py --kofia-only --strict
           make update-market-risk

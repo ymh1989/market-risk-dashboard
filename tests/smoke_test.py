@@ -292,8 +292,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260910-1" in html
-    assert "app.js?v=20260910-1" in html
+    assert "styles.css?v=20260910-2" in html
+    assert "app.js?v=20260910-2" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -513,6 +513,9 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert "scripts/prepare_atomic_publication.py" in workflow
     assert "--reused-file data/kospi-breadth.json" in workflow
     assert "scripts/update_kb_market_funds.py --kofia-only --strict" in workflow
+    assert "scripts/update_vkospi.py" in workflow
+    assert "scripts/update_vkospi.py" in run_script
+    assert "--vkospi data/raw/vkospi/stockplus_vkospi.csv" in run_script
     assert "--reused-file data/kb-market-funds.json" not in workflow
     assert "data/publication-manifest.json" in workflow
     assert 'SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"' in installer
@@ -749,7 +752,10 @@ def test_market_breadth_dashboard_contract():
     quality = breadth["quality"]
     assert breadth["source"]["provider"] == "KRX"
     assert breadth["source"]["frequency"] == "EOD"
-    assert breadth["source"]["vkospiStatus"] in {"merged", "not_available"}
+    assert breadth["source"]["vkospiStatus"] == "merged"
+    assert breadth["source"]["vkospiProvider"] == "Stockplus"
+    assert breadth["source"]["vkospiSecurityId"] == "KOREA-O2901P"
+    assert breadth["source"]["vkospiLastObservationDate"]
     assert breadth["period"]["observations"] >= 500
     assert latest["up"] + latest["down"] + latest["flat"] == latest["total"]
     assert quality["status"] in {"ok", "warning"}
@@ -757,9 +763,12 @@ def test_market_breadth_dashboard_contract():
     assert "function renderMarketBreadthPage" in app_source
     assert "function renderBreadthPriceChart" in app_source
     assert "function renderBreadthAdChart" in app_source
+    assert "function renderBreadthVkospiChart" in app_source
     assert 'id: "market-breadth", label: "시장 내부강도"' in app_source
     assert 'loadJson("./data/kospi-breadth.json")' in app_source
     assert "VKOSPI 미결합 · risk-on·panic 확정 판정 보류" in app_source
+    assert "KOSPI와 VKOSPI" in app_source
+    assert "valueKey: \"vkospi\"" in app_source
     assert "renderChartRangeControls(chartId)" in app_source
     assert "일간 확산도 (%)" in app_source
     assert "범위 -100~+100 · 0=균형" in app_source
@@ -789,6 +798,7 @@ def test_market_breadth_dashboard_contract():
     assert ".is-ma5" in styles
     assert ".breadth-chart__daily" in styles
     assert ".breadth-chart__ad" in styles
+    assert ".breadth-chart__vkospi" in styles
     assert len(market_funds["series"]) >= 1_000
     assert market_funds["latest"]["date"] == market_funds["series"][-1]["date"]
     assert "function renderDomesticFundingPanel" in app_source
@@ -1021,6 +1031,7 @@ def test_pipeline_status_contract():
         "m7-credit",
         "kb-market-funds",
         "krx-breadth",
+        "stockplus-vkospi",
     }
     assert len(status["artifacts"]) >= 9
     assert any(item["id"] == "breadth" and item["status"] == "ok" for item in status["artifacts"])
@@ -1031,6 +1042,8 @@ def test_pipeline_status_contract():
     assert quality["schemaVersion"] == 1
     assert quality["summary"]["sourceSeriesExpected"] >= 94
     assert quality["summary"]["sourceSeriesPresent"] == quality["summary"]["sourceSeriesExpected"]
+    assert any(group["id"] == "stockplus-vkospi" for group in quality["sourceGroups"])
+    assert any(check["id"] == "source:stockplus-vkospi:KOREA-O2901P" for check in quality["checks"])
     assert quality["summary"]["error"] == 0
 
 

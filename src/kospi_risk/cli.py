@@ -82,6 +82,7 @@ def cmd_update_kospi_breadth(args: argparse.Namespace) -> None:
             start_date=args.start,
             end_date=args.end,
             vkospi=args.vkospi,
+            vkospi_metadata_path=args.vkospi_metadata,
             raw_output_dir=args.raw_dir,
             metadata_path=args.metadata,
             refresh_from_start=args.refresh_from_start,
@@ -450,6 +451,7 @@ def build_parser() -> argparse.ArgumentParser:
     breadth.add_argument("--end", default=None, help="조회 종료일 YYYY-MM-DD, 기본값 오늘")
     breadth.add_argument("--output", default="data/processed/kospi_breadth.parquet")
     breadth.add_argument("--vkospi", default=None, help="선택 VKOSPI CSV 또는 Parquet")
+    breadth.add_argument("--vkospi-metadata", default=None, help="선택 VKOSPI 원천·품질 메타데이터 JSON")
     breadth.add_argument("--raw-dir", default=None, help="선택 일별 종목 원자료 Parquet 디렉터리")
     breadth.add_argument("--metadata", default="data/quality/kospi_breadth_update.json")
     breadth.add_argument("--figures", default="reports/figures/kospi_breadth")

@@ -332,6 +332,13 @@ seed_local_data_cache() {
   if [[ -f "$ROOT/data/quality/kospi_breadth_update.json" ]]; then
     cp -p "$ROOT/data/quality/kospi_breadth_update.json" "$WORKTREE/data/quality/kospi_breadth_update.json"
   fi
+  mkdir -p "$WORKTREE/data/raw/vkospi"
+  for filename in stockplus_vkospi.csv stockplus_vkospi.metadata.json; do
+    source_file="$ROOT/data/raw/vkospi/$filename"
+    if [[ -f "$source_file" ]]; then
+      cp -p "$source_file" "$WORKTREE/data/raw/vkospi/$filename"
+    fi
+  done
   mkdir -p "$WORKTREE/data/cache"
   if [[ -f "$ROOT/data/cache/walk_forward_backtest.joblib" ]]; then
     cp -p "$ROOT/data/cache/walk_forward_backtest.joblib" "$WORKTREE/data/cache/walk_forward_backtest.joblib"
@@ -355,6 +362,13 @@ persist_local_data_cache() {
   if [[ -f "$WORKTREE/data/quality/kospi_breadth_update.json" ]]; then
     cp -p "$WORKTREE/data/quality/kospi_breadth_update.json" "$ROOT/data/quality/kospi_breadth_update.json"
   fi
+  mkdir -p "$ROOT/data/raw/vkospi"
+  for filename in stockplus_vkospi.csv stockplus_vkospi.metadata.json; do
+    source_file="$WORKTREE/data/raw/vkospi/$filename"
+    if [[ -f "$source_file" ]]; then
+      cp -p "$source_file" "$ROOT/data/raw/vkospi/$filename"
+    fi
+  done
   if [[ -f "$WORKTREE/data/cache/walk_forward_backtest.joblib" ]]; then
     mkdir -p "$ROOT/data/cache"
     cp -p "$WORKTREE/data/cache/walk_forward_backtest.joblib" "$ROOT/data/cache/walk_forward_backtest.joblib"
@@ -391,12 +405,19 @@ seed_overnight_candidate
 
 update_kospi_breadth_data() {
   local end_date="$1"
+  echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 증권플러스 VKOSPI 일봉을 증분 갱신합니다: ${end_date}까지"
+  "$PYTHON_BIN" scripts/update_vkospi.py \
+    --end "$end_date" \
+    --output data/raw/vkospi/stockplus_vkospi.csv \
+    --metadata data/raw/vkospi/stockplus_vkospi.metadata.json
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] KOSPI Market Breadth를 갱신합니다: EOD ${end_date}까지"
   "$KOSPI_BREADTH_PYTHON" -m kospi_risk.cli update-kospi-breadth \
     --start 2024-01-01 \
     --end "$end_date" \
     --output data/processed/kospi_breadth.parquet \
     --metadata data/quality/kospi_breadth_update.json \
+    --vkospi data/raw/vkospi/stockplus_vkospi.csv \
+    --vkospi-metadata data/raw/vkospi/stockplus_vkospi.metadata.json \
     --raw-dir "$ROOT/data/raw/kospi_breadth" \
     --skip-plots
   "$KOSPI_BREADTH_PYTHON" scripts/export_kospi_breadth.py \

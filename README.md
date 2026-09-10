@@ -119,7 +119,7 @@ KB_OPENAPI_ENV_FILE=/Users/minhyunyoo/projects/hobby/finance-engineering-telegra
 - 비교선: 일간 확산도 20일 평균, AD Line 20일 이동평균
 - 직접 수급: 외국인·기관·프로그램 당일 및 5거래일 순매수 거래대금
 - 수급 압력: 직전 최대 252거래일 내 5일 순매도 강도 분위수, 최소 60개 관측 필요
-- 시각화: KOSPI·확산도, AD Line·20일선, `1M/3M/YTD/1Y/3Y` 공통 범위와 날짜 커서
+- 시각화: KOSPI·확산도, KOSPI·VKOSPI, AD Line·20일선, `1M/3M/YTD/1Y/3Y` 공통 범위와 날짜 커서
 - 품질표시: 원천, 마지막 관측일, 최근 종목 수 범위, 실패일, VKOSPI 결합 여부
 
 수집에는 `pykrx`와 KRX 정보데이터시스템 로그인이 필요합니다. 로컬 `.env`의 `KRX_ID`, `KRX_PW`를 사용하며 자격증명은 저장소에 포함하지 않습니다.
@@ -130,7 +130,9 @@ make update-kospi-breadth
 
 증분 갱신은 기존 Parquet의 마지막 거래일 다음 날부터 필요한 날짜만 조회합니다. 프로그램 순매수 최초 적재는 KRX 호출 제한을 고려해 최근 80거래일로 제한합니다. 예약 작업은 07:30·12:30에는 직전 EOD, 15:35 이후에는 당일 EOD를 시도하며 KRX가 아직 당일 값을 제공하지 않으면 기존 최신일을 보존합니다.
 
-AD Line 절대값은 데이터 저장 시작일에 따라 달라지므로 다른 시작점의 파일끼리 수준을 직접 비교하지 않습니다. 현재 검증된 VKOSPI 일별 원천은 연결하지 않았으며, 임의 대체값 없이 `미결합`으로 표시합니다. 따라서 지수·breadth만으로 대형주 편중 여부는 관찰할 수 있지만 건강한 risk-on·panic 확정 판정은 보류합니다. 상세 산식과 sanity check는 [KOSPI Market Breadth 운영 가이드](docs/kospi_market_breadth.md)에 정리했습니다.
+VKOSPI는 증권플러스 `KOREA-O2901P` 공개 일봉을 500건 단위로 수집합니다. 최초에는 2009년부터 적재하고 이후에는 최근 10일을 중첩 조회해 수정값을 반영합니다. 원천 장애 시 직전 검증 캐시를 보존하고, 결측값을 임의 보간하지 않습니다. KOSPI200 HMM도 이 캐시를 우선 사용하며 연결 실패 시에만 기존 대체 경로로 내려갑니다.
+
+AD Line 절대값은 데이터 저장 시작일에 따라 달라지므로 다른 시작점의 파일끼리 수준을 직접 비교하지 않습니다. 상세 산식과 sanity check는 [KOSPI Market Breadth 운영 가이드](docs/kospi_market_breadth.md)에 정리했습니다.
 
 
 ## M7 Credit Stress Proxy
