@@ -150,5 +150,5 @@ def test_kospi200_hmm_prefers_stockplus_vkospi_cache(monkeypatch, tmp_path):
 
     assert frame is not None and len(frame) == 100
     assert symbol == "KOREA-O2901P"
-    assert label == "VKOSPI (증권플러스 공개 시세)"
+    assert label == "VKOSPI"
     assert frame.iloc[-1]["close"] == 24.0

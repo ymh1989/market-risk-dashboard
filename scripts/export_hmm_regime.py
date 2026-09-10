@@ -67,7 +67,7 @@ INDICES = [
         "id": "kospi200",
         "symbol": "^KS200",
         "volSymbols": ["^VKOSPI"],
-        "stockplusVol": {"symbol": "KOREA-O2901P", "label": "VKOSPI (증권플러스 공개 시세)"},
+        "stockplusVol": {"symbol": "KOREA-O2901P", "label": "VKOSPI"},
         "investingVol": {"url": INVESTING_VKOSPI_HISTORY_URL, "symbol": "KSVKOSPI", "label": "VKOSPI (Investing.com)"},
         "preferStockplusVol": True,
         "label": "KOSPI200",
