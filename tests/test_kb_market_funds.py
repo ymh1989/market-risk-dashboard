@@ -9,6 +9,7 @@ from kospi_risk.kb_market_funds import (
     KbMarketFundsError,
     KbOpenApiClient,
     KbOpenApiConfig,
+    SCORE_SMOOTHING_ALPHA,
     parse_market_funds_response,
     update_market_funds_payload,
 )
@@ -106,6 +107,40 @@ def test_expanding_score_does_not_rewrite_past_when_future_rows_are_added():
 
     assert {row["date"]: row["score"] for row in extended["series"][:-1]} == prior_scores
     assert extended["series"][59]["scoreMode"] == "expanding-hybrid"
+
+
+def test_confirmed_score_uses_only_past_ewm_and_reduces_daily_noise():
+    rows = []
+    for offset in range(90):
+        observed = (datetime(2026, 1, 1, tzinfo=KST) + timedelta(days=offset)).strftime(
+            "%Y%m%d"
+        )
+        credit_balance = 30000 if offset % 2 == 0 else 39000
+        rows.append(snapshot(observed_date=observed, credit_balance=credit_balance))
+
+    payload = None
+    for row in rows:
+        payload = update_market_funds_payload(payload, row)
+
+    series = payload["series"]
+    expected = series[0]["rawScore"]
+    assert series[0]["score"] == pytest.approx(expected, abs=0.1)
+    for row in series[1:]:
+        expected = (
+            SCORE_SMOOTHING_ALPHA * row["rawScore"]
+            + (1 - SCORE_SMOOTHING_ALPHA) * expected
+        )
+        assert row["score"] == pytest.approx(expected, abs=0.15)
+
+    raw_variation = sum(
+        abs(current["rawScore"] - previous["rawScore"])
+        for previous, current in zip(series, series[1:])
+    )
+    confirmed_variation = sum(
+        abs(current["score"] - previous["score"])
+        for previous, current in zip(series, series[1:])
+    )
+    assert confirmed_variation < raw_variation * 0.5
 
 
 def test_market_indicator_is_observation_only_and_keeps_market_aggregate_context():

@@ -519,6 +519,8 @@ def kb_market_funds_indicator(payload):
     rows = payload.get("series") or []
     prior_score = float(rows[-2]["score"]) if len(rows) > 1 else float(latest["score"])
     score = float(latest["score"])
+    raw_score = float(latest.get("rawScore", score))
+    raw_gap = raw_score - score
     score_change = score - prior_score
     trend = "up" if score_change > 0.5 else "down" if score_change < -0.5 else "flat"
 
@@ -585,11 +587,15 @@ def kb_market_funds_indicator(payload):
                 f"{trillion('receivables'):.2f}조원 · 미수/예탁금 "
                 f"{pct('receivablesToDepositsPct'):.2f}%"
             ),
+            (
+                f"5일 확인점수 {score:.1f} · 당일 원점수 {raw_score:.1f} "
+                f"(확인점수 대비 {raw_gap:+.1f}점)"
+            ),
             spread_detail,
             (
                 f"FreeSIS 확정일 {latest.get('date') or '-'} · {kb_status_detail} · "
                 f"누적 {len(rows)}일 · "
-                f"{'고정 위험구간으로 초기 관찰' if len(rows) < 60 else '당시까지의 expanding 혼합 정규화'}"
+                f"{'고정 위험구간으로 초기 관찰' if len(rows) < 60 else 'expanding 혼합 정규화 후 과거방향 5일 EWM'}"
             ),
         ],
         "source": "금융투자협회 FreeSIS: 증시자금·신용공여 추이 · KB증권 OpenAPI: IVA10370 최종일",
@@ -605,6 +611,8 @@ def kb_market_funds_indicator(payload):
             "receivablesKrwTrillion": round(trillion("receivables"), 3),
             "creditToDepositsPct": round(pct("creditToDepositsPct"), 3),
             "receivablesToDepositsPct": round(pct("receivablesToDepositsPct"), 3),
+            "rawScore": round(raw_score, 1),
+            "rawScoreGap": round(raw_gap, 1),
             "corporateAa3yPct": rates.get("corporateAa3y"),
             "corporateBbb3yPct": rates.get("corporateBbb3y"),
             "cp91dPct": rates.get("cp91d"),

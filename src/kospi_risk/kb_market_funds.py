@@ -18,6 +18,8 @@ from typing import Any
 TOKEN_PATH = "/oauth2/token"
 MARKET_FUNDS_PATH = "/api/v1/iva10370"
 KST = timezone(timedelta(hours=9))
+SCORE_SMOOTHING_SPAN = 5
+SCORE_SMOOTHING_ALPHA = 2 / (SCORE_SMOOTHING_SPAN + 1)
 
 AMOUNT_FIELDS = {
     "customerDeposits": "cs_dpst",
@@ -226,7 +228,7 @@ def _historical_score(values: list[float], current: float, *, inverse: bool = Fa
 
 
 def score_market_funds_series(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """각 날짜까지의 정보만 사용해 레버리지·대기자금 관찰점수를 계산합니다."""
+    """각 날짜까지의 정보만 사용해 원점수와 5일 확인점수를 계산합니다."""
     scored: list[dict[str, Any]] = []
     component_specs = {
         "creditToDepositsPct": {"weight": 0.45, "safe": 20.0, "stress": 45.0, "inverse": False},
@@ -235,6 +237,7 @@ def score_market_funds_series(rows: list[dict[str, Any]]) -> list[dict[str, Any]
         "customerDepositsChangePct": {"weight": 0.10, "safe": 2.0, "stress": -2.0, "inverse": True},
     }
     history: dict[str, list[float]] = {name: [] for name in component_specs}
+    previous_confirmed_score: float | None = None
 
     for row in sorted(rows, key=lambda item: item["date"]):
         components = []
@@ -266,15 +269,25 @@ def score_market_funds_series(rows: list[dict[str, Any]]) -> list[dict[str, Any]
         total_weight = sum(float(item["weight"]) for item in components)
         if total_weight <= 0:
             raise KbMarketFundsError(f"{row['date']} KB 시장자금 관찰점수를 계산할 수 없습니다.")
-        score = sum(float(item["score"]) * float(item["weight"]) for item in components) / total_weight
+        raw_score = sum(
+            float(item["score"]) * float(item["weight"]) for item in components
+        ) / total_weight
+        confirmed_score = (
+            raw_score
+            if previous_confirmed_score is None
+            else SCORE_SMOOTHING_ALPHA * raw_score
+            + (1 - SCORE_SMOOTHING_ALPHA) * previous_confirmed_score
+        )
         scored.append(
             {
                 **row,
-                "score": round(max(0.0, min(100.0, score)), 1),
+                "score": round(max(0.0, min(100.0, confirmed_score)), 1),
+                "rawScore": round(max(0.0, min(100.0, raw_score)), 1),
                 "scoreMode": mode,
                 "scoreComponents": components,
             }
         )
+        previous_confirmed_score = confirmed_score
     return scored
 
 
@@ -574,6 +587,13 @@ def build_market_funds_payload(
             ],
             "normalization": "최소 60개부터 각 시점까지의 expanding 분위수 40%·z 30%·robust z 30%",
             "bootstrap": "60개 미만은 고정 위험구간",
+            "smoothing": {
+                "method": "causal-ewm",
+                "spanTradingDays": SCORE_SMOOTHING_SPAN,
+                "currentObservationWeight": round(SCORE_SMOOTHING_ALPHA, 6),
+                "displayScore": "원점수의 5거래일 과거방향 지수이동평균",
+                "shockReference": "rawScore에 당일 원점수를 별도 보존",
+            },
             "leakageControl": "날짜 t의 점수는 t까지 저장된 관측치만 사용",
             "reconciliation": "동일일 핵심 금액은 절대 10억원 또는 상대 0.1% 이내일 때만 결합",
         },

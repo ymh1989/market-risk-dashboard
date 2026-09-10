@@ -3648,7 +3648,7 @@ function renderIndicatorSourceDetail(indicator, provenance) {
   const normalization = provenance?.model?.normalization;
   const normalizationText =
     indicator.id === "kb_domestic_funding_watch"
-      ? "최근 5년 · 각 시점까지 expanding 분위수 40% · z 30% · robust z 30%"
+      ? "최근 5년 · 원점수 expanding 혼합 정규화 · 확인점수 과거방향 5D EWM"
       : normalization
         ? `최대 2년 · 분위수 ${Number(normalization.percentileWeight) * 100}% · z ${Number(normalization.zScoreWeight) * 100}% · robust z ${Number(normalization.robustZScoreWeight) * 100}%`
         : "최대 2년 · 가용 관측치 기준";
@@ -4981,6 +4981,11 @@ function marketFundingChartPoints(marketFunds) {
       return {
         date: point.date,
         score: Number.isFinite(Number(point.score)) ? Number(point.score) : null,
+        rawScore: Number.isFinite(Number(point.rawScore))
+          ? Number(point.rawScore)
+          : Number.isFinite(Number(point.score))
+            ? Number(point.score)
+            : null,
         customerDepositsTrillion: toTrillion(amounts.customerDeposits),
         creditBalanceTrillion: toTrillion(amounts.creditBalance),
         receivablesTrillion: toTrillion(amounts.receivables),
@@ -5102,10 +5107,17 @@ function renderFundingPressureChart(marketFunds) {
     plotRight,
     series: [
       {
-        label: "부담 점수",
+        label: "5D 확인점수",
         points,
         valueKey: "score",
         color: "var(--red)",
+        format: (value) => `${formatNumber(value, 1)} / 100`
+      },
+      {
+        label: "당일 원점수",
+        points,
+        valueKey: "rawScore",
+        color: "var(--muted)",
         format: (value) => `${formatNumber(value, 1)} / 100`
       },
       {
@@ -5130,6 +5142,7 @@ function renderFundingPressureChart(marketFunds) {
           <g transform="translate(${plotLeft} 0)">
             ${axis.grid}
             <path class="breadth-chart__grid" d="M 0 ${plotTop} L ${plotWidth} ${plotTop} M 0 ${(plotTop + plotBottom) / 2} L ${plotWidth} ${(plotTop + plotBottom) / 2} M 0 ${plotBottom} L ${plotWidth} ${plotBottom}"></path>
+            <path class="breadth-chart__funding-raw-score" d="${datedValuePath(points, "rawScore", domain, scoreDomain, plotWidth, plotTop, plotBottom)}"></path>
             <path class="breadth-chart__funding-score" d="${datedValuePath(points, "score", domain, scoreDomain, plotWidth, plotTop, plotBottom)}"></path>
             <path class="breadth-chart__funding-ratio" d="${datedValuePath(points, "creditToDepositsPct", domain, ratioDomain, plotWidth, plotTop, plotBottom)}"></path>
             ${axis.labels}
@@ -5148,14 +5161,14 @@ function renderFundingPressureChart(marketFunds) {
     <article class="breadth-chart-card breadth-chart-card--funding">
       <header>
         <div><span class="eyebrow">Leverage Buffer</span><h3>레버리지 부담과 완충력</h3></div>
-        <div class="breadth-chart-legend"><span><i class="is-funding-score"></i>부담 점수 · 왼쪽</span><span><i class="is-funding-ratio"></i>신용/예탁금 · 오른쪽</span></div>
+        <div class="breadth-chart-legend"><span><i class="is-funding-score"></i>5D 확인점수</span><span><i class="is-funding-raw-score"></i>당일 원점수</span><span><i class="is-funding-ratio"></i>신용/예탁금</span></div>
       </header>
       <div class="breadth-chart" data-timeseries-chart="${chartId}">
         ${renderChartRangeControls(chartId)}
         ${layers}
         ${renderChartTooltip()}
       </div>
-      <p class="breadth-chart-card__note">점수 상승 = 신용·미수 부담 확대 또는 예탁금 완충력 약화 · 당시까지의 데이터만 사용한 expanding 정규화</p>
+      <p class="breadth-chart-card__note">5D 확인점수 = 당일 원점수의 과거방향 EWM · 당일 반영 33.3% · 옅은 점선은 급격한 변화 확인용 · 미래값 미사용</p>
     </article>
   `;
 }
@@ -5166,6 +5179,8 @@ function renderDomesticFundingPanel(marketFunds) {
   const amounts = latest.amountsKrwMillion ?? {};
   const derived = latest.derived ?? {};
   const score = Number(latest.score);
+  const rawScore = Number.isFinite(Number(latest.rawScore)) ? Number(latest.rawScore) : score;
+  const rawGap = rawScore - score;
   const scoreLevel = diagnosticLevel(score);
   const observations = marketFunds.series.length;
   return `
@@ -5176,10 +5191,10 @@ function renderDomesticFundingPanel(marketFunds) {
           <h3 id="breadth-funding-title">국내 레버리지·대기자금</h3>
           ${renderNarrativeList(["신용·미수 부담과 고객예탁금 완충력을 같은 날짜축으로 비교", "관찰 지표 · 종합점수와 6개 가중치에는 미반영"], "narrative-list--compact")}
         </div>
-        <div class="status-pill status-pill--${scoreLevel.tone}">부담 ${formatNumber(score, 1)}</div>
+        <div class="status-pill status-pill--${scoreLevel.tone}">확인 ${formatNumber(score, 1)}</div>
       </header>
       <div class="breadth-funding-metrics">
-        <article><span>부담 점수</span><strong>${formatNumber(score, 1)} / 100</strong><small>${latest.date} 확정치</small></article>
+        <article><span>5D 확인점수</span><strong>${formatNumber(score, 1)} / 100</strong><small>당일 ${formatNumber(rawScore, 1)} · 괴리 ${rawGap > 0 ? "+" : ""}${formatNumber(rawGap, 1)}점</small></article>
         <article><span>고객예탁금</span><strong>${formatKrwTrillion(Number(amounts.customerDeposits) / 1_000_000)}</strong><small>전일 ${formatSignedPct(derived.customerDepositsChangePct)}</small></article>
         <article><span>신용잔고</span><strong>${formatKrwTrillion(Number(amounts.creditBalance) / 1_000_000)}</strong><small>전일 ${formatSignedPct(derived.creditBalanceChangePct)}</small></article>
         <article><span>신용 / 예탁금</span><strong>${formatNumber(derived.creditToDepositsPct, 1)}%</strong><small>미수금 ${formatKrwTrillion(Number(amounts.receivables) / 1_000_000, 3)}</small></article>

@@ -7340,6 +7340,7 @@ a {
 .breadth-chart__funding-deposits,
 .breadth-chart__funding-credit,
 .breadth-chart__funding-score,
+.breadth-chart__funding-raw-score,
 .breadth-chart__funding-ratio,
 .breadth-chart__vkospi {
   fill: none;
@@ -7415,7 +7416,14 @@ a {
 
 .breadth-chart__funding-score {
   stroke: var(--red);
-  stroke-width: 2.2;
+  stroke-width: 2.5;
+}
+
+.breadth-chart__funding-raw-score {
+  stroke: var(--muted);
+  stroke-dasharray: 2 5;
+  stroke-width: 1.05;
+  opacity: 0.32;
 }
 
 .breadth-chart__funding-ratio {
@@ -7524,6 +7532,7 @@ a {
 .breadth-chart-legend .is-funding-deposits { background: var(--green); }
 .breadth-chart-legend .is-funding-credit,
 .breadth-chart-legend .is-funding-score { background: var(--red); }
+.breadth-chart-legend .is-funding-raw-score { background: var(--muted); opacity: 0.55; }
 .breadth-chart-legend .is-funding-ratio { background: var(--amber); }
 .breadth-chart-legend .is-vkospi { background: var(--red); }
 
