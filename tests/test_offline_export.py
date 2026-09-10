@@ -49,6 +49,8 @@ def test_offline_export_is_single_file_and_interactive(tmp_path):
     assert "function renderModelMonitoringPage" in html
     assert '"data/market-risk-snapshot.json"' in html
     assert '"data/data-quality.json"' in html
+    assert '"data/kb-market-funds.json":' in html
+    assert "국내 레버리지·대기자금" in html
     assert 'src="./src/app.js' not in html
     assert 'href="./src/styles.css' not in html
     assert "fetch(versioned(path)" not in html

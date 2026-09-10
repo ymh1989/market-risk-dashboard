@@ -12,6 +12,7 @@ BACKTEST_FILE = ROOT / "data" / "market-risk-backtest.json"
 STRESS_FILE = ROOT / "data" / "market-stress-episodes.json"
 ELS_FILE = ROOT / "data" / "els-index-risk.json"
 BREADTH_FILE = ROOT / "data" / "kospi-breadth.json"
+KB_MARKET_FUNDS_FILE = ROOT / "data" / "kb-market-funds.json"
 STYLES_FILE = ROOT / "src" / "styles.css"
 APP_FILE = ROOT / "src" / "app.js"
 TARGETS_FILE = ROOT / "src" / "kospi_risk" / "targets.py"
@@ -291,8 +292,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260905-1" in html
-    assert "app.js?v=20260905-1" in html
+    assert "styles.css?v=20260910-1" in html
+    assert "app.js?v=20260910-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -740,6 +741,7 @@ def test_ml_crash_chart_distinguishes_model_target_and_els_reference():
 
 def test_market_breadth_dashboard_contract():
     breadth = json.loads(BREADTH_FILE.read_text(encoding="utf-8"))
+    market_funds = json.loads(KB_MARKET_FUNDS_FILE.read_text(encoding="utf-8"))
     app_source = APP_FILE.read_text(encoding="utf-8")
     styles = STYLES_FILE.read_text(encoding="utf-8")
 
@@ -787,6 +789,19 @@ def test_market_breadth_dashboard_contract():
     assert ".is-ma5" in styles
     assert ".breadth-chart__daily" in styles
     assert ".breadth-chart__ad" in styles
+    assert len(market_funds["series"]) >= 1_000
+    assert market_funds["latest"]["date"] == market_funds["series"][-1]["date"]
+    assert "function renderDomesticFundingPanel" in app_source
+    assert "function renderFundingBalanceChart" in app_source
+    assert "function renderFundingPressureChart" in app_source
+    assert "renderMarketBreadthPage(breadthData, marketFunds)" in app_source
+    assert 'loadJson("./data/kb-market-funds.json")' in app_source
+    assert "신용잔고와 고객예탁금" in app_source
+    assert "레버리지 부담과 완충력" in app_source
+    assert "선택 기간 첫날=100" in app_source
+    assert ".breadth-funding-panel" in styles
+    assert ".breadth-chart__funding-deposits" in styles
+    assert ".breadth-chart__funding-score" in styles
 
 
 def test_weighted_group_timeline_contract():

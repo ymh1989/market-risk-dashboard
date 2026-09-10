@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260905-1";
+const ASSET_VERSION = "20260910-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -189,6 +189,11 @@ const formatSignedEok = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
   const number = Number(value);
   return `${number > 0 ? "+" : ""}${formatNumber(number, Math.abs(number) < 100 ? 1 : 0)}억원`;
+};
+const formatKrwTrillion = (value, digits = 2) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "-";
+  return `${formatNumber(number, digits)}조원`;
 };
 const formatPointDelta = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
@@ -4887,7 +4892,235 @@ function renderBreadthFlowChart(breadthData) {
   `;
 }
 
-function renderMarketBreadthPage(breadthData) {
+function marketFundingChartPoints(marketFunds) {
+  return (marketFunds?.series ?? [])
+    .map((point) => {
+      const amounts = point.amountsKrwMillion ?? {};
+      const derived = point.derived ?? {};
+      const toTrillion = (value) => {
+        const number = Number(value);
+        return Number.isFinite(number) ? number / 1_000_000 : null;
+      };
+      return {
+        date: point.date,
+        score: Number.isFinite(Number(point.score)) ? Number(point.score) : null,
+        customerDepositsTrillion: toTrillion(amounts.customerDeposits),
+        creditBalanceTrillion: toTrillion(amounts.creditBalance),
+        receivablesTrillion: toTrillion(amounts.receivables),
+        creditToDepositsPct: Number.isFinite(Number(derived.creditToDepositsPct))
+          ? Number(derived.creditToDepositsPct)
+          : null
+      };
+    })
+    .filter((point) => point.date);
+}
+
+function renderFundingBalanceChart(marketFunds) {
+  const points = marketFundingChartPoints(marketFunds);
+  if (points.length < 2) return "";
+  const chartWidth = 760;
+  const plotLeft = 58;
+  const plotRight = 748;
+  const plotWidth = plotRight - plotLeft;
+  const plotTop = 18;
+  const plotBottom = 190;
+  const chartId = registerInteractiveChart({
+    width: chartWidth,
+    plotLeft,
+    plotRight,
+    series: [
+      {
+        label: "고객예탁금",
+        points,
+        valueKey: "customerDepositsTrillion",
+        color: "var(--green)",
+        format: (value) => formatKrwTrillion(value)
+      },
+      {
+        label: "신용잔고",
+        points,
+        valueKey: "creditBalanceTrillion",
+        color: "var(--red)",
+        format: (value) => formatKrwTrillion(value)
+      },
+      {
+        label: "미수금",
+        points,
+        valueKey: "receivablesTrillion",
+        color: "var(--amber)",
+        format: (value) => formatKrwTrillion(value, 3)
+      }
+    ]
+  });
+  const layers = chartRangeOptions
+    .map((range) => {
+      const domain = chartRangeDomain([points], range.id);
+      const visible = pointsWithinDomain(points, domain);
+      const firstDeposits = visible.find((point) => Number.isFinite(point.customerDepositsTrillion))?.customerDepositsTrillion;
+      const firstCredit = visible.find((point) => Number.isFinite(point.creditBalanceTrillion))?.creditBalanceTrillion;
+      const indexed = visible.map((point) => ({
+        ...point,
+        depositsIndex:
+          firstDeposits && Number.isFinite(point.customerDepositsTrillion)
+            ? (point.customerDepositsTrillion / firstDeposits) * 100
+            : null,
+        creditIndex:
+          firstCredit && Number.isFinite(point.creditBalanceTrillion)
+            ? (point.creditBalanceTrillion / firstCredit) * 100
+            : null
+      }));
+      const combined = indexed.flatMap((point) =>
+        [point.depositsIndex, point.creditIndex]
+          .filter(Number.isFinite)
+          .map((value) => ({ value }))
+      );
+      const valueDomain = numericChartDomain(combined, "value", 0.12);
+      const ticks = [valueDomain.max, (valueDomain.max + valueDomain.min) / 2, valueDomain.min];
+      const axis = renderMonthAxisFromDomain(domain, plotWidth, plotTop, plotBottom, 207);
+      return `
+        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 ${chartWidth} 210" role="img" aria-label="조회 기간 첫날을 100으로 환산한 고객예탁금과 신용잔고 흐름">
+          <g transform="translate(${plotLeft} 0)">
+            ${axis.grid}
+            <path class="breadth-chart__grid" d="M 0 ${plotTop} L ${plotWidth} ${plotTop} M 0 ${(plotTop + plotBottom) / 2} L ${plotWidth} ${(plotTop + plotBottom) / 2} M 0 ${plotBottom} L ${plotWidth} ${plotBottom}"></path>
+            <path class="breadth-chart__funding-deposits" d="${datedValuePath(indexed, "depositsIndex", domain, valueDomain, plotWidth, plotTop, plotBottom)}"></path>
+            <path class="breadth-chart__funding-credit" d="${datedValuePath(indexed, "creditIndex", domain, valueDomain, plotWidth, plotTop, plotBottom)}"></path>
+            ${axis.labels}
+          </g>
+          <text class="breadth-chart__axis-title is-funding" x="4" y="13">기간 첫날=100</text>
+          ${ticks.map((value, index) => `<text class="breadth-chart__axis-value" x="4" y="${[plotTop, (plotTop + plotBottom) / 2, plotBottom][index] + 4}">${formatNumber(value, 1)}</text>`).join("")}
+          ${renderChartCursorLine(plotTop, plotBottom)}
+        </svg>
+      `;
+    })
+    .join("");
+
+  return `
+    <article class="breadth-chart-card breadth-chart-card--funding">
+      <header>
+        <div><span class="eyebrow">Funding Balance</span><h3>신용잔고와 고객예탁금</h3></div>
+        <div class="breadth-chart-legend"><span><i class="is-funding-deposits"></i>고객예탁금</span><span><i class="is-funding-credit"></i>신용잔고</span></div>
+      </header>
+      <div class="breadth-chart" data-timeseries-chart="${chartId}">
+        ${renderChartRangeControls(chartId)}
+        ${layers}
+        ${renderChartTooltip()}
+      </div>
+      <p class="breadth-chart-card__note">선의 방향 비교를 위해 선택 기간 첫날=100으로 환산 · 마우스 조회값은 실제 조원 잔액</p>
+    </article>
+  `;
+}
+
+function renderFundingPressureChart(marketFunds) {
+  const points = marketFundingChartPoints(marketFunds);
+  if (points.length < 2) return "";
+  const chartWidth = 760;
+  const plotLeft = 64;
+  const plotRight = 696;
+  const plotWidth = plotRight - plotLeft;
+  const plotTop = 18;
+  const plotBottom = 190;
+  const chartId = registerInteractiveChart({
+    width: chartWidth,
+    plotLeft,
+    plotRight,
+    series: [
+      {
+        label: "부담 점수",
+        points,
+        valueKey: "score",
+        color: "var(--red)",
+        format: (value) => `${formatNumber(value, 1)} / 100`
+      },
+      {
+        label: "신용/예탁금",
+        points,
+        valueKey: "creditToDepositsPct",
+        color: "var(--amber)",
+        format: (value) => `${formatNumber(value, 1)}%`
+      }
+    ]
+  });
+  const scoreDomain = { min: 0, max: 100 };
+  const layers = chartRangeOptions
+    .map((range) => {
+      const domain = chartRangeDomain([points], range.id);
+      const visible = pointsWithinDomain(points, domain, "creditToDepositsPct");
+      const ratioDomain = numericChartDomain(visible, "creditToDepositsPct", 0.15);
+      const axis = renderMonthAxisFromDomain(domain, plotWidth, plotTop, plotBottom, 207);
+      const ratioTicks = [ratioDomain.max, (ratioDomain.max + ratioDomain.min) / 2, ratioDomain.min];
+      return `
+        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 ${chartWidth} 210" role="img" aria-label="레버리지 부담 점수와 신용잔고 대비 고객예탁금 비율">
+          <g transform="translate(${plotLeft} 0)">
+            ${axis.grid}
+            <path class="breadth-chart__grid" d="M 0 ${plotTop} L ${plotWidth} ${plotTop} M 0 ${(plotTop + plotBottom) / 2} L ${plotWidth} ${(plotTop + plotBottom) / 2} M 0 ${plotBottom} L ${plotWidth} ${plotBottom}"></path>
+            <path class="breadth-chart__funding-score" d="${datedValuePath(points, "score", domain, scoreDomain, plotWidth, plotTop, plotBottom)}"></path>
+            <path class="breadth-chart__funding-ratio" d="${datedValuePath(points, "creditToDepositsPct", domain, ratioDomain, plotWidth, plotTop, plotBottom)}"></path>
+            ${axis.labels}
+          </g>
+          <text class="breadth-chart__axis-title is-score" x="4" y="13">부담점수</text>
+          ${[100, 50, 0].map((value, index) => `<text class="breadth-chart__axis-value" x="4" y="${[plotTop, (plotTop + plotBottom) / 2, plotBottom][index] + 4}">${value}</text>`).join("")}
+          <text class="breadth-chart__axis-title is-ratio" x="756" y="13" text-anchor="end">신용/예탁금</text>
+          ${ratioTicks.map((value, index) => `<text class="breadth-chart__axis-value" x="756" y="${[plotTop, (plotTop + plotBottom) / 2, plotBottom][index] + 4}" text-anchor="end">${formatNumber(value, 1)}%</text>`).join("")}
+          ${renderChartCursorLine(plotTop, plotBottom)}
+        </svg>
+      `;
+    })
+    .join("");
+
+  return `
+    <article class="breadth-chart-card breadth-chart-card--funding">
+      <header>
+        <div><span class="eyebrow">Leverage Buffer</span><h3>레버리지 부담과 완충력</h3></div>
+        <div class="breadth-chart-legend"><span><i class="is-funding-score"></i>부담 점수 · 왼쪽</span><span><i class="is-funding-ratio"></i>신용/예탁금 · 오른쪽</span></div>
+      </header>
+      <div class="breadth-chart" data-timeseries-chart="${chartId}">
+        ${renderChartRangeControls(chartId)}
+        ${layers}
+        ${renderChartTooltip()}
+      </div>
+      <p class="breadth-chart-card__note">점수 상승 = 신용·미수 부담 확대 또는 예탁금 완충력 약화 · 당시까지의 데이터만 사용한 expanding 정규화</p>
+    </article>
+  `;
+}
+
+function renderDomesticFundingPanel(marketFunds) {
+  const latest = marketFunds?.latest;
+  if (!latest || !marketFunds?.series?.length) return "";
+  const amounts = latest.amountsKrwMillion ?? {};
+  const derived = latest.derived ?? {};
+  const score = Number(latest.score);
+  const scoreLevel = diagnosticLevel(score);
+  const observations = marketFunds.series.length;
+  return `
+    <section class="breadth-funding-panel" aria-labelledby="breadth-funding-title">
+      <header class="breadth-funding-panel__header">
+        <div>
+          <span class="eyebrow">Domestic Leverage & Cash Buffer</span>
+          <h3 id="breadth-funding-title">국내 레버리지·대기자금</h3>
+          ${renderNarrativeList(["신용·미수 부담과 고객예탁금 완충력을 같은 날짜축으로 비교", "관찰 지표 · 종합점수와 6개 가중치에는 미반영"], "narrative-list--compact")}
+        </div>
+        <div class="status-pill status-pill--${scoreLevel.tone}">부담 ${formatNumber(score, 1)}</div>
+      </header>
+      <div class="breadth-funding-metrics">
+        <article><span>부담 점수</span><strong>${formatNumber(score, 1)} / 100</strong><small>${latest.date} 확정치</small></article>
+        <article><span>고객예탁금</span><strong>${formatKrwTrillion(Number(amounts.customerDeposits) / 1_000_000)}</strong><small>전일 ${formatSignedPct(derived.customerDepositsChangePct)}</small></article>
+        <article><span>신용잔고</span><strong>${formatKrwTrillion(Number(amounts.creditBalance) / 1_000_000)}</strong><small>전일 ${formatSignedPct(derived.creditBalanceChangePct)}</small></article>
+        <article><span>신용 / 예탁금</span><strong>${formatNumber(derived.creditToDepositsPct, 1)}%</strong><small>미수금 ${formatKrwTrillion(Number(amounts.receivables) / 1_000_000, 3)}</small></article>
+      </div>
+      <div class="breadth-chart-grid breadth-funding-charts">
+        ${renderFundingBalanceChart(marketFunds)}
+        ${renderFundingPressureChart(marketFunds)}
+      </div>
+      <footer class="breadth-funding-panel__footer">
+        <span>금융투자협회 FreeSIS 일별 확정치</span>
+        <span>${formatNumber(observations)}거래일 · ${marketFunds.series[0]?.date} ~ ${latest.date}</span>
+        <span>KB증권 OpenAPI는 최신일 대조·금리 보강</span>
+      </footer>
+    </section>
+  `;
+}
+
+function renderMarketBreadthPage(breadthData, marketFunds) {
   if (!breadthData?.latest || !breadthData?.series?.length) {
     return `
       <section class="breadth-page">
@@ -4948,6 +5181,8 @@ function renderMarketBreadthPage(breadthData) {
           "수급 진단 전용 · 기존 종합점수와 6개 가중치에는 미반영"
         ], "narrative-list--compact")}
       </section>
+
+      ${renderDomesticFundingPanel(marketFunds)}
 
       <section class="breadth-unit-guide" aria-label="시장 내부강도 단위 읽는 법">
         <strong>단위 읽는 법</strong>
@@ -6142,7 +6377,8 @@ function renderDashboard(
   sourceSnapshot,
   dataQuality,
   stressEpisodes,
-  breadthData
+  breadthData,
+  marketFunds
 ) {
   interactiveChartRegistry.clear();
   interactiveChartSequence = 0;
@@ -6267,7 +6503,7 @@ function renderDashboard(
         tabindex="0"
         ${breadthState.hidden}
       >
-        ${renderMarketBreadthPage(breadthData)}
+        ${renderMarketBreadthPage(breadthData, marketFunds)}
       </section>
       ${
         IS_OFFLINE_SNAPSHOT
@@ -6682,9 +6918,10 @@ Promise.all([
   loadJson("./data/market-risk-snapshot.json"),
   loadJson("./data/data-quality.json"),
   loadJson("./data/market-stress-episodes.json"),
-  loadJson("./data/kospi-breadth.json")
+  loadJson("./data/kospi-breadth.json"),
+  loadJson("./data/kb-market-funds.json")
 ])
-  .then(([publicationManifest, dashboard, timeseries, mlRisk, elsRisk, hmmRegime, pipelineStatus, sourceSnapshot, dataQuality, stressEpisodes, breadthData]) => {
+  .then(([publicationManifest, dashboard, timeseries, mlRisk, elsRisk, hmmRegime, pipelineStatus, sourceSnapshot, dataQuality, stressEpisodes, breadthData, marketFunds]) => {
     validatePublicationBundle(publicationManifest, [
       { path: "risk-dashboard.json", payload: dashboard },
       { path: "market-risk-timeseries.json", payload: timeseries },
@@ -6695,7 +6932,8 @@ Promise.all([
       { path: "market-risk-snapshot.json", payload: sourceSnapshot },
       { path: "data-quality.json", payload: dataQuality },
       { path: "market-stress-episodes.json", payload: stressEpisodes },
-      { path: "kospi-breadth.json", payload: breadthData }
+      { path: "kospi-breadth.json", payload: breadthData },
+      { path: "kb-market-funds.json", payload: marketFunds }
     ]);
     return renderDashboard(
       dashboard,
@@ -6707,7 +6945,8 @@ Promise.all([
       sourceSnapshot,
       dataQuality,
       stressEpisodes,
-      breadthData
+      breadthData,
+      marketFunds
     );
   })
   .catch((error) => {

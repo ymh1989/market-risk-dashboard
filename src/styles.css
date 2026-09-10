@@ -7119,6 +7119,68 @@ a {
   font-size: 1rem;
 }
 
+.breadth-funding-panel {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 20px 0;
+}
+
+.breadth-funding-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.breadth-funding-panel__header h3 {
+  margin: 4px 0 7px;
+  font-size: 1.08rem;
+}
+
+.breadth-funding-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+}
+
+.breadth-funding-metrics article {
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px;
+}
+
+.breadth-funding-metrics article + article {
+  border-left: 1px solid var(--line);
+}
+
+.breadth-funding-metrics span,
+.breadth-funding-metrics small,
+.breadth-funding-panel__footer {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.breadth-funding-metrics strong {
+  font-size: 1rem;
+}
+
+.breadth-funding-panel__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  line-height: 1.5;
+}
+
+.breadth-funding-panel__footer span + span::before {
+  content: "·";
+  margin-right: 16px;
+  color: var(--line-strong);
+}
+
 .breadth-unit-guide {
   display: grid;
   grid-template-columns: auto repeat(3, minmax(0, 1fr));
@@ -7269,7 +7331,11 @@ a {
 .breadth-chart__ad-ma,
 .breadth-chart__flow-foreign,
 .breadth-chart__flow-institution,
-.breadth-chart__flow-program {
+.breadth-chart__flow-program,
+.breadth-chart__funding-deposits,
+.breadth-chart__funding-credit,
+.breadth-chart__funding-score,
+.breadth-chart__funding-ratio {
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -7331,6 +7397,27 @@ a {
   stroke-width: 1.8;
 }
 
+.breadth-chart__funding-deposits {
+  stroke: var(--green);
+  stroke-width: 2.35;
+}
+
+.breadth-chart__funding-credit {
+  stroke: var(--red);
+  stroke-width: 2.15;
+}
+
+.breadth-chart__funding-score {
+  stroke: var(--red);
+  stroke-width: 2.2;
+}
+
+.breadth-chart__funding-ratio {
+  stroke: var(--amber);
+  stroke-dasharray: 6 4;
+  stroke-width: 1.8;
+}
+
 .breadth-chart-card--flow {
   grid-column: 1 / -1;
 }
@@ -7372,6 +7459,18 @@ a {
   fill: var(--teal);
 }
 
+.breadth-chart__axis-title.is-funding {
+  fill: var(--green);
+}
+
+.breadth-chart__axis-title.is-score {
+  fill: var(--red);
+}
+
+.breadth-chart__axis-title.is-ratio {
+  fill: var(--amber);
+}
+
 .breadth-chart-card--dual-axis .chart-month-label {
   fill: color-mix(in srgb, var(--ink) 72%, var(--muted));
   font-size: 12px;
@@ -7407,6 +7506,10 @@ a {
 .breadth-chart-legend .is-flow-foreign { background: var(--blue); }
 .breadth-chart-legend .is-flow-institution { background: var(--green); }
 .breadth-chart-legend .is-flow-program { background: var(--amber); }
+.breadth-chart-legend .is-funding-deposits { background: var(--green); }
+.breadth-chart-legend .is-funding-credit,
+.breadth-chart-legend .is-funding-score { background: var(--red); }
+.breadth-chart-legend .is-funding-ratio { background: var(--amber); }
 
 .breadth-chart-card__note {
   margin: 8px 0 0;
@@ -7482,6 +7585,7 @@ a {
 
   .breadth-metrics,
   .breadth-flow-metrics,
+  .breadth-funding-metrics,
   .breadth-chart-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -7504,6 +7608,7 @@ a {
   .breadth-summary dl,
   .breadth-metrics,
   .breadth-flow-metrics,
+  .breadth-funding-metrics,
   .breadth-chart-grid,
   .breadth-trust,
   .breadth-trust dl {
@@ -7521,9 +7626,27 @@ a {
     flex-direction: column;
   }
 
+  .breadth-funding-panel__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .breadth-flow-metrics article + article {
     border-top: 1px solid var(--line);
     border-left: 0;
+  }
+
+  .breadth-funding-metrics article + article {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .breadth-funding-panel__footer {
+    display: grid;
+  }
+
+  .breadth-funding-panel__footer span + span::before {
+    content: none;
   }
 
   .breadth-state {

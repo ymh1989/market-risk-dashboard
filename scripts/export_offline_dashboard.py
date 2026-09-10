@@ -24,6 +24,7 @@ DATA_FILES = [
     "data/market-risk-backtest.json",
     "data/market-stress-episodes.json",
     "data/kospi-breadth.json",
+    "data/kb-market-funds.json",
 ]
 
 
