@@ -292,8 +292,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260910-3" in html
-    assert "app.js?v=20260910-3" in html
+    assert "styles.css?v=20260911-1" in html
+    assert "app.js?v=20260911-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -677,6 +677,11 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert "renderObservationJournal(section, timeseries)" in section_source
     assert "시장 의견 검증 일지" in app_source
     assert ".observation-journal__item" in styles
+    assert 'key: "change3d"' in app_source
+    assert 'label: "3D"' in app_source
+    assert 'offset: 3' in app_source
+    assert '["3D", valueChange(currentValue, points, 3)]' in app_source
+    assert "grid-template-columns: repeat(4, minmax(0, 1fr));" in styles
 
 
 def test_interactive_timeline_range_and_cursor_contract():

@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260910-2";
+const ASSET_VERSION = "20260911-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -27,6 +27,13 @@ const indicatorSortOptions = [
     description: "전일 대비 점수 상승폭이 큰 지표부터 봅니다.",
     reverseDescription: "전일 대비 점수 하락폭이 큰 지표부터 봅니다.",
     offset: 1
+  },
+  {
+    key: "change3d",
+    label: "3D",
+    description: "최근 3거래일 점수 상승폭이 큰 지표부터 봅니다.",
+    reverseDescription: "최근 3거래일 점수 하락폭이 큰 지표부터 봅니다.",
+    offset: 3
   },
   {
     key: "change1w",
@@ -371,6 +378,7 @@ function changeTone(value) {
 function renderChangePills(currentValue, points) {
   const changes = [
     ["1D", valueChange(currentValue, points, 1)],
+    ["3D", valueChange(currentValue, points, 3)],
     ["1W", valueChange(currentValue, points, 5)],
     ["1M", valueChange(currentValue, points, 20)]
   ];
