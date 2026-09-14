@@ -292,7 +292,7 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260911-1" in html
+    assert "styles.css?v=20260914-1" in html
     assert "app.js?v=20260911-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
@@ -656,6 +656,12 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert 'data-indicator-filter-reset="${sectionId}"' in app_source
     assert ".group-card:has(.group-card__info:hover) .group-card__tooltip" in styles
     assert ".group-card:has(.group-card__info:focus-visible) .group-card__tooltip" in styles
+    assert ".group-card:has(.group-card__tooltip:hover) .group-card__tooltip" in styles
+    assert "top: 48px;" in styles
+    assert "max-height: min(480px, calc(100vh - 96px));" in styles
+    assert ".change-pills .change-pill" in styles
+    assert "grid-template-columns: minmax(0, 1fr);" in styles
+    assert "justify-items: center;" in styles
     assert "엔화 약세" in app_source
     assert '{ id: "jp10y_naver", label: "일본 10년"' in app_source
     assert '{ id: "usdkrw_naver", label: "원/달러"' in app_source

@@ -4018,10 +4018,11 @@ a {
   visibility: hidden;
   z-index: 30;
   position: absolute;
-  top: calc(100% - 4px);
-  left: 50%;
-  width: min(390px, calc(100vw - 48px));
-  max-height: min(480px, 66vh);
+  top: 48px;
+  right: 14px;
+  left: 14px;
+  width: auto;
+  max-height: min(480px, calc(100vh - 96px));
   gap: 8px;
   overflow-y: auto;
   border: 1px solid color-mix(in srgb, var(--group-accent) 58%, #ffffff);
@@ -4032,7 +4033,7 @@ a {
   opacity: 0;
   padding: 15px;
   pointer-events: none;
-  transform: translate(-50%, 6px);
+  transform: translateY(-6px);
   transition:
     opacity 140ms ease,
     transform 140ms ease,
@@ -4040,11 +4041,12 @@ a {
 }
 
 .group-card:has(.group-card__info:hover) .group-card__tooltip,
-.group-card:has(.group-card__info:focus-visible) .group-card__tooltip {
+.group-card:has(.group-card__info:focus-visible) .group-card__tooltip,
+.group-card:has(.group-card__tooltip:hover) .group-card__tooltip {
   visibility: visible;
   opacity: 1;
   pointer-events: auto;
-  transform: translate(-50%, 0);
+  transform: translateY(0);
 }
 
 .group-card__tooltip > strong {
@@ -4213,13 +4215,32 @@ a {
 .change-pills {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
 }
 
 .change-pills .change-pill {
-  grid-template-columns: 1fr auto;
+  box-sizing: border-box;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  width: 100%;
   min-width: 0;
-  padding: 7px 8px;
+  gap: 3px;
+  overflow: hidden;
+  padding: 6px 4px;
+  text-align: center;
+}
+
+.change-pills .change-pill small,
+.change-pills .change-pill strong {
+  max-width: 100%;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.change-pills .change-pill strong {
+  font-size: 0.78rem;
 }
 
 .risk-section {
