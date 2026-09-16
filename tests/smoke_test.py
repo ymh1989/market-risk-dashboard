@@ -239,6 +239,7 @@ def test_dashboard_contract():
     performance_assets = [*els_risk["indices"], *els_risk["singleStocks"]]
     assert len(performance_assets) == 7
     for item in performance_assets:
+        assert item["metrics"]["returnYtdPct"] is not None
         price_series = item.get("sixMonthPriceSeries") or item["ytdPriceSeries"]
         assert len(price_series) >= 60
         assert [point["date"] for point in price_series] == sorted(
