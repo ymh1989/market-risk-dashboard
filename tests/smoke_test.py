@@ -236,6 +236,14 @@ def test_dashboard_contract():
     assert 0 <= issuance_map["basket"]["hedgeBurdenScore"] <= 100
     assert len(issuance_map["singleStocks"]) == 2
     assert {item["id"] for item in issuance_map["singleStocks"]} == {"samsung", "hynix"}
+    performance_assets = [*els_risk["indices"], *els_risk["singleStocks"]]
+    assert len(performance_assets) == 7
+    for item in performance_assets:
+        price_series = item.get("sixMonthPriceSeries") or item["ytdPriceSeries"]
+        assert len(price_series) >= 60
+        assert [point["date"] for point in price_series] == sorted(
+            point["date"] for point in price_series
+        )
     for item in issuance_map["items"]:
         assert item["stance"] in {"발행기회", "선별발행", "헤지주의", "발행부담"}
         assert 0 <= item["opportunityScore"] <= 100
@@ -292,8 +300,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260914-1" in html
-    assert "app.js?v=20260911-1" in html
+    assert "styles.css?v=20260916-1" in html
+    assert "app.js?v=20260916-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -558,6 +566,19 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert 'id: "operations", label: "운영현황"' in app_source
     assert 'id: "els-issuance", label: "ELS 발행·헤지"' in app_source
     assert "renderElsIssuanceHedgePage" in app_source
+    assert "renderElsPerformancePanel" in app_source
+    assert "기초자산 수익률" in app_source
+    assert 'const stocks = elsRisk?.singleStocks' in app_source
+    assert '["1D", "return1dPct"]' in app_source
+    assert '["6M", "return6mPct"]' in app_source
+    assert "renderElsPriceSparkline" in app_source
+    assert "elsDerivedPeriodReturns" in app_source
+    assert "VIX" in app_source and "VKOSPI" in app_source
+    assert 'return number > 0 ? "up" : "down"' in app_source
+    assert 'els-return els-return--${tone}' in app_source
+    assert ".els-performance-table" in styles
+    assert ".els-performance-sparkline--up" in styles
+    assert ".els-performance-sparkline--down" in styles
     assert 'class="els-index-card__asof"' in app_source
     assert '${item.label}<small>${item.lastDate ?? "-"}</small>' in app_source
     assert 'data-els-window="${window.id}"' in app_source

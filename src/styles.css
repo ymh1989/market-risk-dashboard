@@ -1607,6 +1607,7 @@ a {
 }
 
 .els-issuance-heading,
+.els-performance-panel,
 .els-opportunity-map,
 .els-episode-review,
 .els-comparison,
@@ -1678,6 +1679,237 @@ a {
 .els-issuance-facts strong {
   overflow-wrap: anywhere;
   font-size: 1.35rem;
+}
+
+.els-performance-panel {
+  overflow: hidden;
+}
+
+.els-performance-panel__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.els-performance-panel__header h3 {
+  margin: 5px 0 0;
+  font-size: 1.05rem;
+}
+
+.els-performance-panel__header small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.els-performance-panel__header b,
+.els-performance-panel__header em {
+  font-style: normal;
+}
+
+.els-performance-panel__header b {
+  color: var(--red);
+}
+
+.els-performance-panel__header em {
+  color: var(--blue);
+}
+
+.els-performance-table-wrap {
+  overflow-x: auto;
+  background: var(--surface-raised);
+}
+
+.els-performance-table {
+  width: 100%;
+  min-width: 1030px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.els-performance-table th,
+.els-performance-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 11px 10px;
+  text-align: right;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.els-performance-table thead th {
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.els-performance-table thead th:first-child,
+.els-performance-table tbody th {
+  width: 152px;
+  padding-left: 18px;
+  text-align: left;
+}
+
+.els-performance-table thead th:nth-child(2),
+.els-performance-table td:nth-child(2) {
+  width: 176px;
+  text-align: center;
+}
+
+.els-performance-table thead th:last-child,
+.els-performance-table td:last-child {
+  width: 126px;
+}
+
+.els-performance-table tbody tr:last-child th,
+.els-performance-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.els-performance-table tbody th {
+  background: var(--surface-raised);
+}
+
+.els-performance-row__identity {
+  display: grid;
+  gap: 2px;
+}
+
+.els-performance-row--stock th,
+.els-performance-row--stock td {
+  background: color-mix(in srgb, var(--els-samsung) 5%, var(--surface-raised));
+}
+
+.els-performance-row--stock:last-child th,
+.els-performance-row--stock:last-child td {
+  background: color-mix(in srgb, var(--els-hynix) 6%, var(--surface-raised));
+}
+
+.els-performance-row__type {
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.61rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 6px;
+}
+
+.els-performance-row--stock .els-performance-row__type {
+  border-color: color-mix(in srgb, var(--els-samsung) 45%, var(--line));
+  color: var(--els-samsung);
+}
+
+.els-performance-row--stock:last-child .els-performance-row__type {
+  border-color: color-mix(in srgb, var(--els-hynix) 45%, var(--line));
+  color: var(--els-hynix);
+}
+
+.els-performance-table tbody th strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.els-performance-table tbody th small {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.els-performance-sparkline {
+  display: block;
+  width: 156px;
+  height: 48px;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.els-performance-sparkline--empty {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.els-performance-sparkline__baseline,
+.els-performance-sparkline__line {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.els-performance-sparkline__baseline {
+  stroke: var(--line);
+  stroke-dasharray: 3 4;
+  stroke-width: 1;
+}
+
+.els-performance-sparkline__line {
+  stroke: var(--muted);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.els-performance-sparkline__end {
+  fill: var(--muted);
+  stroke: var(--surface-raised);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.els-performance-sparkline--up .els-performance-sparkline__line {
+  stroke: var(--red);
+}
+
+.els-performance-sparkline--up .els-performance-sparkline__end {
+  fill: var(--red);
+}
+
+.els-performance-sparkline--down .els-performance-sparkline__line {
+  stroke: var(--blue);
+}
+
+.els-performance-sparkline--down .els-performance-sparkline__end {
+  fill: var(--blue);
+}
+
+.els-return {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  min-width: 68px;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.els-return i {
+  font-size: 0.58rem;
+  font-style: normal;
+}
+
+.els-return--up {
+  color: var(--red);
+}
+
+.els-return--down {
+  color: var(--blue);
+}
+
+.els-return--flat,
+.els-return--missing,
+.els-performance-row__vol {
+  color: var(--muted);
+}
+
+.els-performance-row__vol {
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .els-opportunity-map,
@@ -6489,6 +6721,7 @@ a {
   .ml-risk-panel__header,
   .els-index-panel__header,
   .els-issuance-heading,
+  .els-performance-panel__header,
   .els-opportunity-map__header,
   .els-single-stock-section__header,
   .els-episode-review__header,
@@ -6538,6 +6771,10 @@ a {
   .els-opportunity-map__header p,
   .els-opportunity-map__header .narrative-list {
     max-width: none;
+    text-align: left;
+  }
+
+  .els-performance-panel__header small {
     text-align: left;
   }
 

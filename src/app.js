@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260911-1";
+const ASSET_VERSION = "20260916-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -1958,7 +1958,190 @@ function renderElsSingleStockSection(items, methodology) {
   `;
 }
 
-function renderElsIssuanceHedgePage(elsRisk) {
+const elsPerformanceReturnColumns = [
+  ["1D", "return1dPct"],
+  ["1W", "return1wPct"],
+  ["MTD", "returnMtdPct"],
+  ["YTD", "returnYtdPct"],
+  ["3M", "return3mPct"],
+  ["6M", "return6mPct"]
+];
+
+function elsReturnTone(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || Math.abs(number) < 0.005) return "flat";
+  return number > 0 ? "up" : "down";
+}
+
+function renderElsReturn(value) {
+  if (value === null || value === undefined || value === "") {
+    return `<span class="els-return els-return--missing">–</span>`;
+  }
+  const number = Number(value);
+  if (!Number.isFinite(number)) return `<span class="els-return els-return--missing">–</span>`;
+  const tone = elsReturnTone(number);
+  const marker = tone === "up" ? "▲" : tone === "down" ? "▼" : "•";
+  return `<span class="els-return els-return--${tone}"><i aria-hidden="true">${marker}</i>${number > 0 ? "+" : ""}${number.toFixed(2)}%</span>`;
+}
+
+function elsPriceHistory(item) {
+  return (item.sixMonthPriceSeries?.length ? item.sixMonthPriceSeries : item.ytdPriceSeries ?? [])
+    .filter((point) => point?.date && Number.isFinite(Number(point.close)))
+    .map((point) => ({ date: point.date, close: Number(point.close) }))
+    .sort((left, right) => dateMs(left.date) - dateMs(right.date));
+}
+
+function elsReturnFromBase(current, base) {
+  return Number.isFinite(current) && Number.isFinite(base) && base !== 0
+    ? ((current / base) - 1) * 100
+    : null;
+}
+
+function elsDerivedPeriodReturns(item) {
+  const prices = elsPriceHistory(item);
+  const provided = item.metrics ?? {};
+  if (!prices.length) return provided;
+  const latest = prices.at(-1);
+  const latestDate = new Date(`${latest.date}T00:00:00Z`);
+  const observationReturn = (offset) =>
+    prices.length > offset ? elsReturnFromBase(latest.close, prices.at(-1 - offset).close) : null;
+  const anchorReturn = (anchor) => {
+    const eligible = prices.filter((point) => dateMs(point.date) <= anchor.getTime());
+    return eligible.length ? elsReturnFromBase(latest.close, eligible.at(-1).close) : null;
+  };
+  const monthAnchor = new Date(Date.UTC(latestDate.getUTCFullYear(), latestDate.getUTCMonth(), 0));
+  const yearAnchor = new Date(Date.UTC(latestDate.getUTCFullYear(), 0, 0));
+  const threeMonthAnchor = new Date(latestDate);
+  threeMonthAnchor.setUTCMonth(threeMonthAnchor.getUTCMonth() - 3);
+  const sixMonthAnchor = new Date(latestDate);
+  sixMonthAnchor.setUTCMonth(sixMonthAnchor.getUTCMonth() - 6);
+  const fallback = {
+    return1dPct: observationReturn(1),
+    return1wPct: observationReturn(5),
+    returnMtdPct: anchorReturn(monthAnchor),
+    returnYtdPct: anchorReturn(yearAnchor),
+    return3mPct: anchorReturn(threeMonthAnchor),
+    return6mPct: anchorReturn(sixMonthAnchor)
+  };
+
+  return Object.fromEntries(
+    elsPerformanceReturnColumns.map(([, field]) => [
+      field,
+      provided[field] === null || provided[field] === undefined || provided[field] === ""
+        ? fallback[field]
+        : provided[field]
+    ])
+  );
+}
+
+function renderElsPriceSparkline(item) {
+  const prices = elsPriceHistory(item);
+  if (prices.length < 2) {
+    return `<span class="els-performance-sparkline els-performance-sparkline--empty">데이터 없음</span>`;
+  }
+
+  const latestDate = new Date(`${prices.at(-1).date}T00:00:00Z`);
+  const cutoff = new Date(latestDate);
+  cutoff.setUTCMonth(cutoff.getUTCMonth() - 3);
+  const threeMonthPrices = prices.filter((point) => dateMs(point.date) >= cutoff.getTime());
+  const visible = threeMonthPrices.length >= 2 ? threeMonthPrices : prices.slice(-66);
+  const width = 156;
+  const height = 48;
+  const padding = 4;
+  const values = visible.map((point) => point.close);
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const span = high - low || Math.max(Math.abs(high) * 0.01, 1);
+  const coordinates = visible.map((point, index) => ({
+    x: padding + (index / Math.max(visible.length - 1, 1)) * (width - padding * 2),
+    y: padding + ((high - point.close) / span) * (height - padding * 2)
+  }));
+  const path = coordinates
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+    .join(" ");
+  const end = coordinates.at(-1);
+  const tone = elsReturnTone(item.metrics?.return3mPct ?? values.at(-1) / values[0] - 1);
+  const summary = `${visible[0].date}~${visible.at(-1).date} 종가 흐름`;
+
+  return `
+    <svg class="els-performance-sparkline els-performance-sparkline--${tone}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${item.label} ${summary}">
+      <title>${item.label} ${summary}</title>
+      <path class="els-performance-sparkline__baseline" d="M ${padding} ${height / 2} H ${width - padding}"></path>
+      <path class="els-performance-sparkline__line" d="${path}"></path>
+      <circle class="els-performance-sparkline__end" cx="${end.x.toFixed(2)}" cy="${end.y.toFixed(2)}" r="2.5"></circle>
+    </svg>
+  `;
+}
+
+function elsVolatilityLabel(item, hmmById) {
+  const regime = hmmById.get(item.id);
+  const proxyRaw = regime?.metrics?.volProxy;
+  const proxy = proxyRaw === null || proxyRaw === undefined || proxyRaw === "" ? NaN : Number(proxyRaw);
+  if (["VIX", "VKOSPI"].includes(regime?.volSource) && Number.isFinite(proxy)) {
+    return `${regime.volSource} ${proxy.toFixed(1)}`;
+  }
+  const realizedRaw = item.metrics?.realizedVol20dPct;
+  const realized = realizedRaw === null || realizedRaw === undefined || realizedRaw === "" ? NaN : Number(realizedRaw);
+  return Number.isFinite(realized) ? `실현20D ${realized.toFixed(1)}%` : "–";
+}
+
+function renderElsPerformancePanel(elsRisk, hmmRegime) {
+  const indices = elsRisk?.indices ?? [];
+  const stocks = elsRisk?.singleStocks ?? elsRisk?.issuanceHedgeMap?.singleStocks ?? [];
+  const assets = [...indices, ...stocks];
+  if (!assets.length) return "";
+  const hmmById = new Map((hmmRegime?.indices ?? []).map((item) => [item.id, item]));
+
+  return `
+    <section class="els-performance-panel" aria-labelledby="els-performance-title">
+      <header class="els-performance-panel__header">
+        <div>
+          <span class="eyebrow">Underlying Performance</span>
+          <h3 id="els-performance-title">기초자산 수익률</h3>
+        </div>
+        <small>종가 기준 · 상승 <b>빨강</b> · 하락 <em>파랑</em> · 지수 5개 + 개별종목 2개</small>
+      </header>
+      <div class="els-performance-table-wrap">
+        <table class="els-performance-table">
+          <thead>
+            <tr>
+              <th scope="col">기초자산</th>
+              <th scope="col">최근 약 3개월</th>
+              ${elsPerformanceReturnColumns.map(([label]) => `<th scope="col">${label}</th>`).join("")}
+              <th scope="col">변동성</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${assets
+              .map((item) => {
+                const assetType = item.assetType === "single-stock" ? "개별종목" : "지수";
+                const returns = elsDerivedPeriodReturns(item);
+                return `
+                  <tr class="els-performance-row els-performance-row--${item.assetType === "single-stock" ? "stock" : "index"}">
+                    <th scope="row">
+                      <div class="els-performance-row__identity">
+                        <span class="els-performance-row__type">${assetType}</span>
+                        <strong>${item.label}</strong>
+                        <small>EOD ${item.lastDate ?? "–"}</small>
+                      </div>
+                    </th>
+                    <td class="els-performance-row__spark">${renderElsPriceSparkline(item)}</td>
+                    ${elsPerformanceReturnColumns
+                      .map(([, field]) => `<td>${renderElsReturn(returns[field])}</td>`)
+                      .join("")}
+                    <td class="els-performance-row__vol">${elsVolatilityLabel(item, hmmById)}</td>
+                  </tr>
+                `;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
+function renderElsIssuanceHedgePage(elsRisk, hmmRegime) {
   const map = elsRisk?.issuanceHedgeMap;
   if (!map?.items?.length || !map?.basket) {
     return `
@@ -2107,6 +2290,8 @@ function renderElsIssuanceHedgePage(elsRisk) {
         <div><span>기회 상위</span><strong>${map.basket.topOpportunityIndex}</strong><small>변동성 상대가치 기준</small></div>
         <div><span>부담 상위</span><strong>${map.basket.topBurdenIndex}</strong><small>기존 북 관리 우선</small></div>
       </div>
+
+      ${renderElsPerformancePanel(elsRisk, hmmRegime)}
 
       <section class="els-opportunity-map els-opportunity-map--current" data-els-map>
         <div class="els-opportunity-map__header">
@@ -6660,7 +6845,7 @@ function renderDashboard(
         tabindex="0"
         ${elsIssuanceState.hidden}
       >
-        ${renderElsIssuanceHedgePage(elsRisk)}
+        ${renderElsIssuanceHedgePage(elsRisk, hmmRegime)}
       </section>
           ${visibleSections
             .map((section) => renderSection(section, timeseries, null, null, null, activeTab, { snapshot: sourceSnapshot, quality: dataQuality }))

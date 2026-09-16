@@ -246,6 +246,41 @@ def test_single_stock_specs_use_korean_common_stock_tickers():
     }
 
 
+def test_single_stock_payload_exposes_period_returns_and_three_month_sparkline(monkeypatch):
+    module = load_els_module()
+    dates = pd.bdate_range("2025-01-02", periods=420)
+    prices = pd.DataFrame(
+        {
+            "date": dates.strftime("%Y-%m-%d"),
+            "close": np.linspace(100000.0, 180000.0, len(dates)),
+        }
+    )
+    monkeypatch.setattr(module, "_fetch_price_history", lambda *_args, **_kwargs: prices.copy())
+
+    payload, _ = module._index_payload(module.SINGLE_STOCKS[0])
+
+    assert payload["id"] == "samsung"
+    assert payload["assetType"] == "single-stock"
+    assert set(payload["metrics"]) >= {
+        "return1dPct",
+        "return1wPct",
+        "returnMtdPct",
+        "returnYtdPct",
+        "return3mPct",
+        "return6mPct",
+    }
+    assert all(payload["metrics"][key] is not None for key in (
+        "return1dPct",
+        "return1wPct",
+        "returnMtdPct",
+        "returnYtdPct",
+        "return3mPct",
+        "return6mPct",
+    ))
+    assert len(payload["sixMonthPriceSeries"]) >= 120
+    assert payload["sixMonthPriceSeries"][-1]["date"] == payload["lastDate"]
+
+
 def test_cached_price_history_includes_single_stocks(tmp_path):
     module = load_els_module()
     cache_file = tmp_path / "els-index-risk.json"
