@@ -364,6 +364,55 @@ def _reading(latest: pd.Series, score: float) -> str:
     return "현재 점수는 중립권이며, 변동성 확대 여부를 중심으로 보면 됩니다."
 
 
+def _return_pct(current: float, base: float) -> float | None:
+    if not math.isfinite(float(current)) or not math.isfinite(float(base)) or float(base) == 0:
+        return None
+    return _round((float(current) / float(base) - 1) * 100, 2)
+
+
+def _period_returns(frame: pd.DataFrame) -> dict[str, float | None]:
+    prices = frame[["date", "close"]].copy()
+    prices["date"] = pd.to_datetime(prices["date"], errors="coerce")
+    prices["close"] = pd.to_numeric(prices["close"], errors="coerce")
+    prices = prices.dropna(subset=["date", "close"]).drop_duplicates("date", keep="last").sort_values("date")
+    empty = {
+        "return1dPct": None,
+        "return1wPct": None,
+        "returnMtdPct": None,
+        "returnYtdPct": None,
+        "return3mPct": None,
+        "return6mPct": None,
+    }
+    if prices.empty:
+        return empty
+
+    latest = prices.iloc[-1]
+    latest_date = pd.Timestamp(latest["date"])
+    current = float(latest["close"])
+
+    def observation_return(offset: int) -> float | None:
+        if len(prices) <= offset:
+            return None
+        return _return_pct(current, float(prices.iloc[-1 - offset]["close"]))
+
+    def anchor_return(anchor: pd.Timestamp) -> float | None:
+        eligible = prices.loc[prices["date"] <= anchor]
+        if eligible.empty:
+            return None
+        return _return_pct(current, float(eligible.iloc[-1]["close"]))
+
+    month_start = latest_date.to_period("M").start_time
+    year_start = latest_date.to_period("Y").start_time
+    return {
+        "return1dPct": observation_return(1),
+        "return1wPct": observation_return(5),
+        "returnMtdPct": anchor_return(month_start - pd.Timedelta(days=1)),
+        "returnYtdPct": anchor_return(year_start - pd.Timedelta(days=1)),
+        "return3mPct": anchor_return(latest_date - pd.DateOffset(months=3)),
+        "return6mPct": anchor_return(latest_date - pd.DateOffset(months=6)),
+    }
+
+
 def _index_payload(spec: dict[str, str], cached_prices: pd.DataFrame | None = None) -> tuple[dict, pd.DataFrame]:
     price = _fetch_price_history(spec["symbol"], cached_prices, cache_key=spec["id"])
     price_source = price.attrs.get("priceSource", "Yahoo Finance")
@@ -372,6 +421,12 @@ def _index_payload(spec: dict[str, str], cached_prices: pd.DataFrame | None = No
     latest = frame.dropna(subset=["els_risk_score"]).iloc[-1]
     latest_year = int(str(latest["date"])[:4])
     ytd_prices = frame.loc[pd.to_datetime(frame["date"]).dt.year == latest_year, ["date", "close"]]
+    latest_date = pd.Timestamp(latest["date"])
+    six_month_prices = frame.loc[
+        pd.to_datetime(frame["date"]) >= latest_date - pd.DateOffset(months=6),
+        ["date", "close"],
+    ]
+    period_returns = _period_returns(frame.loc[pd.to_datetime(frame["date"]) <= latest_date])
     score = float(latest["els_risk_score"])
     bucket = _bucket(score)
     series = []
@@ -400,6 +455,7 @@ def _index_payload(spec: dict[str, str], cached_prices: pd.DataFrame | None = No
             "tone": bucket["tone"],
             "reading": _reading(latest, score),
             "metrics": {
+                **period_returns,
                 "return20dPct": _round(latest["ret_20d"] * 100, 2),
                 "return60dPct": _round(latest["ret_60d"] * 100, 2),
                 "realizedVol20dPct": _round(latest["realized_vol_20d"] * 100, 2),
@@ -412,6 +468,10 @@ def _index_payload(spec: dict[str, str], cached_prices: pd.DataFrame | None = No
             "ytdPriceSeries": [
                 {"date": row["date"], "close": _round(row["close"], 2)}
                 for row in ytd_prices.to_dict(orient="records")
+            ],
+            "sixMonthPriceSeries": [
+                {"date": row["date"], "close": _round(row["close"], 2)}
+                for row in six_month_prices.to_dict(orient="records")
             ],
             "series": series,
         },
@@ -528,6 +588,12 @@ def _issuance_hedge_item(index: dict, correlation_score: float) -> dict:
         **scores,
         "interpretation": interpretation,
         "metrics": {
+            "return1dPct": metrics.get("return1dPct"),
+            "return1wPct": metrics.get("return1wPct"),
+            "returnMtdPct": metrics.get("returnMtdPct"),
+            "returnYtdPct": metrics.get("returnYtdPct"),
+            "return3mPct": metrics.get("return3mPct"),
+            "return6mPct": metrics.get("return6mPct"),
             "return20dPct": metrics["return20dPct"],
             "realizedVol20dPct": metrics["realizedVol20dPct"],
             "drawdown252dPct": metrics["drawdown252dPct"],

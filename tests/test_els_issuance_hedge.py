@@ -193,6 +193,50 @@ def test_trajectory_windows_include_one_week_momentum_period():
     }
 
 
+def test_period_returns_use_previous_period_close_and_calendar_anchors():
+    module = load_els_module()
+    dates = pd.bdate_range("2025-12-22", "2026-07-15")
+    frame = pd.DataFrame(
+        {
+            "date": dates.strftime("%Y-%m-%d"),
+            "close": np.arange(100.0, 100.0 + len(dates)),
+        }
+    )
+
+    returns = module._period_returns(frame)
+    latest = frame.iloc[-1]
+
+    def expected(base_date):
+        eligible = frame.loc[pd.to_datetime(frame["date"]) <= pd.Timestamp(base_date)]
+        return round((latest["close"] / eligible.iloc[-1]["close"] - 1) * 100, 2)
+
+    assert returns["return1dPct"] == round((latest["close"] / frame.iloc[-2]["close"] - 1) * 100, 2)
+    assert returns["return1wPct"] == round((latest["close"] / frame.iloc[-6]["close"] - 1) * 100, 2)
+    assert returns["returnMtdPct"] == expected("2026-06-30")
+    assert returns["returnYtdPct"] == expected("2025-12-31")
+    assert returns["return3mPct"] == expected("2026-04-15")
+    assert returns["return6mPct"] == expected("2026-01-15")
+
+
+def test_period_returns_keep_unavailable_history_missing():
+    module = load_els_module()
+    frame = pd.DataFrame(
+        {
+            "date": ["2026-01-02", "2026-01-05", "2026-01-06"],
+            "close": [100.0, 101.0, 102.0],
+        }
+    )
+
+    returns = module._period_returns(frame)
+
+    assert returns["return1dPct"] == 0.99
+    assert returns["return1wPct"] is None
+    assert returns["returnMtdPct"] is None
+    assert returns["returnYtdPct"] is None
+    assert returns["return3mPct"] is None
+    assert returns["return6mPct"] is None
+
+
 def test_single_stock_specs_use_korean_common_stock_tickers():
     module = load_els_module()
 
@@ -231,6 +275,12 @@ def test_issuance_hedge_item_is_bounded_and_explainable():
             "region": "테스트",
             "lastDate": "2026-07-20",
             "metrics": {
+                "return1dPct": -1.0,
+                "return1wPct": -2.0,
+                "returnMtdPct": -3.0,
+                "returnYtdPct": 4.0,
+                "return3mPct": 5.0,
+                "return6mPct": 6.0,
                 "return20dPct": -12.0,
                 "realizedVol20dPct": 38.0,
                 "realizedVol60dPct": 24.0,
@@ -246,6 +296,7 @@ def test_issuance_hedge_item_is_bounded_and_explainable():
     assert 0 <= item["hedgeBurdenScore"] <= 100
     assert item["stance"] == "헤지주의"
     assert item["interpretation"]
+    assert item["metrics"]["return6mPct"] == 6.0
     assert set(item["components"]) == {
         "volPercentileScore",
         "volLevelScore",
