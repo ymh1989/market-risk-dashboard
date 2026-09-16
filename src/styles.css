@@ -1706,6 +1706,26 @@ a {
   font-weight: 700;
 }
 
+.els-performance-panel__controls {
+  display: grid;
+  justify-items: end;
+  gap: 9px;
+}
+
+.els-performance-range-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.els-performance-range-toolbar > span {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .els-performance-panel__header b,
 .els-performance-panel__header em {
   font-style: normal;
@@ -1828,6 +1848,10 @@ a {
   margin: 0 auto;
   overflow: visible;
   cursor: crosshair;
+}
+
+.els-performance-range-layer:not(.is-active) {
+  display: none;
 }
 
 .els-performance-panel .chart-cursor-tooltip {
@@ -6782,6 +6806,15 @@ a {
 
   .els-performance-panel__header small {
     text-align: left;
+  }
+
+  .els-performance-panel__controls {
+    justify-items: start;
+  }
+
+  .els-performance-range-toolbar {
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   .els-episode-review__header p {

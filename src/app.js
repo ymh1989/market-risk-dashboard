@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260916-2";
+const ASSET_VERSION = "20260916-3";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -15,7 +15,14 @@ const chartRangeOptions = [
   { id: "1y", label: "1Y", calendarDays: 366 },
   { id: "3y", label: "3Y", calendarDays: 1096 }
 ];
+const elsPerformanceRangeOptions = [
+  { id: "1m", label: "1M", calendarDays: 31 },
+  { id: "3m", label: "3M", calendarDays: 93 },
+  { id: "6m", label: "6M", calendarDays: 186 },
+  { id: "ytd", label: "YTD" }
+];
 let activeChartRange = "ytd";
+let activeElsPerformanceRange = "3m";
 let interactiveChartSequence = 0;
 const interactiveChartRegistry = new Map();
 
@@ -1987,10 +1994,12 @@ function renderElsReturn(value) {
 }
 
 function elsPriceHistory(item) {
-  return (item.sixMonthPriceSeries?.length ? item.sixMonthPriceSeries : item.ytdPriceSeries ?? [])
-    .filter((point) => point?.date && Number.isFinite(Number(point.close)))
-    .map((point) => ({ date: point.date, close: Number(point.close) }))
-    .sort((left, right) => dateMs(left.date) - dateMs(right.date));
+  const byDate = new Map();
+  [...(item.ytdPriceSeries ?? []), ...(item.sixMonthPriceSeries ?? [])].forEach((point) => {
+    if (!point?.date || !Number.isFinite(Number(point.close))) return;
+    byDate.set(point.date, { date: point.date, close: Number(point.close) });
+  });
+  return [...byDate.values()].sort((left, right) => dateMs(left.date) - dateMs(right.date));
 }
 
 function elsReturnFromBase(current, base) {
@@ -2036,23 +2045,53 @@ function elsDerivedPeriodReturns(item) {
   );
 }
 
-function elsThreeMonthPriceHistory(item) {
-  const prices = elsPriceHistory(item);
-  if (prices.length < 2) return prices;
-  const latestDate = new Date(`${prices.at(-1).date}T00:00:00Z`);
-  const cutoff = new Date(latestDate);
-  cutoff.setUTCMonth(cutoff.getUTCMonth() - 3);
-  const threeMonthPrices = prices.filter((point) => dateMs(point.date) >= cutoff.getTime());
-  return threeMonthPrices.length >= 2 ? threeMonthPrices : prices.slice(-66);
+function elsPerformanceRangeDomain(seriesList, rangeId) {
+  const fullDomain = timelineDomain(seriesList);
+  if (!fullDomain) return null;
+  const option =
+    elsPerformanceRangeOptions.find((candidate) => candidate.id === rangeId) ??
+    elsPerformanceRangeOptions[1];
+  const endDate = new Date(fullDomain.end);
+  const requestedStart =
+    option.id === "ytd"
+      ? Date.UTC(endDate.getUTCFullYear(), 0, 1)
+      : fullDomain.end - option.calendarDays * 24 * 60 * 60 * 1000;
+  const start = Math.max(fullDomain.start, requestedStart);
+  return { start, end: fullDomain.end, span: Math.max(fullDomain.end - start, 1) };
 }
 
-function renderElsPriceSparkline(item, chartId, seriesIndex, timeline) {
-  const prices = elsThreeMonthPriceHistory(item);
-  if (prices.length < 2) {
-    return `<span class="els-performance-sparkline els-performance-sparkline--empty">데이터 없음</span>`;
+function renderElsPerformanceRangeControls() {
+  return `
+    <div class="els-performance-range-toolbar">
+      <span>스파크라인 기간</span>
+      <div class="chart-range-control" role="group" aria-label="ELS 기초자산 스파크라인 기간">
+        ${elsPerformanceRangeOptions
+          .map(
+            (option) => `
+              <button
+                type="button"
+                class="${option.id === activeElsPerformanceRange ? "is-active" : ""}"
+                data-els-performance-range="${option.id}"
+                aria-pressed="${option.id === activeElsPerformanceRange ? "true" : "false"}"
+              >${option.label}</button>
+            `
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderElsPriceSparkline(item, seriesIndex, rangeId, timeline) {
+  const prices = elsPriceHistory(item);
+  const visible = timeline ? pointsWithinDomain(prices, timeline, "close") : prices;
+  const layerClass = `els-performance-range-layer${
+    rangeId === activeElsPerformanceRange ? " is-active" : ""
+  }`;
+  if (visible.length < 2 || !timeline) {
+    return `<span class="els-performance-sparkline els-performance-sparkline--empty ${layerClass}" data-els-performance-range-layer="${rangeId}">데이터 없음</span>`;
   }
 
-  const visible = timeline ? pointsWithinDomain(prices, timeline, "close") : prices;
   const width = 156;
   const height = 48;
   const padding = 4;
@@ -2060,21 +2099,20 @@ function renderElsPriceSparkline(item, chartId, seriesIndex, timeline) {
   const low = Math.min(...values);
   const high = Math.max(...values);
   const span = high - low || Math.max(Math.abs(high) * 0.01, 1);
-  const safeTimeline = timeline ?? timelineDomain([visible]);
   const coordinates = visible.map((point) => ({
-    x: padding + ((dateMs(point.date) - safeTimeline.start) / safeTimeline.span) * (width - padding * 2),
+    x: padding + ((dateMs(point.date) - timeline.start) / timeline.span) * (width - padding * 2),
     y: padding + ((high - point.close) / span) * (height - padding * 2)
   }));
   const path = coordinates
     .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
     .join(" ");
   const end = coordinates.at(-1);
-  const threeMonthReturn = elsReturnFromBase(values.at(-1), values[0]);
-  const tone = elsReturnTone(item.metrics?.return3mPct ?? threeMonthReturn);
+  const rangeReturn = elsReturnFromBase(values.at(-1), values[0]);
+  const tone = elsReturnTone(rangeReturn);
   const summary = `${visible[0].date}~${visible.at(-1).date} 종가 흐름`;
 
   return `
-    <svg class="els-performance-sparkline els-performance-sparkline--${tone}" data-chart-svg data-chart-series-index="${seriesIndex}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${item.label} ${summary}">
+    <svg class="els-performance-sparkline els-performance-sparkline--${tone} ${layerClass}" data-els-performance-range-layer="${rangeId}" data-chart-svg data-chart-series-index="${seriesIndex}" data-chart-domain-start="${timeline.start}" data-chart-domain-end="${timeline.end}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${item.label} ${summary}">
       <title>${item.label} ${summary}</title>
       <path class="els-performance-sparkline__baseline" d="M ${padding} ${height / 2} H ${width - padding}"></path>
       <path class="els-performance-sparkline__line" d="${path}"></path>
@@ -2102,23 +2140,26 @@ function renderElsPerformancePanel(elsRisk, hmmRegime) {
   const assets = [...indices, ...stocks];
   if (!assets.length) return "";
   const hmmById = new Map((hmmRegime?.indices ?? []).map((item) => [item.id, item]));
-  const sparklineSeries = assets.map((item) => elsThreeMonthPriceHistory(item));
-  const sparklineDomain = timelineDomain(sparklineSeries);
+  const sparklineSeries = assets.map((item) => elsPriceHistory(item));
+  const sparklineDomains = Object.fromEntries(
+    elsPerformanceRangeOptions.map((range) => [
+      range.id,
+      elsPerformanceRangeDomain(sparklineSeries, range.id)
+    ])
+  );
   const chartId = registerInteractiveChart({
     tooltipMode: "hovered",
     width: 156,
     plotLeft: 4,
     plotRight: 152,
-    fixedDomain: sparklineDomain,
     series: assets.map((item, index) => {
       const points = sparklineSeries[index];
       const latest = points.at(-1);
-      const tone = elsReturnTone(elsReturnFromBase(latest?.close, points[0]?.close));
       return {
         label: item.label,
         points,
         valueKey: "close",
-        color: tone === "up" ? "var(--red)" : tone === "down" ? "var(--blue)" : "var(--muted)",
+        color: "var(--muted)",
         format: (value) => formatMarketTrendValue(value, "index"),
         detail: (point) => formatMarketTrendCurrentComparison(point.close, latest?.close, "index")
       };
@@ -2132,14 +2173,17 @@ function renderElsPerformancePanel(elsRisk, hmmRegime) {
           <span class="eyebrow">Underlying Performance</span>
           <h3 id="els-performance-title">기초자산 수익률</h3>
         </div>
-        <small>종가 기준 · 상승 <b>빨강</b> · 하락 <em>파랑</em> · 지수 5개 + 개별종목 2개</small>
+        <div class="els-performance-panel__controls">
+          <small>종가 기준 · 상승 <b>빨강</b> · 하락 <em>파랑</em> · 지수 5개 + 개별종목 2개</small>
+          ${renderElsPerformanceRangeControls()}
+        </div>
       </header>
       <div class="els-performance-table-wrap">
         <table class="els-performance-table">
           <thead>
             <tr>
               <th scope="col">기초자산</th>
-              <th scope="col">최근 약 3개월</th>
+              <th scope="col"><span data-els-performance-range-label>${elsPerformanceRangeOptions.find((option) => option.id === activeElsPerformanceRange)?.label ?? "3M"}</span> 흐름</th>
               ${elsPerformanceReturnColumns.map(([label]) => `<th scope="col">${label}</th>`).join("")}
               <th scope="col">변동성</th>
             </tr>
@@ -2158,7 +2202,13 @@ function renderElsPerformancePanel(elsRisk, hmmRegime) {
                         <small>EOD ${item.lastDate ?? "–"}</small>
                       </div>
                     </th>
-                    <td class="els-performance-row__spark">${renderElsPriceSparkline(item, chartId, index, sparklineDomain)}</td>
+                    <td class="els-performance-row__spark">
+                      ${elsPerformanceRangeOptions
+                        .map((range) =>
+                          renderElsPriceSparkline(item, index, range.id, sparklineDomains[range.id])
+                        )
+                        .join("")}
+                    </td>
                     ${elsPerformanceReturnColumns
                       .map(([, field]) => `<td>${renderElsReturn(returns[field])}</td>`)
                       .join("")}
@@ -6183,7 +6233,18 @@ function chartPointerInViewBox(svg, event, fallbackWidth) {
 function updateChartCursor(chart, svg, event) {
   const model = interactiveChartRegistry.get(chart.dataset.timeseriesChart);
   if (!model) return;
+  const svgDomainStart = Number(svg.dataset.chartDomainStart);
+  const svgDomainEnd = Number(svg.dataset.chartDomainEnd);
+  const svgDomain =
+    Number.isFinite(svgDomainStart) && Number.isFinite(svgDomainEnd)
+      ? {
+          start: svgDomainStart,
+          end: svgDomainEnd,
+          span: Math.max(svgDomainEnd - svgDomainStart, 1)
+        }
+      : null;
   const domain =
+    svgDomain ??
     model.fixedDomain ??
     chartRangeDomain(
       model.series.map((item) => item.points),
@@ -6212,7 +6273,7 @@ function updateChartCursor(chart, svg, event) {
 
   const cursorTime = dateMs(anchorPoint.date);
   const cursorRatio = Math.max(0, Math.min(1, (cursorTime - domain.start) / domain.span));
-  const cursorLines = model.fixedDomain
+  const cursorLines = svgDomain || model.fixedDomain
     ? svg.querySelectorAll("[data-chart-cursor-line]")
     : chart.querySelectorAll(
         `[data-chart-range-layer="${activeChartRange}"] [data-chart-cursor-line]`
@@ -6292,6 +6353,42 @@ function activateChartRange(rangeId) {
     label.textContent = activeLabel;
   });
   app.querySelectorAll("[data-timeseries-chart]").forEach(hideChartCursor);
+}
+
+function activateElsPerformanceRange(rangeId) {
+  if (!elsPerformanceRangeOptions.some((option) => option.id === rangeId)) return;
+  activeElsPerformanceRange = rangeId;
+  const activeLabel =
+    elsPerformanceRangeOptions.find((option) => option.id === rangeId)?.label ?? "3M";
+  app.querySelectorAll("[data-els-performance-range]").forEach((button) => {
+    const selected = button.dataset.elsPerformanceRange === rangeId;
+    button.classList.toggle("is-active", selected);
+    button.setAttribute("aria-pressed", selected ? "true" : "false");
+  });
+  app.querySelectorAll("[data-els-performance-range-layer]").forEach((layer) => {
+    layer.classList.toggle(
+      "is-active",
+      layer.dataset.elsPerformanceRangeLayer === rangeId
+    );
+  });
+  app.querySelectorAll("[data-els-performance-range-label]").forEach((label) => {
+    label.textContent = activeLabel;
+  });
+  app
+    .querySelectorAll('.els-performance-panel[data-timeseries-chart]')
+    .forEach(hideChartCursor);
+}
+
+function initializeElsPerformanceRangeControls(scope = app) {
+  scope
+    .querySelectorAll("[data-els-performance-range]:not([data-els-performance-range-bound])")
+    .forEach((button) => {
+      button.dataset.elsPerformanceRangeBound = "true";
+      button.addEventListener("click", () =>
+        activateElsPerformanceRange(button.dataset.elsPerformanceRange)
+      );
+    });
+  activateElsPerformanceRange(activeElsPerformanceRange);
 }
 
 function initializeInteractiveCharts(scope = app) {
@@ -6890,6 +6987,7 @@ function renderDashboard(
             .join("")}
     </div>
   `;
+  initializeElsPerformanceRangeControls(app);
   initializeInteractiveCharts(app);
   app.querySelectorAll("[data-observation-detail-toggle]").forEach((button) => {
     button.addEventListener("click", () => {
