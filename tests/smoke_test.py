@@ -300,8 +300,8 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260916-1" in html
-    assert "app.js?v=20260916-1" in html
+    assert "styles.css?v=20260916-2" in html
+    assert "app.js?v=20260916-2" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -572,6 +572,10 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert '["1D", "return1dPct"]' in app_source
     assert '["6M", "return6mPct"]' in app_source
     assert "renderElsPriceSparkline" in app_source
+    assert 'data-timeseries-chart="${chartId}" aria-labelledby="els-performance-title"' in app_source
+    assert 'data-chart-series-index="${seriesIndex}"' in app_source
+    assert "fixedDomain: sparklineDomain" in app_source
+    assert 'svg.querySelectorAll("[data-chart-cursor-line]")' in app_source
     assert "elsDerivedPeriodReturns" in app_source
     assert "VIX" in app_source and "VKOSPI" in app_source
     assert 'return number > 0 ? "up" : "down"' in app_source

@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260916-1";
+const ASSET_VERSION = "20260916-2";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -1538,7 +1538,8 @@ function registerInteractiveChart({
   width = 760,
   tooltipMode = "all",
   plotLeft = 0,
-  plotRight = width
+  plotRight = width,
+  fixedDomain = null
 }) {
   interactiveChartSequence += 1;
   const id = `timeline-chart-${interactiveChartSequence}`;
@@ -1547,6 +1548,7 @@ function registerInteractiveChart({
     tooltipMode,
     plotLeft,
     plotRight,
+    fixedDomain,
     series: series.map((item) => ({
       ...item,
       points: [...(item.points ?? [])].sort((left, right) => dateMs(left.date) - dateMs(right.date))
@@ -2034,17 +2036,23 @@ function elsDerivedPeriodReturns(item) {
   );
 }
 
-function renderElsPriceSparkline(item) {
+function elsThreeMonthPriceHistory(item) {
   const prices = elsPriceHistory(item);
-  if (prices.length < 2) {
-    return `<span class="els-performance-sparkline els-performance-sparkline--empty">데이터 없음</span>`;
-  }
-
+  if (prices.length < 2) return prices;
   const latestDate = new Date(`${prices.at(-1).date}T00:00:00Z`);
   const cutoff = new Date(latestDate);
   cutoff.setUTCMonth(cutoff.getUTCMonth() - 3);
   const threeMonthPrices = prices.filter((point) => dateMs(point.date) >= cutoff.getTime());
-  const visible = threeMonthPrices.length >= 2 ? threeMonthPrices : prices.slice(-66);
+  return threeMonthPrices.length >= 2 ? threeMonthPrices : prices.slice(-66);
+}
+
+function renderElsPriceSparkline(item, chartId, seriesIndex, timeline) {
+  const prices = elsThreeMonthPriceHistory(item);
+  if (prices.length < 2) {
+    return `<span class="els-performance-sparkline els-performance-sparkline--empty">데이터 없음</span>`;
+  }
+
+  const visible = timeline ? pointsWithinDomain(prices, timeline, "close") : prices;
   const width = 156;
   const height = 48;
   const padding = 4;
@@ -2052,22 +2060,25 @@ function renderElsPriceSparkline(item) {
   const low = Math.min(...values);
   const high = Math.max(...values);
   const span = high - low || Math.max(Math.abs(high) * 0.01, 1);
-  const coordinates = visible.map((point, index) => ({
-    x: padding + (index / Math.max(visible.length - 1, 1)) * (width - padding * 2),
+  const safeTimeline = timeline ?? timelineDomain([visible]);
+  const coordinates = visible.map((point) => ({
+    x: padding + ((dateMs(point.date) - safeTimeline.start) / safeTimeline.span) * (width - padding * 2),
     y: padding + ((high - point.close) / span) * (height - padding * 2)
   }));
   const path = coordinates
     .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
     .join(" ");
   const end = coordinates.at(-1);
-  const tone = elsReturnTone(item.metrics?.return3mPct ?? values.at(-1) / values[0] - 1);
+  const threeMonthReturn = elsReturnFromBase(values.at(-1), values[0]);
+  const tone = elsReturnTone(item.metrics?.return3mPct ?? threeMonthReturn);
   const summary = `${visible[0].date}~${visible.at(-1).date} 종가 흐름`;
 
   return `
-    <svg class="els-performance-sparkline els-performance-sparkline--${tone}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${item.label} ${summary}">
+    <svg class="els-performance-sparkline els-performance-sparkline--${tone}" data-chart-svg data-chart-series-index="${seriesIndex}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${item.label} ${summary}">
       <title>${item.label} ${summary}</title>
       <path class="els-performance-sparkline__baseline" d="M ${padding} ${height / 2} H ${width - padding}"></path>
       <path class="els-performance-sparkline__line" d="${path}"></path>
+      ${renderChartCursorLine(padding, height - padding)}
       <circle class="els-performance-sparkline__end" cx="${end.x.toFixed(2)}" cy="${end.y.toFixed(2)}" r="2.5"></circle>
     </svg>
   `;
@@ -2091,9 +2102,31 @@ function renderElsPerformancePanel(elsRisk, hmmRegime) {
   const assets = [...indices, ...stocks];
   if (!assets.length) return "";
   const hmmById = new Map((hmmRegime?.indices ?? []).map((item) => [item.id, item]));
+  const sparklineSeries = assets.map((item) => elsThreeMonthPriceHistory(item));
+  const sparklineDomain = timelineDomain(sparklineSeries);
+  const chartId = registerInteractiveChart({
+    tooltipMode: "hovered",
+    width: 156,
+    plotLeft: 4,
+    plotRight: 152,
+    fixedDomain: sparklineDomain,
+    series: assets.map((item, index) => {
+      const points = sparklineSeries[index];
+      const latest = points.at(-1);
+      const tone = elsReturnTone(elsReturnFromBase(latest?.close, points[0]?.close));
+      return {
+        label: item.label,
+        points,
+        valueKey: "close",
+        color: tone === "up" ? "var(--red)" : tone === "down" ? "var(--blue)" : "var(--muted)",
+        format: (value) => formatMarketTrendValue(value, "index"),
+        detail: (point) => formatMarketTrendCurrentComparison(point.close, latest?.close, "index")
+      };
+    })
+  });
 
   return `
-    <section class="els-performance-panel" aria-labelledby="els-performance-title">
+    <section class="els-performance-panel" data-timeseries-chart="${chartId}" aria-labelledby="els-performance-title">
       <header class="els-performance-panel__header">
         <div>
           <span class="eyebrow">Underlying Performance</span>
@@ -2113,7 +2146,7 @@ function renderElsPerformancePanel(elsRisk, hmmRegime) {
           </thead>
           <tbody>
             ${assets
-              .map((item) => {
+              .map((item, index) => {
                 const assetType = item.assetType === "single-stock" ? "개별종목" : "지수";
                 const returns = elsDerivedPeriodReturns(item);
                 return `
@@ -2125,7 +2158,7 @@ function renderElsPerformancePanel(elsRisk, hmmRegime) {
                         <small>EOD ${item.lastDate ?? "–"}</small>
                       </div>
                     </th>
-                    <td class="els-performance-row__spark">${renderElsPriceSparkline(item)}</td>
+                    <td class="els-performance-row__spark">${renderElsPriceSparkline(item, chartId, index, sparklineDomain)}</td>
                     ${elsPerformanceReturnColumns
                       .map(([, field]) => `<td>${renderElsReturn(returns[field])}</td>`)
                       .join("")}
@@ -2137,6 +2170,7 @@ function renderElsPerformancePanel(elsRisk, hmmRegime) {
           </tbody>
         </table>
       </div>
+      ${renderChartTooltip()}
     </section>
   `;
 }
@@ -6149,10 +6183,12 @@ function chartPointerInViewBox(svg, event, fallbackWidth) {
 function updateChartCursor(chart, svg, event) {
   const model = interactiveChartRegistry.get(chart.dataset.timeseriesChart);
   if (!model) return;
-  const domain = chartRangeDomain(
-    model.series.map((item) => item.points),
-    activeChartRange
-  );
+  const domain =
+    model.fixedDomain ??
+    chartRangeDomain(
+      model.series.map((item) => item.points),
+      activeChartRange
+    );
   if (!domain) return;
 
   const svgRect = svg.getBoundingClientRect();
@@ -6176,10 +6212,12 @@ function updateChartCursor(chart, svg, event) {
 
   const cursorTime = dateMs(anchorPoint.date);
   const cursorRatio = Math.max(0, Math.min(1, (cursorTime - domain.start) / domain.span));
-  chart
-    .querySelectorAll(
-      `[data-chart-range-layer="${activeChartRange}"] [data-chart-cursor-line]`
-    )
+  const cursorLines = model.fixedDomain
+    ? svg.querySelectorAll("[data-chart-cursor-line]")
+    : chart.querySelectorAll(
+        `[data-chart-range-layer="${activeChartRange}"] [data-chart-cursor-line]`
+      );
+  cursorLines
     .forEach((line) => {
       const x = model.plotLeft + cursorRatio * (model.plotRight - model.plotLeft);
       line.setAttribute("x1", x.toFixed(2));
