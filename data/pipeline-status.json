@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-23 04:23:17 KST",
+  "generatedAt": "2026-09-23 07:32:07 KST",
   "current": {
-    "runId": "20260923T040739-manual-full",
+    "runId": "20260923T073005-0730-fast",
     "status": "success",
-    "mode": "full",
-    "trigger": "manual",
-    "scheduledTime": null,
-    "startedAt": "2026-09-23 04:07:39 KST",
-    "completedAt": "2026-09-23 04:23:17 KST",
-    "durationSeconds": 938,
+    "mode": "fast",
+    "trigger": "scheduled",
+    "scheduledTime": "07:30",
+    "startedAt": "2026-09-23 07:30:05 KST",
+    "completedAt": "2026-09-23 07:32:07 KST",
+    "durationSeconds": 122,
     "dataAsOf": "2026-09-22",
-    "dashboardGeneratedAt": "2026-09-23 04:08 KST",
-    "mlGeneratedAt": "2026-09-23 04:23 KST",
-    "qualityScore": 95.3,
+    "dashboardGeneratedAt": "2026-09-23 07:30 KST",
+    "mlGeneratedAt": "2026-09-23 07:32 KST",
+    "qualityScore": 95.5,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
@@ -118,21 +118,21 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 105,
+      "durationSeconds": 58,
       "detail": "시장 데이터 수집, 위험점수, M7·KB 시장자금, ELS·HMM 산출"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
-      "durationSeconds": 809,
+      "durationSeconds": 40,
       "detail": "특성 생성, 모델 학습, 예측 및 OOS 검증"
     },
     {
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 1,
+      "durationSeconds": 0,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -184,7 +184,7 @@
       "id": "fred",
       "label": "FRED",
       "status": "ok",
-      "lastDate": "2026-09-21",
+      "lastDate": "2026-09-22",
       "seriesCount": 5,
       "detail": "5/5개 수집 · 허용시차 내 5개",
       "oldestLastDate": "2026-09-11",
@@ -254,31 +254,31 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-09-23 04:08 KST"
+      "generatedAt": "2026-09-23 07:30 KST"
     },
     {
       "id": "ml",
       "label": "ML 위험신호",
       "status": "ok",
-      "generatedAt": "2026-09-23 04:23 KST"
+      "generatedAt": "2026-09-23 07:32 KST"
     },
     {
       "id": "els",
       "label": "ELS 지수위험",
       "status": "ok",
-      "generatedAt": "2026-09-23 04:09 KST"
+      "generatedAt": "2026-09-23 07:31 KST"
     },
     {
       "id": "hmm",
       "label": "HMM 레짐",
       "status": "ok",
-      "generatedAt": "2026-09-23 04:09 KST"
+      "generatedAt": "2026-09-23 07:31 KST"
     },
     {
       "id": "backtest",
       "label": "시장 백테스트",
       "status": "ok",
-      "generatedAt": "2026-09-23 04:08 KST"
+      "generatedAt": "2026-09-23 07:30 KST"
     },
     {
       "id": "stress",
@@ -290,35 +290,35 @@
       "id": "m7",
       "label": "M7 신용스트레스 프록시",
       "status": "ok",
-      "generatedAt": "2026-09-23T04:07:53+09:00"
+      "generatedAt": "2026-09-23T07:30:20+09:00"
     },
     {
       "id": "kb-funds",
       "label": "FreeSIS·KB 증시주변자금",
       "status": "ok",
-      "generatedAt": "2026-09-23 04:07:53 KST"
+      "generatedAt": "2026-09-23 07:30:20 KST"
     },
     {
       "id": "breadth",
       "label": "KOSPI 시장 내부강도",
       "status": "ok",
-      "generatedAt": "2026-09-23 04:07:43 KST"
+      "generatedAt": "2026-09-23 07:30:10 KST"
     },
     {
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-09-23 04:23:16 KST"
+      "generatedAt": "2026-09-23 07:32:07 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 95.3,
+    "score": 95.5,
     "referenceDate": "2026-09-23",
     "summary": {
       "checks": 255,
-      "ok": 231,
-      "warning": 24,
+      "ok": 232,
+      "warning": 23,
       "error": 0,
       "sourceSeriesExpected": 100,
       "sourceSeriesPresent": 100,
@@ -416,7 +416,7 @@
       "id": "ai-roi",
       "title": "AI 투자 ROI 회의론",
       "status": "확산 미확인",
-      "score": 38.6,
+      "score": 38.7,
       "tone": "good",
       "decision": "기존 가중지표 유지",
       "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검"
@@ -425,7 +425,7 @@
       "id": "geopolitics-reinflation",
       "title": "지정학·재인플레이션",
       "status": "부담 높음",
-      "score": 82.9,
+      "score": 81.6,
       "tone": "danger",
       "decision": "관찰지표 보강",
       "operation": "DBC·DBA 관찰카드 유지 · 기존 에너지 가중치 변경 없음"
@@ -434,7 +434,7 @@
       "id": "macro-rates",
       "title": "매크로 금리 불확실성",
       "status": "부담 높음",
-      "score": 79.7,
+      "score": 79.4,
       "tone": "danger",
       "decision": "기존 가중지표 유지",
       "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -452,7 +452,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "관찰",
-      "score": 52.7,
+      "score": 52.8,
       "tone": "watch",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -468,6 +468,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20260923T073005-0730-fast",
+      "status": "success",
+      "mode": "fast",
+      "trigger": "scheduled",
+      "scheduledTime": "07:30",
+      "startedAt": "2026-09-23 07:30:05 KST",
+      "completedAt": "2026-09-23 07:32:07 KST",
+      "durationSeconds": 122,
+      "dataAsOf": "2026-09-22",
+      "dashboardGeneratedAt": "2026-09-23 07:30 KST",
+      "mlGeneratedAt": "2026-09-23 07:32 KST",
+      "qualityScore": 95.5,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20260923T040739-manual-full",
       "status": "success",
@@ -902,29 +917,14 @@
       "mlGeneratedAt": "2026-09-18 07:31 KST",
       "qualityScore": 96.7,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20260918T100001-1000-live",
-      "status": "success",
-      "mode": "live",
-      "trigger": "scheduled",
-      "scheduledTime": "10:00",
-      "startedAt": "2026-09-18 10:00:01 KST",
-      "completedAt": "2026-09-18 10:00:48 KST",
-      "durationSeconds": 47,
-      "dataAsOf": "2026-09-18",
-      "dashboardGeneratedAt": "2026-09-18 10:00 KST",
-      "mlGeneratedAt": "2026-09-18 07:31 KST",
-      "qualityScore": 96.7,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260923T040739-manual-full",
-    "mode": "full",
+    "runId": "20260923T073005-0730-fast",
+    "mode": "fast",
     "state": "generated",
-    "startedAt": "2026-09-23 04:07:39 KST",
-    "preparedAt": "2026-09-23 04:23:17 KST"
+    "startedAt": "2026-09-23 07:30:05 KST",
+    "preparedAt": "2026-09-23 07:32:08 KST"
   }
 }
