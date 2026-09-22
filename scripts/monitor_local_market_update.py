@@ -30,6 +30,13 @@ except ModuleNotFoundError:  # pytest에서 저장소 루트 패키지로 불러
 ROOT = Path(__file__).resolve().parents[1]
 KST = ZoneInfo("Asia/Seoul")
 EXPECTED_MINUTES = {"live": 3, "fast": 5, "full": 25, "krx": 4}
+# 후속 작업이 실제로 갱신하는 범위만 이전 실패를 보완할 수 있습니다.
+RECOVERY_MODES = {
+    "live": frozenset({"live", "fast", "full"}),
+    "fast": frozenset({"fast", "full"}),
+    "full": frozenset({"full"}),
+    "krx": frozenset({"krx"}),
+}
 
 
 @dataclass(frozen=True)
@@ -150,7 +157,7 @@ def find_schedule_alerts(
         done = state_dir / f"{current.date().isoformat()}-{slot_time}.done"
         slots.append((slot_time, scheduled_at, mode, done))
 
-    latest_done_at = max((slot[1] for slot in slots if slot[3].exists()), default=None)
+    completed_slots = [slot for slot in slots if slot[3].exists()]
     alerts = []
     for slot_time, scheduled_at, mode, done in slots:
         deadline = scheduled_at + timedelta(
@@ -158,7 +165,10 @@ def find_schedule_alerts(
         )
         if current < deadline or done.exists():
             continue
-        if latest_done_at is not None and latest_done_at > scheduled_at:
+        if any(
+            later_at > scheduled_at and later_mode in RECOVERY_MODES[mode]
+            for _, later_at, later_mode, _ in completed_slots
+        ):
             continue
 
         marker = alert_dir / f"{current.date().isoformat()}-{slot_time}.alerted"

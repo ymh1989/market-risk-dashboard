@@ -59,13 +59,12 @@ if [[ -f "$ENV_FILE" ]]; then
 fi
 
 refresh_runtime_entrypoint() {
-  local self_path candidate_path remote_path
+  local self_path candidate_path remote_path runtime_commit support_dir support runtime_python
   if [[ "$RUNTIME_SELF_UPDATE" != "1" ]]; then
     return 0
   fi
 
   self_path="$ROOT/scripts/run_local_market_update.sh"
-  remote_path="$REMOTE/$BRANCH:scripts/run_local_market_update.sh"
   candidate_path="$(mktemp "$ROOT/scripts/.run_local_market_update.XXXXXX")"
 
   if ! git -C "$ROOT" fetch "$REMOTE" "$BRANCH"; then
@@ -73,6 +72,8 @@ refresh_runtime_entrypoint() {
     echo "[$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')] 런타임 스크립트 최신본 조회에 실패해 현재 버전으로 계속합니다." >&2
     return 0
   fi
+  runtime_commit="$(git -C "$ROOT" rev-parse "$REMOTE/$BRANCH")"
+  remote_path="$runtime_commit:scripts/run_local_market_update.sh"
   if ! git -C "$ROOT" show "$remote_path" > "$candidate_path"; then
     rm -f "$candidate_path"
     echo "[$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')] 원격 런타임 스크립트를 읽지 못해 현재 버전으로 계속합니다." >&2
@@ -83,6 +84,22 @@ refresh_runtime_entrypoint() {
     echo "[$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')] 원격 런타임 스크립트 구문검사에 실패해 교체하지 않습니다." >&2
     return 1
   fi
+  # 감시기도 같은 커밋으로 맞춰, 실행기만 최신이고 실패 판독은 구버전인 상태를 방지합니다.
+  runtime_python="${PYTHON_BIN:-python3}"
+  support_dir="$(mktemp -d "$ROOT/scripts/.runtime-support.XXXXXX")"
+  for support in monitor_local_market_update.py send_operations_alert.py; do
+    if ! git -C "$ROOT" show "$runtime_commit:scripts/$support" > "$support_dir/$support" || \
+      ! "$runtime_python" -c 'import ast, pathlib, sys; ast.parse(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))' "$support_dir/$support"; then
+      rm -rf "$support_dir"
+      rm -f "$candidate_path"
+      echo "운영 감시기 동기화 검증에 실패해 실행기·감시기를 교체하지 않습니다." >&2
+      return 1
+    fi
+  done
+  for support in monitor_local_market_update.py send_operations_alert.py; do
+    mv -f "$support_dir/$support" "$ROOT/scripts/$support"
+  done
+  rmdir "$support_dir"
   if cmp -s "$candidate_path" "$self_path"; then
     rm -f "$candidate_path"
     return 0
@@ -196,26 +213,16 @@ mark_scheduled_done() {
   fi
 }
 
-pages_publication_run_id() {
-  local response
-  response="$(curl -fsSL --max-time 20 -H "Cache-Control: no-cache" "${PAGES_URL%/}/data/publication-manifest.json?check=$(date +%s)" 2>/dev/null || true)"
-  if [[ -z "$response" ]]; then
-    return 0
-  fi
-  "$PYTHON_BIN" -c 'import json, sys; payload=json.load(sys.stdin); print(payload.get("runId", "") if payload.get("status") == "ready" else "")' <<< "$response" 2>/dev/null || true
-}
-
 wait_for_pages_deployment() {
   local expected_run_id="$1"
-  local attempt deployed_run_id
+  local attempt
 
   for ((attempt = 1; attempt <= PAGES_VERIFY_ATTEMPTS; attempt++)); do
-    deployed_run_id="$(pages_publication_run_id)"
-    if [[ "$deployed_run_id" == "$expected_run_id" ]]; then
-      echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] GitHub Pages 원자적 스냅샷 반영을 확인했습니다: $deployed_run_id"
+    if "$PYTHON_BIN" scripts/publication_delivery.py verify-remote --url "$PAGES_URL"; then
+      echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] GitHub Pages 전체 게시 파일 반영을 확인했습니다: $expected_run_id"
       return 0
     fi
-    echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] Pages 반영 대기 중 ($attempt/$PAGES_VERIFY_ATTEMPTS): ${deployed_run_id:-manifest 응답 없음}"
+    echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] Pages 파일 검증 대기 중 ($attempt/$PAGES_VERIFY_ATTEMPTS)"
     sleep "$PAGES_VERIFY_INTERVAL_SECONDS"
   done
   return 1
@@ -295,6 +302,9 @@ mkdir -p "$LOG_DIR"
 LOCK_DIR="$LOG_DIR/.local-market-update.lock"
 LOCK_ACQUIRED=0
 WORKTREE=""
+SOURCE_COMMIT=""
+KEEP_FAILED_CANDIDATE=0
+ELS_REUSED=0
 
 record_schedule_running() {
   if [[ -n "$SCHEDULE_RUNNING_FILE" ]]; then
@@ -307,8 +317,8 @@ record_schedule_running() {
 record_schedule_failure() {
   local exit_code="$1"
   if [[ -n "$SCHEDULE_FAILED_FILE" && ! -f "$SCHEDULE_STATE_FILE" ]]; then
-    printf "status=failed\nexitCode=%s\nstage=%s\nfailedAt=%s\n" \
-      "$exit_code" "$CURRENT_STAGE" "$(kst_now '+%Y-%m-%d %H:%M:%S KST')" > "$SCHEDULE_FAILED_FILE"
+    printf "status=failed\nexitCode=%s\nstage=%s\nfailedAt=%s\nrunId=%s\n" \
+      "$exit_code" "$CURRENT_STAGE" "$(kst_now '+%Y-%m-%d %H:%M:%S KST')" "$RUN_ID" > "$SCHEDULE_FAILED_FILE"
     rm -f "$SCHEDULE_RUNNING_FILE"
   fi
 }
@@ -322,7 +332,16 @@ cleanup() {
     rm -rf "$LOCK_DIR"
   fi
   if [[ -n "$WORKTREE" && -d "$WORKTREE" ]]; then
-    git -C "$ROOT" worktree remove --force "$WORKTREE" >/dev/null 2>&1 || rm -rf "$WORKTREE"
+    if (( exit_code != 0 && KEEP_FAILED_CANDIDATE )); then
+      echo "게시 복구용 작업폴더를 보관합니다: $WORKTREE" >&2
+      "$PYTHON_BIN" "$WORKTREE/scripts/retry_market_publication.py" save \
+        --root "$WORKTREE" --runtime-root "$ROOT" --run-id "$RUN_ID" \
+        --source-commit "$SOURCE_COMMIT" --stage "$CURRENT_STAGE" \
+        --remote "$REMOTE" --branch "$BRANCH" --scheduled-time "$SCHEDULED_TIME" \
+        --started-at "$RUN_STARTED_AT" || true
+    else
+      git -C "$ROOT" worktree remove --force "$WORKTREE" >/dev/null 2>&1 || rm -rf "$WORKTREE"
+    fi
   fi
   return "$exit_code"
 }
@@ -345,6 +364,7 @@ git -C "$ROOT" fetch "$REMOTE" "$BRANCH"
 git -C "$ROOT" worktree add --detach "$WORKTREE" "$REMOTE/$BRANCH"
 
 cd "$WORKTREE"
+SOURCE_COMMIT="$(git rev-parse HEAD)"
 
 export PYTHONUNBUFFERED=1
 export PYTHONPATH="$WORKTREE/src"
@@ -474,6 +494,7 @@ refresh_els_index_risk() {
   fi
   if [[ -s data/els-index-risk.json ]]; then
     echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] ELS 원천 조회 실패로 직전 검증본을 유지합니다." >&2
+    ELS_REUSED=1
     return 0
   fi
   echo "ELS 지수 리스크 신규 산출과 직전 검증본 사용이 모두 불가능합니다." >&2
@@ -577,6 +598,7 @@ make test
 VALIDATION_STAGE_COMPLETED_EPOCH="$(date +%s)"
 RUN_COMPLETED_AT="$(kst_now '+%Y-%m-%d %H:%M:%S KST')"
 RUN_COMPLETED_EPOCH="$(date +%s)"
+KEEP_FAILED_CANDIDATE=1
 
 "$PYTHON_BIN" scripts/write_pipeline_status.py \
   --mode "$UPDATE_MODE" \
@@ -601,6 +623,9 @@ ATOMIC_PUBLICATION_ARGS=(
   --mode "$UPDATE_MODE"
   --started-at "$RUN_STARTED_AT"
 )
+if (( ELS_REUSED )); then
+  ATOMIC_PUBLICATION_ARGS+=(--reused-file data/els-index-risk.json)
+fi
 if [[ "$UPDATE_MODE" == "fast" ]]; then
   ATOMIC_PUBLICATION_ARGS+=(
     --reused-file data/market-stress-episodes.json
@@ -654,40 +679,34 @@ push_update_commit() {
 
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 원격 변경을 감지했습니다. 최신 $REMOTE/$BRANCH 위로 데이터 커밋을 재배치합니다."
   git fetch "$REMOTE" "$BRANCH"
-  git rebase -X theirs "$REMOTE/$BRANCH"
+  "$PYTHON_BIN" scripts/publication_delivery.py check-rebase --base "$SOURCE_COMMIT" --target "$REMOTE/$BRANCH"
+  git rebase "$REMOTE/$BRANCH"
+  SOURCE_COMMIT="$(git rev-parse "$REMOTE/$BRANCH")"
 
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 재배치된 코드 기준으로 오프라인 HTML과 스모크 테스트를 다시 검증합니다."
   "$PYTHON_BIN" scripts/export_offline_dashboard.py --stable-only
   prepare_atomic_publication
   python3 tests/smoke_test.py
+  load_publish_files
   git add -- "${PUBLISH_FILES[@]}"
+  "$PYTHON_BIN" scripts/publication_delivery.py verify-staged
   if ! git diff --cached --quiet; then
     git commit --amend --no-edit
   fi
   git push "$REMOTE" "HEAD:$BRANCH"
 }
 
-PUBLISH_FILES=(
-  data/risk-dashboard.json
-  data/market-risk-snapshot.json
-  data/market-risk-timeseries.json
-  data/naver-marketindex-history.json
-  data/market-risk-backtest.json
-  data/market-stress-episodes.json
-  data/market-history-cache.json
-  data/els-index-risk.json
-  data/hmm-regime.json
-  data/ml-risk-signal.json
-  data/data-quality.json
-  data/pipeline-status.json
-  data/publication-manifest.json
-  data/m7-credit-proxy.json
-  data/kb-market-funds.json
-  data/dram-spot-prices.json
-  data/kospi-breadth.json
-  reports/market-risk-dashboard-offline.html
-)
+load_publish_files() {
+  local paths path
+  paths="$("$PYTHON_BIN" scripts/publication_delivery.py files)"
+  PUBLISH_FILES=()
+  while IFS= read -r path; do
+    PUBLISH_FILES+=("$path")
+  done <<< "$paths"
+}
+load_publish_files
 git add -- "${PUBLISH_FILES[@]}"
+"$PYTHON_BIN" scripts/publication_delivery.py verify-staged
 
 if git diff --cached --quiet; then
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 변경된 데이터가 없어 커밋하지 않습니다."

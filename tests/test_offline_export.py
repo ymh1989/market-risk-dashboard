@@ -1,6 +1,8 @@
 import importlib.util
 from pathlib import Path
 
+from scripts.publication_delivery import publication_files
+
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPORTER_FILE = ROOT / "scripts" / "export_offline_dashboard.py"
@@ -85,9 +87,10 @@ def test_homepage_and_update_pipelines_publish_latest_snapshot():
     assert 'download="${offlineSnapshotFilename(data)}"' in app_source
     assert ".hero__download" in styles
     assert "scripts/export_offline_dashboard.py --stable-only" in local_update
-    assert "reports/market-risk-dashboard-offline.html" in local_update
+    assert "scripts/publication_delivery.py files" in local_update
     assert "scripts/export_offline_dashboard.py --stable-only" in workflow
-    assert "reports/market-risk-dashboard-offline.html" in workflow
+    assert "scripts/publication_delivery.py files" in workflow
+    assert "reports/market-risk-dashboard-offline.html" in publication_files(ROOT)
 
 
 def test_weekday_full_update_does_not_expand_an_empty_bash_array():

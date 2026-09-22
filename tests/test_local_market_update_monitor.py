@@ -76,7 +76,7 @@ def test_failure_marker_is_included_and_alert_is_sent_once(tmp_path):
     assert find_schedule_alerts(**kwargs) == []
 
 
-def test_later_success_supersedes_an_earlier_missing_slot(tmp_path):
+def test_later_live_success_does_not_hide_missing_fast_slot(tmp_path):
     state_dir = tmp_path / "state"
     state_dir.mkdir()
     (state_dir / "2026-08-27-15:00.done").write_text("완료", encoding="utf-8")
@@ -89,6 +89,34 @@ def test_later_success_supersedes_an_earlier_missing_slot(tmp_path):
         lock_dir=tmp_path / "lock",
     )
 
+    assert [(alert.mode, alert.scheduled_at.strftime("%H:%M")) for alert in alerts] == [("fast", "07:30")]
+
+
+def test_krx_success_does_not_hide_failed_full_update(tmp_path):
+    state_dir = tmp_path / "state"
+    state_dir.mkdir()
+    for slot in ("07:30", "09:00", "15:00", "18:30"):
+        (state_dir / f"2026-08-27-{slot}.done").write_text("완료", encoding="utf-8")
+    (state_dir / "2026-08-27-15:35.failed").write_text(
+        "status=failed\nexitCode=1\nstage=게시 파일 준비\n", encoding="utf-8"
+    )
+    alerts = find_schedule_alerts(
+        now=datetime(2026, 8, 27, 19, 0, tzinfo=KST), settings=settings_from_env(ENV),
+        state_dir=state_dir, alert_dir=tmp_path / "alerts", lock_dir=tmp_path / "lock",
+    )
+    assert len(alerts) == 1
+    assert alerts[0].mode == "full"
+    assert "게시 파일 준비" in alerts[0].state
+
+
+def test_full_success_covers_earlier_fast_and_live_slots(tmp_path):
+    state_dir = tmp_path / "state"
+    state_dir.mkdir()
+    (state_dir / "2026-08-27-15:35.done").write_text("완료", encoding="utf-8")
+    alerts = find_schedule_alerts(
+        now=datetime(2026, 8, 27, 17, 0, tzinfo=KST), settings=settings_from_env(ENV),
+        state_dir=state_dir, alert_dir=tmp_path / "alerts", lock_dir=tmp_path / "lock",
+    )
     assert alerts == []
 
 

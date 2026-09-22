@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
 
 jobs:
   update-market-risk:
@@ -44,6 +45,7 @@ jobs:
           python3 scripts/update_vkospi.py
           python3 -m m7_credit_proxy.pipeline --update-latest
           python3 scripts/update_kb_market_funds.py --kofia-only --strict
+          python3 scripts/update_dram_spot_prices.py
           make update-market-risk
           make backtest-market-risk
           REFRESH_STRESS_CACHE=1 make analyze-stress-episodes
@@ -80,10 +82,33 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/risk-dashboard.json data/market-risk-snapshot.json data/market-risk-timeseries.json data/naver-marketindex-history.json data/market-risk-backtest.json data/market-stress-episodes.json data/market-history-cache.json data/els-index-risk.json data/hmm-regime.json data/ml-risk-signal.json data/data-quality.json data/pipeline-status.json data/publication-manifest.json data/m7-credit-proxy.json data/kb-market-funds.json data/kospi-breadth.json reports/market-risk-dashboard-offline.html
+          PUBLISH_PATHS="$(python3 scripts/publication_delivery.py files)"
+          PUBLISH_FILES=()
+          while IFS= read -r path; do
+            PUBLISH_FILES+=("$path")
+          done <<< "$PUBLISH_PATHS"
+          git add -- "${PUBLISH_FILES[@]}"
+          python3 scripts/publication_delivery.py verify-staged
           if git diff --cached --quiet; then
             echo "No data changes to commit."
           else
             git commit -m "Update market risk data"
             git push
           fi
+
+      - name: Request Pages build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/builds"
+
+      - name: Verify published snapshot
+        timeout-minutes: 15
+        run: |
+          for attempt in $(seq 1 60); do
+            if python3 scripts/publication_delivery.py verify-remote; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "홈페이지 게시 파일 검증 실패" >&2
+          exit 1

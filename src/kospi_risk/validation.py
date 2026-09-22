@@ -4,9 +4,11 @@ import hashlib
 import json
 import math
 import os
+import platform
 import warnings
 from dataclasses import dataclass
 from functools import lru_cache
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +45,11 @@ CRASH_TASKS = [
 ]
 
 BACKTEST_CACHE_SCHEMA_VERSION = 1
+BACKTEST_CODE_FILES = (
+    "models.py", "validation.py", "feature_engineering.py", "targets.py",
+    "config.py", "data_loader.py", "data_schema.py",
+)
+BACKTEST_PACKAGES = ("numpy", "pandas", "scipy", "scikit-learn", "joblib", "lightgbm")
 
 
 @dataclass
@@ -54,13 +61,21 @@ class WalkForwardSplit:
 
 
 @lru_cache(maxsize=1)
-def _implementation_fingerprint() -> str:
-    """모델 코드 변경 시 이전 fold 캐시가 재사용되지 않도록 해시를 만든다."""
+def _implementation_fingerprint(package_dir: Path | None = None) -> str:
+    """계산 의존 코드·환경만 비교해 관찰카드 수정의 불필요한 재학습을 막습니다."""
     digest = hashlib.sha256()
-    package_dir = Path(__file__).resolve().parent
-    for path in sorted(package_dir.glob("*.py")):
+    package_dir = package_dir or Path(__file__).resolve().parent
+    for name in BACKTEST_CODE_FILES:
+        path = package_dir / name
         digest.update(path.name.encode("utf-8"))
         digest.update(path.read_bytes())
+    environment = {"python": platform.python_version(), "machine": platform.machine()}
+    for name in BACKTEST_PACKAGES:
+        try:
+            environment[name] = version(name)
+        except PackageNotFoundError:
+            environment[name] = "not-installed"
+    digest.update(json.dumps(environment, sort_keys=True).encode("utf-8"))
     return digest.hexdigest()
 
 

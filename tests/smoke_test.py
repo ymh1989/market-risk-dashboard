@@ -508,7 +508,8 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert 'EOD ${end_date}까지' in run_script
     assert 'EOD $BREADTH_END_DATE까지' not in run_script
     assert "push_update_commit()" in run_script
-    assert 'git rebase -X theirs "$REMOTE/$BRANCH"' in run_script
+    assert 'git rebase -X theirs' not in run_script
+    assert 'scripts/publication_delivery.py check-rebase' in run_script
     assert "재배치된 코드 기준으로 오프라인 HTML과 스모크 테스트를 다시 검증합니다." in run_script
     assert "refresh_runtime_entrypoint()" in run_script
     assert 'git -C "$ROOT" show "$remote_path" > "$candidate_path"' in run_script
@@ -525,12 +526,12 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert "--reused-file data/market-history-cache.json" in run_script
     assert "--reused-file data/kospi-breadth.json" in run_script
     assert "--reused-file data/kb-market-funds.json" in run_script
-    assert "data/publication-manifest.json" in run_script
-    assert "pages_publication_run_id()" in run_script
+    assert "scripts/publication_delivery.py verify-remote" in run_script
+    assert "pages_publication_run_id()" not in run_script
     assert "PUBLISH_FILES=(" in run_script
     assert 'git add -- "${PUBLISH_FILES[@]}"' in run_script
-    publish_files = run_script.split("PUBLISH_FILES=(", 1)[1].split("\n)", 1)[0]
-    assert "data/dram-spot-prices.json" in publish_files
+    assert "scripts/publication_delivery.py files" in run_script
+    assert "scripts/publication_delivery.py verify-staged" in run_script
     assert "MARKET_UPDATE_RUN_ID=gha-${{ github.run_id }}-${{ github.run_attempt }}" in workflow
     assert "scripts/prepare_atomic_publication.py" in workflow
     assert "--reused-file data/kospi-breadth.json" in workflow
@@ -539,7 +540,9 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert "scripts/update_vkospi.py" in run_script
     assert "--vkospi data/raw/vkospi/stockplus_vkospi.csv" in run_script
     assert "--reused-file data/kb-market-funds.json" not in workflow
-    assert "data/publication-manifest.json" in workflow
+    assert "scripts/publication_delivery.py files" in workflow
+    assert "scripts/publication_delivery.py verify-staged" in workflow
+    assert "scripts/update_dram_spot_prices.py" in workflow
     assert 'SATURDAY_TIMES="${LOCAL_MARKET_UPDATE_SATURDAY_TIMES:-07:30}"' in installer
     assert 'TIMES="${LOCAL_MARKET_UPDATE_TIMES:-07:30,09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35,18:30}"' in installer
     assert 'append_calendar_intervals "$MONDAY_TIMES" 1' in installer

@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import ast
+from pathlib import Path
+
 import pandas as pd
+import pytest
 
 from kospi_risk.config import load_config
 from kospi_risk.data_loader import make_sample_market_data
@@ -8,6 +12,7 @@ from kospi_risk.feature_engineering import build_features_from_market_data
 from kospi_risk.models import eligible_training_frame
 from kospi_risk.targets import add_targets
 from kospi_risk.validation import make_walk_forward_splits, run_crash_walk_forward_backtest, run_walk_forward_backtest
+from kospi_risk import validation
 
 
 def small_config():
@@ -83,6 +88,8 @@ def test_walk_forward_cache_reuses_identical_folds(tmp_path):
     assert second_crash_metrics.attrs["cache"]["hits"] == 3
     pd.testing.assert_frame_equal(first_scored, second_scored)
     pd.testing.assert_frame_equal(first_crash, second_crash)
+    pd.testing.assert_frame_equal(first_metrics, second_metrics)
+    pd.testing.assert_frame_equal(first_crash_metrics, second_crash_metrics)
 
 
 def test_walk_forward_cache_retrains_only_changed_tail_fold(tmp_path):
@@ -117,3 +124,43 @@ def test_walk_forward_cache_invalidates_historical_revision(tmp_path):
 
     assert revised_metrics.attrs["cache"]["hits"] == 0
     assert revised_metrics.attrs["cache"]["misses"] == 3
+
+
+def test_cache_fingerprint_ignores_observation_and_lab_modules(tmp_path):
+    for name in validation.BACKTEST_CODE_FILES:
+        (tmp_path / name).write_text("original", encoding="utf-8")
+    first = validation._implementation_fingerprint(tmp_path)
+    for name in ("dram_spot.py", "transformer_lab.py", "model_monitoring.py"):
+        (tmp_path / name).write_text("changed", encoding="utf-8")
+    validation._implementation_fingerprint.cache_clear()
+    assert validation._implementation_fingerprint(tmp_path) == first
+
+
+def test_cache_code_list_covers_internal_import_dependencies():
+    root = Path(validation.__file__).parent
+    for filename in validation.BACKTEST_CODE_FILES:
+        tree = ast.parse((root / filename).read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.level == 1 and node.module:
+                assert node.module.split(".", 1)[0] + ".py" in validation.BACKTEST_CODE_FILES
+
+
+@pytest.mark.parametrize("name", validation.BACKTEST_CODE_FILES)
+def test_cache_fingerprint_tracks_all_calculation_modules(tmp_path, name):
+    for filename in validation.BACKTEST_CODE_FILES:
+        (tmp_path / filename).write_text("original", encoding="utf-8")
+    first = validation._implementation_fingerprint(tmp_path)
+    (tmp_path / name).write_text("changed", encoding="utf-8")
+    validation._implementation_fingerprint.cache_clear()
+    assert validation._implementation_fingerprint(tmp_path) != first
+
+
+def test_cache_fingerprint_tracks_dependency_versions(tmp_path, monkeypatch):
+    for name in validation.BACKTEST_CODE_FILES:
+        (tmp_path / name).write_text("original", encoding="utf-8")
+    monkeypatch.setattr(validation, "version", lambda name: "1.0")
+    first = validation._implementation_fingerprint(tmp_path)
+    monkeypatch.setattr(validation, "version", lambda name: "2.0" if name == "scikit-learn" else "1.0")
+    validation._implementation_fingerprint.cache_clear()
+    assert validation._implementation_fingerprint(tmp_path) != first
+    validation._implementation_fingerprint.cache_clear()

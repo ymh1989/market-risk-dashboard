@@ -31,7 +31,9 @@ models:
     )
 
 
-def test_cli_pipeline_smoke(tmp_path):
+def test_cli_pipeline_smoke(tmp_path, monkeypatch):
+    # 기본 캐시·보조 리포트도 운영 작업폴더에 쓰지 않도록 격리합니다.
+    monkeypatch.chdir(tmp_path)
     raw = tmp_path / "market_data.csv"
     features = tmp_path / "features.parquet"
     config = tmp_path / "config.yaml"

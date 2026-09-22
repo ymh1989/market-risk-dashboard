@@ -240,3 +240,19 @@ def test_verify_rejects_artifact_path_outside_project(tmp_path):
 
     with pytest.raises(PublicationError, match="프로젝트 내부 상대경로"):
         verify_publication(tmp_path, expected_run_id=RUN_ID)
+
+
+def test_full_els_fallback_preserves_actual_timestamp_and_requires_explicit_reuse(tmp_path):
+    make_publication_candidate(tmp_path)
+    els = Path("data/els-index-risk.json")
+    old_time = "2026-08-18 15:36:00 KST"
+    write_json(tmp_path, els, {"generatedAt": old_time, "indices": []})
+    artifacts = tuple(path for path in ARTIFACTS if "stress-episodes" not in str(path)) + (els,)
+    with pytest.raises(PublicationError, match="신규 산출물이 아닙니다"):
+        prepare_publication(tmp_path, run_id=RUN_ID, mode="full", started_at=STARTED_AT,
+                            artifact_paths=artifacts, prepared_at=PREPARED_AT)
+    prepare_publication(tmp_path, run_id=RUN_ID, mode="full", started_at=STARTED_AT,
+                        artifact_paths=artifacts, reused_paths=[els], prepared_at=PREPARED_AT)
+    payload = json.loads((tmp_path / els).read_text())
+    assert payload["generatedAt"] == old_time
+    assert payload["publication"]["state"] == "reused"
