@@ -21,6 +21,7 @@ DATA_FILES = [
     "data/market-risk-snapshot.json",
     "data/data-quality.json",
     "data/naver-marketindex-history.json",
+    "data/dram-spot-prices.json",
     "data/market-risk-backtest.json",
     "data/market-stress-episodes.json",
     "data/kospi-breadth.json",

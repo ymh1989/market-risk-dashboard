@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260916-3";
+const ASSET_VERSION = "20260922-2";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -159,6 +159,13 @@ const marketTrendGroups = [
       { id: "copper", label: "구리", type: "price", upLabel: "가격 상승", downLabel: "가격 하락" },
       { id: "iron_ore", label: "철광석", type: "price", upLabel: "가격 상승", downLabel: "가격 하락" },
       { id: "gold", label: "국제 금", type: "price", upLabel: "금값 상승", downLabel: "금값 하락" }
+    ]
+  },
+  {
+    id: "memory",
+    label: "메모리 현물",
+    items: [
+      { id: "dram_ddr5_16gb", label: "DDR5 16Gb 현물", type: "usd", upLabel: "현물가 상승", downLabel: "현물가 하락" }
     ]
   },
   {
@@ -3221,7 +3228,7 @@ function formatMarketTrendCurrentComparison(pointValue, currentValue, type) {
             ? 2
             : 4;
   const formattedRaw = `${rawChange > 0 ? "+" : ""}${formatNumber(rawChange, digits)}`;
-  const rawText = type === "crypto" ? `${formattedRaw}원` : formattedRaw;
+  const rawText = type === "crypto" ? `${formattedRaw}원` : type === "usd" ? `$${formattedRaw}` : formattedRaw;
   const percentChange = (current / point - 1) * 100;
   return `과거 대비 현재는 ${rawText} · ${formatMarketTrendChange(percentChange, type)}`;
 }
@@ -3232,10 +3239,46 @@ function formatMarketTrendValue(value, type) {
   if (type === "yield") return `${number.toFixed(3)}%`;
   if (type === "spread") return `${number > 0 ? "+" : ""}${(number * 100).toFixed(1)}bp`;
   if (type === "crypto") return `₩${formatNumber(number, 0)}`;
+  if (type === "usd") return `$${formatNumber(number, 3)}`;
   if (type === "fx") return number >= 100 ? number.toFixed(2) : number.toFixed(4);
   if (number >= 1000) return formatNumber(number, 1);
   if (number >= 100) return number.toFixed(2);
   return number.toFixed(4);
+}
+
+function mergeDramSpotDirectionData(marketIndexes, dramSpotPrices) {
+  if (!marketIndexes?.series || !marketIndexes?.metadata || !dramSpotPrices) {
+    return marketIndexes;
+  }
+
+  const rowsByDate = new Map();
+  (dramSpotPrices.history ?? []).forEach((point) => {
+    const close = Number(point?.pricesUsd?.DDR5_16Gb);
+    if (!point?.date || !Number.isFinite(close)) return;
+    rowsByDate.set(point.date, { date: point.date, close });
+  });
+  const rows = [...rowsByDate.values()].sort((left, right) => left.date.localeCompare(right.date));
+  if (rows.length < 2) return marketIndexes;
+
+  return {
+    ...marketIndexes,
+    metadata: {
+      ...marketIndexes.metadata,
+      dram_ddr5_16gb: {
+        label: "DDR5 16Gb 현물",
+        symbol: "DDR5 16Gb (2Gx8) 4800/5600",
+        frequency: "daily",
+        source: "TrendForce 공개 DRAM 현물가격",
+        observations: rows.length,
+        firstDate: rows[0].date,
+        lastDate: rows.at(-1).date
+      }
+    },
+    series: {
+      ...marketIndexes.series,
+      dram_ddr5_16gb: rows
+    }
+  };
 }
 
 function formatMarketSnapshotTime(observedAt) {
@@ -3472,7 +3515,7 @@ function renderMarketIndexTrendPanel(marketIndexes) {
       <header class="market-trend-panel__header">
         <div>
           <span class="eyebrow">Cross-Asset Direction</span>
-          <h2>금리·스프레드·환율·원자재·운임 방향성</h2>
+          <h2>금리·스프레드·환율·원자재·메모리·운임 방향성</h2>
           ${renderNarrativeList(narrative, "narrative-list--compact")}
         </div>
         <div class="market-trend-panel__summary">
@@ -3502,7 +3545,8 @@ function renderMarketIndexTrendPanel(marketIndexes) {
       </div>
       ${renderChartTooltip()}
       <footer class="market-trend-panel__footer">
-        <span>Naver Pay 증권 · 업비트 BTC/KRW · 국채 스프레드는 동일 관측일 장기금리-단기금리</span>
+        <span>Naver Pay 증권 · 업비트 BTC/KRW · TrendForce DDR5 16Gb 현물</span>
+        <span>국채 스프레드는 동일 관측일 장기금리-단기금리</span>
         <span>현재값은 실시간·지연 잠정치 · 과거 시계열과 ML은 확정 EOD</span>
         <span>일간 최근 10회 · 주간 최근 6회 방향 판독</span>
         <span>전일·1주는 고정 · 기간 변동은 선택 구간 첫 관측 대비 · 부족 시 가용기간 표기</span>
@@ -6831,7 +6875,8 @@ function renderDashboard(
   dataQuality,
   stressEpisodes,
   breadthData,
-  marketFunds
+  marketFunds,
+  dramSpotPrices
 ) {
   interactiveChartRegistry.clear();
   interactiveChartSequence = 0;
@@ -7102,8 +7147,9 @@ function renderDashboard(
     ]);
 
     if (directionSlot) {
+      const directionData = mergeDramSpotDirectionData(marketIndexes, dramSpotPrices);
       directionSlot.innerHTML =
-        renderMarketIndexTrendPanel(marketIndexes) ||
+        renderMarketIndexTrendPanel(directionData) ||
         `<div class="deferred-panel deferred-panel--error">시장 방향성 데이터를 확인하지 못했습니다</div>`;
       initializeInteractiveCharts(directionSlot);
     }
@@ -7323,6 +7369,17 @@ function renderDashboard(
 }
 
 let activePublicationRunId = "";
+let activePublicationArtifactStates = new Map();
+
+function publicationArtifactPath(path) {
+  const normalized = String(path).replace(/^\.\//, "").split("?", 1)[0];
+  if (normalized.startsWith("data/") || normalized.startsWith("reports/")) return normalized;
+  return `data/${normalized}`;
+}
+
+function publicationAllowsReuse(path, artifactStates = activePublicationArtifactStates) {
+  return artifactStates.get(publicationArtifactPath(path)) === "reused";
+}
 
 function validatePublicationBundle(manifest, entries) {
   if (!manifest) return;
@@ -7330,14 +7387,21 @@ function validatePublicationBundle(manifest, entries) {
   if (manifest.status !== "ready" || !runId) {
     throw new Error("게시 manifest가 준비 완료 상태가 아닙니다.");
   }
+  const artifactStates = new Map(
+    (manifest.artifacts ?? []).map((artifact) => [artifact.path, artifact.state])
+  );
   const mismatches = entries
     .filter(({ payload }) => payload)
-    .filter(({ payload }) => payload?.publication?.runId !== runId)
+    .filter(
+      ({ path, payload }) =>
+        payload?.publication?.runId !== runId && !publicationAllowsReuse(path, artifactStates)
+    )
     .map(({ path }) => path);
   if (mismatches.length) {
     throw new Error(`게시 데이터 실행번호가 일치하지 않습니다: ${mismatches.join(", ")}`);
   }
   activePublicationRunId = runId;
+  activePublicationArtifactStates = artifactStates;
 }
 
 async function loadJson(path, required = false, allowLegacyMissing = false) {
@@ -7349,7 +7413,8 @@ async function loadJson(path, required = false, allowLegacyMissing = false) {
     if (
       activePublicationRunId &&
       !path.includes("publication-manifest.json") &&
-      payload?.publication?.runId !== activePublicationRunId
+      payload?.publication?.runId !== activePublicationRunId &&
+      !publicationAllowsReuse(path)
     ) {
       throw new Error(`${path}가 현재 게시 실행번호와 일치하지 않습니다.`);
     }
@@ -7373,9 +7438,10 @@ Promise.all([
   loadJson("./data/data-quality.json"),
   loadJson("./data/market-stress-episodes.json"),
   loadJson("./data/kospi-breadth.json"),
-  loadJson("./data/kb-market-funds.json")
+  loadJson("./data/kb-market-funds.json"),
+  loadJson("./data/dram-spot-prices.json")
 ])
-  .then(([publicationManifest, dashboard, timeseries, mlRisk, elsRisk, hmmRegime, pipelineStatus, sourceSnapshot, dataQuality, stressEpisodes, breadthData, marketFunds]) => {
+  .then(([publicationManifest, dashboard, timeseries, mlRisk, elsRisk, hmmRegime, pipelineStatus, sourceSnapshot, dataQuality, stressEpisodes, breadthData, marketFunds, dramSpotPrices]) => {
     validatePublicationBundle(publicationManifest, [
       { path: "risk-dashboard.json", payload: dashboard },
       { path: "market-risk-timeseries.json", payload: timeseries },
@@ -7387,7 +7453,8 @@ Promise.all([
       { path: "data-quality.json", payload: dataQuality },
       { path: "market-stress-episodes.json", payload: stressEpisodes },
       { path: "kospi-breadth.json", payload: breadthData },
-      { path: "kb-market-funds.json", payload: marketFunds }
+      { path: "kb-market-funds.json", payload: marketFunds },
+      { path: "dram-spot-prices.json", payload: dramSpotPrices }
     ]);
     return renderDashboard(
       dashboard,
@@ -7400,7 +7467,8 @@ Promise.all([
       dataQuality,
       stressEpisodes,
       breadthData,
-      marketFunds
+      marketFunds,
+      dramSpotPrices
     );
   })
   .catch((error) => {
