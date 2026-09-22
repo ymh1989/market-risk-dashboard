@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260922-3";
+const ASSET_VERSION = "20260922-4";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -3791,25 +3791,16 @@ function indicatorSourceRecords(indicator, snapshot) {
   if (indicator.id === "dram_spot_cycle_watch" && snapshot?.dramSpotPrices) {
     const dramSources = Object.values(snapshot.dramSpotPrices.sources ?? {});
     matches.push(
-      ...dramSources.map((record, index) => {
-        const isHistory = String(record.role ?? "").includes("52주 이력");
-        return {
-          id: `dram-spot-prices-${index}`,
-          lastDate: snapshot.dramSpotPrices.lastDate,
-          observations: snapshot.dramSpotPrices.observations,
-          fetchStatus: record.status,
-          ...record,
-          displayLabel:
-            record.displayLabel ??
-            (isHistory
-              ? "공개 DRAM 52주 이력(보조)"
-              : record.provider === "TrendForce"
-                ? "TrendForce 공식 최신값"
-                : null),
-          providerNote:
-            record.providerNote ?? (isHistory ? `제공: ${record.provider}` : null)
-        };
-      })
+      ...dramSources.map((record, index) => ({
+        id: `dram-spot-prices-${index}`,
+        lastDate: snapshot.dramSpotPrices.lastDate,
+        observations: snapshot.dramSpotPrices.observations,
+        fetchStatus: record.status,
+        ...record,
+        displayLabel:
+          record.displayLabel ??
+          (record.provider === "TrendForce" ? "TrendForce 공식 최신값" : null)
+      }))
     );
   }
   return matches.filter(
@@ -3854,7 +3845,7 @@ function sourceEnhancementNote(indicator) {
     return "FreeSIS 5년 원장 · KB 최종일 동일일 대조";
   }
   if (indicator.id === "dram_spot_cycle_watch") {
-    return "TrendForce 공식 최신값 · 공개 52주 이력 대조";
+    return "TrendForce 공식 최신값 · 일별 자체 적재";
   }
   return "소스 변경 이력 없음";
 }
@@ -4018,7 +4009,7 @@ function renderIndicatorSourceDetail(indicator, provenance) {
     indicator.id === "kb_domestic_funding_watch"
       ? "최근 5년 · 원점수 expanding 혼합 정규화 · 확인점수 과거방향 5D EWM"
       : indicator.id === "dram_spot_cycle_watch"
-        ? "2025년 이후 · 20D/60D 모멘텀·고점 근접도·상승 확산 · 과거방향 5D EWM"
+        ? "TrendForce 공식 관측 누적 · 20D/60D 모멘텀·고점 근접도·상승 확산 · 과거방향 5D EWM"
         : normalization
         ? `최대 2년 · 분위수 ${Number(normalization.percentileWeight) * 100}% · z ${Number(normalization.zScoreWeight) * 100}% · robust z ${Number(normalization.robustZScoreWeight) * 100}%`
         : "최대 2년 · 가용 관측치 기준";
@@ -4046,7 +4037,7 @@ function renderIndicatorSourceDetail(indicator, provenance) {
                   (record) => `
                     <div>
                       <strong>${renderSourceRecordLabel(record)}</strong>
-                      <span>${record.lastDate ?? "관측일 확인 대기"} · ${sourceValueState(record)} · ${Number.isFinite(Number(record.observations)) ? `${Number(record.observations).toLocaleString()}개 관측` : Number.isFinite(Number(record.coveragePct)) ? `커버리지 ${Number(record.coveragePct).toFixed(0)}%` : "관측수 확인 대기"}${record.providerNote ? ` · ${record.providerNote}` : ""}</span>
+                      <span>${record.lastDate ?? "관측일 확인 대기"} · ${sourceValueState(record)} · ${Number.isFinite(Number(record.observations)) ? `${Number(record.observations).toLocaleString()}개 관측` : Number.isFinite(Number(record.coveragePct)) ? `커버리지 ${Number(record.coveragePct).toFixed(0)}%` : "관측수 확인 대기"}</span>
                     </div>
                   `
                 )

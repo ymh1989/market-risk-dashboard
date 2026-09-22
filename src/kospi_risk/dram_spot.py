@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import html
-import json
 import math
 import re
 from collections.abc import Iterable, Mapping
@@ -85,69 +84,6 @@ def parse_trendforce_spot_html(document: str) -> dict[str, Any]:
         "pricesUsd": prices,
         "sessionChangesPct": session_changes,
     }
-
-
-def parse_public_history_html(document: str) -> list[dict[str, Any]]:
-    """공개 페이지의 Next.js payload에서 52주 제품별 이력을 추출합니다."""
-    match = re.search(
-        r'\\"dramHistoryAll\\":(\[.*?\]),\\"[^\\"]+\\":',
-        document,
-        flags=re.DOTALL,
-    )
-    if not match:
-        match = re.search(r'"dramHistoryAll":(\[.*?\]),"[^\"]+":', document, re.DOTALL)
-    if not match:
-        raise DramSpotDataError("공개 52주 DRAM 이력 payload를 찾지 못했습니다.")
-
-    raw_json = match.group(1).replace(r'\"', '"')
-    try:
-        rows = json.loads(raw_json)
-    except json.JSONDecodeError as exc:
-        raise DramSpotDataError("공개 DRAM 이력 JSON을 해석하지 못했습니다.") from exc
-
-    if not isinstance(rows, list) or not rows:
-        raise DramSpotDataError("공개 DRAM 이력이 비어 있습니다.")
-    return rows
-
-
-def normalize_history(
-    rows: Iterable[Mapping[str, Any]],
-    *,
-    start_date: str = HISTORY_START_DATE,
-) -> list[dict[str, Any]]:
-    """제품별 long 형식 이력을 평일 단위 wide 형식으로 변환합니다."""
-    by_date: dict[str, dict[str, float]] = {}
-    for row in rows:
-        observed_date = str(row.get("date") or "")
-        product_id = str(row.get("chip_type") or "")
-        value = row.get("price_usd")
-        if observed_date < start_date or product_id not in PRODUCTS:
-            continue
-        try:
-            parsed_date = date.fromisoformat(observed_date)
-            price = float(value)
-        except (TypeError, ValueError):
-            continue
-        if parsed_date.weekday() >= 5 or not math.isfinite(price) or price <= 0:
-            continue
-        by_date.setdefault(observed_date, {})[product_id] = price
-
-    complete_rows = []
-    required = set(PRODUCTS)
-    for observed_date in sorted(by_date):
-        prices = by_date[observed_date]
-        if set(prices) != required:
-            continue
-        complete_rows.append(
-            {
-                "date": observed_date,
-                "pricesUsd": {key: round(prices[key], 4) for key in PRODUCTS},
-                "source": "public-history",
-            }
-        )
-    if not complete_rows:
-        raise DramSpotDataError("4개 제품이 모두 있는 평일 DRAM 이력이 없습니다.")
-    return complete_rows
 
 
 def merge_history(
@@ -250,7 +186,7 @@ def calculate_cycle_scores(rows: Iterable[Mapping[str, Any]]) -> list[dict[str, 
                 "returns60dPct": {key: round(float(returns_60d[key]), 2) for key in PRODUCTS},
                 "highGapPct": {key: round(float(high_gaps[key]), 2) for key in PRODUCTS},
                 "positiveBreadthPct": round(positive_breadth * 100, 1),
-                "source": row.get("source") or "public-history",
+                "source": row.get("source") or "trendforce-official",
             }
         )
     if not output:
@@ -263,15 +199,39 @@ def build_payload(
     *,
     generated_at: datetime,
     official_latest: Mapping[str, Any] | None = None,
-    history_status: str = "direct",
     official_status: str = "direct",
 ) -> dict[str, Any]:
-    """저장·대시보드 연동용 DRAM 관찰지표 payload를 생성합니다."""
+    """TrendForce 공식 일별 관측만 저장하고 충분한 이력이 쌓이면 점수를 계산합니다."""
     normalized_rows = list(rows)
-    scored = calculate_cycle_scores(normalized_rows)
-    latest = dict(scored[-1])
-    prior = scored[-2] if len(scored) > 1 else latest
-    latest["change1d"] = round(latest["score"] - prior["score"], 1)
+    if not normalized_rows:
+        raise DramSpotDataError("TrendForce 공식 DRAM 관측값이 없습니다.")
+
+    scored: list[dict[str, Any]] = []
+    if len(normalized_rows) >= 21:
+        scored = calculate_cycle_scores(normalized_rows)
+
+    if scored:
+        latest = dict(scored[-1])
+        prior = scored[-2] if len(scored) > 1 else latest
+        latest["change1d"] = round(latest["score"] - prior["score"], 1)
+    else:
+        latest_row = normalized_rows[-1]
+        latest = {
+            "date": latest_row["date"],
+            "score": None,
+            "rawScore": None,
+            "pricesUsd": {
+                key: round(float(latest_row["pricesUsd"][key]), 4)
+                for key in PRODUCTS
+            },
+            "returns20dPct": {key: None for key in PRODUCTS},
+            "returns60dPct": {key: None for key in PRODUCTS},
+            "highGapPct": {key: None for key in PRODUCTS},
+            "positiveBreadthPct": None,
+            "source": latest_row.get("source") or "trendforce-official",
+            "change1d": None,
+        }
+
     latest["products"] = [
         {
             "id": key,
@@ -285,24 +245,13 @@ def build_payload(
         for key, config in PRODUCTS.items()
     ]
 
-    comparison = None
-    if official_latest and official_latest.get("date") == latest["date"]:
-        differences = []
-        for key in PRODUCTS:
-            official = float(official_latest["pricesUsd"][key])
-            stored = float(latest["pricesUsd"][key])
-            differences.append(abs(stored / official - 1) * 100)
-        comparison = {
-            "date": latest["date"],
-            "maxDifferencePct": round(max(differences), 4),
-            "status": "matched" if max(differences) <= 0.1 else "mismatch",
-        }
-
+    observation_count = len(normalized_rows)
+    score_ready = bool(scored)
     return {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "generatedAt": generated_at.isoformat(),
         "historyStart": normalized_rows[0]["date"],
-        "scoreStart": scored[0]["date"],
+        "scoreStart": scored[0]["date"] if scored else None,
         "latest": latest,
         "history": normalized_rows,
         "series": scored,
@@ -311,29 +260,26 @@ def build_payload(
                 "provider": "TrendForce",
                 "displayLabel": "TrendForce 공식 최신값",
                 "url": "https://www.trendforce.com/price/dram/lpddr_spot",
-                "role": "공개 세션 평균 최신값",
+                "role": "공개 세션 평균 최신값 · 일별 자체 적재",
                 "status": official_status,
-            },
-            "publicHistory": {
-                "provider": "어깨에서 팔기 프로젝트",
-                "displayLabel": "공개 DRAM 52주 이력(보조)",
-                "providerNote": "제공: 어깨에서 팔기 프로젝트",
-                "url": "https://shoulder-project.vercel.app/",
-                "role": "2025-09-22 이후 공개 52주 이력 보조",
-                "status": history_status,
-            },
+            }
         },
-        "qualityChecks": {"officialVsHistory": comparison},
+        "qualityChecks": {
+            "officialObservationCount": observation_count,
+            "minimumScoreObservations": 21,
+            "scoreStatus": "ready" if score_ready else "building-official-history",
+        },
         "methodology": {
             "label": "DRAM 현물가격 사이클 과열",
-            "formula": "20일 모멘텀 35% + 60일 모멘텀 25% + 52주 고점 근접도 25% + 4개 제품 상승 확산도 15%",
+            "formula": "20일 모멘텀 35% + 60일 모멘텀 25% + 보유 이력 고점 근접도 25% + 4개 제품 상승 확산도 15%",
             "smoothing": "과거값만 사용하는 5일 지수평활",
             "direction": "상승 시 메모리 공급사 가격결정력과 수요기업 원가 부담이 함께 확대",
             "operatingRole": "시장리스크 관찰카드 · 종합점수 가중치 0",
+            "readiness": "TrendForce 공식 관측 21개부터 점수 산출",
         },
         "limitations": [
-            "공식 공개 페이지는 최신값만 제공하므로 과거 이력은 공개 보조 페이지를 사용합니다.",
+            "TrendForce 공개 페이지의 최신값만 매일 자체 적재하므로 초기에는 시계열과 점수를 제공하지 않습니다.",
             "제품별 현물가격은 실제 계약가격·HBM 가격과 다르며 주가 방향을 직접 예측하지 않습니다.",
-            "시계열 시작 이전 고점은 알 수 없어 52주 고점 근접도는 보유 이력 안에서 계산합니다.",
+            "고점 근접도는 자체 적재를 시작한 이후의 보유 이력 안에서만 계산합니다.",
         ],
     }

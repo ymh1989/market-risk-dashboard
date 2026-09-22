@@ -3,7 +3,7 @@
     "title": "통합 리스크 모니터링 대시보드",
     "subtitle": "시장 조기경보 · 신용리스크 확장 준비 · 유동성리스크 확장 준비",
     "asOf": "2026-09-22",
-    "generatedAt": "2026-09-22 15:01 KST",
+    "generatedAt": "2026-09-22 16:42 KST",
     "source": "Yahoo Finance, Naver Finance equity/market-index, FRED, and KB Securities OpenAPI endpoints"
   },
   "tabs": [
@@ -81,7 +81,7 @@
           "VIX3M, VVIX, RSP/SPY, QQEW/QQQ, DBC/DBA observation proxies",
           "M7 adjusted prices, IGIB/LQD/HYG/IEF, OFR FSI, U.S. Treasury yield curve",
           "KB Securities OpenAPI IVA10370 customer deposits, credit balance, receivables, MMF, and Korean money-market rates",
-          "TrendForce public DRAM spot session averages and public 52-week history"
+          "TrendForce official DRAM spot session averages stored daily"
         ],
         "references": [
           {
@@ -161,12 +161,8 @@
             "url": "https://openapi.kbsec.com/apidoc_b2c"
           },
           {
-            "label": "TrendForce public DRAM spot prices",
+            "label": "TrendForce 공식 DRAM 현물가격",
             "url": "https://www.trendforce.com/price/dram/lpddr_spot"
-          },
-          {
-            "label": "Public 52-week DRAM history backfill",
-            "url": "https://shoulder-project.vercel.app/"
           }
         ],
         "normalization": {
@@ -210,13 +206,13 @@
           "name": "KOSPI 가격 스트레스",
           "category": "한국주식",
           "group": "crash",
-          "value": 60.9,
+          "value": 61.0,
           "unit": "score",
           "weight": 0.11,
           "trend": "down",
-          "detail": "KOSPI 7,039.51, 20일 수익률 +4.40%, 20일 변동성 +30.60%, 고점대비 -22.77%",
+          "detail": "KOSPI 7,017.91, 20일 수익률 +4.08%, 20일 변동성 +30.59%, 고점대비 -23.00%",
           "source": "Yahoo Finance chart: ^KS11",
-          "contribution": 6.7,
+          "contribution": 6.71,
           "contributionPct": 11.0
         },
         {
@@ -224,11 +220,11 @@
           "name": "KOSDAQ 성장주 스트레스",
           "category": "한국주식",
           "group": "crash",
-          "value": 57.5,
+          "value": 57.6,
           "unit": "score",
           "weight": 0.07,
           "trend": "down",
-          "detail": "KOSDAQ 835.83, 20일 수익률 +1.05%, 20일 변동성 +21.98%",
+          "detail": "KOSDAQ 834.38, 20일 수익률 +0.87%, 20일 변동성 +22.00%",
           "source": "Yahoo Finance chart: ^KQ11",
           "contribution": 4.03,
           "contributionPct": 7.0
@@ -238,13 +234,13 @@
           "name": "원/달러 환율 압력",
           "category": "외환",
           "group": "macro",
-          "value": 17.4,
+          "value": 18.0,
           "unit": "score",
           "weight": 0.06,
           "trend": "down",
-          "detail": "USD/KRW 1,356.58, 20일 변화율 -1.75%, 2년 분위 5.2",
+          "detail": "USD/KRW 1,361.08, 20일 변화율 -1.43%, 2년 분위 6.4",
           "source": "Yahoo Finance chart: KRW=X",
-          "contribution": 1.04,
+          "contribution": 1.08,
           "contributionPct": 6.0
         },
         {
@@ -252,13 +248,13 @@
           "name": "글로벌 변동성 압력",
           "category": "변동성",
           "group": "macro",
-          "value": 24.5,
+          "value": 23.4,
           "unit": "score",
           "weight": 0.05,
           "trend": "down",
-          "detail": "VIX 14.87, 20일 변화율 -6.18%, 2년 분위 16.0",
+          "detail": "VIX 14.67, 20일 변화율 -5.05%, 2년 분위 13.9",
           "source": "Yahoo Finance chart: ^VIX",
-          "contribution": 1.23,
+          "contribution": 1.17,
           "contributionPct": 5.0
         },
         {
@@ -280,13 +276,13 @@
           "name": "미국 신용스프레드 스트레스",
           "category": "신용/크레딧",
           "group": "macro",
-          "value": 30.1,
+          "value": 29.9,
           "unit": "score",
           "weight": 0.05,
           "trend": "flat",
-          "detail": "미국 하이일드 OAS 2.68%, 최근 20개 관측치 변화 -0.02%p, 위험분위 17.0",
+          "detail": "미국 하이일드 OAS 2.68%, 최근 20개 관측치 변화 -0.02%p, 위험분위 17.2",
           "source": "FRED: BAMLH0A0HYM2",
-          "contribution": 1.51,
+          "contribution": 1.5,
           "contributionPct": 5.0
         },
         {
@@ -294,13 +290,13 @@
           "name": "미국 금융여건 긴축 압력",
           "category": "금융여건",
           "group": "macro",
-          "value": 56.1,
+          "value": 56.9,
           "unit": "score",
           "weight": 0.03,
           "trend": "up",
           "detail": "STLFSI -0.85, NFCI -0.56, 미 2년 4.76%, 10Y-2Y 0.20%p",
           "source": "FRED: STLFSI4, NFCI, DGS2, T10Y2Y",
-          "contribution": 1.68,
+          "contribution": 1.71,
           "contributionPct": 3.0
         },
         {
@@ -336,13 +332,13 @@
           "name": "원화 환산 에너지 수입비용",
           "category": "에너지/환율",
           "group": "macro",
-          "value": 83.7,
+          "value": 84.1,
           "unit": "score",
           "weight": 0.02,
           "trend": "up",
-          "detail": "브렌트유 $100.34, USD/KRW 1,356.58, 원화 환산 배럴당 비용 136,119.23원, 최근 20개 관측치 변화 +10.68%. 유가와 원화 약세가 동시에 기업 마진·물가·금리 부담으로 전이되는 경로를 측정합니다.",
+          "detail": "브렌트유 $100.34, USD/KRW 1,361.08, 원화 환산 배럴당 비용 136,570.76원, 최근 20개 관측치 변화 +11.04%. 유가와 원화 약세가 동시에 기업 마진·물가·금리 부담으로 전이되는 경로를 측정합니다.",
           "source": "Naver market index: LCOcv1; Yahoo Finance: KRW=X",
-          "contribution": 1.67,
+          "contribution": 1.68,
           "contributionPct": 2.0
         },
         {
@@ -355,7 +351,7 @@
           "unit": "score",
           "weight": 0.0,
           "trend": "flat",
-          "detail": "USD/JPY 157.36, 5개 관측치 변화 +1.95%, VIX 14.87·5개 관측치 -13.04%, SPX 5개 관측치 +1.90%. 엔화 급강세·VIX 상승·SPX 하락의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
+          "detail": "USD/JPY 157.36, 5개 관측치 변화 +1.95%, VIX 14.67·5개 관측치 -14.71%, SPX 5개 관측치 +1.90%. 엔화 급강세·VIX 상승·SPX 하락의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
           "source": "Naver market index: USDJPY; Yahoo Finance: ^VIX, ^GSPC",
           "contribution": 0.0,
           "contributionPct": 0.0
@@ -370,7 +366,7 @@
           "unit": "score",
           "weight": 0.0,
           "trend": "up",
-          "detail": "한국 3년 4.055%, 미국 2년 4.753%, 금리차 -0.698%p·20개 관측치 변화 -0.296%p, USD/KRW 1,356.58·20개 관측치 -1.75%. 금리차 축소와 원화 약세의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
+          "detail": "한국 3년 4.055%, 미국 2년 4.753%, 금리차 -0.698%p·20개 관측치 변화 -0.296%p, USD/KRW 1,361.08·20개 관측치 -1.43%. 금리차 축소와 원화 약세의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
           "source": "Naver market index: KR3YT=RR, US2YT=RR; Yahoo Finance: KRW=X",
           "contribution": 0.0,
           "contributionPct": 0.0
@@ -468,13 +464,13 @@
           "name": "한국 AI 반도체 쏠림/스트레스",
           "category": "AI 반도체",
           "group": "ai_semi",
-          "value": 40.3,
+          "value": 40.1,
           "unit": "score",
           "weight": 0.1,
           "trend": "flat",
-          "detail": "5개 한국 반도체 basket, 삼성전자 276,500.00, SK하이닉스 1,845,000.00, 반도체 60일 상대성과 -0.47%, 쏠림점수 1.6",
+          "detail": "5개 한국 반도체 basket, 삼성전자 276,500.00, SK하이닉스 1,840,000.00, 반도체 60일 상대성과 -0.43%, 쏠림점수 1.4",
           "source": "Yahoo Finance chart: 005930.KS, 000660.KS, 042700.KS, 000990.KS, 058470.KQ, ^KS11",
-          "contribution": 4.03,
+          "contribution": 4.01,
           "contributionPct": 10.0
         },
         {
@@ -496,13 +492,13 @@
           "name": "거래량 과열/위축 압력",
           "category": "유동성",
           "group": "liquidity",
-          "value": 49.3,
+          "value": 43.2,
           "unit": "score",
           "weight": 0.07,
           "trend": "flat",
-          "detail": "주요 반도체·KODEX ETF 거래량의 60일 평균 대비 평균 괴리 -27.90%, 최대 괴리 +1.74%",
+          "detail": "주요 반도체·KODEX ETF 거래량의 60일 평균 대비 평균 괴리 -21.16%, 최대 괴리 +7.81%",
           "source": "Naver Finance chart: 005930, 000660, 042700, 069500, 122630",
-          "contribution": 3.45,
+          "contribution": 3.02,
           "contributionPct": 7.0
         },
         {
@@ -510,13 +506,13 @@
           "name": "삼성전자·하이닉스 단일종목 레버리지",
           "category": "단일종목/레버리지",
           "group": "overheating",
-          "value": 51.5,
+          "value": 51.7,
           "unit": "score",
           "weight": 0.04,
           "trend": "down",
-          "detail": "삼성전자 276,500.00, SK하이닉스 1,845,000.00, 20일 수익률 삼성 +7.59%·하이닉스 +9.95%, KOSPI 대비 변동성 배율 삼성 1.37x·하이닉스 1.81x",
+          "detail": "삼성전자 276,500.00, SK하이닉스 1,840,000.00, 20일 수익률 삼성 +7.59%·하이닉스 +9.65%, KOSPI 대비 변동성 배율 삼성 1.37x·하이닉스 1.82x",
           "source": "Yahoo Finance chart: 005930.KS, 000660.KS, ^KS11",
-          "contribution": 2.06,
+          "contribution": 2.07,
           "contributionPct": 4.0
         },
         {
@@ -614,38 +610,6 @@
           },
           "contribution": 0.0,
           "contributionPct": 0.0
-        },
-        {
-          "id": "dram_spot_cycle_watch",
-          "name": "DRAM 현물가격 사이클",
-          "category": "관찰/반도체 가격",
-          "group": "ai_semi",
-          "role": "observation",
-          "value": 65.9,
-          "unit": "score",
-          "weight": 0.0,
-          "trend": "flat",
-          "asOf": "2026-09-21",
-          "quality": "complete",
-          "detail": [
-            "DDR5 16Gb $56.93 · 20일 +5.1% · DDR4 16Gb $85.00 · 20일 -6.9%",
-            "4개 제품 20일 상승 확산 50% · 보유이력 고점 대비 평균 -2.8%",
-            "이력 2025-09-22~2026-09-21 · 공식 최신값 대조 일치"
-          ],
-          "source": "TrendForce 공개 DRAM 현물가격 · 공개 52주 이력 보조",
-          "sourceUrl": "https://www.trendforce.com/price/dram/lpddr_spot",
-          "sourceUrls": [
-            "https://www.trendforce.com/price/dram/lpddr_spot",
-            "https://shoulder-project.vercel.app/"
-          ],
-          "metrics": {
-            "positiveBreadthPct": 50.0,
-            "averageHighGapPct": -2.77,
-            "rawScore": 64.9,
-            "historyStart": "2025-09-22"
-          },
-          "contribution": 0.0,
-          "contributionPct": 0.0
         }
       ],
       "actions": [
@@ -654,7 +618,7 @@
         "연구 관찰카드는 OOS 개선이 확인되기 전까지 종합점수와 고위험 지표 수에 포함하지 않습니다.",
         "M7 Credit Stress Proxy는 실제 CDS가 아니며 데이터 품질과 선행성을 검증한 뒤에만 가중 승격합니다.",
         "국내 신용·예탁금 관찰카드는 FreeSIS 5년 원장과 KB 최종일을 대조하고 OOS 검증 전에는 가중치 0을 유지합니다.",
-        "DRAM 현물가격 관찰카드는 공식 최신값과 공개 52주 이력을 대조하며 종합점수에는 반영하지 않습니다.",
+        "DRAM 현물가격은 TrendForce 공식 최신값만 일별 적재하며, 공식 관측 21개 전에는 점수를 산출하지 않습니다.",
         "시장 의견의 완화·반등 전망은 점수에 선반영하지 않고 실제 가격·금리·기간구조의 확인 신호로 검증합니다.",
         "운영 배포에서는 Yahoo/Naver proxy를 KRX, 한국은행 ECOS, 금융투자협회, 내부 포지션/외국인 수급 데이터로 교체할 수 있습니다."
       ],
@@ -664,7 +628,7 @@
           "label": "Macro",
           "score": 41.4,
           "weight": 0.3,
-          "contribution": 12.43,
+          "contribution": 12.44,
           "indicatorCount": 9,
           "observationCount": 7
         },
@@ -673,16 +637,16 @@
           "label": "AI Semi",
           "score": 42.4,
           "weight": 0.26,
-          "contribution": 11.03,
+          "contribution": 11.01,
           "indicatorCount": 3,
-          "observationCount": 1
+          "observationCount": 0
         },
         {
           "id": "crash",
           "label": "Crash Stress",
-          "score": 59.6,
+          "score": 59.7,
           "weight": 0.18,
-          "contribution": 10.73,
+          "contribution": 10.74,
           "indicatorCount": 2,
           "observationCount": 0
         },
@@ -698,18 +662,18 @@
         {
           "id": "overheating",
           "label": "Overheating",
-          "score": 50.3,
+          "score": 50.4,
           "weight": 0.09,
-          "contribution": 4.52,
+          "contribution": 4.53,
           "indicatorCount": 2,
           "observationCount": 0
         },
         {
           "id": "liquidity",
           "label": "Liquidity",
-          "score": 49.3,
+          "score": 43.2,
           "weight": 0.07,
-          "contribution": 3.45,
+          "contribution": 3.02,
           "indicatorCount": 1,
           "observationCount": 0
         }
@@ -740,15 +704,15 @@
             {
               "id": "korea_ai_semiconductor_concentration",
               "name": "한국 AI 반도체 쏠림/스트레스",
-              "value": 40.3,
+              "value": 40.1,
               "weight": 0.2,
-              "contribution": 8.06
+              "contribution": 8.02
             }
           ],
           "evidence": [
             "빅테크 AI 수요 우려 31.9",
             "글로벌 AI 반도체 50.9",
-            "한국 AI 반도체 40.3"
+            "한국 AI 반도체 40.1"
           ],
           "assessment": "반도체 가격 스트레스와 빅테크 수요 신호를 분리합니다. 반도체 조정이 크더라도 빅테크 수요 신호가 동반 악화되지 않으면 ROI 붕괴로 단정하지 않습니다. 실적·CAPEX·매출 추정치 데이터가 없는 현재는 가중치를 늘리지 않습니다.",
           "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검"
@@ -757,7 +721,7 @@
           "id": "geopolitics-reinflation",
           "title": "지정학·재인플레이션",
           "status": "부담 높음",
-          "score": 82.9,
+          "score": 83.1,
           "tone": "danger",
           "decision": "관찰지표 보강",
           "components": [
@@ -771,13 +735,13 @@
             {
               "id": "energy_import_cost_pressure",
               "name": "원화 환산 에너지 수입비용",
-              "value": 83.7,
+              "value": 84.1,
               "weight": 0.45,
-              "contribution": 37.66
+              "contribution": 37.84
             }
           ],
           "evidence": [
-            "원화 환산 에너지 비용 83.7",
+            "원화 환산 에너지 비용 84.1",
             "원자재·농산물 재인플레이션 82.2"
           ],
           "assessment": "유가 단일 상승과 광의 물가 확산을 분리합니다. 원자재·농산물의 5일 흐름이 꺾여도 20일 누적압력이 높으면 즉시 해소로 보지 않습니다.",
@@ -787,7 +751,7 @@
           "id": "macro-rates",
           "title": "매크로 금리 불확실성",
           "status": "부담 높음",
-          "score": 79.6,
+          "score": 79.9,
           "tone": "danger",
           "decision": "기존 가중지표 유지",
           "components": [
@@ -801,14 +765,14 @@
             {
               "id": "us_financial_conditions_stress",
               "name": "미국 금융여건 긴축 압력",
-              "value": 56.1,
+              "value": 56.9,
               "weight": 0.4,
-              "contribution": 22.44
+              "contribution": 22.76
             }
           ],
           "evidence": [
             "글로벌 금리 압력 95.2",
-            "미국 금융여건 56.1"
+            "미국 금융여건 56.9"
           ],
           "assessment": "시장금리 레벨과 금융여건을 함께 봅니다. 지정학 완화가 예상되더라도 실제 금리와 금융여건 점수가 낮아지기 전에는 부담 완화를 선반영하지 않습니다.",
           "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -817,7 +781,7 @@
           "id": "domestic-funding-leverage",
           "title": "국내 레버리지·대기자금",
           "status": "관찰",
-          "score": 46.0,
+          "score": 44.8,
           "tone": "watch",
           "decision": "직접 시장통계 관찰",
           "components": [
@@ -838,15 +802,15 @@
             {
               "id": "trading_activity_heat",
               "name": "거래량 과열/위축 압력",
-              "value": 49.3,
+              "value": 43.2,
               "weight": 0.2,
-              "contribution": 9.86
+              "contribution": 8.64
             }
           ],
           "evidence": [
             "KB 신용·예탁금 43.0",
             "외국인 보유비중 이탈 48.8",
-            "거래 유동성 49.3"
+            "거래 유동성 43.2"
           ],
           "assessment": "신용잔고가 예탁금보다 빠르게 늘고 미수금 비중까지 높아지면 반대매매 취약성이 커진 것으로 봅니다. 다만 급락 뒤 신용잔고 감소는 부담 완화가 아니라 강제 청산의 결과일 수 있어 외국인 수급·거래량·시장 breadth와 함께 확인합니다.",
           "operation": "연결일 이후 일별 누적 · 60개 관측과 OOS 검증 전 가중치 0 유지"
@@ -855,7 +819,7 @@
           "id": "flow-deleveraging",
           "title": "옵션 헤지·디레버리징",
           "status": "관찰",
-          "score": 56.2,
+          "score": 55.0,
           "tone": "watch",
           "decision": "관찰지표 보강",
           "components": [
@@ -876,15 +840,15 @@
             {
               "id": "trading_activity_heat",
               "name": "거래량 과열/위축 압력",
-              "value": 49.3,
+              "value": 43.2,
               "weight": 0.2,
-              "contribution": 9.86
+              "contribution": 8.64
             }
           ],
           "evidence": [
             "옵션 기간구조 26.5",
             "미국 증시 폭 악화 98.3",
-            "거래 유동성 49.3"
+            "거래 유동성 43.2"
           ],
           "assessment": "VIX 기간구조와 동일가중 상대성과로 공포와 하락 확산을 교차 확인합니다. 동일가중 상대성과가 강하면 대형 기술주 조정은 확인하되 시장 전반 디레버리징으로 판정하지 않습니다. 딜러 델타·감마, 기관 포지션과 IPO 자금흡수의 직접 관측값은 아닙니다.",
           "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -898,7 +862,7 @@
           "decision": "직접 점수화 보류",
           "components": [],
           "evidence": [
-            "일별 공개 DRAM·NAND 현물가격 미연결",
+            "TrendForce DRAM 최신값은 연결 · 장기 공식 이력은 자체 적재 중",
             "기업별 상장 조달액·설비투자 집행 시계열 미연결",
             "반도체 주가카드는 간접 가격신호로만 사용"
           ],
@@ -1289,111 +1253,7 @@
           "가중치 0의 관찰지표이며 OOS 검증 전에는 종합점수에 반영하지 않습니다."
         ]
       },
-      "dramSpotPrices": {
-        "latest": {
-          "date": "2026-09-21",
-          "score": 65.9,
-          "rawScore": 64.9,
-          "pricesUsd": {
-            "DDR5_16Gb": 56.933,
-            "DDR4_16Gb": 85.0,
-            "DDR4_8Gb": 46.036,
-            "DDR3_4Gb": 13.78
-          },
-          "returns20dPct": {
-            "DDR5_16Gb": 5.11,
-            "DDR4_16Gb": -6.92,
-            "DDR4_8Gb": 6.35,
-            "DDR3_4Gb": -1.2
-          },
-          "returns60dPct": {
-            "DDR5_16Gb": 21.83,
-            "DDR4_16Gb": 17.54,
-            "DDR4_8Gb": 27.88,
-            "DDR3_4Gb": 19.09
-          },
-          "highGapPct": {
-            "DDR5_16Gb": 0.0,
-            "DDR4_16Gb": -9.09,
-            "DDR4_8Gb": -0.23,
-            "DDR3_4Gb": -1.74
-          },
-          "positiveBreadthPct": 50.0,
-          "source": "trendforce-official",
-          "change1d": -0.5,
-          "products": [
-            {
-              "id": "DDR5_16Gb",
-              "label": "DDR5 16Gb",
-              "spec": "2Gx8 4800/5600",
-              "priceUsd": 56.933,
-              "return20dPct": 5.11,
-              "return60dPct": 21.83,
-              "highGapPct": 0.0
-            },
-            {
-              "id": "DDR4_16Gb",
-              "label": "DDR4 16Gb",
-              "spec": "2Gx8 3200",
-              "priceUsd": 85.0,
-              "return20dPct": -6.92,
-              "return60dPct": 17.54,
-              "highGapPct": -9.09
-            },
-            {
-              "id": "DDR4_8Gb",
-              "label": "DDR4 8Gb",
-              "spec": "1Gx8 3200",
-              "priceUsd": 46.036,
-              "return20dPct": 6.35,
-              "return60dPct": 27.88,
-              "highGapPct": -0.23
-            },
-            {
-              "id": "DDR3_4Gb",
-              "label": "DDR3 4Gb",
-              "spec": "512Mx8 1600/1866",
-              "priceUsd": 13.78,
-              "return20dPct": -1.2,
-              "return60dPct": 19.09,
-              "highGapPct": -1.74
-            }
-          ]
-        },
-        "sources": {
-          "officialLatest": {
-            "provider": "TrendForce",
-            "url": "https://www.trendforce.com/price/dram/lpddr_spot",
-            "role": "공개 세션 평균 최신값",
-            "status": "direct"
-          },
-          "publicHistory": {
-            "provider": "어깨에서 팔기 프로젝트",
-            "url": "https://shoulder-project.vercel.app/",
-            "role": "2025-09-22 이후 공개 52주 이력 보조",
-            "status": "direct"
-          }
-        },
-        "qualityChecks": {
-          "officialVsHistory": {
-            "date": "2026-09-21",
-            "maxDifferencePct": 0.0,
-            "status": "matched"
-          }
-        },
-        "methodology": {
-          "label": "DRAM 현물가격 사이클 과열",
-          "formula": "20일 모멘텀 35% + 60일 모멘텀 25% + 52주 고점 근접도 25% + 4개 제품 상승 확산도 15%",
-          "smoothing": "과거값만 사용하는 5일 지수평활",
-          "direction": "상승 시 메모리 공급사 가격결정력과 수요기업 원가 부담이 함께 확대",
-          "operatingRole": "시장리스크 관찰카드 · 종합점수 가중치 0"
-        },
-        "limitations": [
-          "공식 공개 페이지는 최신값만 제공하므로 과거 이력은 공개 보조 페이지를 사용합니다.",
-          "제품별 현물가격은 실제 계약가격·HBM 가격과 다르며 주가 방향을 직접 예측하지 않습니다.",
-          "시계열 시작 이전 고점은 알 수 없어 52주 고점 근접도는 보유 이력 안에서 계산합니다."
-        ]
-      }
+      "dramSpotPrices": null
     },
     {
       "id": "credit",
@@ -1484,6 +1344,6 @@
     "mode": "live",
     "state": "generated",
     "startedAt": "2026-09-22 15:00:04 KST",
-    "preparedAt": "2026-09-22 15:02:26 KST"
+    "preparedAt": "2026-09-22 16:45:28 KST"
   }
 }

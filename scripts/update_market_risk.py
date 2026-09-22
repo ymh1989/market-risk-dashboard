@@ -664,12 +664,10 @@ def dram_spot_price_indicator(payload):
         if isinstance(row.get("highGapPct"), (int, float))
     ]
     average_high_gap = statistics.fmean(high_gaps) if high_gaps else math.nan
-    comparison = (payload.get("qualityChecks") or {}).get("officialVsHistory") or {}
-    quality = "complete" if comparison.get("status") == "matched" else "secondary-history"
-    comparison_label = {
-        "matched": "일치",
-        "mismatch": "불일치",
-    }.get(comparison.get("status"), "기준일 불일치")
+    official_count = int(
+        (payload.get("qualityChecks") or {}).get("officialObservationCount") or 0
+    )
+    quality = "official-history"
     return {
         "id": "dram_spot_cycle_watch",
         "name": "DRAM 현물가격 사이클",
@@ -689,15 +687,14 @@ def dram_spot_price_indicator(payload):
                 f"보유이력 고점 대비 평균 {average_high_gap:+.1f}%"
             ),
             (
-                f"이력 {payload.get('historyStart') or '-'}~{latest.get('date') or '-'} · "
-                f"공식 최신값 대조 {comparison_label}"
+                f"TrendForce 공식 관측 {official_count}개 · "
+                f"{payload.get('historyStart') or '-'}~{latest.get('date') or '-'}"
             ),
         ],
-        "source": "TrendForce 공개 DRAM 현물가격 · 공개 52주 이력 보조",
+        "source": "TrendForce 공식 공개 DRAM 현물가격",
         "sourceUrl": "https://www.trendforce.com/price/dram/lpddr_spot",
         "sourceUrls": [
             "https://www.trendforce.com/price/dram/lpddr_spot",
-            "https://shoulder-project.vercel.app/",
         ],
         "metrics": {
             "positiveBreadthPct": latest.get("positiveBreadthPct"),
@@ -3918,7 +3915,7 @@ def build_observation_journal(indicators):
             "decision": "직접 점수화 보류",
             "components": [],
             "evidence": [
-                "일별 공개 DRAM·NAND 현물가격 미연결",
+                "TrendForce DRAM 최신값은 연결 · 장기 공식 이력은 자체 적재 중",
                 "기업별 상장 조달액·설비투자 집행 시계열 미연결",
                 "반도체 주가카드는 간접 가격신호로만 사용",
             ],
@@ -4500,7 +4497,7 @@ def update_dashboard(
         "VIX3M, VVIX, RSP/SPY, QQEW/QQQ, DBC/DBA observation proxies",
         "M7 adjusted prices, IGIB/LQD/HYG/IEF, OFR FSI, U.S. Treasury yield curve",
         "KB Securities OpenAPI IVA10370 customer deposits, credit balance, receivables, MMF, and Korean money-market rates",
-        "TrendForce public DRAM spot session averages and public 52-week history",
+        "TrendForce official DRAM spot session averages stored daily",
     ]
     market["model"]["references"] = [
         {
@@ -4580,12 +4577,8 @@ def update_dashboard(
             "url": "https://openapi.kbsec.com/apidoc_b2c",
         },
         {
-            "label": "TrendForce public DRAM spot prices",
+            "label": "TrendForce 공식 DRAM 현물가격",
             "url": "https://www.trendforce.com/price/dram/lpddr_spot",
-        },
-        {
-            "label": "Public 52-week DRAM history backfill",
-            "url": "https://shoulder-project.vercel.app/",
         },
     ]
     market["m7CreditProxy"] = (
@@ -4633,7 +4626,7 @@ def update_dashboard(
         "연구 관찰카드는 OOS 개선이 확인되기 전까지 종합점수와 고위험 지표 수에 포함하지 않습니다.",
         "M7 Credit Stress Proxy는 실제 CDS가 아니며 데이터 품질과 선행성을 검증한 뒤에만 가중 승격합니다.",
         "국내 신용·예탁금 관찰카드는 FreeSIS 5년 원장과 KB 최종일을 대조하고 OOS 검증 전에는 가중치 0을 유지합니다.",
-        "DRAM 현물가격 관찰카드는 공식 최신값과 공개 52주 이력을 대조하며 종합점수에는 반영하지 않습니다.",
+        "DRAM 현물가격은 TrendForce 공식 최신값만 일별 적재하며, 공식 관측 21개 전에는 점수를 산출하지 않습니다.",
         "시장 의견의 완화·반등 전망은 점수에 선반영하지 않고 실제 가격·금리·기간구조의 확인 신호로 검증합니다.",
         "운영 배포에서는 Yahoo/Naver proxy를 KRX, 한국은행 ECOS, 금융투자협회, 내부 포지션/외국인 수급 데이터로 교체할 수 있습니다.",
     ]
@@ -4781,7 +4774,7 @@ def write_snapshot(
         ),
         "dramSpotPrices": (
             {
-                "provider": "TrendForce + 공개 52주 이력 보조",
+                "provider": "TrendForce 공식 최신값",
                 "label": "DRAM 현물가격 사이클",
                 "lastDate": dram_spot_prices["latest"].get("date"),
                 "firstDate": dram_spot_prices.get("historyStart"),

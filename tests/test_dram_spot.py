@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import json
 
 import pytest
 
+from scripts.update_dram_spot_prices import update
 from scripts.update_market_risk import dram_spot_price_indicator
 from kospi_risk.dram_spot import (
     PRODUCTS,
     build_payload,
     calculate_cycle_scores,
-    normalize_history,
-    parse_public_history_html,
     parse_trendforce_spot_html,
 )
 
@@ -69,22 +69,6 @@ def test_parse_trendforce_public_table_extracts_session_averages():
     assert parsed["sessionChangesPct"]["DDR4_16Gb"] == pytest.approx(-0.88)
 
 
-def test_parse_public_history_and_drop_weekend_rows():
-    raw = [
-        {"date": observed_date, "chip_type": key, "price_usd": 10 + index}
-        for observed_date in ("2025-09-22", "2025-09-27")
-        for index, key in enumerate(PRODUCTS)
-    ]
-    document = '<script>self.__next_f.push([1,"\\"dramHistoryAll\\":' + str(raw).replace("'", '\\"') + ',\\"next\\":1"])</script>'
-    document = document.replace("None", "null")
-
-    parsed = parse_public_history_html(document)
-    normalized = normalize_history(parsed)
-
-    assert len(parsed) == 8
-    assert [row["date"] for row in normalized] == ["2025-09-22"]
-
-
 def test_cycle_score_is_causal_and_bounded():
     base_rows = synthetic_rows(80)
     base = calculate_cycle_scores(base_rows)
@@ -114,8 +98,44 @@ def test_payload_starts_after_2025_and_is_observation_ready():
     assert len(payload["latest"]["products"]) == 4
     assert payload["methodology"]["operatingRole"].endswith("가중치 0")
     assert payload["sources"]["officialLatest"]["displayLabel"] == "TrendForce 공식 최신값"
-    assert payload["sources"]["publicHistory"]["displayLabel"] == "공개 DRAM 52주 이력(보조)"
-    assert payload["sources"]["publicHistory"]["providerNote"] == "제공: 어깨에서 팔기 프로젝트"
+    assert set(payload["sources"]) == {"officialLatest"}
+    assert payload["qualityChecks"]["officialObservationCount"] == 90
+    assert payload["qualityChecks"]["scoreStatus"] == "ready"
+
+
+def test_payload_waits_for_official_history_before_scoring():
+    payload = build_payload(
+        synthetic_rows(1),
+        generated_at=datetime(2026, 9, 22, 10, 0, tzinfo=KST),
+    )
+
+    assert payload["latest"]["score"] is None
+    assert payload["series"] == []
+    assert payload["scoreStart"] is None
+    assert payload["qualityChecks"]["scoreStatus"] == "building-official-history"
+    assert payload["qualityChecks"]["minimumScoreObservations"] == 21
+
+
+def test_updater_removes_non_trendforce_history(tmp_path):
+    output = tmp_path / "dram.json"
+    public_row = synthetic_rows(1)[0]
+    public_row["source"] = "public-history"
+    official_row = {
+        **synthetic_rows(1)[0],
+        "date": "2026-09-21",
+        "source": "trendforce-official",
+    }
+    output.write_text(
+        json.dumps({"history": [public_row, official_row]}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    payload = update(output, official_html=official_html())
+
+    assert len(payload["history"]) == 1
+    assert payload["history"][0]["date"] == "2026-09-21"
+    assert payload["history"][0]["source"] == "trendforce-official"
+    assert set(payload["sources"]) == {"officialLatest"}
 
 
 def test_dashboard_indicator_is_observation_only():

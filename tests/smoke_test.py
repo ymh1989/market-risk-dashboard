@@ -13,6 +13,7 @@ STRESS_FILE = ROOT / "data" / "market-stress-episodes.json"
 ELS_FILE = ROOT / "data" / "els-index-risk.json"
 BREADTH_FILE = ROOT / "data" / "kospi-breadth.json"
 KB_MARKET_FUNDS_FILE = ROOT / "data" / "kb-market-funds.json"
+DRAM_SPOT_FILE = ROOT / "data" / "dram-spot-prices.json"
 STYLES_FILE = ROOT / "src" / "styles.css"
 APP_FILE = ROOT / "src" / "app.js"
 TARGETS_FILE = ROOT / "src" / "kospi_risk" / "targets.py"
@@ -64,6 +65,7 @@ def test_dashboard_contract():
     backtest = json.loads(BACKTEST_FILE.read_text(encoding="utf-8"))
     stress = json.loads(STRESS_FILE.read_text(encoding="utf-8"))
     els_risk = json.loads(ELS_FILE.read_text(encoding="utf-8"))
+    dram_spot = json.loads(DRAM_SPOT_FILE.read_text(encoding="utf-8"))
     assert dashboard["metadata"]["title"] == "통합 리스크 모니터링 대시보드"
     assert any(section["id"] == "market" and section["status"] == "active" for section in dashboard["sections"])
     assert any(section["id"] == "credit" and section["status"] == "planned" for section in dashboard["sections"])
@@ -100,7 +102,7 @@ def test_dashboard_contract():
     assert any(indicator["id"] == "china_demand_fx_stress" for indicator in market["indicators"])
     assert any(indicator["id"] == "energy_import_cost_pressure" for indicator in market["indicators"])
     observations = [indicator for indicator in market["indicators"] if indicator.get("role") == "observation"]
-    assert {indicator["id"] for indicator in observations} == {
+    expected_observations = {
         "yen_carry_unwind_watch",
         "korea_us_rate_fx_watch",
         "japan_us_rate_spread_watch",
@@ -109,8 +111,10 @@ def test_dashboard_contract():
         "broad_reinflation_watch",
         "m7_credit_stress_proxy",
         "kb_domestic_funding_watch",
-        "dram_spot_cycle_watch",
     }
+    if dram_spot["qualityChecks"]["scoreStatus"] == "ready":
+        expected_observations.add("dram_spot_cycle_watch")
+    assert {indicator["id"] for indicator in observations} == expected_observations
     assert all(float(indicator["weight"]) == 0 for indicator in observations)
     assert len(market["observationJournal"]) == 6
     assert {item["id"] for item in market["observationJournal"]} == {
@@ -303,7 +307,7 @@ def test_ui_hierarchy_and_accessibility_contract():
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
     assert "styles.css?v=20260916-3" in html
-    assert "app.js?v=20260922-3" in html
+    assert "app.js?v=20260922-4" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -653,9 +657,8 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert '{ path: "dram-spot-prices.json", payload: dramSpotPrices }' in app_source
     assert 'if (type === "usd") return `$${formatNumber(number, 3)}`' in app_source
     assert "TrendForce DDR5 16Gb 현물" in app_source
-    assert '"공개 DRAM 52주 이력(보조)"' in app_source
+    assert "TrendForce 공식 최신값 · 일별 자체 적재" in app_source
     assert "function renderSourceRecordLabel" in app_source
-    assert "record.providerNote" in app_source
     assert ".source-detail__link" in styles
     assert ".market-trend-group--digital" in styles
     assert "Naver Pay 증권 · 업비트 BTC/KRW" in app_source

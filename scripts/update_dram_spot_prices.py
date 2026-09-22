@@ -14,8 +14,6 @@ from kospi_risk.dram_spot import (
     DramSpotDataError,
     build_payload,
     merge_history,
-    normalize_history,
-    parse_public_history_html,
     parse_trendforce_spot_html,
 )
 
@@ -23,7 +21,6 @@ from kospi_risk.dram_spot import (
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "data" / "dram-spot-prices.json"
 TREND_FORCE_URL = "https://www.trendforce.com/price/dram/lpddr_spot"
-PUBLIC_HISTORY_URL = "https://shoulder-project.vercel.app/"
 USER_AGENT = "Mozilla/5.0 (compatible; market-lab-risk-dashboard/0.1)"
 KST = timezone(timedelta(hours=9))
 
@@ -62,10 +59,14 @@ def write_json_atomic(path: Path, payload: dict) -> None:
     temporary.replace(path)
 
 
-def update(output: Path, *, official_html: str | None = None, history_html: str | None = None) -> dict:
-    """기존 이력을 보존하고 공식 최신값과 신규 보조 이력을 추가합니다."""
+def update(output: Path, *, official_html: str | None = None) -> dict:
+    """TrendForce 공식 최신값만 보존하며 일별 이력을 증분 적재합니다."""
     existing = load_existing(output)
-    existing_rows = existing.get("history") or existing.get("series") or []
+    existing_rows = [
+        row
+        for row in (existing.get("history") or [])
+        if row.get("source") == "trendforce-official"
+    ]
 
     official_latest = None
     official_status = "direct"
@@ -78,24 +79,11 @@ def update(output: Path, *, official_html: str | None = None, history_html: str 
             raise
         official_status = "stored-fallback"
 
-    fetched_rows = []
-    history_status = "direct"
-    try:
-        long_rows = parse_public_history_html(
-            history_html if history_html is not None else fetch_text(PUBLIC_HISTORY_URL)
-        )
-        fetched_rows = normalize_history(long_rows)
-    except DramSpotDataError:
-        if not existing_rows:
-            raise
-        history_status = "stored-fallback"
-
-    merged_rows = merge_history(existing_rows, fetched_rows, official_latest)
+    merged_rows = merge_history(existing_rows, [], official_latest)
     payload = build_payload(
         merged_rows,
         generated_at=datetime.now(KST),
         official_latest=official_latest,
-        history_status=history_status,
         official_status=official_status,
     )
     write_json_atomic(output, payload)
@@ -106,7 +94,6 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="DRAM 현물가격 관찰지표를 갱신합니다.")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--official-html", type=Path, help="테스트용 TrendForce HTML 파일")
-    parser.add_argument("--history-html", type=Path, help="테스트용 공개 이력 HTML 파일")
     return parser.parse_args()
 
 
@@ -115,14 +102,16 @@ def main() -> None:
     payload = update(
         args.output,
         official_html=args.official_html.read_text(encoding="utf-8") if args.official_html else None,
-        history_html=args.history_html.read_text(encoding="utf-8") if args.history_html else None,
     )
     latest = payload["latest"]
-    quality = (payload.get("qualityChecks") or {}).get("officialVsHistory") or {}
-    print(
-        f"DRAM 관찰지표 갱신: {latest['date']} · {latest['score']:.1f}점 · "
-        f"공식대조 {quality.get('status') or '기준일 불일치'}"
+    quality = payload.get("qualityChecks") or {}
+    score = latest.get("score")
+    score_text = (
+        f"{score:.1f}점"
+        if isinstance(score, (int, float))
+        else f"공식 관측 {quality.get('officialObservationCount', 0)}개 · 점수 준비 중"
     )
+    print(f"DRAM 관찰지표 갱신: {latest['date']} · {score_text}")
     print(f"Wrote {args.output}")
 
 
