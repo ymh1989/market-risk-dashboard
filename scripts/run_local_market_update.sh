@@ -24,6 +24,7 @@ FULL_TIMES="${LOCAL_MARKET_UPDATE_FULL_TIMES:-15:35}"
 LIVE_TIMES="${LOCAL_MARKET_UPDATE_LIVE_TIMES:-09:00,10:00,11:00,12:00,13:00,14:00,15:00}"
 KRX_TIMES="${LOCAL_MARKET_UPDATE_KRX_TIMES:-18:30}"
 SCHEDULE_GRACE_MINUTES="${LOCAL_MARKET_UPDATE_SCHEDULE_GRACE_MINUTES:-10}"
+RUNTIME_SELF_UPDATE="${LOCAL_MARKET_UPDATE_RUNTIME_SELF_UPDATE:-0}"
 ONLY_AT_SCHEDULED_KST=0
 SCHEDULE_STATE_FILE=""
 SCHEDULED_TIME=""
@@ -54,7 +55,46 @@ if [[ -f "$ENV_FILE" ]]; then
   LIVE_TIMES="${LOCAL_MARKET_UPDATE_LIVE_TIMES:-$LIVE_TIMES}"
   KRX_TIMES="${LOCAL_MARKET_UPDATE_KRX_TIMES:-$KRX_TIMES}"
   SCHEDULE_GRACE_MINUTES="${LOCAL_MARKET_UPDATE_SCHEDULE_GRACE_MINUTES:-$SCHEDULE_GRACE_MINUTES}"
+  RUNTIME_SELF_UPDATE="${LOCAL_MARKET_UPDATE_RUNTIME_SELF_UPDATE:-$RUNTIME_SELF_UPDATE}"
 fi
+
+refresh_runtime_entrypoint() {
+  local self_path candidate_path remote_path
+  if [[ "$RUNTIME_SELF_UPDATE" != "1" ]]; then
+    return 0
+  fi
+
+  self_path="$ROOT/scripts/run_local_market_update.sh"
+  remote_path="$REMOTE/$BRANCH:scripts/run_local_market_update.sh"
+  candidate_path="$(mktemp "$ROOT/scripts/.run_local_market_update.XXXXXX")"
+
+  if ! git -C "$ROOT" fetch "$REMOTE" "$BRANCH"; then
+    rm -f "$candidate_path"
+    echo "[$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')] 런타임 스크립트 최신본 조회에 실패해 현재 버전으로 계속합니다." >&2
+    return 0
+  fi
+  if ! git -C "$ROOT" show "$remote_path" > "$candidate_path"; then
+    rm -f "$candidate_path"
+    echo "[$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')] 원격 런타임 스크립트를 읽지 못해 현재 버전으로 계속합니다." >&2
+    return 0
+  fi
+  if ! /bin/bash -n "$candidate_path"; then
+    rm -f "$candidate_path"
+    echo "[$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')] 원격 런타임 스크립트 구문검사에 실패해 교체하지 않습니다." >&2
+    return 1
+  fi
+  if cmp -s "$candidate_path" "$self_path"; then
+    rm -f "$candidate_path"
+    return 0
+  fi
+
+  chmod +x "$candidate_path"
+  mv -f "$candidate_path" "$self_path"
+  echo "[$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')] 예약 실행기를 원격 $BRANCH 최신본으로 동기화하고 다시 시작합니다."
+  exec env LOCAL_MARKET_UPDATE_RUNTIME_SELF_UPDATE=0 /bin/bash "$self_path" "$@"
+}
+
+refresh_runtime_entrypoint "$@"
 
 for arg in "$@"; do
   case "$arg" in

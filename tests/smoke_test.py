@@ -510,6 +510,12 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert "push_update_commit()" in run_script
     assert 'git rebase -X theirs "$REMOTE/$BRANCH"' in run_script
     assert "재배치된 코드 기준으로 오프라인 HTML과 스모크 테스트를 다시 검증합니다." in run_script
+    assert "refresh_runtime_entrypoint()" in run_script
+    assert 'git -C "$ROOT" show "$remote_path" > "$candidate_path"' in run_script
+    assert "LOCAL_MARKET_UPDATE_RUNTIME_SELF_UPDATE=0" in run_script
+    assert "LOCAL_MARKET_UPDATE_RUNTIME_SELF_UPDATE" in installer
+    assert '"$PYTHON_BIN" scripts/update_dram_spot_prices.py' in run_script
+    assert "DRAM 현물가격 관찰지표를 갱신합니다." in run_script
     assert 'export MARKET_UPDATE_RUN_ID="$RUN_ID"' in run_script
     assert "prepare_atomic_publication()" in run_script
     assert "scripts/prepare_atomic_publication.py" in run_script

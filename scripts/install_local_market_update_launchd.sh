@@ -107,6 +107,8 @@ cat > "$PLIST" <<PLIST
   <dict>
     <key>PYTHONUNBUFFERED</key>
     <string>1</string>
+    <key>LOCAL_MARKET_UPDATE_RUNTIME_SELF_UPDATE</key>
+    <string>1</string>
   </dict>
   <key>StandardOutPath</key>
   <string>$LOG_DIR/local-market-update.log</string>
