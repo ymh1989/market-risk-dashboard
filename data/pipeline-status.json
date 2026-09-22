@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-22 15:02:26 KST",
+  "generatedAt": "2026-09-22 18:30:23 KST",
   "current": {
-    "runId": "20260922T150004-1500-live",
+    "runId": "20260922T183005-1830-krx",
     "status": "success",
-    "mode": "live",
+    "mode": "krx",
     "trigger": "scheduled",
-    "scheduledTime": "15:00",
-    "startedAt": "2026-09-22 15:00:04 KST",
-    "completedAt": "2026-09-22 15:02:26 KST",
-    "durationSeconds": 142,
+    "scheduledTime": "18:30",
+    "startedAt": "2026-09-22 18:30:05 KST",
+    "completedAt": "2026-09-22 18:30:23 KST",
+    "durationSeconds": 18,
     "dataAsOf": "2026-09-22",
-    "dashboardGeneratedAt": "2026-09-22 15:01 KST",
+    "dashboardGeneratedAt": "2026-09-22 16:42 KST",
     "mlGeneratedAt": "2026-09-22 07:32 KST",
     "qualityScore": 95.3,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
@@ -118,8 +118,8 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 138,
-      "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
+      "durationSeconds": 16,
+      "detail": "KRX 외국인·기관·프로그램 당일 확정치 갱신"
     },
     {
       "id": "ml",
@@ -196,18 +196,18 @@
       "id": "krx-breadth",
       "label": "KRX Market Breadth",
       "status": "ok",
-      "lastDate": "2026-09-21",
-      "seriesCount": 663,
+      "lastDate": "2026-09-22",
+      "seriesCount": 664,
       "detail": "KOSPI 상승·하락·보합 종목 수 · pykrx EOD"
     },
     {
       "id": "stockplus-vkospi",
       "label": "증권플러스 VKOSPI",
       "status": "ok",
-      "lastDate": "2026-09-21",
-      "seriesCount": 663,
+      "lastDate": "2026-09-22",
+      "seriesCount": 664,
       "detail": "1/1개 수집 · 허용시차 내 1개",
-      "oldestLastDate": "2026-09-21",
+      "oldestLastDate": "2026-09-22",
       "freshCount": 1,
       "staleCount": 0,
       "fallbackCount": 0
@@ -216,7 +216,7 @@
       "id": "ml-input",
       "label": "ML 입력 원천",
       "status": "warning",
-      "lastDate": "2026-09-21",
+      "lastDate": "2026-09-22",
       "oldestLastDate": "2026-09-11",
       "seriesCount": 17,
       "freshCount": 16,
@@ -254,7 +254,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-09-22 15:01 KST"
+      "generatedAt": "2026-09-22 16:42 KST"
     },
     {
       "id": "ml",
@@ -302,13 +302,13 @@
       "id": "breadth",
       "label": "KOSPI 시장 내부강도",
       "status": "ok",
-      "generatedAt": "2026-09-22 07:30:07 KST"
+      "generatedAt": "2026-09-22 18:30:22 KST"
     },
     {
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-09-22 15:02:26 KST"
+      "generatedAt": "2026-09-22 18:30:23 KST"
     }
   ],
   "quality": {
@@ -316,8 +316,8 @@
     "score": 95.3,
     "referenceDate": "2026-09-22",
     "summary": {
-      "checks": 255,
-      "ok": 231,
+      "checks": 254,
+      "ok": 230,
       "warning": 24,
       "error": 0,
       "sourceSeriesExpected": 100,
@@ -332,10 +332,10 @@
         "category": "source",
         "label": "US 2Y Treasury",
         "status": "warning",
-        "detail": "최신 2026-09-18 · 영업일 시차 2일 · 관측치 7296개 · cached",
+        "detail": "최신 2026-09-18 · 영업일 시차 2일 · 관측치 7399개 · cached",
         "groupId": "fred",
         "lastDate": "2026-09-18",
-        "observations": 7296,
+        "observations": 7399,
         "fetchStatus": "cached"
       },
       {
@@ -343,10 +343,10 @@
         "category": "source",
         "label": "US 10Y-2Y Treasury Spread",
         "status": "warning",
-        "detail": "최신 2026-09-21 · 영업일 시차 1일 · 관측치 7297개 · cached",
+        "detail": "최신 2026-09-21 · 영업일 시차 1일 · 관측치 7400개 · cached",
         "groupId": "fred",
         "lastDate": "2026-09-21",
-        "observations": 7297,
+        "observations": 7400,
         "fetchStatus": "cached"
       },
       {
@@ -354,10 +354,10 @@
         "category": "source",
         "label": "US High Yield OAS",
         "status": "warning",
-        "detail": "최신 2026-09-18 · 영업일 시차 2일 · 관측치 743개 · cached",
+        "detail": "최신 2026-09-18 · 영업일 시차 2일 · 관측치 804개 · cached",
         "groupId": "fred",
         "lastDate": "2026-09-18",
-        "observations": 743,
+        "observations": 804,
         "fetchStatus": "cached"
       },
       {
@@ -365,10 +365,10 @@
         "category": "source",
         "label": "St. Louis Fed Financial Stress Index",
         "status": "warning",
-        "detail": "최신 2026-09-11 · 영업일 시차 7일 · 관측치 1515개 · cached",
+        "detail": "최신 2026-09-11 · 영업일 시차 7일 · 관측치 1537개 · cached",
         "groupId": "fred",
         "lastDate": "2026-09-11",
-        "observations": 1515,
+        "observations": 1537,
         "fetchStatus": "cached"
       },
       {
@@ -376,10 +376,10 @@
         "category": "source",
         "label": "Chicago Fed National Financial Conditions Index",
         "status": "warning",
-        "detail": "최신 2026-09-11 · 영업일 시차 7일 · 관측치 1515개 · cached",
+        "detail": "최신 2026-09-11 · 영업일 시차 7일 · 관측치 1537개 · cached",
         "groupId": "fred",
         "lastDate": "2026-09-11",
-        "observations": 1515,
+        "observations": 1537,
         "fetchStatus": "cached"
       },
       {
@@ -387,9 +387,9 @@
         "category": "source",
         "label": "CSI 300",
         "status": "warning",
-        "detail": "yahoo · skipped_low_coverage · 최신 2026-09-21 · 관측치 1개 · 커버리지 7.1%",
+        "detail": "yahoo · skipped_low_coverage · 최신 2026-09-22 · 관측치 1개 · 커버리지 6.7%",
         "groupId": "ml-input",
-        "lastDate": "2026-09-21",
+        "lastDate": "2026-09-22",
         "observations": 1,
         "fetchStatus": "skipped_low_coverage",
         "required": false
@@ -430,7 +430,7 @@
       "id": "geopolitics-reinflation",
       "title": "지정학·재인플레이션",
       "status": "부담 높음",
-      "score": 82.9,
+      "score": 83.1,
       "tone": "danger",
       "decision": "관찰지표 보강",
       "operation": "DBC·DBA 관찰카드 유지 · 기존 에너지 가중치 변경 없음"
@@ -439,7 +439,7 @@
       "id": "macro-rates",
       "title": "매크로 금리 불확실성",
       "status": "부담 높음",
-      "score": 79.6,
+      "score": 79.9,
       "tone": "danger",
       "decision": "기존 가중지표 유지",
       "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -448,7 +448,7 @@
       "id": "domestic-funding-leverage",
       "title": "국내 레버리지·대기자금",
       "status": "관찰",
-      "score": 46.0,
+      "score": 44.8,
       "tone": "watch",
       "decision": "직접 시장통계 관찰",
       "operation": "연결일 이후 일별 누적 · 60개 관측과 OOS 검증 전 가중치 0 유지"
@@ -457,7 +457,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "관찰",
-      "score": 56.2,
+      "score": 55.0,
       "tone": "watch",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -473,6 +473,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20260922T183005-1830-krx",
+      "status": "success",
+      "mode": "krx",
+      "trigger": "scheduled",
+      "scheduledTime": "18:30",
+      "startedAt": "2026-09-22 18:30:05 KST",
+      "completedAt": "2026-09-22 18:30:23 KST",
+      "durationSeconds": 18,
+      "dataAsOf": "2026-09-22",
+      "dashboardGeneratedAt": "2026-09-22 16:42 KST",
+      "mlGeneratedAt": "2026-09-22 07:32 KST",
+      "qualityScore": 95.3,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20260922T150004-1500-live",
       "status": "success",
@@ -907,29 +922,14 @@
       "mlGeneratedAt": "2026-09-18 07:31 KST",
       "qualityScore": 96.3,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20260917T183001-1830-krx",
-      "status": "success",
-      "mode": "krx",
-      "trigger": "scheduled",
-      "scheduledTime": "18:30",
-      "startedAt": "2026-09-17 18:30:01 KST",
-      "completedAt": "2026-09-17 18:30:20 KST",
-      "durationSeconds": 19,
-      "dataAsOf": "2026-09-17",
-      "dashboardGeneratedAt": "2026-09-17 15:36 KST",
-      "mlGeneratedAt": "2026-09-17 15:38 KST",
-      "qualityScore": 97.3,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260922T150004-1500-live",
-    "mode": "live",
+    "runId": "20260922T183005-1830-krx",
+    "mode": "krx",
     "state": "generated",
-    "startedAt": "2026-09-22 15:00:04 KST",
-    "preparedAt": "2026-09-22 16:45:28 KST"
+    "startedAt": "2026-09-22 18:30:05 KST",
+    "preparedAt": "2026-09-22 18:30:23 KST"
   }
 }
