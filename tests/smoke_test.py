@@ -109,6 +109,7 @@ def test_dashboard_contract():
         "broad_reinflation_watch",
         "m7_credit_stress_proxy",
         "kb_domestic_funding_watch",
+        "dram_spot_cycle_watch",
     }
     assert all(float(indicator["weight"]) == 0 for indicator in observations)
     assert len(market["observationJournal"]) == 6
@@ -302,7 +303,7 @@ def test_ui_hierarchy_and_accessibility_contract():
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
     assert "styles.css?v=20260916-3" in html
-    assert "app.js?v=20260916-3" in html
+    assert "app.js?v=20260922-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source

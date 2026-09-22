@@ -476,6 +476,8 @@ echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] M7 공개시장 신용스트레스 �
 "$PYTHON_BIN" -m m7_credit_proxy.pipeline --update-latest
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] FreeSIS 과거 원장과 KB 증시주변자금 최종일을 갱신합니다."
 "$PYTHON_BIN" scripts/update_kb_market_funds.py
+echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] DRAM 현물가격 관찰지표를 갱신합니다."
+"$PYTHON_BIN" scripts/update_dram_spot_prices.py
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 시장리스크 데이터를 갱신합니다."
 MARKET_STAGE_STARTED_EPOCH="$(date +%s)"
 make update-market-risk

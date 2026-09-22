@@ -3707,6 +3707,9 @@ function sourceCatalog(snapshot) {
   if (snapshot.kbMarketFunds) {
     records.push({ id: "kb-market-funds", ...snapshot.kbMarketFunds });
   }
+  if (snapshot.dramSpotPrices) {
+    records.push({ id: "dram-spot-prices", ...snapshot.dramSpotPrices });
+  }
   return records;
 }
 
@@ -3741,6 +3744,18 @@ function indicatorSourceRecords(indicator, snapshot) {
       matches.push({ id: "kb-market-funds", ...snapshot.kbMarketFunds });
     }
   }
+  if (indicator.id === "dram_spot_cycle_watch" && snapshot?.dramSpotPrices) {
+    const dramSources = Object.values(snapshot.dramSpotPrices.sources ?? {});
+    matches.push(
+      ...dramSources.map((record, index) => ({
+        id: `dram-spot-prices-${index}`,
+        lastDate: snapshot.dramSpotPrices.lastDate,
+        observations: snapshot.dramSpotPrices.observations,
+        fetchStatus: record.status,
+        ...record
+      }))
+    );
+  }
   return matches.filter(
     (record, index, all) =>
       all.findIndex((candidate) => `${candidate.provider}:${candidate.symbol ?? candidate.seriesId ?? candidate.id}` === `${record.provider}:${record.symbol ?? record.seriesId ?? record.id}`) === index
@@ -3768,6 +3783,9 @@ function sourceEnhancementNote(indicator) {
   }
   if (indicator.id === "kb_domestic_funding_watch") {
     return "FreeSIS 5년 원장 · KB 최종일 동일일 대조";
+  }
+  if (indicator.id === "dram_spot_cycle_watch") {
+    return "TrendForce 공식 최신값 · 공개 52주 이력 대조";
   }
   return "소스 변경 이력 없음";
 }
@@ -3876,6 +3894,10 @@ const indicatorDirectionMeanings = {
   kb_domestic_funding_watch: {
     up: "신용·미수 부담이 예탁금 완충력보다 빠르게 확대",
     down: "신용·미수 부담 완화 또는 고객예탁금 완충력 개선"
+  },
+  dram_spot_cycle_watch: {
+    up: "메모리 업체 가격결정력 강화 · 빅테크·하드웨어 원가 부담 확대",
+    down: "메모리 판가 모멘텀과 수요기업 원가 부담 동반 완화"
   }
 };
 
@@ -3892,7 +3914,7 @@ function renderIndicatorDirectionMeaning(indicator) {
     <section class="indicator-direction" aria-label="${indicator.name} 점수 방향 해석">
       <div class="indicator-direction__heading">
         <strong>점수 방향</strong>
-        <small>0~100 위험점수 기준</small>
+        <small>${indicator.role === "observation" ? "0~100 관찰점수 기준" : "0~100 위험점수 기준"}</small>
       </div>
       <dl class="indicator-direction__list">
         <div class="indicator-direction__item indicator-direction__item--up">
@@ -3926,7 +3948,9 @@ function renderIndicatorSourceDetail(indicator, provenance) {
   const normalizationText =
     indicator.id === "kb_domestic_funding_watch"
       ? "최근 5년 · 원점수 expanding 혼합 정규화 · 확인점수 과거방향 5D EWM"
-      : normalization
+      : indicator.id === "dram_spot_cycle_watch"
+        ? "2025년 이후 · 20D/60D 모멘텀·고점 근접도·상승 확산 · 과거방향 5D EWM"
+        : normalization
         ? `최대 2년 · 분위수 ${Number(normalization.percentileWeight) * 100}% · z ${Number(normalization.zScoreWeight) * 100}% · robust z ${Number(normalization.robustZScoreWeight) * 100}%`
         : "최대 2년 · 가용 관측치 기준";
   const detailId = `source-detail-${indicator.id}`;

@@ -23,6 +23,7 @@ HISTORY_CACHE_FILE = ROOT / "data" / "market-history-cache.json"
 NAVER_MARKET_INDEX_CACHE_FILE = ROOT / "data" / "naver-marketindex-history.json"
 M7_CREDIT_FILE = ROOT / "data" / "m7-credit-proxy.json"
 KB_MARKET_FUNDS_FILE = ROOT / "data" / "kb-market-funds.json"
+DRAM_SPOT_PRICES_FILE = ROOT / "data" / "dram-spot-prices.json"
 MARKET_DATA_FILE = ROOT / "data" / "raw" / "market_data.csv"
 MARKET_DATA_METADATA_FILE = ROOT / "data" / "raw" / "market_data_sources.json"
 YAHOO_CHART_URLS = (
@@ -461,6 +462,29 @@ def load_kb_market_funds():
     return payload
 
 
+def load_dram_spot_prices():
+    if not DRAM_SPOT_PRICES_FILE.exists():
+        print(
+            f"{DRAM_SPOT_PRICES_FILE.relative_to(ROOT)} 파일이 없어 DRAM 관찰카드를 생략합니다.",
+            flush=True,
+        )
+        return None
+    try:
+        payload = json.loads(DRAM_SPOT_PRICES_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        print(f"DRAM 현물가격 파일을 읽지 못했습니다: {error}", flush=True)
+        return None
+    latest = payload.get("latest") or {}
+    score = latest.get("score")
+    if not isinstance(score, (int, float)) or not 0 <= score <= 100:
+        print("DRAM 현물가격 최신 점수가 없거나 0~100 범위를 벗어났습니다.", flush=True)
+        return None
+    if not isinstance(payload.get("series"), list) or not payload["series"]:
+        print("DRAM 현물가격 시계열이 없어 관찰카드를 생략합니다.", flush=True)
+        return None
+    return payload
+
+
 def m7_credit_indicator(payload):
     latest = payload["latest"]
     top_driver = latest.get("top_driver") or {}
@@ -617,6 +641,69 @@ def kb_market_funds_indicator(payload):
             "corporateBbb3yPct": rates.get("corporateBbb3y"),
             "cp91dPct": rates.get("cp91d"),
             "cd91dPct": rates.get("cd91d"),
+        },
+    }
+
+
+def dram_spot_price_indicator(payload):
+    latest = payload["latest"]
+    products = {row["id"]: row for row in latest.get("products") or []}
+    change_1d = float(latest.get("change1d") or 0)
+    trend = "up" if change_1d > 0.5 else "down" if change_1d < -0.5 else "flat"
+
+    def product_text(product_id):
+        row = products.get(product_id) or {}
+        return (
+            f"{row.get('label') or product_id} ${float(row.get('priceUsd') or 0):.2f} · "
+            f"20일 {float(row.get('return20dPct') or 0):+.1f}%"
+        )
+
+    high_gaps = [
+        float(row.get("highGapPct") or 0)
+        for row in products.values()
+        if isinstance(row.get("highGapPct"), (int, float))
+    ]
+    average_high_gap = statistics.fmean(high_gaps) if high_gaps else math.nan
+    comparison = (payload.get("qualityChecks") or {}).get("officialVsHistory") or {}
+    quality = "complete" if comparison.get("status") == "matched" else "secondary-history"
+    comparison_label = {
+        "matched": "일치",
+        "mismatch": "불일치",
+    }.get(comparison.get("status"), "기준일 불일치")
+    return {
+        "id": "dram_spot_cycle_watch",
+        "name": "DRAM 현물가격 사이클",
+        "category": "관찰/반도체 가격",
+        "group": "ai_semi",
+        "role": "observation",
+        "value": round_score(float(latest["score"])),
+        "unit": "score",
+        "weight": 0.0,
+        "trend": trend,
+        "asOf": latest.get("date"),
+        "quality": quality,
+        "detail": [
+            f"{product_text('DDR5_16Gb')} · {product_text('DDR4_16Gb')}",
+            (
+                f"4개 제품 20일 상승 확산 {float(latest.get('positiveBreadthPct') or 0):.0f}% · "
+                f"보유이력 고점 대비 평균 {average_high_gap:+.1f}%"
+            ),
+            (
+                f"이력 {payload.get('historyStart') or '-'}~{latest.get('date') or '-'} · "
+                f"공식 최신값 대조 {comparison_label}"
+            ),
+        ],
+        "source": "TrendForce 공개 DRAM 현물가격 · 공개 52주 이력 보조",
+        "sourceUrl": "https://www.trendforce.com/price/dram/lpddr_spot",
+        "sourceUrls": [
+            "https://www.trendforce.com/price/dram/lpddr_spot",
+            "https://shoulder-project.vercel.app/",
+        ],
+        "metrics": {
+            "positiveBreadthPct": latest.get("positiveBreadthPct"),
+            "averageHighGapPct": round(average_high_gap, 2) if math.isfinite(average_high_gap) else None,
+            "rawScore": latest.get("rawScore"),
+            "historyStart": payload.get("historyStart"),
         },
     }
 
@@ -3465,6 +3552,7 @@ def build_timeseries(
     market_index_map=None,
     m7_credit_proxy=None,
     kb_market_funds=None,
+    dram_spot_prices=None,
     limit=120,
     step=1,
 ):
@@ -3571,6 +3659,17 @@ def build_timeseries(
             for point in kb_market_funds.get("series", [])
             if point.get("date") and isinstance(point.get("score"), (int, float))
         ][-limit::step]
+    if dram_spot_prices:
+        # 짧은 공개 이력은 2025년 이후 전부 보존해 YTD·1Y 전환에서도 잘리지 않게 합니다.
+        timeseries["dram_spot_cycle_watch"] = [
+            {
+                "date": point["date"],
+                "value": round_score(float(point["score"])),
+            }
+            for point in dram_spot_prices.get("series", [])
+            if point.get("date") >= "2025-01-01"
+            and isinstance(point.get("score"), (int, float))
+        ][::step]
     return timeseries
 
 
@@ -3870,6 +3969,7 @@ def build_indicators(
     market_index_map,
     m7_credit_proxy=None,
     kb_market_funds=None,
+    dram_spot_prices=None,
 ):
     kospi = equity_stress_score(series_map["kospi"])
     kosdaq = equity_stress_score(series_map["kosdaq"])
@@ -4327,6 +4427,8 @@ def build_indicators(
         indicators.append(m7_credit_indicator(m7_credit_proxy))
     if kb_market_funds:
         indicators.append(kb_market_funds_indicator(kb_market_funds))
+    if dram_spot_prices:
+        indicators.append(dram_spot_price_indicator(dram_spot_prices))
     return indicators
 
 
@@ -4337,6 +4439,7 @@ def update_dashboard(
     indicators,
     m7_credit_proxy=None,
     kb_market_funds=None,
+    dram_spot_prices=None,
 ):
     dashboard = json.loads(DASHBOARD_FILE.read_text(encoding="utf-8"))
     generated_at = datetime.now(KST).strftime("%Y-%m-%d %H:%M KST")
@@ -4361,10 +4464,10 @@ def update_dashboard(
         "대형 반도체 단일종목 레버리지성 스트레스, 빅테크 AI 수요 우려, "
         "AI 반도체 밸류체인 가격 신호를 표준화한 시장 조기경보 모듈입니다. 엔 캐리 청산, "
         "한미 금리차·원화 압력, 미·일 10년 금리차, 옵션 기간구조, 미국 증시 폭, 국내 신용·예탁금, "
-        "M7 공개시장 신용스트레스 프록시와 광의 "
+        "M7 공개시장 신용스트레스 프록시, DRAM 현물가격 사이클과 광의 "
         "재인플레이션은 종합점수와 분리한 연구 관찰카드로 제공합니다."
     )
-    market["model"]["version"] = "market-risk-v11-kofia-kb-funding-history"
+    market["model"]["version"] = "market-risk-v12-dram-spot-observation"
     market["model"]["methodology"] = (
         "각 시계열의 최대 2년 히스토리에서 레벨, 20개 관측치 변화율, 20일 실현변동성, 252일 고점대비 낙폭을 "
         "분위수 점수, z-score 정규분포 변환 점수, median/MAD 기반 robust z-score 변환 점수로 "
@@ -4397,6 +4500,7 @@ def update_dashboard(
         "VIX3M, VVIX, RSP/SPY, QQEW/QQQ, DBC/DBA observation proxies",
         "M7 adjusted prices, IGIB/LQD/HYG/IEF, OFR FSI, U.S. Treasury yield curve",
         "KB Securities OpenAPI IVA10370 customer deposits, credit balance, receivables, MMF, and Korean money-market rates",
+        "TrendForce public DRAM spot session averages and public 52-week history",
     ]
     market["model"]["references"] = [
         {
@@ -4475,6 +4579,14 @@ def update_dashboard(
             "label": "KB Securities OpenAPI IVA10370 latest market funds",
             "url": "https://openapi.kbsec.com/apidoc_b2c",
         },
+        {
+            "label": "TrendForce public DRAM spot prices",
+            "url": "https://www.trendforce.com/price/dram/lpddr_spot",
+        },
+        {
+            "label": "Public 52-week DRAM history backfill",
+            "url": "https://shoulder-project.vercel.app/",
+        },
     ]
     market["m7CreditProxy"] = (
         {
@@ -4501,6 +4613,17 @@ def update_dashboard(
         if kb_market_funds
         else None
     )
+    market["dramSpotPrices"] = (
+        {
+            "latest": dram_spot_prices.get("latest"),
+            "sources": dram_spot_prices.get("sources"),
+            "qualityChecks": dram_spot_prices.get("qualityChecks"),
+            "methodology": dram_spot_prices.get("methodology"),
+            "limitations": dram_spot_prices.get("limitations"),
+        }
+        if dram_spot_prices
+        else None
+    )
     market["groupScores"] = group_scores
     market["indicators"] = enriched_indicators
     market["observationJournal"] = build_observation_journal(enriched_indicators)
@@ -4510,6 +4633,7 @@ def update_dashboard(
         "연구 관찰카드는 OOS 개선이 확인되기 전까지 종합점수와 고위험 지표 수에 포함하지 않습니다.",
         "M7 Credit Stress Proxy는 실제 CDS가 아니며 데이터 품질과 선행성을 검증한 뒤에만 가중 승격합니다.",
         "국내 신용·예탁금 관찰카드는 FreeSIS 5년 원장과 KB 최종일을 대조하고 OOS 검증 전에는 가중치 0을 유지합니다.",
+        "DRAM 현물가격 관찰카드는 공식 최신값과 공개 52주 이력을 대조하며 종합점수에는 반영하지 않습니다.",
         "시장 의견의 완화·반등 전망은 점수에 선반영하지 않고 실제 가격·금리·기간구조의 확인 신호로 검증합니다.",
         "운영 배포에서는 Yahoo/Naver proxy를 KRX, 한국은행 ECOS, 금융투자협회, 내부 포지션/외국인 수급 데이터로 교체할 수 있습니다.",
     ]
@@ -4527,6 +4651,7 @@ def write_snapshot(
     yahoo_fetch_statuses,
     m7_credit_proxy=None,
     kb_market_funds=None,
+    dram_spot_prices=None,
 ):
     enriched_indicators, group_scores = enrich_indicators(indicators)
     snapshot = {
@@ -4654,6 +4779,22 @@ def write_snapshot(
             if kb_market_funds
             else None
         ),
+        "dramSpotPrices": (
+            {
+                "provider": "TrendForce + 공개 52주 이력 보조",
+                "label": "DRAM 현물가격 사이클",
+                "lastDate": dram_spot_prices["latest"].get("date"),
+                "firstDate": dram_spot_prices.get("historyStart"),
+                "observations": len(dram_spot_prices.get("series") or []),
+                "fetchStatus": (dram_spot_prices.get("sources") or {}).get(
+                    "officialLatest", {}
+                ).get("status", "unknown"),
+                "qualityChecks": dram_spot_prices.get("qualityChecks"),
+                "sources": dram_spot_prices.get("sources"),
+            }
+            if dram_spot_prices
+            else None
+        ),
         "groupScores": group_scores,
         "indicators": enriched_indicators,
     }
@@ -4667,6 +4808,7 @@ def write_timeseries(
     market_index_map,
     m7_credit_proxy=None,
     kb_market_funds=None,
+    dram_spot_prices=None,
 ):
     timeseries = {
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
@@ -4680,6 +4822,7 @@ def write_timeseries(
             market_index_map,
             m7_credit_proxy=m7_credit_proxy,
             kb_market_funds=kb_market_funds,
+            dram_spot_prices=dram_spot_prices,
         ),
     }
     TIMESERIES_FILE.write_text(json.dumps(timeseries, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -4688,6 +4831,7 @@ def write_timeseries(
 def main():
     m7_credit_proxy = load_m7_credit_proxy()
     kb_market_funds = load_kb_market_funds()
+    dram_spot_prices = load_dram_spot_prices()
     print("Yahoo Finance 시계열을 조회합니다.", flush=True)
     cached_yahoo_map = load_history_yahoo_series_map()
     cached_yahoo_by_symbol = {
@@ -4728,6 +4872,7 @@ def main():
         market_index_map,
         m7_credit_proxy=m7_credit_proxy,
         kb_market_funds=kb_market_funds,
+        dram_spot_prices=dram_spot_prices,
     )
     update_dashboard(
         series_map,
@@ -4736,6 +4881,7 @@ def main():
         indicators,
         m7_credit_proxy=m7_credit_proxy,
         kb_market_funds=kb_market_funds,
+        dram_spot_prices=dram_spot_prices,
     )
     write_snapshot(
         series_map,
@@ -4747,6 +4893,7 @@ def main():
         yahoo_fetch_statuses,
         m7_credit_proxy,
         kb_market_funds,
+        dram_spot_prices,
     )
     write_timeseries(
         series_map,
@@ -4755,6 +4902,7 @@ def main():
         market_index_map,
         m7_credit_proxy=m7_credit_proxy,
         kb_market_funds=kb_market_funds,
+        dram_spot_prices=dram_spot_prices,
     )
 
     total_weight = sum(indicator["weight"] for indicator in indicators)

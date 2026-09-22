@@ -1,4 +1,4 @@
-.PHONY: serve test audit-data update-m7-credit-proxy update-kb-market-funds update-market-risk update-vkospi update-kospi-breadth backtest-market-risk analyze-stress-episodes export-offline send-news-digest install-news-digest run-local-market-update install-local-market-update run-overnight-market-prepare install-overnight-market-prepare
+.PHONY: serve test audit-data update-m7-credit-proxy update-kb-market-funds update-dram-spot-prices update-market-risk update-vkospi update-kospi-breadth backtest-market-risk analyze-stress-episodes export-offline send-news-digest install-news-digest run-local-market-update install-local-market-update run-overnight-market-prepare install-overnight-market-prepare
 
 KOSPI_BREADTH_START ?= 2024-01-01
 
@@ -16,6 +16,9 @@ update-m7-credit-proxy:
 
 update-kb-market-funds:
 	PYTHONPATH=src python3 scripts/update_kb_market_funds.py
+
+update-dram-spot-prices:
+	PYTHONPATH=src python3 scripts/update_dram_spot_prices.py
 
 update-market-risk:
 	python3 scripts/update_market_risk.py
