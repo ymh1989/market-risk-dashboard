@@ -683,6 +683,7 @@ PUBLISH_FILES=(
   data/publication-manifest.json
   data/m7-credit-proxy.json
   data/kb-market-funds.json
+  data/dram-spot-prices.json
   data/kospi-breadth.json
   reports/market-risk-dashboard-offline.html
 )

@@ -529,6 +529,8 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert "pages_publication_run_id()" in run_script
     assert "PUBLISH_FILES=(" in run_script
     assert 'git add -- "${PUBLISH_FILES[@]}"' in run_script
+    publish_files = run_script.split("PUBLISH_FILES=(", 1)[1].split("\n)", 1)[0]
+    assert "data/dram-spot-prices.json" in publish_files
     assert "MARKET_UPDATE_RUN_ID=gha-${{ github.run_id }}-${{ github.run_attempt }}" in workflow
     assert "scripts/prepare_atomic_publication.py" in workflow
     assert "--reused-file data/kospi-breadth.json" in workflow
