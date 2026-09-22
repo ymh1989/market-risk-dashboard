@@ -309,12 +309,15 @@ def build_payload(
         "sources": {
             "officialLatest": {
                 "provider": "TrendForce",
+                "displayLabel": "TrendForce 공식 최신값",
                 "url": "https://www.trendforce.com/price/dram/lpddr_spot",
                 "role": "공개 세션 평균 최신값",
                 "status": official_status,
             },
             "publicHistory": {
                 "provider": "어깨에서 팔기 프로젝트",
+                "displayLabel": "공개 DRAM 52주 이력(보조)",
+                "providerNote": "제공: 어깨에서 팔기 프로젝트",
                 "url": "https://shoulder-project.vercel.app/",
                 "role": "2025-09-22 이후 공개 52주 이력 보조",
                 "status": history_status,

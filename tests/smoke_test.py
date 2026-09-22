@@ -303,7 +303,7 @@ def test_ui_hierarchy_and_accessibility_contract():
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
     assert "styles.css?v=20260916-3" in html
-    assert "app.js?v=20260922-2" in html
+    assert "app.js?v=20260922-3" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -653,6 +653,10 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert '{ path: "dram-spot-prices.json", payload: dramSpotPrices }' in app_source
     assert 'if (type === "usd") return `$${formatNumber(number, 3)}`' in app_source
     assert "TrendForce DDR5 16Gb 현물" in app_source
+    assert '"공개 DRAM 52주 이력(보조)"' in app_source
+    assert "function renderSourceRecordLabel" in app_source
+    assert "record.providerNote" in app_source
+    assert ".source-detail__link" in styles
     assert ".market-trend-group--digital" in styles
     assert "Naver Pay 증권 · 업비트 BTC/KRW" in app_source
     assert "현재값은 실시간·지연 잠정치" in app_source

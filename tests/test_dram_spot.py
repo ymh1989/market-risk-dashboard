@@ -113,6 +113,9 @@ def test_payload_starts_after_2025_and_is_observation_ready():
     assert payload["latest"]["score"] <= 100
     assert len(payload["latest"]["products"]) == 4
     assert payload["methodology"]["operatingRole"].endswith("가중치 0")
+    assert payload["sources"]["officialLatest"]["displayLabel"] == "TrendForce 공식 최신값"
+    assert payload["sources"]["publicHistory"]["displayLabel"] == "공개 DRAM 52주 이력(보조)"
+    assert payload["sources"]["publicHistory"]["providerNote"] == "제공: 어깨에서 팔기 프로젝트"
 
 
 def test_dashboard_indicator_is_observation_only():

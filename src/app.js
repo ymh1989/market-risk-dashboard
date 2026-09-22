@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260922-2";
+const ASSET_VERSION = "20260922-3";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -3791,19 +3791,44 @@ function indicatorSourceRecords(indicator, snapshot) {
   if (indicator.id === "dram_spot_cycle_watch" && snapshot?.dramSpotPrices) {
     const dramSources = Object.values(snapshot.dramSpotPrices.sources ?? {});
     matches.push(
-      ...dramSources.map((record, index) => ({
-        id: `dram-spot-prices-${index}`,
-        lastDate: snapshot.dramSpotPrices.lastDate,
-        observations: snapshot.dramSpotPrices.observations,
-        fetchStatus: record.status,
-        ...record
-      }))
+      ...dramSources.map((record, index) => {
+        const isHistory = String(record.role ?? "").includes("52주 이력");
+        return {
+          id: `dram-spot-prices-${index}`,
+          lastDate: snapshot.dramSpotPrices.lastDate,
+          observations: snapshot.dramSpotPrices.observations,
+          fetchStatus: record.status,
+          ...record,
+          displayLabel:
+            record.displayLabel ??
+            (isHistory
+              ? "공개 DRAM 52주 이력(보조)"
+              : record.provider === "TrendForce"
+                ? "TrendForce 공식 최신값"
+                : null),
+          providerNote:
+            record.providerNote ?? (isHistory ? `제공: ${record.provider}` : null)
+        };
+      })
     );
   }
   return matches.filter(
     (record, index, all) =>
       all.findIndex((candidate) => `${candidate.provider}:${candidate.symbol ?? candidate.seriesId ?? candidate.id}` === `${record.provider}:${record.symbol ?? record.seriesId ?? record.id}`) === index
   );
+}
+
+function sourceRecordDisplayLabel(record) {
+  if (record.displayLabel) return record.displayLabel;
+  return [record.provider, record.symbol ?? record.seriesId ?? record.label ?? record.id]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function renderSourceRecordLabel(record) {
+  const label = sourceRecordDisplayLabel(record);
+  if (!record.url) return label;
+  return `<a class="source-detail__link" href="${record.url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
 }
 
 function sourceValueState(record) {
@@ -4020,8 +4045,8 @@ function renderIndicatorSourceDetail(indicator, provenance) {
                 .map(
                   (record) => `
                     <div>
-                      <strong>${record.provider} · ${record.symbol ?? record.seriesId ?? record.label ?? record.id}</strong>
-                      <span>${record.lastDate ?? "관측일 확인 대기"} · ${sourceValueState(record)} · ${Number.isFinite(Number(record.observations)) ? `${Number(record.observations).toLocaleString()}개 관측` : Number.isFinite(Number(record.coveragePct)) ? `커버리지 ${Number(record.coveragePct).toFixed(0)}%` : "관측수 확인 대기"}</span>
+                      <strong>${renderSourceRecordLabel(record)}</strong>
+                      <span>${record.lastDate ?? "관측일 확인 대기"} · ${sourceValueState(record)} · ${Number.isFinite(Number(record.observations)) ? `${Number(record.observations).toLocaleString()}개 관측` : Number.isFinite(Number(record.coveragePct)) ? `커버리지 ${Number(record.coveragePct).toFixed(0)}%` : "관측수 확인 대기"}${record.providerNote ? ` · ${record.providerNote}` : ""}</span>
                     </div>
                   `
                 )
