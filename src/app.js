@@ -165,7 +165,10 @@ const marketTrendGroups = [
     id: "memory",
     label: "메모리 현물",
     items: [
-      { id: "dram_ddr5_16gb", label: "DDR5 16Gb 현물", type: "usd", upLabel: "현물가 상승", downLabel: "현물가 하락" }
+      { id: "dram_ddr5_16gb", label: "DDR5 16Gb 현물", type: "usd", productKey: "DDR5_16Gb", symbol: "DDR5 16Gb (2Gx8) 4800/5600", upLabel: "현물가 상승", downLabel: "현물가 하락" },
+      { id: "dram_ddr4_16gb", label: "DDR4 16Gb 현물", type: "usd", productKey: "DDR4_16Gb", symbol: "DDR4 16Gb (2Gx8) 3200", upLabel: "현물가 상승", downLabel: "현물가 하락" },
+      { id: "dram_ddr4_8gb", label: "DDR4 8Gb 현물", type: "usd", productKey: "DDR4_8Gb", symbol: "DDR4 8Gb (1Gx8) 3200", upLabel: "현물가 상승", downLabel: "현물가 하락" },
+      { id: "dram_ddr3_4gb", label: "DDR3 4Gb 현물", type: "usd", productKey: "DDR3_4Gb", symbol: "DDR3 4Gb 512Mx8 1600/1866", upLabel: "현물가 상승", downLabel: "현물가 하락" }
     ]
   },
   {
@@ -3251,34 +3254,31 @@ function mergeDramSpotDirectionData(marketIndexes, dramSpotPrices) {
     return marketIndexes;
   }
 
-  const rowsByDate = new Map();
-  [...(dramSpotPrices.priceHistory ?? []), ...(dramSpotPrices.history ?? [])].forEach((point) => {
-    const close = Number(point?.pricesUsd?.DDR5_16Gb);
-    if (!point?.date || !Number.isFinite(close) || close <= 0) return;
-    rowsByDate.set(point.date, { date: point.date, close });
-  });
-  const rows = [...rowsByDate.values()].sort((left, right) => left.date.localeCompare(right.date));
-  if (rows.length < 2) return marketIndexes;
+  const metadata = { ...marketIndexes.metadata };
+  const series = { ...marketIndexes.series };
+  const products = marketTrendGroups.find((group) => group.id === "memory").items;
+  products.forEach((product) => {
+    const rowsByDate = new Map();
+    [...(dramSpotPrices.priceHistory ?? []), ...(dramSpotPrices.history ?? [])].forEach((point) => {
+      const close = Number(point?.pricesUsd?.[product.productKey]);
+      if (!point?.date || !Number.isFinite(close) || close <= 0) return;
+      rowsByDate.set(point.date, { date: point.date, close });
+    });
+    const rows = [...rowsByDate.values()].sort((left, right) => left.date.localeCompare(right.date));
+    if (rows.length < 2) return;
 
-  return {
-    ...marketIndexes,
-    metadata: {
-      ...marketIndexes.metadata,
-      dram_ddr5_16gb: {
-        label: "DDR5 16Gb 현물",
-        symbol: "DDR5 16Gb (2Gx8) 4800/5600",
-        frequency: "daily",
-        source: "DRAM 현물가격 · 최신값 TrendForce",
-        observations: rows.length,
-        firstDate: rows[0].date,
-        lastDate: rows.at(-1).date
-      }
-    },
-    series: {
-      ...marketIndexes.series,
-      dram_ddr5_16gb: rows
-    }
-  };
+    metadata[product.id] = {
+      label: product.label,
+      symbol: product.symbol,
+      frequency: "daily",
+      source: "DRAM 현물가격 · 최신값 TrendForce",
+      observations: rows.length,
+      firstDate: rows[0].date,
+      lastDate: rows.at(-1).date
+    };
+    series[product.id] = rows;
+  });
+  return { ...marketIndexes, metadata, series };
 }
 
 function formatMarketSnapshotTime(observedAt) {
@@ -3545,7 +3545,7 @@ function renderMarketIndexTrendPanel(marketIndexes) {
       </div>
       ${renderChartTooltip()}
       <footer class="market-trend-panel__footer">
-        <span>Naver Pay 증권 · 업비트 BTC/KRW · DDR5 현물 최신값 TrendForce</span>
+        <span>Naver Pay 증권 · 업비트 BTC/KRW · DRAM 현물 최신값 TrendForce</span>
         <span>국채 스프레드는 동일 관측일 장기금리-단기금리</span>
         <span>현재값은 실시간·지연 잠정치 · 과거 시계열과 ML은 확정 EOD</span>
         <span>일간 최근 10회 · 주간 최근 6회 방향 판독</span>

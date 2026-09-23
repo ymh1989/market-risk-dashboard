@@ -262,6 +262,8 @@ python3 scripts/send_operations_alert.py \
 
 DRAM 방향성 차트는 보관된 과거 가격(`priceHistory`)과 공식 최신 관측을 연결합니다. 같은 날짜에는 공식값을 우선하며, 자동 갱신에서도 과거 이력을 보존합니다. 점수 계산은 공식 수집 이력(`history`)만 사용하므로 가격 그래프 복원이 점수에 영향을 주지 않습니다. 과거 이력의 원천 정보는 내부 추적용으로 보존하고 화면에는 최신값의 TrendForce 출처만 표시합니다. 이력 추가 적재는 `scripts/update_dram_spot_prices.py --import-price-history <JSON 경로>`로 실행할 수 있습니다.
 
+메모리 현물 방향성은 DDR5 16Gb, DDR4 16Gb·8Gb, DDR3 4Gb를 함께 제공합니다. 각 품목의 달러 가격·전일·1주 변동률과 공통 기간 선택에 따른 변동률·스파크라인을 표시하며, 품목별 누락값은 다른 품목 가격으로 대체하지 않습니다.
+
 계산·품질 검증 이후 게시 준비나 배포에서 실패하면 작업폴더를 삭제하지 않고, 복구 기록을 실행기 루트의 `logs/publication-recovery/<runId>.json`에 남깁니다. 복구 기록에는 비밀키를 넣지 않습니다. 원본 실패 이력도 유지합니다.
 
 ```bash
