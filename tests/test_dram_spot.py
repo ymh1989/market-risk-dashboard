@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 import json
+from io import StringIO
 
 import pytest
 
-from scripts.update_dram_spot_prices import update
+from scripts.update_dram_spot_prices import main, update
 from scripts.update_market_risk import dram_spot_price_indicator
 from kospi_risk.dram_spot import (
     PRODUCTS,
+    DramSpotDataError,
     build_payload,
     calculate_cycle_scores,
     parse_trendforce_spot_html,
@@ -152,3 +154,113 @@ def test_dashboard_indicator_is_observation_only():
     assert indicator["group"] == "ai_semi"
     assert indicator["asOf"] == payload["latest"]["date"]
     assert "DRAM" in indicator["source"]
+
+
+def test_price_history_is_chart_only_and_official_overlap_wins():
+    official = parse_trendforce_spot_html(official_html())
+    archive = synthetic_rows(90)
+    stale_overlap = {**archive[0], "date": official["date"]}
+    payload = build_payload(
+        [official],
+        generated_at=datetime(2026, 9, 22, tzinfo=KST),
+        price_history=[stale_overlap, *reversed(archive), archive[0]],
+    )
+
+    assert payload["history"] == [official]
+    assert payload["priceHistory"][-1]["pricesUsd"] == official["pricesUsd"]
+    assert len(payload["priceHistory"]) == 91
+    dates = [row["date"] for row in payload["priceHistory"]]
+    assert dates == sorted(set(dates))
+    assert payload["qualityChecks"]["officialObservationCount"] == 1
+    assert payload["qualityChecks"]["priceObservationCount"] == 91
+    assert payload["series"] == []
+    assert payload["latest"]["score"] is None
+    assert set(payload["sources"]) == {"officialLatest"}
+
+
+def test_price_history_does_not_change_existing_scores():
+    rows = synthetic_rows(90)
+    generated_at = datetime(2026, 9, 22, tzinfo=KST)
+    original = build_payload(rows, generated_at=generated_at)
+    extended = build_payload(
+        rows,
+        generated_at=generated_at,
+        price_history=[{
+            "date": "2025-01-02",
+            "pricesUsd": {key: 999999 for key in PRODUCTS},
+            "source": "public-history",
+        }],
+    )
+
+    assert extended["series"] == original["series"]
+    assert extended["latest"] == original["latest"]
+    assert extended["history"] == original["history"]
+    assert len(extended["priceHistory"]) == 91
+
+
+def test_price_history_excludes_future_and_before_2025():
+    official = parse_trendforce_spot_html(official_html())
+    payload = build_payload(
+        [official],
+        generated_at=datetime(2026, 9, 22, tzinfo=KST),
+        price_history=[
+            {**official, "date": "2024-12-31"},
+            {**official, "date": "2026-09-22"},
+        ],
+    )
+
+    assert [row["date"] for row in payload["priceHistory"]] == [official["date"]]
+    assert payload["priceHistory"][0]["pricesUsd"] == official["pricesUsd"]
+
+
+def test_updater_preserves_imported_history_between_runs(tmp_path):
+    output = tmp_path / "dram.json"
+    archive = {
+        "history": synthetic_rows(90),
+        "sources": {"archive": {"provider": "보관 원천"}},
+        "generatedAt": "2026-09-21T19:00:00+09:00",
+    }
+    first = update(output, official_html=official_html(), price_history_payload=archive)
+    second = update(output, official_html=official_html())
+
+    assert second["priceHistory"] == first["priceHistory"]
+    assert second["history"] == first["history"]
+    assert second["priceHistoryProvenance"]["sources"] == archive["sources"]
+    assert second["priceHistoryProvenance"]["usage"] == "price-chart-only"
+    assert set(second["sources"]) == {"officialLatest"}
+    assert len(second["priceHistory"]) == 91
+
+    fallback = update(output, official_html="일시적인 원천 조회 실패")
+    assert fallback["priceHistory"] == second["priceHistory"]
+    assert fallback["sources"]["officialLatest"]["status"] == "stored-fallback"
+
+
+@pytest.mark.parametrize("bad_price", [float("nan"), float("inf"), 0, -1, None])
+def test_invalid_price_history_does_not_overwrite_existing_file(tmp_path, bad_price):
+    output = tmp_path / "dram.json"
+    update(output, official_html=official_html())
+    before = output.read_bytes()
+    row = synthetic_rows(1)[0]
+    row["pricesUsd"]["DDR5_16Gb"] = bad_price
+
+    with pytest.raises(DramSpotDataError, match="가격"):
+        update(output, official_html=official_html(), price_history_payload={"history": [row]})
+
+    assert output.read_bytes() == before
+
+
+def test_cli_imports_price_history_from_stdin(tmp_path, monkeypatch):
+    output = tmp_path / "dram.json"
+    html = tmp_path / "official.html"
+    html.write_text(official_html(), encoding="utf-8")
+    monkeypatch.setattr("sys.argv", [
+        "update_dram_spot_prices.py", "--output", str(output),
+        "--official-html", str(html), "--import-price-history", "-",
+    ])
+    monkeypatch.setattr("sys.stdin", StringIO(json.dumps({"history": synthetic_rows(90)})))
+
+    main()
+
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert len(payload["priceHistory"]) == 91
+    assert len(payload["history"]) == 1

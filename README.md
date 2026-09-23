@@ -260,6 +260,8 @@ python3 scripts/send_operations_alert.py \
 - 갱신 도중 원격 계산 코드·설정·데이터 변경 시 자동 병합 차단; 화면·문서 변경만 재검증 후 허용
 - ELS 조회 실패 시 직전 검증본을 명시적 `reused`로 유지하고 원천 관측일 보존
 
+DRAM 방향성 차트는 보관된 과거 가격(`priceHistory`)과 공식 최신 관측을 연결합니다. 같은 날짜에는 공식값을 우선하며, 자동 갱신에서도 과거 이력을 보존합니다. 점수 계산은 공식 수집 이력(`history`)만 사용하므로 가격 그래프 복원이 점수에 영향을 주지 않습니다. 과거 이력의 원천 정보는 내부 추적용으로 보존하고 화면에는 최신값의 TrendForce 출처만 표시합니다. 이력 추가 적재는 `scripts/update_dram_spot_prices.py --import-price-history <JSON 경로>`로 실행할 수 있습니다.
+
 계산·품질 검증 이후 게시 준비나 배포에서 실패하면 작업폴더를 삭제하지 않고, 복구 기록을 실행기 루트의 `logs/publication-recovery/<runId>.json`에 남깁니다. 복구 기록에는 비밀키를 넣지 않습니다. 원본 실패 이력도 유지합니다.
 
 ```bash

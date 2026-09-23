@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -59,8 +60,13 @@ def write_json_atomic(path: Path, payload: dict) -> None:
     temporary.replace(path)
 
 
-def update(output: Path, *, official_html: str | None = None) -> dict:
-    """TrendForce 공식 최신값만 보존하며 일별 이력을 증분 적재합니다."""
+def update(
+    output: Path,
+    *,
+    official_html: str | None = None,
+    price_history_payload: dict | None = None,
+) -> dict:
+    """공식 관측을 증분 적재하고 표시용 가격 이력은 점수와 분리해 보존합니다."""
     existing = load_existing(output)
     existing_rows = [
         row
@@ -80,12 +86,27 @@ def update(output: Path, *, official_html: str | None = None) -> dict:
         official_status = "stored-fallback"
 
     merged_rows = merge_history(existing_rows, [], official_latest)
+    imported = price_history_payload or {}
+    display_rows = [
+        *(imported.get("priceHistory") or imported.get("history") or []),
+        *(existing.get("priceHistory") or []),
+    ]
     payload = build_payload(
         merged_rows,
         generated_at=datetime.now(KST),
         official_latest=official_latest,
         official_status=official_status,
+        price_history=display_rows,
     )
+    provenance = existing.get("priceHistoryProvenance")
+    if price_history_payload is not None:
+        provenance = {
+            "sources": imported.get("sources") or {},
+            "snapshotGeneratedAt": imported.get("generatedAt"),
+            "usage": "price-chart-only",
+        }
+    if provenance:
+        payload["priceHistoryProvenance"] = provenance
     write_json_atomic(output, payload)
     return payload
 
@@ -94,14 +115,27 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="DRAM 현물가격 관찰지표를 갱신합니다.")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--official-html", type=Path, help="테스트용 TrendForce HTML 파일")
+    parser.add_argument("--import-price-history", help="차트 전용 과거 가격 JSON 경로. '-'는 표준입력")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    price_history_payload = None
+    if args.import_price_history:
+        price_history_payload = (
+            json.load(sys.stdin)
+            if args.import_price_history == "-"
+            else load_existing(Path(args.import_price_history))
+        )
+        if not isinstance(price_history_payload, dict) or not (
+            price_history_payload.get("priceHistory") or price_history_payload.get("history")
+        ):
+            raise DramSpotDataError("가져올 가격 이력 JSON에 history 또는 priceHistory가 필요합니다.")
     payload = update(
         args.output,
         official_html=args.official_html.read_text(encoding="utf-8") if args.official_html else None,
+        price_history_payload=price_history_payload,
     )
     latest = payload["latest"]
     quality = payload.get("qualityChecks") or {}

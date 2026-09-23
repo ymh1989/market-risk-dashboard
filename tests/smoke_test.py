@@ -307,7 +307,7 @@ def test_ui_hierarchy_and_accessibility_contract():
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
     assert "styles.css?v=20260916-3" in html
-    assert "app.js?v=20260922-4" in html
+    assert "app.js?v=20260923-1" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source
@@ -661,13 +661,14 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert 'id: "memory"' in app_source
     assert '{ id: "dram_ddr5_16gb", label: "DDR5 16Gb 현물", type: "usd"' in app_source
     assert "function mergeDramSpotDirectionData" in app_source
+    assert "...(dramSpotPrices.priceHistory ?? [])" in app_source
     assert "point?.pricesUsd?.DDR5_16Gb" in app_source
     assert "function publicationAllowsReuse" in app_source
     assert 'artifact.state])' in app_source
     assert '!publicationAllowsReuse(path)' in app_source
     assert '{ path: "dram-spot-prices.json", payload: dramSpotPrices }' in app_source
     assert 'if (type === "usd") return `$${formatNumber(number, 3)}`' in app_source
-    assert "TrendForce DDR5 16Gb 현물" in app_source
+    assert "DDR5 현물 최신값 TrendForce" in app_source
     assert "TrendForce 공식 최신값 · 일별 자체 적재" in app_source
     assert "function renderSourceRecordLabel" in app_source
     assert ".source-detail__link" in styles

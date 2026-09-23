@@ -200,11 +200,31 @@ def build_payload(
     generated_at: datetime,
     official_latest: Mapping[str, Any] | None = None,
     official_status: str = "direct",
+    price_history: Iterable[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
-    """TrendForce 공식 일별 관측만 저장하고 충분한 이력이 쌓이면 점수를 계산합니다."""
+    """가격 표시 이력을 별도로 보존하며 점수에는 공식 일별 관측만 사용합니다."""
     normalized_rows = list(rows)
     if not normalized_rows:
         raise DramSpotDataError("TrendForce 공식 DRAM 관측값이 없습니다.")
+
+    # 복원한 가격은 차트에만 사용하며, 같은 날짜는 공식 관측으로 덮어씁니다.
+    display_rows = []
+    latest_date = max(str(row["date"]) for row in normalized_rows)
+    for row in price_history:
+        try:
+            observed_date = date.fromisoformat(str(row["date"])).isoformat()
+            prices = {key: float(row["pricesUsd"][key]) for key in PRODUCTS}
+        except (KeyError, TypeError, ValueError) as exc:
+            raise DramSpotDataError("가격 표시 이력의 날짜 또는 제품 가격이 유효하지 않습니다.") from exc
+        if any(not math.isfinite(value) or value <= 0 for value in prices.values()):
+            raise DramSpotDataError("가격 표시 이력에는 양수인 유한 가격만 허용합니다.")
+        if HISTORY_START_DATE <= observed_date <= latest_date:
+            display_rows.append({
+                "date": observed_date,
+                "pricesUsd": prices,
+                "source": row.get("source") or "stored-history",
+            })
+    display_rows = merge_history([*display_rows, *normalized_rows], [], None)
 
     scored: list[dict[str, Any]] = []
     if len(normalized_rows) >= 21:
@@ -248,12 +268,13 @@ def build_payload(
     observation_count = len(normalized_rows)
     score_ready = bool(scored)
     return {
-        "schemaVersion": 2,
+        "schemaVersion": 3,
         "generatedAt": generated_at.isoformat(),
         "historyStart": normalized_rows[0]["date"],
         "scoreStart": scored[0]["date"] if scored else None,
         "latest": latest,
         "history": normalized_rows,
+        "priceHistory": display_rows,
         "series": scored,
         "sources": {
             "officialLatest": {
@@ -268,6 +289,7 @@ def build_payload(
             "officialObservationCount": observation_count,
             "minimumScoreObservations": 21,
             "scoreStatus": "ready" if score_ready else "building-official-history",
+            "priceObservationCount": len(display_rows),
         },
         "methodology": {
             "label": "DRAM 현물가격 사이클 과열",
@@ -278,7 +300,7 @@ def build_payload(
             "readiness": "TrendForce 공식 관측 21개부터 점수 산출",
         },
         "limitations": [
-            "TrendForce 공개 페이지의 최신값만 매일 자체 적재하므로 초기에는 시계열과 점수를 제공하지 않습니다.",
+            "점수는 TrendForce 공식 관측 21개부터 산출하며, 가격 그래프의 보관 이력과 분리합니다.",
             "제품별 현물가격은 실제 계약가격·HBM 가격과 다르며 주가 방향을 직접 예측하지 않습니다.",
             "고점 근접도는 자체 적재를 시작한 이후의 보유 이력 안에서만 계산합니다.",
         ],

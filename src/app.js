@@ -3252,9 +3252,9 @@ function mergeDramSpotDirectionData(marketIndexes, dramSpotPrices) {
   }
 
   const rowsByDate = new Map();
-  (dramSpotPrices.history ?? []).forEach((point) => {
+  [...(dramSpotPrices.priceHistory ?? []), ...(dramSpotPrices.history ?? [])].forEach((point) => {
     const close = Number(point?.pricesUsd?.DDR5_16Gb);
-    if (!point?.date || !Number.isFinite(close)) return;
+    if (!point?.date || !Number.isFinite(close) || close <= 0) return;
     rowsByDate.set(point.date, { date: point.date, close });
   });
   const rows = [...rowsByDate.values()].sort((left, right) => left.date.localeCompare(right.date));
@@ -3268,7 +3268,7 @@ function mergeDramSpotDirectionData(marketIndexes, dramSpotPrices) {
         label: "DDR5 16Gb 현물",
         symbol: "DDR5 16Gb (2Gx8) 4800/5600",
         frequency: "daily",
-        source: "TrendForce 공개 DRAM 현물가격",
+        source: "DRAM 현물가격 · 최신값 TrendForce",
         observations: rows.length,
         firstDate: rows[0].date,
         lastDate: rows.at(-1).date
@@ -3545,7 +3545,7 @@ function renderMarketIndexTrendPanel(marketIndexes) {
       </div>
       ${renderChartTooltip()}
       <footer class="market-trend-panel__footer">
-        <span>Naver Pay 증권 · 업비트 BTC/KRW · TrendForce DDR5 16Gb 현물</span>
+        <span>Naver Pay 증권 · 업비트 BTC/KRW · DDR5 현물 최신값 TrendForce</span>
         <span>국채 스프레드는 동일 관측일 장기금리-단기금리</span>
         <span>현재값은 실시간·지연 잠정치 · 과거 시계열과 ML은 확정 EOD</span>
         <span>일간 최근 10회 · 주간 최근 6회 방향 판독</span>
