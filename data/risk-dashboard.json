@@ -3,7 +3,7 @@
     "title": "통합 리스크 모니터링 대시보드",
     "subtitle": "시장 조기경보 · 신용리스크 확장 준비 · 유동성리스크 확장 준비",
     "asOf": "2026-09-24",
-    "generatedAt": "2026-09-24 15:02 KST",
+    "generatedAt": "2026-09-24 15:35 KST",
     "source": "Yahoo Finance, Naver Finance equity/market-index, FRED, and KB Securities OpenAPI endpoints"
   },
   "tabs": [
@@ -234,13 +234,13 @@
           "name": "원/달러 환율 압력",
           "category": "외환",
           "group": "macro",
-          "value": 19.5,
+          "value": 19.1,
           "unit": "score",
           "weight": 0.06,
           "trend": "down",
-          "detail": "USD/KRW 1,369.22, 20일 변화율 -1.03%, 2년 분위 8.8",
+          "detail": "USD/KRW 1,366.52, 20일 변화율 -1.23%, 2년 분위 8.1",
           "source": "Yahoo Finance chart: KRW=X",
-          "contribution": 1.17,
+          "contribution": 1.15,
           "contributionPct": 6.0
         },
         {
@@ -276,13 +276,13 @@
           "name": "미국 신용스프레드 스트레스",
           "category": "신용/크레딧",
           "group": "macro",
-          "value": 30.2,
+          "value": 30.0,
           "unit": "score",
           "weight": 0.05,
           "trend": "flat",
-          "detail": "미국 하이일드 OAS 2.68%, 최근 20개 관측치 변화 -0.02%p, 위험분위 17.2",
+          "detail": "미국 하이일드 OAS 2.68%, 최근 20개 관측치 변화 -0.02%p, 위험분위 17.4",
           "source": "FRED: BAMLH0A0HYM2",
-          "contribution": 1.51,
+          "contribution": 1.5,
           "contributionPct": 5.0
         },
         {
@@ -290,13 +290,13 @@
           "name": "미국 금융여건 긴축 압력",
           "category": "금융여건",
           "group": "macro",
-          "value": 55.2,
+          "value": 53.6,
           "unit": "score",
           "weight": 0.03,
           "trend": "up",
           "detail": "STLFSI -0.91, NFCI -0.56, 미 2년 4.71%, 10Y-2Y 0.26%p",
           "source": "FRED: STLFSI4, NFCI, DGS2, T10Y2Y",
-          "contribution": 1.66,
+          "contribution": 1.61,
           "contributionPct": 3.0
         },
         {
@@ -332,11 +332,11 @@
           "name": "원화 환산 에너지 수입비용",
           "category": "에너지/환율",
           "group": "macro",
-          "value": 82.7,
+          "value": 82.4,
           "unit": "score",
           "weight": 0.02,
           "trend": "flat",
-          "detail": "브렌트유 $103.08, USD/KRW 1,369.22, 원화 환산 배럴당 비용 141,139.19원, 최근 20개 관측치 변화 +8.62%. 유가와 원화 약세가 동시에 기업 마진·물가·금리 부담으로 전이되는 경로를 측정합니다.",
+          "detail": "브렌트유 $103.08, USD/KRW 1,366.52, 원화 환산 배럴당 비용 140,860.88원, 최근 20개 관측치 변화 +8.40%. 유가와 원화 약세가 동시에 기업 마진·물가·금리 부담으로 전이되는 경로를 측정합니다.",
           "source": "Naver market index: LCOcv1; Yahoo Finance: KRW=X",
           "contribution": 1.65,
           "contributionPct": 2.0
@@ -366,7 +366,7 @@
           "unit": "score",
           "weight": 0.0,
           "trend": "up",
-          "detail": "한국 3년 3.998%, 미국 2년 4.895%, 금리차 -0.897%p·20개 관측치 변화 -0.490%p, USD/KRW 1,369.22·20개 관측치 -1.03%. 금리차 축소와 원화 약세의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
+          "detail": "한국 3년 3.998%, 미국 2년 4.895%, 금리차 -0.897%p·20개 관측치 변화 -0.490%p, USD/KRW 1,366.52·20개 관측치 -1.23%. 금리차 축소와 원화 약세의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
           "source": "Naver market index: KR3YT=RR, US2YT=RR; Yahoo Finance: KRW=X",
           "contribution": 0.0,
           "contributionPct": 0.0
@@ -626,9 +626,9 @@
         {
           "id": "macro",
           "label": "Macro",
-          "score": 42.5,
+          "score": 42.2,
           "weight": 0.3,
-          "contribution": 12.74,
+          "contribution": 12.66,
           "indicatorCount": 9,
           "observationCount": 7
         },
@@ -721,7 +721,7 @@
           "id": "geopolitics-reinflation",
           "title": "지정학·재인플레이션",
           "status": "부담 높음",
-          "score": 83.3,
+          "score": 83.2,
           "tone": "danger",
           "decision": "관찰지표 보강",
           "components": [
@@ -735,13 +735,13 @@
             {
               "id": "energy_import_cost_pressure",
               "name": "원화 환산 에너지 수입비용",
-              "value": 82.7,
+              "value": 82.4,
               "weight": 0.45,
-              "contribution": 37.22
+              "contribution": 37.08
             }
           ],
           "evidence": [
-            "원화 환산 에너지 비용 82.7",
+            "원화 환산 에너지 비용 82.4",
             "원자재·농산물 재인플레이션 83.8"
           ],
           "assessment": "유가 단일 상승과 광의 물가 확산을 분리합니다. 원자재·농산물의 5일 흐름이 꺾여도 20일 누적압력이 높으면 즉시 해소로 보지 않습니다.",
@@ -751,7 +751,7 @@
           "id": "macro-rates",
           "title": "매크로 금리 불확실성",
           "status": "부담 높음",
-          "score": 81.8,
+          "score": 81.2,
           "tone": "danger",
           "decision": "기존 가중지표 유지",
           "components": [
@@ -765,14 +765,14 @@
             {
               "id": "us_financial_conditions_stress",
               "name": "미국 금융여건 긴축 압력",
-              "value": 55.2,
+              "value": 53.6,
               "weight": 0.4,
-              "contribution": 22.08
+              "contribution": 21.44
             }
           ],
           "evidence": [
             "글로벌 금리 압력 99.6",
-            "미국 금융여건 55.2"
+            "미국 금융여건 53.6"
           ],
           "assessment": "시장금리 레벨과 금융여건을 함께 봅니다. 지정학 완화가 예상되더라도 실제 금리와 금융여건 점수가 낮아지기 전에는 부담 완화를 선반영하지 않습니다.",
           "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -874,7 +874,7 @@
         "name": "M7 Credit Stress Proxy",
         "latest": {
           "as_of": "2026-09-23",
-          "updated_at_kst": "2026-09-24T07:30:19+09:00",
+          "updated_at_kst": "2026-09-24T15:35:32+09:00",
           "score": 46.8,
           "score_band": "Normal",
           "score_band_label": "보통",
@@ -907,9 +907,9 @@
             "close": 337.8299865722656,
             "return_1d": -0.03795995258808027,
             "return_5d": -0.014699473901760629,
-            "rolling_beta": 0.622663640826706,
-            "residual_1d": -0.03347081410857261,
-            "residual_5d": -0.04910282024585568,
+            "rolling_beta": 0.6226632646979594,
+            "residual_1d": -0.03347081726685269,
+            "residual_5d": -0.04910280087747815,
             "drawdown_60d": 0.1048665767599054,
             "quality_flag": "ok",
             "rank": 1
@@ -919,9 +919,9 @@
             "close": 249.27000427246094,
             "return_1d": -0.022393880111205244,
             "return_5d": 0.013457462466425874,
-            "rolling_beta": 0.5962769102460369,
-            "residual_1d": -0.01764160897666429,
-            "residual_5d": -0.018557290803602883,
+            "rolling_beta": 0.5962763270179472,
+            "residual_1d": -0.01764161387391737,
+            "residual_5d": -0.018557267833338668,
             "drawdown_60d": 0.12235048970281515,
             "quality_flag": "ok",
             "rank": 2
@@ -931,9 +931,9 @@
             "close": 380.1199951171875,
             "return_1d": 0.0032198501988798256,
             "return_5d": 0.06155051768154007,
-            "rolling_beta": 1.5005395254375764,
-            "residual_1d": 0.015814416758160716,
-            "residual_5d": -0.018492139489611537,
+            "rolling_beta": 1.5005401307728887,
+            "residual_1d": 0.015814421841043855,
+            "residual_5d": -0.018492180699996086,
             "drawdown_60d": 0.1062308816659886,
             "quality_flag": "ok",
             "rank": 3
@@ -943,9 +943,9 @@
             "close": 225.50999450683594,
             "return_1d": -0.014680826154739757,
             "return_5d": 0.054277704261974646,
-            "rolling_beta": 1.1459806234635668,
-            "residual_1d": -0.00516707904917209,
-            "residual_5d": -0.0073268525063953085,
+            "rolling_beta": 1.1459800157526308,
+            "residual_1d": -0.005167084152002876,
+            "residual_5d": -0.007326826289199547,
             "drawdown_60d": 0.019958622013171223,
             "quality_flag": "ok",
             "rank": 4
@@ -955,9 +955,9 @@
             "close": 500.5899963378906,
             "return_1d": 0.005200795859218177,
             "return_5d": 0.020987168674511336,
-            "rolling_beta": 0.3763522642172494,
-            "residual_1d": 0.008347475350872867,
-            "residual_5d": -5.4273862898928174e-05,
+            "rolling_beta": 0.3763515886039157,
+            "residual_1d": 0.008347469677878826,
+            "residual_5d": -5.425103481547337e-05,
             "drawdown_60d": 0.02519820111922544,
             "quality_flag": "ok",
             "rank": 5
@@ -967,9 +967,9 @@
             "close": 337.0199890136719,
             "return_1d": -0.008035352424806796,
             "return_5d": 0.01386837129080054,
-            "rolling_beta": 0.0879889822465073,
-            "residual_1d": -0.0073289834499199215,
-            "residual_5d": 0.0074924012664548435,
+            "rolling_beta": 0.08798884736773199,
+            "residual_1d": -0.007328984582470821,
+            "residual_5d": 0.007492409567926088,
             "drawdown_60d": 0.008143153964860095,
             "quality_flag": "ok",
             "rank": 6
@@ -979,9 +979,9 @@
             "close": 744.0999755859375,
             "return_1d": 0.010181917253030193,
             "return_5d": 0.10600942844711492,
-            "rolling_beta": 0.577210683213612,
-            "residual_1d": 0.014977156810582367,
-            "residual_5d": 0.06940128012643887,
+            "rolling_beta": 0.5772104069724857,
+            "residual_1d": 0.014977154491039242,
+            "residual_5d": 0.0694012941119655,
             "drawdown_60d": 0.0,
             "quality_flag": "ok",
             "rank": 7
@@ -1008,7 +1008,7 @@
         "name": "국내 증시주변자금 원장",
         "latest": {
           "date": "2026-09-22",
-          "retrievedAt": "2026-09-24 07:30:23 KST",
+          "retrievedAt": "2026-09-24 15:35:36 KST",
           "amountsKrwMillion": {
             "customerDeposits": 100982555.0,
             "futuresDeposits": 42217285.0,
@@ -1099,7 +1099,7 @@
           "sourceSnapshots": {
             "kb": {
               "date": "2026-09-22",
-              "retrievedAt": "2026-09-24 07:30:23 KST",
+              "retrievedAt": "2026-09-24 15:35:36 KST",
               "amountsKrwMillion": {
                 "customerDeposits": 100982000.0,
                 "customerDepositsChange": 2844000.0,
@@ -1340,10 +1340,10 @@
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260924T150007-1500-live",
-    "mode": "live",
+    "runId": "20260924T153506-1535-full",
+    "mode": "full",
     "state": "generated",
-    "startedAt": "2026-09-24 15:00:07 KST",
-    "preparedAt": "2026-09-24 15:02:35 KST"
+    "startedAt": "2026-09-24 15:35:06 KST",
+    "preparedAt": "2026-09-24 15:38:10 KST"
   }
 }
