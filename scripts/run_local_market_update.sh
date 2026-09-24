@@ -26,6 +26,7 @@ KRX_TIMES="${LOCAL_MARKET_UPDATE_KRX_TIMES:-18:30}"
 SCHEDULE_GRACE_MINUTES="${LOCAL_MARKET_UPDATE_SCHEDULE_GRACE_MINUTES:-10}"
 RUNTIME_SELF_UPDATE="${LOCAL_MARKET_UPDATE_RUNTIME_SELF_UPDATE:-0}"
 ONLY_AT_SCHEDULED_KST=0
+RETRY_SCHEDULED_KST=""
 SCHEDULE_STATE_FILE=""
 SCHEDULED_TIME=""
 SCHEDULED_DAY_TYPE=""
@@ -118,6 +119,13 @@ for arg in "$@"; do
     --only-at-scheduled-kst)
       ONLY_AT_SCHEDULED_KST=1
       ;;
+    --retry-scheduled-kst=*)
+      RETRY_SCHEDULED_KST="${arg#*=}"
+      if [[ ! "$RETRY_SCHEDULED_KST" =~ ^[0-2][0-9]:[0-5][0-9]$ ]]; then
+        echo "재시도 예약 시각은 HH:MM 형식이어야 합니다." >&2
+        exit 2
+      fi
+      ;;
     --fast|--mode=fast)
       MODE="fast"
       ;;
@@ -184,14 +192,21 @@ is_scheduled_now() {
   IFS=',' read -ra schedule_times <<< "$active_times"
   for scheduled_time in "${schedule_times[@]}"; do
     scheduled_time="${scheduled_time//[[:space:]]/}"
+    if [[ -n "$RETRY_SCHEDULED_KST" && "$scheduled_time" != "$RETRY_SCHEDULED_KST" ]]; then
+      continue
+    fi
     scheduled_minutes="$((10#${scheduled_time%:*} * 60 + 10#${scheduled_time#*:}))"
     elapsed_minutes="$((now_minutes - scheduled_minutes))"
-    if (( elapsed_minutes >= 0 && elapsed_minutes <= SCHEDULE_GRACE_MINUTES )); then
+    if (( elapsed_minutes >= 0 )) && { (( elapsed_minutes <= SCHEDULE_GRACE_MINUTES )) || [[ -n "$RETRY_SCHEDULED_KST" ]]; }; then
       mkdir -p "$STATE_DIR"
       state_key="$(kst_now +%Y-%m-%d)-$scheduled_time"
       state_file="$STATE_DIR/$state_key.done"
       if [[ -f "$state_file" ]]; then
         echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 이미 실행한 예약 시각입니다: $scheduled_time"
+        return 1
+      fi
+      if [[ -n "$RETRY_SCHEDULED_KST" && ! -f "${state_file%.done}.failed" ]]; then
+        echo "재시도할 오늘의 실패 기록이 없습니다: $scheduled_time" >&2
         return 1
       fi
       SCHEDULE_STATE_FILE="$state_file"
@@ -276,7 +291,9 @@ resolve_update_mode() {
   esac
 }
 
-if (( ONLY_AT_SCHEDULED_KST )); then
+if [[ -n "$RETRY_SCHEDULED_KST" ]]; then
+  is_scheduled_now || exit 1
+elif (( ONLY_AT_SCHEDULED_KST )); then
   is_scheduled_now || exit 0
 fi
 
@@ -308,6 +325,9 @@ ELS_REUSED=0
 
 record_schedule_running() {
   if [[ -n "$SCHEDULE_RUNNING_FILE" ]]; then
+    if [[ -n "$RETRY_SCHEDULED_KST" && -f "$SCHEDULE_FAILED_FILE" ]]; then
+      cp -p "$SCHEDULE_FAILED_FILE" "${SCHEDULE_FAILED_FILE}.before-retry-$RUN_ID"
+    fi
     printf "status=running\nrunId=%s\nmode=%s\nstartedAt=%s\n" \
       "$RUN_ID" "$UPDATE_MODE" "$RUN_STARTED_AT" > "$SCHEDULE_RUNNING_FILE"
     rm -f "$SCHEDULE_FAILED_FILE"
@@ -511,14 +531,11 @@ if [[ "$UPDATE_MODE" == "live" ]]; then
   ML_STAGE_STARTED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"
   ML_STAGE_COMPLETED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"
 elif [[ "$UPDATE_MODE" == "krx" ]]; then
-  if [[ -n "$SCHEDULED_TIME" ]]; then
-    BREADTH_END_DATE="$(kst_now '+%Y-%m-%d')"
-  else
-    BREADTH_END_DATE="$("$KOSPI_BREADTH_PYTHON" -c 'import pandas as pd; dates=pd.to_datetime(pd.read_parquet("data/processed/kospi_breadth.parquet")["date"], errors="coerce").dropna(); print(dates.max().date().isoformat() if len(dates) else "")')"
-    if [[ -z "$BREADTH_END_DATE" ]]; then
-      echo "수동 KRX 보강 기준일을 확인할 수 없습니다." >&2
-      exit 1
-    fi
+  KRX_REFERENCE_DATE="$(kst_now '+%Y-%m-%d')"
+  BREADTH_END_DATE="$("$KOSPI_BREADTH_PYTHON" scripts/verify_kospi_flow_final.py \
+    --date "$KRX_REFERENCE_DATE" --resolve-date)"
+  if [[ "$BREADTH_END_DATE" != "$KRX_REFERENCE_DATE" ]]; then
+    echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] KRX 휴장: ${KRX_REFERENCE_DATE} · 최근 거래일 ${BREADTH_END_DATE} 확정치 점검"
   fi
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] KRX 확정치 갱신: 외국인·기관·프로그램 순매매만 보강합니다."
   MARKET_STAGE_STARTED_EPOCH="$(date +%s)"
@@ -610,6 +627,8 @@ KEEP_FAILED_CANDIDATE=1
   --krx-times "$KRX_TIMES" \
   --schedule-grace-minutes "$SCHEDULE_GRACE_MINUTES" \
   --scheduled-time "$SCHEDULED_TIME" \
+  --krx-reference-date "${KRX_REFERENCE_DATE:-}" \
+  --krx-session-date "${BREADTH_END_DATE:-}" \
   --run-id "$RUN_ID" \
   --started-at "$RUN_STARTED_AT" \
   --completed-at "$RUN_COMPLETED_AT" \

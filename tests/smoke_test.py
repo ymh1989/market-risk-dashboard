@@ -496,7 +496,9 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert 'if [[ "$UPDATE_MODE" == "live" ]]' in run_script
     assert 'elif [[ "$UPDATE_MODE" == "krx" ]]' in run_script
     assert "KRX 확정치 갱신" in run_script
-    assert "수동 KRX 보강 기준일을 확인할 수 없습니다." in run_script
+    assert '--date "$KRX_REFERENCE_DATE" --resolve-date' in run_script
+    assert "최근 거래일 ${BREADTH_END_DATE} 확정치 점검" in run_script
+    assert "--retry-scheduled-kst=*)" in run_script
     assert "scripts/verify_kospi_flow_final.py" in run_script
     assert "장중 경량 갱신" in run_script
     assert 'SCHEDULED_DAY_TYPE="saturday"' in run_script

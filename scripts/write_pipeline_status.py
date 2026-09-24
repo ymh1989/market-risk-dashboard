@@ -168,6 +168,13 @@ def artifact_status(data):
 def stage_status(args):
     live_mode = args.mode == "live"
     krx_mode = args.mode == "krx"
+    reference_date = getattr(args, "krx_reference_date", "")
+    session_date = getattr(args, "krx_session_date", "")
+    krx_detail = "KRX 외국인·기관·프로그램 확정치 갱신"
+    if session_date:
+        krx_detail = f"KRX {session_date} 외국인·기관·프로그램 확정치 점검"
+        if reference_date and reference_date != session_date:
+            krx_detail = f"KRX 휴장({reference_date}) · 최근 거래일 {session_date} 확정치 점검"
     return [
         {
             "id": "market",
@@ -175,7 +182,7 @@ def stage_status(args):
             "status": "success",
             "durationSeconds": args.market_duration,
             "detail": (
-                "KRX 외국인·기관·프로그램 당일 확정치 갱신"
+                krx_detail
                 if krx_mode
                 else (
                     "장중 가격·금리·환율·원자재와 위험점수 갱신"
@@ -286,6 +293,9 @@ def build_payload(args):
             else "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
         ),
     }
+    if args.mode == "krx":
+        current["krxReferenceDate"] = getattr(args, "krx_reference_date", "") or None
+        current["krxSessionDate"] = getattr(args, "krx_session_date", "") or None
     history = [current]
     history.extend(item for item in previous.get("history", []) if item.get("runId") != run_id)
 
@@ -350,6 +360,8 @@ def parse_args():
     parser.add_argument("--krx-times", default="18:30")
     parser.add_argument("--schedule-grace-minutes", type=int, default=10)
     parser.add_argument("--scheduled-time", default="")
+    parser.add_argument("--krx-reference-date", default="")
+    parser.add_argument("--krx-session-date", default="")
     parser.add_argument("--run-id", default="")
     parser.add_argument("--started-at", default=now)
     parser.add_argument("--completed-at", default=now)

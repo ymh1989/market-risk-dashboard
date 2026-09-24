@@ -18,6 +18,20 @@ def load_pipeline_status_module():
     return module
 
 
+def test_krx_stage_explains_holiday_and_actual_session():
+    module = load_pipeline_status_module()
+    args = SimpleNamespace(
+        mode="krx", market_duration=1, ml_duration=0, validation_duration=1,
+        krx_reference_date="2026-09-24", krx_session_date="2026-09-23",
+    )
+    stages = module.stage_status(args)
+    assert "KRX 휴장(2026-09-24)" in stages[0]["detail"]
+    assert "최근 거래일 2026-09-23" in stages[0]["detail"]
+    assert "당일" not in stages[0]["detail"]
+    args.krx_reference_date = "2026-09-23"
+    assert "휴장" not in module.stage_status(args)[0]["detail"]
+
+
 def test_pipeline_status_keeps_previous_run_history(tmp_path):
     module = load_pipeline_status_module()
     output = tmp_path / "pipeline-status.json"

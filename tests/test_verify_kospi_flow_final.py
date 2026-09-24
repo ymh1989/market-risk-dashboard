@@ -50,3 +50,54 @@ def test_verify_final_flows_rejects_missing_expected_date():
 
     with pytest.raises(ValueError, match="기준일 행이 없습니다"):
         module.verify_final_flows(flow_frame(), "2026-08-26")
+
+
+@pytest.mark.parametrize("reference,expected", [
+    ("2026-09-23", "2026-09-23"),
+    ("2026-09-24", "2026-09-23"),
+    ("2026-09-25", "2026-09-23"),
+    ("2026-09-26", "2026-09-23"),
+    ("2026-09-27", "2026-09-23"),
+    ("2026-09-28", "2026-09-28"),
+    ("2026-05-01", "2026-04-30"),
+    ("2026-08-17", "2026-08-14"),
+    ("2026-10-05", "2026-10-02"),
+    ("2026-12-31", "2026-12-30"),
+    ("2027-01-01", "2026-12-30"),
+])
+def test_krx_calendar_resolves_holidays_not_just_weekends(reference, expected):
+    assert load_module().resolve_krx_session_date(reference) == expected
+
+
+def test_normal_session_cannot_silently_fall_back_to_stale_data():
+    module = load_module()
+    expected = module.resolve_krx_session_date("2026-09-28")
+    with pytest.raises(ValueError, match="기준일 행이 없습니다"):
+        module.verify_final_flows(flow_frame(date="2026-09-23"), expected)
+
+
+def test_holiday_still_requires_complete_last_session_flows():
+    module = load_module()
+    expected = module.resolve_krx_session_date("2026-09-24")
+    with pytest.raises(ValueError, match="아직 공개되지 않았습니다"):
+        module.verify_final_flows(
+            flow_frame(date="2026-09-23", program_net_buy_value=float("nan")), expected
+        )
+
+
+def test_calendar_unavailable_fails_instead_of_assuming_a_holiday(monkeypatch):
+    import sys
+    monkeypatch.setitem(sys.modules, "exchange_calendars", None)
+    with pytest.raises(RuntimeError, match="거래일 달력이 없습니다"):
+        load_module().resolve_krx_session_date("2026-09-24")
+
+
+def test_calendar_out_of_range_fails_clearly():
+    with pytest.raises(ValueError, match="거래일 달력 확인 불가"):
+        load_module().resolve_krx_session_date("2100-01-01")
+
+
+def test_resolve_cli_needs_no_stored_frame(monkeypatch, capsys):
+    monkeypatch.setattr("sys.argv", ["verify_kospi_flow_final.py", "--date", "2026-09-24", "--resolve-date"])
+    load_module().main()
+    assert capsys.readouterr().out.strip() == "2026-09-23"
