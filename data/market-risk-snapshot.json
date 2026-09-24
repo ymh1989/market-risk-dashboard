@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-24 12:01:07 KST",
+  "generatedAt": "2026-09-24 13:01:17 KST",
   "source": "Yahoo Finance, Naver Finance, FRED, KOFIA FreeSIS, and KB Securities OpenAPI endpoints",
   "yahooSymbols": {
     "kospi": {
@@ -33,7 +33,7 @@
       "symbol": "KRW=X",
       "label": "USD/KRW",
       "lastDate": "2026-09-24",
-      "lastClose": 1372.1801,
+      "lastClose": 1371.28,
       "observations": 518,
       "fetchStatus": "yahoo",
       "source": "Yahoo Finance"
@@ -96,7 +96,7 @@
       "symbol": "^SOX",
       "label": "Philadelphia Semiconductor Index",
       "lastDate": "2026-09-23",
-      "lastClose": 12534.2744,
+      "lastClose": 12534.2803,
       "observations": 500,
       "fetchStatus": "yahoo",
       "source": "Yahoo Finance"
@@ -418,10 +418,10 @@
       "label": "US High Yield OAS",
       "lastDate": "2026-09-22",
       "lastClose": 2.68,
-      "observations": 786,
-      "fetchSource": "fred_api",
-      "fetchStatus": "ok",
-      "fetchWarning": null
+      "observations": 745,
+      "fetchSource": "fred_cache",
+      "fetchStatus": "cached",
+      "fetchWarning": "직접 조회 실패: BAMLH0A0HYM2: FRED API와 공개 CSV 조회가 모두 실패했습니다 (API: The read operation timed out; CSV: The read operation timed out)"
     },
     "us_financial_stress_stlfsi": {
       "seriesId": "STLFSI4",
@@ -463,9 +463,9 @@
       "frequency": "daily",
       "fetchStatus": "live",
       "firstDate": "2023-09-25",
-      "lastDate": "2026-09-22",
-      "lastClose": 5157.0,
-      "observations": 749
+      "lastDate": "2026-09-23",
+      "lastClose": 5207.0,
+      "observations": 750
     },
     "bdi": {
       "category": "transport",
@@ -474,9 +474,9 @@
       "frequency": "daily",
       "fetchStatus": "live",
       "firstDate": "2023-09-25",
-      "lastDate": "2026-09-22",
-      "lastClose": 3432.0,
-      "observations": 749
+      "lastDate": "2026-09-23",
+      "lastClose": 3430.0,
+      "observations": 750
     },
     "iron_ore": {
       "category": "metals",
@@ -1105,13 +1105,13 @@
       "name": "원/달러 환율 압력",
       "category": "외환",
       "group": "macro",
-      "value": 20.2,
+      "value": 20.0,
       "unit": "score",
       "weight": 0.06,
       "trend": "down",
-      "detail": "USD/KRW 1,372.18, 20일 변화율 -0.82%, 2년 분위 10.0",
+      "detail": "USD/KRW 1,371.28, 20일 변화율 -0.88%, 2년 분위 9.6",
       "source": "Yahoo Finance chart: KRW=X",
-      "contribution": 1.21,
+      "contribution": 1.2,
       "contributionPct": 6.0
     },
     {
@@ -1147,13 +1147,13 @@
       "name": "미국 신용스프레드 스트레스",
       "category": "신용/크레딧",
       "group": "macro",
-      "value": 30.0,
+      "value": 30.2,
       "unit": "score",
       "weight": 0.05,
       "trend": "flat",
-      "detail": "미국 하이일드 OAS 2.68%, 최근 20개 관측치 변화 -0.02%p, 위험분위 17.4",
+      "detail": "미국 하이일드 OAS 2.68%, 최근 20개 관측치 변화 -0.02%p, 위험분위 17.2",
       "source": "FRED: BAMLH0A0HYM2",
-      "contribution": 1.5,
+      "contribution": 1.51,
       "contributionPct": 5.0
     },
     {
@@ -1175,11 +1175,11 @@
       "name": "운임 비용-수요 괴리",
       "category": "운임/공급망",
       "group": "macro",
-      "value": 27.4,
+      "value": 27.7,
       "unit": "score",
       "weight": 0.02,
-      "trend": "flat",
-      "detail": "SCFI 3,687.83, 최근 4개 주간 관측치 변화 +12.57%, BDTI 5,157.00, 최근 20개 관측치 변화 +74.16%, BDI 3,432.00, 최근 20개 관측치 변화 +19.08%. 비용압력 91.3에서 BDI 수요점수 92.6을 비교한 괴리는 0.0입니다.",
+      "trend": "up",
+      "detail": "SCFI 3,687.83, 최근 4개 주간 관측치 변화 +12.57%, BDTI 5,207.00, 최근 20개 관측치 변화 +80.42%, BDI 3,430.00, 최근 20개 관측치 변화 +17.22%. 비용압력 91.4에서 BDI 수요점수 91.0을 비교한 괴리는 0.4입니다.",
       "source": "Naver market index: .SCFIDXSSE, .BAID, .BADI",
       "contribution": 0.55,
       "contributionPct": 2.0
@@ -1203,11 +1203,11 @@
       "name": "원화 환산 에너지 수입비용",
       "category": "에너지/환율",
       "group": "macro",
-      "value": 83.2,
+      "value": 83.1,
       "unit": "score",
       "weight": 0.02,
       "trend": "flat",
-      "detail": "브렌트유 $103.08, USD/KRW 1,372.18, 원화 환산 배럴당 비용 141,444.32원, 최근 20개 관측치 변화 +8.85%. 유가와 원화 약세가 동시에 기업 마진·물가·금리 부담으로 전이되는 경로를 측정합니다.",
+      "detail": "브렌트유 $103.08, USD/KRW 1,371.28, 원화 환산 배럴당 비용 141,351.55원, 최근 20개 관측치 변화 +8.78%. 유가와 원화 약세가 동시에 기업 마진·물가·금리 부담으로 전이되는 경로를 측정합니다.",
       "source": "Naver market index: LCOcv1; Yahoo Finance: KRW=X",
       "contribution": 1.66,
       "contributionPct": 2.0
@@ -1237,7 +1237,7 @@
       "unit": "score",
       "weight": 0.0,
       "trend": "up",
-      "detail": "한국 3년 3.998%, 미국 2년 4.895%, 금리차 -0.897%p·20개 관측치 변화 -0.490%p, USD/KRW 1,372.18·20개 관측치 -0.82%. 금리차 축소와 원화 약세의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
+      "detail": "한국 3년 3.998%, 미국 2년 4.895%, 금리차 -0.897%p·20개 관측치 변화 -0.490%p, USD/KRW 1,371.28·20개 관측치 -0.88%. 금리차 축소와 원화 약세의 동시 발생을 보는 연구 관찰점수이며 종합점수에는 반영하지 않습니다.",
       "source": "Naver market index: KR3YT=RR, US2YT=RR; Yahoo Finance: KRW=X",
       "contribution": 0.0,
       "contributionPct": 0.0
@@ -1311,7 +1311,7 @@
       "unit": "score",
       "weight": 0.1,
       "trend": "flat",
-      "detail": "7개 글로벌 AI 반도체 basket, SOX 12,534.27, SOX 20일 수익률 +9.73%, NVDA 점수 49.2, TSM 점수 42.1",
+      "detail": "7개 글로벌 AI 반도체 basket, SOX 12,534.28, SOX 20일 수익률 +9.73%, NVDA 점수 49.2, TSM 점수 42.1",
       "source": "Yahoo Finance chart: ^SOX, NVDA, TSM, AVGO, AMD, MU, ASML",
       "contribution": 4.84,
       "contributionPct": 10.0
@@ -1485,10 +1485,10 @@
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260924T120003-1200-live",
+    "runId": "20260924T130003-1300-live",
     "mode": "live",
     "state": "generated",
-    "startedAt": "2026-09-24 12:00:03 KST",
-    "preparedAt": "2026-09-24 12:01:24 KST"
+    "startedAt": "2026-09-24 13:00:03 KST",
+    "preparedAt": "2026-09-24 13:01:34 KST"
   }
 }
