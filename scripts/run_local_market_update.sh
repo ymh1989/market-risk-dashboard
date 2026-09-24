@@ -576,6 +576,8 @@ ML_STAGE_STARTED_EPOCH="$(date +%s)"
 persist_local_data_cache
 CURRENT_MARKET_DATA_SHA="$("$PYTHON_BIN" -c 'import hashlib, pathlib; print(hashlib.sha256(pathlib.Path("data/raw/market_data.csv").read_bytes()).hexdigest())')"
 if [[ -n "$OVERNIGHT_MARKET_DATA_SHA" && "$CURRENT_MARKET_DATA_SHA" == "$OVERNIGHT_MARKET_DATA_SHA" ]]; then
+  # 새 worktree에는 학습 단계에서 생성하는 출력 폴더가 없을 수 있습니다.
+  mkdir -p data/processed models
   cp -p "$OVERNIGHT_CANDIDATE_DIR/processed/features.parquet" data/processed/features.parquet
   cp -p "$OVERNIGHT_CANDIDATE_DIR/models/model_bundle.joblib" models/model_bundle.joblib
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 미국장 원자료가 야간 후보와 같아 피처·운영 모델을 재사용합니다."

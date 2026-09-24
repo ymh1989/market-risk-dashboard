@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -135,6 +137,78 @@ def make_candidate(root: Path) -> None:
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(content)
+
+
+def run_morning_reuse(
+    worktree: Path, candidate: Path, candidate_sha: str = "same"
+) -> subprocess.CompletedProcess[str]:
+    """실제 아침 배치의 재사용 분기를 빈 작업 폴더에서도 실행한다."""
+    script = (Path(__file__).parents[1] / "scripts/run_local_market_update.sh").read_text()
+    guard = 'if [[ -n "$OVERNIGHT_MARKET_DATA_SHA" && "$CURRENT_MARKET_DATA_SHA" == "$OVERNIGHT_MARKET_DATA_SHA" ]]; then'
+    block = guard + script.split(guard, 1)[1].split("\nelse\n", 1)[0] + "\nfi\n"
+    return subprocess.run(
+        ["/bin/bash", "-c", "set -Eeuo pipefail\nkst_now() { printf test; }\n" + block],
+        cwd=worktree,
+        env={
+            **os.environ,
+            "OVERNIGHT_CANDIDATE_DIR": str(candidate),
+            "OVERNIGHT_MARKET_DATA_SHA": candidate_sha,
+            "CURRENT_MARKET_DATA_SHA": "same",
+        },
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+
+@pytest.mark.parametrize("existing_directories", ["none", "processed", "both"])
+def test_morning_reuse_creates_destinations_and_preserves_candidate(tmp_path, existing_directories):
+    candidate = tmp_path / "overnight candidate"
+    worktree = tmp_path / "fresh worktree"
+    make_candidate(candidate)
+    worktree.mkdir()
+    if existing_directories != "none":
+        (worktree / "data/processed").mkdir(parents=True)
+    if existing_directories == "both":
+        (worktree / "models").mkdir()
+        (worktree / "models/model_bundle.joblib").write_bytes(b"old model")
+
+    result = run_morning_reuse(worktree, candidate)
+
+    assert result.returncode == 0, result.stderr
+    assert (worktree / "data/processed/features.parquet").read_bytes() == b"features"
+    assert (worktree / "models/model_bundle.joblib").read_bytes() == b"model"
+    assert (candidate / "models/model_bundle.joblib").read_bytes() == b"model"
+    assert "재사용합니다" in result.stdout
+
+
+def test_morning_reuse_does_not_hide_missing_model(tmp_path):
+    candidate = tmp_path / "candidate"
+    worktree = tmp_path / "worktree"
+    make_candidate(candidate)
+    (candidate / "models/model_bundle.joblib").unlink()
+    worktree.mkdir()
+
+    result = run_morning_reuse(worktree, candidate)
+
+    assert result.returncode != 0
+    assert "model_bundle.joblib" in result.stderr
+    assert "재사용합니다" not in result.stdout
+
+
+@pytest.mark.parametrize("candidate_sha", ["", "different"])
+def test_morning_reuse_requires_matching_market_data(tmp_path, candidate_sha):
+    candidate = tmp_path / "candidate"
+    worktree = tmp_path / "worktree"
+    make_candidate(candidate)
+    worktree.mkdir()
+
+    result = run_morning_reuse(worktree, candidate, candidate_sha)
+
+    assert result.returncode == 0, result.stderr
+    assert not (worktree / "models").exists()
+    assert not (worktree / "data/processed/features.parquet").exists()
+    assert "재사용합니다" not in result.stdout
 
 
 def test_candidate_seal_verify_publish_and_tamper_detection(tmp_path):
