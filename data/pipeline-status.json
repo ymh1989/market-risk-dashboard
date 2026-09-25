@@ -1,20 +1,22 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-25 15:02:15 KST",
+  "generatedAt": "2026-09-25 18:30:14 KST",
   "current": {
-    "runId": "20260925T150004-1500-live",
+    "runId": "20260925T183007-1830-krx",
     "status": "success",
-    "mode": "live",
+    "mode": "krx",
     "trigger": "scheduled",
-    "scheduledTime": "15:00",
-    "startedAt": "2026-09-25 15:00:04 KST",
-    "completedAt": "2026-09-25 15:02:15 KST",
-    "durationSeconds": 131,
+    "scheduledTime": "18:30",
+    "startedAt": "2026-09-25 18:30:07 KST",
+    "completedAt": "2026-09-25 18:30:14 KST",
+    "durationSeconds": 7,
     "dataAsOf": "2026-09-25",
     "dashboardGeneratedAt": "2026-09-25 15:01 KST",
     "mlGeneratedAt": "2026-09-25 08:04 KST",
-    "qualityScore": 95.3,
-    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    "qualityScore": 95.5,
+    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+    "krxReferenceDate": "2026-09-25",
+    "krxSessionDate": "2026-09-23"
   },
   "schedule": {
     "timezone": "Asia/Seoul",
@@ -118,8 +120,8 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 128,
-      "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
+      "durationSeconds": 2,
+      "detail": "KRX 휴장(2026-09-25) · 최근 거래일 2026-09-23 확정치 점검"
     },
     {
       "id": "ml",
@@ -132,7 +134,7 @@
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 0,
+      "durationSeconds": 1,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -219,10 +221,10 @@
       "lastDate": "2026-09-24",
       "oldestLastDate": "2026-09-18",
       "seriesCount": 17,
-      "freshCount": 15,
-      "staleCount": 2,
+      "freshCount": 16,
+      "staleCount": 1,
       "fallbackCount": 1,
-      "detail": "17/17개 수집 · 사용 가능 15개 · 보강/대체 1개"
+      "detail": "17/17개 수집 · 사용 가능 16개 · 보강/대체 1개"
     },
     {
       "id": "m7-credit",
@@ -302,28 +304,28 @@
       "id": "breadth",
       "label": "KOSPI 시장 내부강도",
       "status": "ok",
-      "generatedAt": "2026-09-25 08:02:08 KST"
+      "generatedAt": "2026-09-25 18:30:13 KST"
     },
     {
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-09-25 15:02:15 KST"
+      "generatedAt": "2026-09-25 18:30:14 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 95.3,
+    "score": 95.5,
     "referenceDate": "2026-09-25",
     "summary": {
       "checks": 255,
-      "ok": 231,
-      "warning": 24,
+      "ok": 232,
+      "warning": 23,
       "error": 0,
       "sourceSeriesExpected": 100,
       "sourceSeriesPresent": 100,
-      "freshSeries": 98,
-      "staleSeries": 2,
+      "freshSeries": 99,
+      "staleSeries": 1,
       "fallbackSeries": 18
     },
     "issues": [
@@ -383,23 +385,11 @@
         "fetchStatus": "cached"
       },
       {
-        "id": "source:ml:NIKKEI225",
-        "category": "source",
-        "label": "Nikkei 225",
-        "status": "warning",
-        "detail": "yahoo · skipped_low_coverage · 최신 2026-09-18 · 관측치 7177개 · 커버리지 93.0%",
-        "groupId": "ml-input",
-        "lastDate": "2026-09-18",
-        "observations": 7177,
-        "fetchStatus": "skipped_low_coverage",
-        "required": false
-      },
-      {
         "id": "source:ml:CSI300",
         "category": "source",
         "label": "CSI 300",
         "status": "warning",
-        "detail": "yahoo · skipped_low_coverage · 최신 2026-09-24 · 관측치 1개 · 커버리지 6.7%",
+        "detail": "yahoo · skipped_low_coverage · 최신 2026-09-24 · 관측치 1개 · 커버리지 6.2%",
         "groupId": "ml-input",
         "lastDate": "2026-09-24",
         "observations": 1,
@@ -410,6 +400,16 @@
         "id": "source:m7:price:AAPL",
         "category": "source",
         "label": "price:AAPL",
+        "status": "warning",
+        "detail": "최신 2026-09-24 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-09-24",
+        "fetchStatus": "dashboard_yahoo"
+      },
+      {
+        "id": "source:m7:price:AMZN",
+        "category": "source",
+        "label": "price:AMZN",
         "status": "warning",
         "detail": "최신 2026-09-24 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
@@ -475,6 +475,23 @@
     }
   ],
   "history": [
+    {
+      "runId": "20260925T183007-1830-krx",
+      "status": "success",
+      "mode": "krx",
+      "trigger": "scheduled",
+      "scheduledTime": "18:30",
+      "startedAt": "2026-09-25 18:30:07 KST",
+      "completedAt": "2026-09-25 18:30:14 KST",
+      "durationSeconds": 7,
+      "dataAsOf": "2026-09-25",
+      "dashboardGeneratedAt": "2026-09-25 15:01 KST",
+      "mlGeneratedAt": "2026-09-25 08:04 KST",
+      "qualityScore": 95.5,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "krxReferenceDate": "2026-09-25",
+      "krxSessionDate": "2026-09-23"
+    },
     {
       "runId": "20260925T150004-1500-live",
       "status": "success",
@@ -911,29 +928,14 @@
       "mlGeneratedAt": "2026-09-23 04:23 KST",
       "qualityScore": 95.3,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20260922T235417-manual-full",
-      "status": "success",
-      "mode": "full",
-      "trigger": "manual",
-      "scheduledTime": null,
-      "startedAt": "2026-09-22 23:54:17 KST",
-      "completedAt": "2026-09-23 00:09:53 KST",
-      "durationSeconds": 936,
-      "dataAsOf": "2026-09-22",
-      "dashboardGeneratedAt": "2026-09-22 23:54 KST",
-      "mlGeneratedAt": "2026-09-23 00:09 KST",
-      "qualityScore": 96.3,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260925T150004-1500-live",
-    "mode": "live",
+    "runId": "20260925T183007-1830-krx",
+    "mode": "krx",
     "state": "generated",
-    "startedAt": "2026-09-25 15:00:04 KST",
-    "preparedAt": "2026-09-25 15:02:15 KST"
+    "startedAt": "2026-09-25 18:30:07 KST",
+    "preparedAt": "2026-09-25 18:30:14 KST"
   }
 }
