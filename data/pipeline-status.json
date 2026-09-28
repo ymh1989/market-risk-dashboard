@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-28 09:01:56 KST",
+  "generatedAt": "2026-09-28 10:01:36 KST",
   "current": {
-    "runId": "20260928T090004-0900-live",
+    "runId": "20260928T100004-1000-live",
     "status": "success",
     "mode": "live",
     "trigger": "scheduled",
-    "scheduledTime": "09:00",
-    "startedAt": "2026-09-28 09:00:04 KST",
-    "completedAt": "2026-09-28 09:01:56 KST",
-    "durationSeconds": 112,
+    "scheduledTime": "10:00",
+    "startedAt": "2026-09-28 10:00:04 KST",
+    "completedAt": "2026-09-28 10:01:36 KST",
+    "durationSeconds": 92,
     "dataAsOf": "2026-09-28",
-    "dashboardGeneratedAt": "2026-09-28 09:01 KST",
+    "dashboardGeneratedAt": "2026-09-28 10:01 KST",
     "mlGeneratedAt": "2026-09-26 07:50 KST",
-    "qualityScore": 93.7,
+    "qualityScore": 96.5,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
@@ -118,7 +118,7 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 109,
+      "durationSeconds": 87,
       "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
     },
     {
@@ -132,7 +132,7 @@
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 0,
+      "durationSeconds": 1,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -147,13 +147,13 @@
     {
       "id": "yahoo",
       "label": "Yahoo Finance",
-      "status": "warning",
+      "status": "ok",
       "lastDate": "2026-09-28",
       "seriesCount": 36,
-      "detail": "36/36개 수집 · 허용시차 내 27개",
-      "oldestLastDate": "2026-09-23",
-      "freshCount": 27,
-      "staleCount": 9,
+      "detail": "36/36개 수집 · 허용시차 내 36개",
+      "oldestLastDate": "2026-09-25",
+      "freshCount": 36,
+      "staleCount": 0,
       "fallbackCount": 0
     },
     {
@@ -186,11 +186,11 @@
       "status": "warning",
       "lastDate": "2026-09-25",
       "seriesCount": 5,
-      "detail": "5/5개 수집 · 허용시차 내 5개 · 대체값 2개",
+      "detail": "5/5개 수집 · 허용시차 내 5개 · 대체값 1개",
       "oldestLastDate": "2026-09-18",
       "freshCount": 5,
       "staleCount": 0,
-      "fallbackCount": 2
+      "fallbackCount": 1
     },
     {
       "id": "krx-breadth",
@@ -254,7 +254,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-09-28 09:01 KST"
+      "generatedAt": "2026-09-28 10:01 KST"
     },
     {
       "id": "ml",
@@ -308,112 +308,109 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-09-28 09:01:56 KST"
+      "generatedAt": "2026-09-28 10:01:36 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 93.7,
+    "score": 96.5,
     "referenceDate": "2026-09-28",
     "summary": {
-      "checks": 255,
-      "ok": 223,
-      "warning": 32,
+      "checks": 254,
+      "ok": 236,
+      "warning": 18,
       "error": 0,
       "sourceSeriesExpected": 100,
       "sourceSeriesPresent": 100,
-      "freshSeries": 87,
-      "staleSeries": 13,
-      "fallbackSeries": 15
+      "freshSeries": 96,
+      "staleSeries": 4,
+      "fallbackSeries": 14
     },
     "issues": [
       {
-        "id": "source:yahoo:kospi",
+        "id": "source:fred:us_high_yield_oas",
         "category": "source",
-        "label": "KOSPI",
+        "label": "US High Yield OAS",
         "status": "warning",
-        "detail": "최신 2026-09-23 · 영업일 시차 3일 · 관측치 502개 · yahoo+naver",
-        "groupId": "yahoo",
-        "lastDate": "2026-09-23",
-        "observations": 502,
-        "fetchStatus": "yahoo+naver"
+        "detail": "최신 2026-09-24 · 영업일 시차 2일 · 관측치 787개 · cached",
+        "groupId": "fred",
+        "lastDate": "2026-09-24",
+        "observations": 787,
+        "fetchStatus": "cached"
       },
       {
-        "id": "source:yahoo:kosdaq",
+        "id": "source:ml:NIKKEI225",
         "category": "source",
-        "label": "KOSDAQ",
+        "label": "Nikkei 225",
         "status": "warning",
-        "detail": "최신 2026-09-23 · 영업일 시차 3일 · 관측치 502개 · yahoo+naver",
-        "groupId": "yahoo",
-        "lastDate": "2026-09-23",
-        "observations": 502,
-        "fetchStatus": "yahoo+naver"
+        "detail": "yahoo · skipped_low_coverage · 최신 2026-09-18 · 관측치 7177개 · 커버리지 93.0%",
+        "groupId": "ml-input",
+        "lastDate": "2026-09-18",
+        "observations": 7177,
+        "fetchStatus": "skipped_low_coverage",
+        "required": false
       },
       {
-        "id": "source:yahoo:kodex200",
+        "id": "source:ml:CSI300",
         "category": "source",
-        "label": "KODEX 200",
+        "label": "CSI 300",
         "status": "warning",
-        "detail": "최신 2026-09-23 · 영업일 시차 3일 · 관측치 481개 · yahoo",
-        "groupId": "yahoo",
-        "lastDate": "2026-09-23",
-        "observations": 481,
-        "fetchStatus": "yahoo"
+        "detail": "yahoo · skipped_low_coverage · 최신 2026-09-24 · 관측치 1개 · 커버리지 6.2%",
+        "groupId": "ml-input",
+        "lastDate": "2026-09-24",
+        "observations": 1,
+        "fetchStatus": "skipped_low_coverage",
+        "required": false
       },
       {
-        "id": "source:yahoo:kodex_leverage",
+        "id": "source:m7:price:AAPL",
         "category": "source",
-        "label": "KODEX Leverage",
+        "label": "price:AAPL",
         "status": "warning",
-        "detail": "최신 2026-09-23 · 영업일 시차 3일 · 관측치 481개 · yahoo",
-        "groupId": "yahoo",
-        "lastDate": "2026-09-23",
-        "observations": 481,
-        "fetchStatus": "yahoo"
+        "detail": "최신 2026-09-25 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-09-25",
+        "fetchStatus": "dashboard_yahoo"
       },
       {
-        "id": "source:yahoo:samsung",
+        "id": "source:m7:price:AMZN",
         "category": "source",
-        "label": "Samsung Electronics",
+        "label": "price:AMZN",
         "status": "warning",
-        "detail": "최신 2026-09-23 · 영업일 시차 3일 · 관측치 482개 · yahoo",
-        "groupId": "yahoo",
-        "lastDate": "2026-09-23",
-        "observations": 482,
-        "fetchStatus": "yahoo"
+        "detail": "최신 2026-09-25 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-09-25",
+        "fetchStatus": "dashboard_yahoo"
       },
       {
-        "id": "source:yahoo:hynix",
+        "id": "source:m7:price:GOOGL",
         "category": "source",
-        "label": "SK hynix",
+        "label": "price:GOOGL",
         "status": "warning",
-        "detail": "최신 2026-09-23 · 영업일 시차 3일 · 관측치 482개 · yahoo",
-        "groupId": "yahoo",
-        "lastDate": "2026-09-23",
-        "observations": 482,
-        "fetchStatus": "yahoo"
+        "detail": "최신 2026-09-25 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-09-25",
+        "fetchStatus": "dashboard_yahoo"
       },
       {
-        "id": "source:yahoo:hanmi",
+        "id": "source:m7:price:HYG",
         "category": "source",
-        "label": "Hanmi Semiconductor",
+        "label": "price:HYG",
         "status": "warning",
-        "detail": "최신 2026-09-23 · 영업일 시차 3일 · 관측치 482개 · yahoo",
-        "groupId": "yahoo",
-        "lastDate": "2026-09-23",
-        "observations": 482,
-        "fetchStatus": "yahoo"
+        "detail": "최신 2026-09-25 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-09-25",
+        "fetchStatus": "dashboard_yahoo"
       },
       {
-        "id": "source:yahoo:dbhitek",
+        "id": "source:m7:price:IEF",
         "category": "source",
-        "label": "DB HiTek",
+        "label": "price:IEF",
         "status": "warning",
-        "detail": "최신 2026-09-23 · 영업일 시차 3일 · 관측치 482개 · yahoo",
-        "groupId": "yahoo",
-        "lastDate": "2026-09-23",
-        "observations": 482,
-        "fetchStatus": "yahoo"
+        "detail": "최신 2026-09-25 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-09-25",
+        "fetchStatus": "dashboard_yahoo"
       }
     ]
   },
@@ -422,7 +419,7 @@
       "id": "ai-roi",
       "title": "AI 투자 ROI 회의론",
       "status": "관찰",
-      "score": 40.7,
+      "score": 40.8,
       "tone": "watch",
       "decision": "기존 가중지표 유지",
       "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검"
@@ -440,7 +437,7 @@
       "id": "macro-rates",
       "title": "매크로 금리 불확실성",
       "status": "부담 높음",
-      "score": 81.7,
+      "score": 80.5,
       "tone": "danger",
       "decision": "기존 가중지표 유지",
       "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -449,7 +446,7 @@
       "id": "domestic-funding-leverage",
       "title": "국내 레버리지·대기자금",
       "status": "관찰",
-      "score": 52.6,
+      "score": 52.3,
       "tone": "watch",
       "decision": "직접 시장통계 관찰",
       "operation": "연결일 이후 일별 누적 · 60개 관측과 OOS 검증 전 가중치 0 유지"
@@ -458,7 +455,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "주의",
-      "score": 67.8,
+      "score": 67.5,
       "tone": "caution",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -474,6 +471,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20260928T100004-1000-live",
+      "status": "success",
+      "mode": "live",
+      "trigger": "scheduled",
+      "scheduledTime": "10:00",
+      "startedAt": "2026-09-28 10:00:04 KST",
+      "completedAt": "2026-09-28 10:01:36 KST",
+      "durationSeconds": 92,
+      "dataAsOf": "2026-09-28",
+      "dashboardGeneratedAt": "2026-09-28 10:01 KST",
+      "mlGeneratedAt": "2026-09-26 07:50 KST",
+      "qualityScore": 96.5,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20260928T090004-0900-live",
       "status": "success",
@@ -912,29 +924,14 @@
       "mlGeneratedAt": "2026-09-23 07:32 KST",
       "qualityScore": 95.9,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20260923T090006-0900-live",
-      "status": "success",
-      "mode": "live",
-      "trigger": "scheduled",
-      "scheduledTime": "09:00",
-      "startedAt": "2026-09-23 09:00:06 KST",
-      "completedAt": "2026-09-23 09:02:19 KST",
-      "durationSeconds": 133,
-      "dataAsOf": "2026-09-23",
-      "dashboardGeneratedAt": "2026-09-23 09:01 KST",
-      "mlGeneratedAt": "2026-09-23 07:32 KST",
-      "qualityScore": 95.3,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260928T090004-0900-live",
+    "runId": "20260928T100004-1000-live",
     "mode": "live",
     "state": "generated",
-    "startedAt": "2026-09-28 09:00:04 KST",
-    "preparedAt": "2026-09-28 09:01:57 KST"
+    "startedAt": "2026-09-28 10:00:04 KST",
+    "preparedAt": "2026-09-28 10:01:36 KST"
   }
 }
