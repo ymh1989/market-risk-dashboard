@@ -78,6 +78,28 @@ def test_source_audit_marks_degraded_fallback_as_warning():
     assert checks[0]["status"] == "warning"
 
 
+def test_source_audit_does_not_treat_preserved_history_as_failed_latest_fetch():
+    group, checks = assess_source_group(
+        "naver",
+        "네이버",
+        {"scfi": {
+            "lastDate": "2026-09-24",
+            "observations": 144,
+            "fetchStatus": "live+history_preserved",
+        }},
+        {"scfi": {"label": "SCFI"}},
+        date(2026, 9, 29),
+        warning_lag=2,
+        error_lag=5,
+        min_observations=60,
+        weekly_ids={"scfi"},
+    )
+
+    assert group["status"] == "ok"
+    assert group["fallbackCount"] == 0
+    assert checks[0]["status"] == "ok"
+
+
 def test_ml_source_audit_surfaces_supplement_failure(monkeypatch):
     monkeypatch.setattr(
         audit_data_completeness,

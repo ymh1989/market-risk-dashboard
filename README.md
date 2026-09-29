@@ -456,7 +456,7 @@ make run-news-bot
 - `data/market-stress-episodes.json`: 과거 고위험 구간의 낙폭과 주요 기여지표를 저장합니다.
 - `data/market-history-cache.json`: 스트레스 사례 재현에 필요한 시장 히스토리 캐시입니다.
 - `data/naver-marketindex-history.json`: 네이버 운임·금속·에너지·채권·국제환율의 확정 이력, 자산별 원천 사용 상태, 상세 API의 실시간·지연·마감 최신 스냅샷을 저장합니다.
-- 네이버 조회 시작일이 밀려도 같은 원천·티커·주기의 기존 과거 관측은 수집 목표 개수 내에서 보존합니다. 새 조회 범위는 최신 응답을 우선하며, 과거 이력 보강 시 `live+cached_history`로 기록합니다. 3년 범위 검사는 유지하고 실제 저장값이 없으면 임의로 채우지 않습니다.
+- 네이버 조회 시작일이 밀려도 같은 원천·티커·주기의 기존 과거 관측은 수집 목표 개수 내에서 보존합니다. 새 조회 범위는 최신 응답을 우선하며, 과거 이력 보강 시 `live+history_preserved`로 기록합니다. 최신값 조회 실패에 따른 캐시 대체와 구분하며, 3년 범위 검사는 유지하고 실제 저장값이 없으면 임의로 채우지 않습니다.
 - `data/els-index-risk.json`: ELS 5개 기초지수와 worst-of basket 리스크를 저장합니다.
 - `data/ml-risk-signal.json`: 최신 ML risk-off 신호, 성능지표와 최근 흐름을 저장합니다.
 - `data/data-quality.json`: 원천별 완비성·최신성, 캐시 상태와 산출물 정렬 검사 결과를 저장합니다.

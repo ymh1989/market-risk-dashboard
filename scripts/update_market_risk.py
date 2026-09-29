@@ -1594,7 +1594,7 @@ def fetch_naver_market_indexes(max_workers=5):
                 results[key] = [history[day] for day in sorted(history)][-target:]
                 fetch_statuses[key] = "live"
                 if results[key][0]["date"] < fresh_series[0]["date"]:
-                    fetch_statuses[key] = "live+cached_history"
+                    fetch_statuses[key] = "live+history_preserved"
             except Exception as exc:
                 cached_series = cached.get(key) or []
                 if not _is_recent_market_index_cache(cached_series, config["max_cache_age_days"]):

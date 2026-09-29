@@ -92,7 +92,7 @@ def test_naver_history_preserves_verified_boundary_without_overriding_new_values
     assert len(result["scfi"]) <= config["target_observations"]
     if cache_kind == "same_source":
         assert [point["date"] for point in result["scfi"]] == ["2023-09-28", "2023-10-13", "2026-09-24"]
-        assert statuses["scfi"] == "live+cached_history"
+        assert statuses["scfi"] == "live+history_preserved"
         three_year_start = date(2026, 9, 28) - timedelta(days=1096)
         assert date.fromisoformat(result["scfi"][0]["date"]) <= three_year_start + timedelta(days=10)
     else:
