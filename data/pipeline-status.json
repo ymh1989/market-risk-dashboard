@@ -1,22 +1,20 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-29 18:30:23 KST",
+  "generatedAt": "2026-09-30 07:32:13 KST",
   "current": {
-    "runId": "20260929T183004-1830-krx",
+    "runId": "20260930T073007-0730-fast",
     "status": "success",
-    "mode": "krx",
+    "mode": "fast",
     "trigger": "scheduled",
-    "scheduledTime": "18:30",
-    "startedAt": "2026-09-29 18:30:04 KST",
-    "completedAt": "2026-09-29 18:30:23 KST",
-    "durationSeconds": 19,
+    "scheduledTime": "07:30",
+    "startedAt": "2026-09-30 07:30:07 KST",
+    "completedAt": "2026-09-30 07:32:13 KST",
+    "durationSeconds": 126,
     "dataAsOf": "2026-09-29",
-    "dashboardGeneratedAt": "2026-09-29 15:36 KST",
-    "mlGeneratedAt": "2026-09-29 15:38 KST",
-    "qualityScore": 97.3,
-    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-    "krxReferenceDate": "2026-09-29",
-    "krxSessionDate": "2026-09-29"
+    "dashboardGeneratedAt": "2026-09-30 07:30 KST",
+    "mlGeneratedAt": "2026-09-30 07:32 KST",
+    "qualityScore": 96.3,
+    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
     "timezone": "Asia/Seoul",
@@ -120,15 +118,15 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 15,
-      "detail": "KRX 2026-09-29 외국인·기관·프로그램 확정치 점검"
+      "durationSeconds": 53,
+      "detail": "시장 데이터 수집, 위험점수, M7·KB 시장자금, ELS·HMM 산출"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
-      "durationSeconds": 0,
-      "detail": "직전 확정 ML·HMM 산출물 재사용"
+      "durationSeconds": 48,
+      "detail": "특성 생성, 모델 학습, 예측 및 OOS 검증"
     },
     {
       "id": "validation",
@@ -153,7 +151,7 @@
       "lastDate": "2026-09-29",
       "seriesCount": 36,
       "detail": "36/36개 수집 · 허용시차 내 36개",
-      "oldestLastDate": "2026-09-28",
+      "oldestLastDate": "2026-09-29",
       "freshCount": 36,
       "staleCount": 0,
       "fallbackCount": 0
@@ -186,7 +184,7 @@
       "id": "fred",
       "label": "FRED",
       "status": "ok",
-      "lastDate": "2026-09-28",
+      "lastDate": "2026-09-29",
       "seriesCount": 5,
       "detail": "5/5개 수집 · 허용시차 내 5개",
       "oldestLastDate": "2026-09-18",
@@ -230,8 +228,8 @@
       "id": "m7-credit",
       "label": "M7 Credit Stress Proxy",
       "status": "warning",
-      "lastDate": "2026-09-28",
-      "oldestLastDate": "2026-09-24",
+      "lastDate": "2026-09-29",
+      "oldestLastDate": "2026-09-25",
       "seriesCount": 14,
       "freshCount": 14,
       "staleCount": 0,
@@ -256,31 +254,31 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-09-29 15:36 KST"
+      "generatedAt": "2026-09-30 07:30 KST"
     },
     {
       "id": "ml",
       "label": "ML 위험신호",
       "status": "ok",
-      "generatedAt": "2026-09-29 15:38 KST"
+      "generatedAt": "2026-09-30 07:32 KST"
     },
     {
       "id": "els",
       "label": "ELS 지수위험",
       "status": "ok",
-      "generatedAt": "2026-09-29 15:37 KST"
+      "generatedAt": "2026-09-30 07:31 KST"
     },
     {
       "id": "hmm",
       "label": "HMM 레짐",
       "status": "ok",
-      "generatedAt": "2026-09-29 15:37 KST"
+      "generatedAt": "2026-09-30 07:31 KST"
     },
     {
       "id": "backtest",
       "label": "시장 백테스트",
       "status": "ok",
-      "generatedAt": "2026-09-29 15:36 KST"
+      "generatedAt": "2026-09-30 07:30 KST"
     },
     {
       "id": "stress",
@@ -292,35 +290,35 @@
       "id": "m7",
       "label": "M7 신용스트레스 프록시",
       "status": "ok",
-      "generatedAt": "2026-09-29T15:35:51+09:00"
+      "generatedAt": "2026-09-30T07:30:22+09:00"
     },
     {
       "id": "kb-funds",
       "label": "FreeSIS·KB 증시주변자금",
       "status": "ok",
-      "generatedAt": "2026-09-29 15:35:51 KST"
+      "generatedAt": "2026-09-30 07:30:22 KST"
     },
     {
       "id": "breadth",
       "label": "KOSPI 시장 내부강도",
       "status": "ok",
-      "generatedAt": "2026-09-29 18:30:22 KST"
+      "generatedAt": "2026-09-30 07:30:12 KST"
     },
     {
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-09-29 18:30:23 KST"
+      "generatedAt": "2026-09-30 07:32:13 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 97.3,
-    "referenceDate": "2026-09-29",
+    "score": 96.3,
+    "referenceDate": "2026-09-30",
     "summary": {
       "checks": 255,
-      "ok": 241,
-      "warning": 14,
+      "ok": 236,
+      "warning": 19,
       "error": 0,
       "sourceSeriesExpected": 100,
       "sourceSeriesPresent": 100,
@@ -358,9 +356,9 @@
         "category": "source",
         "label": "price:AAPL",
         "status": "warning",
-        "detail": "최신 2026-09-28 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-09-29 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-09-28",
+        "lastDate": "2026-09-29",
         "fetchStatus": "dashboard_yahoo"
       },
       {
@@ -368,9 +366,9 @@
         "category": "source",
         "label": "price:AMZN",
         "status": "warning",
-        "detail": "최신 2026-09-28 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-09-29 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-09-28",
+        "lastDate": "2026-09-29",
         "fetchStatus": "dashboard_yahoo"
       },
       {
@@ -378,9 +376,9 @@
         "category": "source",
         "label": "price:GOOGL",
         "status": "warning",
-        "detail": "최신 2026-09-28 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-09-29 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-09-28",
+        "lastDate": "2026-09-29",
         "fetchStatus": "dashboard_yahoo"
       },
       {
@@ -388,9 +386,9 @@
         "category": "source",
         "label": "price:HYG",
         "status": "warning",
-        "detail": "최신 2026-09-28 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-09-29 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-09-28",
+        "lastDate": "2026-09-29",
         "fetchStatus": "dashboard_yahoo"
       },
       {
@@ -398,9 +396,9 @@
         "category": "source",
         "label": "price:IEF",
         "status": "warning",
-        "detail": "최신 2026-09-28 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-09-29 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-09-28",
+        "lastDate": "2026-09-29",
         "fetchStatus": "dashboard_yahoo"
       },
       {
@@ -408,9 +406,9 @@
         "category": "source",
         "label": "price:IGIB",
         "status": "warning",
-        "detail": "최신 2026-09-28 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-09-29 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-09-28",
+        "lastDate": "2026-09-29",
         "fetchStatus": "dashboard_yahoo"
       }
     ]
@@ -420,7 +418,7 @@
       "id": "ai-roi",
       "title": "AI 투자 ROI 회의론",
       "status": "관찰",
-      "score": 41.0,
+      "score": 42.5,
       "tone": "watch",
       "decision": "기존 가중지표 유지",
       "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검"
@@ -428,9 +426,9 @@
     {
       "id": "geopolitics-reinflation",
       "title": "지정학·재인플레이션",
-      "status": "부담 높음",
-      "score": 80.1,
-      "tone": "danger",
+      "status": "주의",
+      "score": 74.2,
+      "tone": "caution",
       "decision": "관찰지표 보강",
       "operation": "DBC·DBA 관찰카드 유지 · 기존 에너지 가중치 변경 없음"
     },
@@ -438,7 +436,7 @@
       "id": "macro-rates",
       "title": "매크로 금리 불확실성",
       "status": "부담 높음",
-      "score": 80.4,
+      "score": 79.3,
       "tone": "danger",
       "decision": "기존 가중지표 유지",
       "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -447,7 +445,7 @@
       "id": "domestic-funding-leverage",
       "title": "국내 레버리지·대기자금",
       "status": "관찰",
-      "score": 43.8,
+      "score": 43.4,
       "tone": "watch",
       "decision": "직접 시장통계 관찰",
       "operation": "연결일 이후 일별 누적 · 60개 관측과 OOS 검증 전 가중치 0 유지"
@@ -456,7 +454,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "주의",
-      "score": 69.8,
+      "score": 69.5,
       "tone": "caution",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -472,6 +470,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20260930T073007-0730-fast",
+      "status": "success",
+      "mode": "fast",
+      "trigger": "scheduled",
+      "scheduledTime": "07:30",
+      "startedAt": "2026-09-30 07:30:07 KST",
+      "completedAt": "2026-09-30 07:32:13 KST",
+      "durationSeconds": 126,
+      "dataAsOf": "2026-09-29",
+      "dashboardGeneratedAt": "2026-09-30 07:30 KST",
+      "mlGeneratedAt": "2026-09-30 07:32 KST",
+      "qualityScore": 96.3,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20260929T183004-1830-krx",
       "status": "success",
@@ -912,31 +925,14 @@
       "mlGeneratedAt": "2026-09-25 08:04 KST",
       "qualityScore": 95.9,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20260924T191118-1830-krx",
-      "status": "success",
-      "mode": "krx",
-      "trigger": "scheduled",
-      "scheduledTime": "18:30",
-      "startedAt": "2026-09-24 19:11:18 KST",
-      "completedAt": "2026-09-24 19:11:24 KST",
-      "durationSeconds": 6,
-      "dataAsOf": "2026-09-24",
-      "dashboardGeneratedAt": "2026-09-24 15:35 KST",
-      "mlGeneratedAt": "2026-09-24 15:38 KST",
-      "qualityScore": 96.9,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-      "krxReferenceDate": "2026-09-24",
-      "krxSessionDate": "2026-09-23"
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260929T183004-1830-krx",
-    "mode": "krx",
+    "runId": "20260930T073007-0730-fast",
+    "mode": "fast",
     "state": "generated",
-    "startedAt": "2026-09-29 18:30:04 KST",
-    "preparedAt": "2026-09-29 18:30:23 KST"
+    "startedAt": "2026-09-30 07:30:07 KST",
+    "preparedAt": "2026-09-30 07:32:13 KST"
   }
 }
