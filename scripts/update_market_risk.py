@@ -1580,8 +1580,21 @@ def fetch_naver_market_indexes(max_workers=5):
             key = futures[future]
             config = NAVER_MARKET_INDEXES[key]
             try:
-                results[key] = future.result()
+                fresh_series = future.result()
+                cached_metadata = (cached_payload.get("metadata") or {}).get(key) or {}
+                history = {}
+                if all(cached_metadata.get(field) == config.get(field) for field in ("category", "symbol", "frequency")):
+                    # 원천의 조회 시작일이 밀려도, 같은 출처에서 이미 수집한 앞쪽 이력은 보존합니다.
+                    history = {
+                        point["date"]: point for point in cached.get(key, [])
+                        if point["date"] < fresh_series[0]["date"]
+                    }
+                history.update({point["date"]: point for point in fresh_series})
+                target = int(config.get("target_observations", 780))
+                results[key] = [history[day] for day in sorted(history)][-target:]
                 fetch_statuses[key] = "live"
+                if results[key][0]["date"] < fresh_series[0]["date"]:
+                    fetch_statuses[key] = "live+cached_history"
             except Exception as exc:
                 cached_series = cached.get(key) or []
                 if not _is_recent_market_index_cache(cached_series, config["max_cache_age_days"]):

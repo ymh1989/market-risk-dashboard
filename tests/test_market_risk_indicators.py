@@ -2,6 +2,9 @@ import json
 import math
 from datetime import date, datetime, timedelta, timezone
 
+import pytest
+
+import scripts.update_market_risk as market_risk
 from scripts.update_market_risk import (
     NAVER_MARKET_INDEXES,
     NAVER_CRYPTO_DIRECTION_INDEXES,
@@ -49,6 +52,68 @@ def test_naver_history_targets_cover_three_year_window():
 
     assert weekly_targets and min(weekly_targets) >= 160
     assert daily_targets and min(daily_targets) >= 760
+
+
+@pytest.mark.parametrize("cache_kind", ["same_source", "other_source", "no_metadata", "empty"])
+def test_naver_history_preserves_verified_boundary_without_overriding_new_values(monkeypatch, cache_kind):
+    config = {**NAVER_MARKET_INDEXES["scfi"], "target_observations": 3}
+    cached = [
+        {"date": "2023-09-21", "close": 911.71},
+        {"date": "2023-09-28", "close": 886.85},
+        {"date": "2026-09-24", "close": 3600.0},
+    ]
+    fresh = [
+        {"date": "2023-10-13", "close": 891.55},
+        {"date": "2026-09-24", "close": 3686.62},
+    ]
+    payload = {"series": {"scfi": cached}, "metadata": {"scfi": dict(config)}}
+    if cache_kind == "other_source":
+        payload["metadata"]["scfi"]["symbol"] = "OTHER"
+    elif cache_kind == "no_metadata":
+        payload["metadata"] = {}
+    elif cache_kind == "empty":
+        payload = {}
+    original = json.dumps(payload)
+    written = {}
+    monkeypatch.setattr(market_risk, "NAVER_MARKET_INDEXES", {"scfi": config})
+    monkeypatch.setattr(market_risk, "load_naver_market_index_cache_payload", lambda: payload)
+    monkeypatch.setattr(market_risk, "fetch_naver_market_index_series", lambda config: fresh)
+    monkeypatch.setattr(market_risk, "fetch_naver_market_index_latest_snapshots", lambda *args: ({}, {}))
+    monkeypatch.setattr(
+        market_risk, "write_naver_market_index_cache",
+        lambda series, *args: written.update(series),
+    )
+
+    result, statuses = market_risk.fetch_naver_market_indexes(max_workers=1)
+
+    assert written == result
+    assert json.dumps(payload) == original
+    assert result["scfi"][-1]["close"] == 3686.62
+    assert len(result["scfi"]) <= config["target_observations"]
+    if cache_kind == "same_source":
+        assert [point["date"] for point in result["scfi"]] == ["2023-09-28", "2023-10-13", "2026-09-24"]
+        assert statuses["scfi"] == "live+cached_history"
+        three_year_start = date(2026, 9, 28) - timedelta(days=1096)
+        assert date.fromisoformat(result["scfi"][0]["date"]) <= three_year_start + timedelta(days=10)
+    else:
+        assert result["scfi"] == fresh
+        assert statuses["scfi"] == "live"
+
+
+def test_naver_history_without_cache_does_not_invent_missing_dates(monkeypatch):
+    config = NAVER_MARKET_INDEXES["scfi"]
+    fresh = [{"date": "2023-10-13", "close": 891.55}, {"date": "2026-09-24", "close": 3686.62}]
+    monkeypatch.setattr(market_risk, "NAVER_MARKET_INDEXES", {"scfi": config})
+    monkeypatch.setattr(market_risk, "load_naver_market_index_cache_payload", lambda: {})
+    monkeypatch.setattr(market_risk, "fetch_naver_market_index_series", lambda config: fresh)
+    monkeypatch.setattr(market_risk, "fetch_naver_market_index_latest_snapshots", lambda *args: ({}, {}))
+    monkeypatch.setattr(market_risk, "write_naver_market_index_cache", lambda *args: None)
+
+    result, _ = market_risk.fetch_naver_market_indexes(max_workers=1)
+
+    three_year_start = date(2026, 9, 28) - timedelta(days=1096)
+    assert date.fromisoformat(result["scfi"][0]["date"]) > three_year_start + timedelta(days=10)
+    assert result["scfi"] == fresh
 
 
 def test_rate_spreads_use_only_common_observation_dates():
