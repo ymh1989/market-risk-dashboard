@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-30 13:01:37 KST",
+  "generatedAt": "2026-09-30 14:01:34 KST",
   "current": {
-    "runId": "20260930T130006-1300-live",
+    "runId": "20260930T140005-1400-live",
     "status": "success",
     "mode": "live",
     "trigger": "scheduled",
-    "scheduledTime": "13:00",
-    "startedAt": "2026-09-30 13:00:06 KST",
-    "completedAt": "2026-09-30 13:01:37 KST",
-    "durationSeconds": 91,
+    "scheduledTime": "14:00",
+    "startedAt": "2026-09-30 14:00:05 KST",
+    "completedAt": "2026-09-30 14:01:34 KST",
+    "durationSeconds": 89,
     "dataAsOf": "2026-09-30",
-    "dashboardGeneratedAt": "2026-09-30 13:01 KST",
+    "dashboardGeneratedAt": "2026-09-30 14:01 KST",
     "mlGeneratedAt": "2026-09-30 07:32 KST",
     "qualityScore": 96.9,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
@@ -118,7 +118,7 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 87,
+      "durationSeconds": 85,
       "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
     },
     {
@@ -254,7 +254,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-09-30 13:01 KST"
+      "generatedAt": "2026-09-30 14:01 KST"
     },
     {
       "id": "ml",
@@ -308,7 +308,7 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-09-30 13:01:36 KST"
+      "generatedAt": "2026-09-30 14:01:34 KST"
     }
   ],
   "quality": {
@@ -328,14 +328,14 @@
     },
     "issues": [
       {
-        "id": "source:fred:us2y",
+        "id": "source:fred:us_financial_stress_stlfsi",
         "category": "source",
-        "label": "US 2Y Treasury",
+        "label": "St. Louis Fed Financial Stress Index",
         "status": "warning",
-        "detail": "최신 2026-09-28 · 영업일 시차 2일 · 관측치 7300개 · cached",
+        "detail": "최신 2026-09-18 · 영업일 시차 8일 · 관측치 1516개 · cached",
         "groupId": "fred",
-        "lastDate": "2026-09-28",
-        "observations": 7300,
+        "lastDate": "2026-09-18",
+        "observations": 1516,
         "fetchStatus": "cached"
       },
       {
@@ -419,7 +419,7 @@
       "id": "ai-roi",
       "title": "AI 투자 ROI 회의론",
       "status": "관찰",
-      "score": 43.2,
+      "score": 43.3,
       "tone": "watch",
       "decision": "기존 가중지표 유지",
       "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검"
@@ -437,7 +437,7 @@
       "id": "macro-rates",
       "title": "매크로 금리 불확실성",
       "status": "부담 높음",
-      "score": 79.3,
+      "score": 78.9,
       "tone": "danger",
       "decision": "기존 가중지표 유지",
       "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -446,7 +446,7 @@
       "id": "domestic-funding-leverage",
       "title": "국내 레버리지·대기자금",
       "status": "관찰",
-      "score": 50.3,
+      "score": 49.1,
       "tone": "watch",
       "decision": "직접 시장통계 관찰",
       "operation": "연결일 이후 일별 누적 · 60개 관측과 OOS 검증 전 가중치 0 유지"
@@ -454,9 +454,9 @@
     {
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
-      "status": "부담 높음",
-      "score": 76.1,
-      "tone": "danger",
+      "status": "주의",
+      "score": 74.8,
+      "tone": "caution",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
     },
@@ -471,6 +471,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20260930T140005-1400-live",
+      "status": "success",
+      "mode": "live",
+      "trigger": "scheduled",
+      "scheduledTime": "14:00",
+      "startedAt": "2026-09-30 14:00:05 KST",
+      "completedAt": "2026-09-30 14:01:34 KST",
+      "durationSeconds": 89,
+      "dataAsOf": "2026-09-30",
+      "dashboardGeneratedAt": "2026-09-30 14:01 KST",
+      "mlGeneratedAt": "2026-09-30 07:32 KST",
+      "qualityScore": 96.9,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20260930T130006-1300-live",
       "status": "success",
@@ -911,29 +926,14 @@
       "mlGeneratedAt": "2026-09-25 08:04 KST",
       "qualityScore": 95.9,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20260925T130004-1300-live",
-      "status": "success",
-      "mode": "live",
-      "trigger": "scheduled",
-      "scheduledTime": "13:00",
-      "startedAt": "2026-09-25 13:00:04 KST",
-      "completedAt": "2026-09-25 13:00:52 KST",
-      "durationSeconds": 48,
-      "dataAsOf": "2026-09-25",
-      "dashboardGeneratedAt": "2026-09-25 13:00 KST",
-      "mlGeneratedAt": "2026-09-25 08:04 KST",
-      "qualityScore": 96.3,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20260930T130006-1300-live",
+    "runId": "20260930T140005-1400-live",
     "mode": "live",
     "state": "generated",
-    "startedAt": "2026-09-30 13:00:06 KST",
-    "preparedAt": "2026-09-30 13:01:37 KST"
+    "startedAt": "2026-09-30 14:00:05 KST",
+    "preparedAt": "2026-09-30 14:01:34 KST"
   }
 }
