@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-02 07:31:44 KST",
+  "generatedAt": "2026-10-02 09:00:58 KST",
   "current": {
-    "runId": "20261002T073003-0730-fast",
+    "runId": "20261002T090005-0900-live",
     "status": "success",
-    "mode": "fast",
+    "mode": "live",
     "trigger": "scheduled",
-    "scheduledTime": "07:30",
-    "startedAt": "2026-10-02 07:30:03 KST",
-    "completedAt": "2026-10-02 07:31:44 KST",
-    "durationSeconds": 101,
-    "dataAsOf": "2026-10-01",
-    "dashboardGeneratedAt": "2026-10-02 07:30 KST",
+    "scheduledTime": "09:00",
+    "startedAt": "2026-10-02 09:00:05 KST",
+    "completedAt": "2026-10-02 09:00:58 KST",
+    "durationSeconds": 53,
+    "dataAsOf": "2026-10-02",
+    "dashboardGeneratedAt": "2026-10-02 09:00 KST",
     "mlGeneratedAt": "2026-10-02 07:31 KST",
-    "qualityScore": 96.3,
+    "qualityScore": 96.9,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
@@ -119,20 +119,20 @@
       "label": "시장데이터·지표",
       "status": "success",
       "durationSeconds": 48,
-      "detail": "시장 데이터 수집, 위험점수, M7·KB 시장자금, ELS·HMM 산출"
+      "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
-      "durationSeconds": 29,
-      "detail": "특성 생성, 모델 학습, 예측 및 OOS 검증"
+      "durationSeconds": 0,
+      "detail": "직전 확정 ML·HMM 산출물 재사용"
     },
     {
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 0,
+      "durationSeconds": 1,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -148,7 +148,7 @@
       "id": "yahoo",
       "label": "Yahoo Finance",
       "status": "ok",
-      "lastDate": "2026-10-01",
+      "lastDate": "2026-10-02",
       "seriesCount": 36,
       "detail": "36/36개 수집 · 허용시차 내 36개",
       "oldestLastDate": "2026-10-01",
@@ -160,10 +160,10 @@
       "id": "naver-equity",
       "label": "Naver 국내주식",
       "status": "ok",
-      "lastDate": "2026-10-01",
+      "lastDate": "2026-10-02",
       "seriesCount": 7,
       "detail": "7/7개 수집 · 허용시차 내 7개",
-      "oldestLastDate": "2026-10-01",
+      "oldestLastDate": "2026-10-02",
       "freshCount": 7,
       "staleCount": 0,
       "fallbackCount": 0
@@ -172,7 +172,7 @@
       "id": "naver-market-index",
       "label": "Naver 시장지표",
       "status": "ok",
-      "lastDate": "2026-10-01",
+      "lastDate": "2026-10-02",
       "seriesCount": 19,
       "detail": "19/19개 수집 · 허용시차 내 19개",
       "oldestLastDate": "2026-09-30",
@@ -254,7 +254,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-10-02 07:30 KST"
+      "generatedAt": "2026-10-02 09:00 KST"
     },
     {
       "id": "ml",
@@ -308,17 +308,17 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-10-02 07:31:44 KST"
+      "generatedAt": "2026-10-02 09:00:57 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 96.3,
+    "score": 96.9,
     "referenceDate": "2026-10-02",
     "summary": {
       "checks": 255,
-      "ok": 236,
-      "warning": 19,
+      "ok": 239,
+      "warning": 16,
       "error": 0,
       "sourceSeriesExpected": 100,
       "sourceSeriesPresent": 100,
@@ -427,7 +427,7 @@
       "id": "geopolitics-reinflation",
       "title": "지정학·재인플레이션",
       "status": "주의",
-      "score": 73.5,
+      "score": 69.9,
       "tone": "caution",
       "decision": "관찰지표 보강",
       "operation": "DBC·DBA 관찰카드 유지 · 기존 에너지 가중치 변경 없음"
@@ -445,7 +445,7 @@
       "id": "domestic-funding-leverage",
       "title": "국내 레버리지·대기자금",
       "status": "관찰",
-      "score": 46.7,
+      "score": 54.6,
       "tone": "watch",
       "decision": "직접 시장통계 관찰",
       "operation": "연결일 이후 일별 누적 · 60개 관측과 OOS 검증 전 가중치 0 유지"
@@ -454,7 +454,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "주의",
-      "score": 66.2,
+      "score": 74.9,
       "tone": "caution",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -470,6 +470,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20261002T090005-0900-live",
+      "status": "success",
+      "mode": "live",
+      "trigger": "scheduled",
+      "scheduledTime": "09:00",
+      "startedAt": "2026-10-02 09:00:05 KST",
+      "completedAt": "2026-10-02 09:00:58 KST",
+      "durationSeconds": 53,
+      "dataAsOf": "2026-10-02",
+      "dashboardGeneratedAt": "2026-10-02 09:00 KST",
+      "mlGeneratedAt": "2026-10-02 07:31 KST",
+      "qualityScore": 96.9,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20261002T073003-0730-fast",
       "status": "success",
@@ -910,29 +925,14 @@
       "mlGeneratedAt": "2026-09-29 09:04 KST",
       "qualityScore": 96.7,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20260929T090602-0900-live",
-      "status": "success",
-      "mode": "live",
-      "trigger": "scheduled",
-      "scheduledTime": "09:00",
-      "startedAt": "2026-09-29 09:06:02 KST",
-      "completedAt": "2026-09-29 09:06:42 KST",
-      "durationSeconds": 40,
-      "dataAsOf": "2026-09-29",
-      "dashboardGeneratedAt": "2026-09-29 09:06 KST",
-      "mlGeneratedAt": "2026-09-29 09:04 KST",
-      "qualityScore": 96.7,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261002T073003-0730-fast",
-    "mode": "fast",
+    "runId": "20261002T090005-0900-live",
+    "mode": "live",
     "state": "generated",
-    "startedAt": "2026-10-02 07:30:03 KST",
-    "preparedAt": "2026-10-02 07:31:45 KST"
+    "startedAt": "2026-10-02 09:00:05 KST",
+    "preparedAt": "2026-10-02 09:00:58 KST"
   }
 }
