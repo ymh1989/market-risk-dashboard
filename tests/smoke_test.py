@@ -1,5 +1,6 @@
 import json
 import pathlib
+import re
 from datetime import date, timedelta
 
 
@@ -306,8 +307,10 @@ def test_ui_hierarchy_and_accessibility_contract():
     sparkline_rule = styles.split(".sparkline {", 1)[1].split("}", 1)[0]
 
     assert '<a class="skip-link" href="#app">대시보드 본문으로 이동</a>' in html
-    assert "styles.css?v=20260916-3" in html
-    assert "app.js?v=20260923-2" in html
+    asset_version = re.search(r'const ASSET_VERSION = "([^"]+)";', app_source)
+    assert asset_version, "화면 자산 캐시 버전이 필요합니다."
+    assert f"styles.css?v={asset_version.group(1)}" in html
+    assert f"app.js?v={asset_version.group(1)}" in html
     assert 'role="tablist"' in app_source
     assert 'role="tab"' in app_source
     assert 'role="tabpanel"' in app_source

@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 
 WEEKDAY_TIMES = "07:30,09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35,18:30"
 MONDAY_TIMES = "09:00,10:00,11:00,12:00,13:00,14:00,15:00,15:35,18:30"
@@ -30,6 +32,23 @@ def test_krx_stage_explains_holiday_and_actual_session():
     assert "당일" not in stages[0]["detail"]
     args.krx_reference_date = "2026-09-23"
     assert "휴장" not in module.stage_status(args)[0]["detail"]
+
+
+@pytest.mark.parametrize("mode", ["fast", "full", "live", "krx"])
+def test_ml_stage_distinguishes_validation_from_reuse(mode):
+    module = load_pipeline_status_module()
+    args = SimpleNamespace(
+        mode=mode, market_duration=1, ml_duration=2, validation_duration=1,
+    )
+    detail = next(stage["detail"] for stage in module.stage_status(args) if stage["id"] == "ml")
+    if mode == "full":
+        assert "워크포워드 OOS 검증 수행" in detail
+        assert "재사용" not in detail
+    elif mode == "fast":
+        assert "최신 ML 신호 갱신" in detail
+        assert "직전 OOS 검증 결과 재사용" in detail
+    else:
+        assert "직전 확정 ML·HMM 산출물 재사용" == detail
 
 
 def test_pipeline_status_keeps_previous_run_history(tmp_path):

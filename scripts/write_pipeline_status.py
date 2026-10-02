@@ -199,7 +199,11 @@ def stage_status(args):
             "detail": (
                 "직전 확정 ML·HMM 산출물 재사용"
                 if live_mode or krx_mode
-                else "특성 생성, 모델 학습, 예측 및 OOS 검증"
+                else (
+                    "최신 ML 신호 갱신 · 직전 OOS 검증 결과 재사용"
+                    if args.mode == "fast"
+                    else "최신 ML 신호 갱신 · 워크포워드 OOS 검증 수행"
+                )
             ),
         },
         {

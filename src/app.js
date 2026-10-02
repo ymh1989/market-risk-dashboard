@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20260922-4";
+const ASSET_VERSION = "20261003-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -377,11 +377,11 @@ function sortedIndicators(section, timeseries, sortKey = "score", direction = "d
   return [...(section.indicators ?? [])].sort((a, b) => {
     const left = indicatorSortValue(a, timeseries, sortKey);
     const right = indicatorSortValue(b, timeseries, sortKey);
-    const leftValid = Number.isFinite(Number(left));
-    const rightValid = Number.isFinite(Number(right));
+    const leftValid = left !== null && left !== undefined && Number.isFinite(Number(left));
+    const rightValid = right !== null && right !== undefined && Number.isFinite(Number(right));
     if (leftValid !== rightValid) return leftValid ? -1 : 1;
-    const leftRank = Number.isFinite(Number(left)) ? Number(left) : Number.NEGATIVE_INFINITY;
-    const rightRank = Number.isFinite(Number(right)) ? Number(right) : Number.NEGATIVE_INFINITY;
+    const leftRank = leftValid ? Number(left) : Number.NEGATIVE_INFINITY;
+    const rightRank = rightValid ? Number(right) : Number.NEGATIVE_INFINITY;
     if (rightRank !== leftRank) return direction === "asc" ? leftRank - rightRank : rightRank - leftRank;
     return clampScore(b.value) - clampScore(a.value);
   });
@@ -4142,6 +4142,61 @@ function renderIndicatorSortControls(sectionId, indicatorCount) {
   `;
 }
 
+function renderPendingDramCard(section, payload, group = null) {
+  if (section.id !== "market" || (group && group !== "ai_semi") || !payload?.latest) return "";
+  if (section.indicators.some((indicator) => indicator.id === "dram_spot_cycle_watch")) return "";
+  if (typeof payload.latest.score === "number" && Number.isFinite(payload.latest.score)) return "";
+  const directionData = mergeDramSpotDirectionData({ series: {}, metadata: {} }, payload);
+  const products = marketTrendGroups.find((item) => item.id === "memory").items
+    .map((product) => ({ ...product, rows: directionData.series[product.id] ?? [] }))
+    .filter((product) => product.rows.length >= 2);
+  if (!products.length) return "";
+  const count = Number(payload.qualityChecks?.officialObservationCount ?? 0);
+  const minimum = Number(payload.qualityChecks?.minimumScoreObservations ?? 21);
+  const colors = ["var(--teal)", "var(--blue)", "var(--green)", "var(--amber)"];
+  const chartId = registerInteractiveChart({
+    tooltipMode: "hovered",
+    width: 180,
+    series: products.map((product, index) => ({
+      label: product.label,
+      points: product.rows,
+      valueKey: "close",
+      color: colors[index],
+      format: (value) => formatMarketTrendValue(value, "usd")
+    }))
+  });
+  return `
+    <article class="indicator-card indicator-card--observation indicator-card--group-ai_semi dram-observation" data-pending-dram>
+      <header><span class="eyebrow">가격 관찰 · USD</span><h3>DRAM 현물가격 사이클</h3></header>
+      <div class="dram-observation__readiness">
+        <span class="status-pill status-pill--watch">공식 이력 축적 중</span>
+        <strong>${count} / ${minimum}개</strong>
+      </div>
+      <progress max="${minimum}" value="${Math.min(count, minimum)}" aria-label="점수 산출에 필요한 공식 관측 누적"></progress>
+      <div class="contribution-line"><span class="indicator-group-tag indicator-group-tag--ai_semi"><i aria-hidden="true"></i>AI·반도체 부담</span><strong>종합점수 미반영</strong></div>
+      <div class="dram-observation__products" data-timeseries-chart="${chartId}">
+        ${products.map((product, index) => {
+          const price = payload.latest.pricesUsd?.[product.productKey];
+          const layers = chartRangeOptions.map((range) => {
+            const domain = chartRangeDomain(products.map((item) => item.rows), range.id);
+            const visible = pointsWithinDomain(product.rows, domain, "close");
+            const path = marketTrendPath(marketTrendCoordinates(visible, domain));
+            return `<svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg data-chart-series-index="${index}" viewBox="0 0 180 52" preserveAspectRatio="none" role="img" aria-label="${product.label} 가격 흐름">
+              <path d="${path}" fill="none" stroke="${colors[index]}" stroke-width="1.6" vector-effect="non-scaling-stroke"></path>${renderChartCursorLine(3, 49)}
+            </svg>`;
+          }).join("");
+          return `<div class="dram-observation__product" data-chart-tooltip-host>
+            <div><span>${product.label.replace(" 현물", "")}</span><strong>${typeof price === "number" && Number.isFinite(price) ? formatMarketTrendValue(price, "usd") : "-"}</strong></div>
+            <div class="dram-observation__sparkline">${layers}</div>
+          </div>`;
+        }).join("")}
+        ${renderChartTooltip()}
+      </div>
+      <div class="dram-observation__note">가격 그래프: 보관 이력 포함<br>점수: 공식 관측 ${minimum}개부터 산출</div>
+      <footer><a href="https://www.trendforce.com/price/dram/lpddr_spot" target="_blank" rel="noopener noreferrer">TrendForce 공식 최신값</a><span>${payload.latest.date}</span></footer>
+    </article>`;
+}
+
 function renderSentimentMoverList(title, eyebrow, items, mode = "change") {
   return `
     <section class="sentiment-list">
@@ -6181,6 +6236,7 @@ function renderObservationJournal(section, timeseries) {
 function renderSection(section, timeseries, backtest, stressEpisodes, marketIndexes, activeTab, provenance = null) {
   const isPlanned = section.status !== "active";
   const initiallySortedIndicators = sortedIndicators(section, timeseries);
+  const pendingDramCard = renderPendingDramCard(section, provenance?.dramSpotPrices);
   const isActive = section.id === activeTab;
   const sectionDescription =
     section.id === "market"
@@ -6238,13 +6294,14 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
             ${renderGauge(section.score, section.level, section.model.thresholds)}
             ${
               section.id === "market"
-                ? renderIndicatorSortControls(section.id, initiallySortedIndicators.length)
+                ? renderIndicatorSortControls(section.id, initiallySortedIndicators.length + Number(Boolean(pendingDramCard)))
                 : ""
             }
             <div class="indicator-grid" data-indicator-grid="${section.id}">
               ${initiallySortedIndicators
                 .map((indicator) => renderIndicator(indicator, section.model.thresholds, timeseries, { ...provenance, model: section.model }))
                 .join("")}
+              ${pendingDramCard}
             </div>
           `
       }
@@ -7068,7 +7125,7 @@ function renderDashboard(
         ${renderElsIssuanceHedgePage(elsRisk, hmmRegime)}
       </section>
           ${visibleSections
-            .map((section) => renderSection(section, timeseries, null, null, null, activeTab, { snapshot: sourceSnapshot, quality: dataQuality }))
+            .map((section) => renderSection(section, timeseries, null, null, null, activeTab, { snapshot: sourceSnapshot, quality: dataQuality, dramSpotPrices }))
             .join("")}
     </div>
   `;
@@ -7153,7 +7210,10 @@ function renderDashboard(
     const directionSlot = app.querySelector("[data-market-direction-slot]");
     const historySlot = app.querySelector("[data-market-history-slot]");
     const loadingMarkup = `<div class="deferred-panel"><span class="loading-dot" aria-hidden="true"></span>상세 데이터를 불러오는 중</div>`;
-    if (directionSlot) directionSlot.innerHTML = loadingMarkup;
+    if (directionSlot) {
+      directionSlot.querySelectorAll("[data-timeseries-chart]").forEach((chart) => interactiveChartRegistry.delete(chart.dataset.timeseriesChart));
+      directionSlot.innerHTML = loadingMarkup;
+    }
     if (historySlot) historySlot.innerHTML = loadingMarkup;
 
     const [marketIndexes, backtest, stressEpisodes] = await Promise.all([
@@ -7162,20 +7222,25 @@ function renderDashboard(
       loadJson("./data/market-stress-episodes.json")
     ]);
 
+    const retryMarkup = `<div class="deferred-panel deferred-panel--error" role="status">일부 상세 데이터를 불러오지 못했습니다.<div class="recovery-actions"><button type="button" data-retry-market-details>다시 불러오기</button><button type="button" data-reload-dashboard>페이지 새로고침</button></div></div>`;
     if (directionSlot) {
       const directionData = mergeDramSpotDirectionData(marketIndexes, dramSpotPrices);
       directionSlot.innerHTML =
         renderMarketIndexTrendPanel(directionData) ||
-        `<div class="deferred-panel deferred-panel--error">시장 방향성 데이터를 확인하지 못했습니다</div>`;
+        retryMarkup;
       initializeInteractiveCharts(directionSlot);
     }
     if (historySlot) {
       historySlot.innerHTML =
-        `${renderBacktestPanel(backtest)}${renderStressEpisodesPanel(stressEpisodes)}` ||
-        `<div class="deferred-panel deferred-panel--error">백테스트 데이터를 확인하지 못했습니다</div>`;
+        `${renderBacktestPanel(backtest)}${renderStressEpisodesPanel(stressEpisodes)}${!backtest || !stressEpisodes ? retryMarkup : ""}`;
     }
-    marketDetailsStatus = "loaded";
+    marketDetailsStatus = marketIndexes && backtest && stressEpisodes ? "loaded" : "idle";
   };
+
+  app.addEventListener("click", (event) => {
+    if (event.target.closest?.("[data-retry-market-details]")) void hydrateMarketDetails();
+    if (event.target.closest?.("[data-reload-dashboard]")) window.location.reload();
+  });
 
   const activateTab = (target, { focus = false, updateHash = true } = {}) => {
     if (!enabledTabs.some((tab) => tab.id === target)) return;
@@ -7258,13 +7323,17 @@ function renderDashboard(
     const indicators = sortedIndicators(section, timeseries, state.key, state.direction).filter(
       (indicator) => !state.group || indicator.group === state.group
     );
+    grid.querySelectorAll("[data-timeseries-chart]").forEach((chart) => interactiveChartRegistry.delete(chart.dataset.timeseriesChart));
+    const pendingDramCard = renderPendingDramCard(section, dramSpotPrices, state.group);
     grid.innerHTML = indicators
       .map((indicator) => renderIndicator(indicator, section.model.thresholds, timeseries, { snapshot: sourceSnapshot, quality: dataQuality, model: section.model }))
-      .join("");
+      .join("") + pendingDramCard;
+    initializeInteractiveCharts(grid);
 
     const definition = state.group ? riskGroupDefinitions[state.group] : null;
     const status = app.querySelector(`[data-indicator-filter-status="${sectionId}"]`);
-    if (status) status.textContent = definition ? `${definition.label} ${indicators.length}개` : `전체 ${indicators.length}개`;
+    const count = indicators.length + Number(Boolean(pendingDramCard));
+    if (status) status.textContent = definition ? `${definition.label} ${count}개` : `전체 ${count}개`;
     const reset = app.querySelector(`[data-indicator-filter-reset="${sectionId}"]`);
     if (reset) reset.hidden = !state.group;
 
@@ -7421,8 +7490,10 @@ function validatePublicationBundle(manifest, entries) {
 }
 
 async function loadJson(path, required = false, allowLegacyMissing = false) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const response = await fetch(versioned(path), { cache: "no-store" });
+    const response = await fetch(versioned(path), { cache: "no-store", signal: controller.signal });
     if (allowLegacyMissing && response.status === 404) return null;
     if (!response.ok) throw new Error(`${path} 응답 오류: ${response.status}`);
     const payload = await response.json();
@@ -7439,59 +7510,63 @@ async function loadJson(path, required = false, allowLegacyMissing = false) {
     if (required || allowLegacyMissing) throw error;
     console.warn(`선택 데이터 로드 실패: ${path}`, error);
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
-Promise.all([
-  loadJson("./data/publication-manifest.json", false, true),
-  loadJson("./data/risk-dashboard.json", true),
-  loadJson("./data/market-risk-timeseries.json"),
-  loadJson("./data/ml-risk-signal.json"),
-  loadJson("./data/els-index-risk.json"),
-  loadJson("./data/hmm-regime.json"),
-  loadJson("./data/pipeline-status.json"),
-  loadJson("./data/market-risk-snapshot.json"),
-  loadJson("./data/data-quality.json"),
-  loadJson("./data/market-stress-episodes.json"),
-  loadJson("./data/kospi-breadth.json"),
-  loadJson("./data/kb-market-funds.json"),
-  loadJson("./data/dram-spot-prices.json")
-])
-  .then(([publicationManifest, dashboard, timeseries, mlRisk, elsRisk, hmmRegime, pipelineStatus, sourceSnapshot, dataQuality, stressEpisodes, breadthData, marketFunds, dramSpotPrices]) => {
-    validatePublicationBundle(publicationManifest, [
-      { path: "risk-dashboard.json", payload: dashboard },
-      { path: "market-risk-timeseries.json", payload: timeseries },
-      { path: "ml-risk-signal.json", payload: mlRisk },
-      { path: "els-index-risk.json", payload: elsRisk },
-      { path: "hmm-regime.json", payload: hmmRegime },
-      { path: "pipeline-status.json", payload: pipelineStatus },
-      { path: "market-risk-snapshot.json", payload: sourceSnapshot },
-      { path: "data-quality.json", payload: dataQuality },
-      { path: "market-stress-episodes.json", payload: stressEpisodes },
-      { path: "kospi-breadth.json", payload: breadthData },
-      { path: "kb-market-funds.json", payload: marketFunds },
-      { path: "dram-spot-prices.json", payload: dramSpotPrices }
-    ]);
-    return renderDashboard(
-      dashboard,
-      timeseries,
-      mlRisk,
-      elsRisk,
-      hmmRegime,
-      pipelineStatus,
-      sourceSnapshot,
-      dataQuality,
-      stressEpisodes,
-      breadthData,
-      marketFunds,
-      dramSpotPrices
-    );
-  })
-  .catch((error) => {
-    app.innerHTML = `
-      <div class="loading-panel loading-panel--error">
-        <strong>대시보드를 불러오지 못했습니다.</strong>
-        <span>${error.message}</span>
-      </div>
-    `;
-  });
+async function startDashboard() {
+  // 게시 파일 교체 중에는 전체 묶음을 다시 읽어 서로 다른 실행의 데이터 혼합을 막습니다.
+  const attempts = IS_OFFLINE_SNAPSHOT ? 1 : 3;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    activePublicationRunId = "";
+    activePublicationArtifactStates = new Map();
+    try {
+      const [publicationManifest, dashboard, timeseries, mlRisk, elsRisk, hmmRegime,
+        pipelineStatus, sourceSnapshot, dataQuality, stressEpisodes, breadthData,
+        marketFunds, dramSpotPrices] = await Promise.all([
+        loadJson("./data/publication-manifest.json", false, true),
+        loadJson("./data/risk-dashboard.json", true),
+        loadJson("./data/market-risk-timeseries.json"),
+        loadJson("./data/ml-risk-signal.json"),
+        loadJson("./data/els-index-risk.json"),
+        loadJson("./data/hmm-regime.json"),
+        loadJson("./data/pipeline-status.json"),
+        loadJson("./data/market-risk-snapshot.json"),
+        loadJson("./data/data-quality.json"),
+        loadJson("./data/market-stress-episodes.json"),
+        loadJson("./data/kospi-breadth.json"),
+        loadJson("./data/kb-market-funds.json"),
+        loadJson("./data/dram-spot-prices.json")
+      ]);
+      validatePublicationBundle(publicationManifest, [
+        { path: "risk-dashboard.json", payload: dashboard },
+        { path: "market-risk-timeseries.json", payload: timeseries },
+        { path: "ml-risk-signal.json", payload: mlRisk },
+        { path: "els-index-risk.json", payload: elsRisk },
+        { path: "hmm-regime.json", payload: hmmRegime },
+        { path: "pipeline-status.json", payload: pipelineStatus },
+        { path: "market-risk-snapshot.json", payload: sourceSnapshot },
+        { path: "data-quality.json", payload: dataQuality },
+        { path: "market-stress-episodes.json", payload: stressEpisodes },
+        { path: "kospi-breadth.json", payload: breadthData },
+        { path: "kb-market-funds.json", payload: marketFunds },
+        { path: "dram-spot-prices.json", payload: dramSpotPrices }
+      ]);
+      renderDashboard(dashboard, timeseries, mlRisk, elsRisk, hmmRegime, pipelineStatus,
+        sourceSnapshot, dataQuality, stressEpisodes, breadthData, marketFunds, dramSpotPrices);
+      return;
+    } catch (error) {
+      if (attempt < attempts - 1) {
+        app.innerHTML = `<div class="loading-panel" role="status">게시 데이터를 다시 확인하는 중 (${attempt + 1}/${attempts - 1})</div>`;
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+        continue;
+      }
+      app.innerHTML = `<div class="loading-panel loading-panel--error" role="alert"><strong>대시보드를 불러오지 못했습니다.</strong><span data-load-error></span><button type="button" data-reload-dashboard>페이지 새로고침</button></div>`;
+      app.querySelector("[data-load-error]").textContent = error.name === "AbortError" ? "데이터 응답 시간이 초과됐습니다." : error.message;
+      app.querySelector("[data-reload-dashboard]").addEventListener("click", () => window.location.reload());
+    }
+  }
+}
+
+startDashboard();

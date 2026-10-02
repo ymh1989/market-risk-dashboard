@@ -77,7 +77,7 @@ def offline_app_source(data_payloads: dict[str, dict[str, Any]]) -> str:
         count=1,
     )
     loader_start = app_source.index("async function loadJson(")
-    loader_end = app_source.index("\n\nPromise.all([", loader_start)
+    loader_end = app_source.index("\n\nasync function startDashboard(", loader_start)
     embedded_data = javascript_json(data_payloads)
     offline_loader = f"""const OFFLINE_DATA = Object.freeze({embedded_data});
 

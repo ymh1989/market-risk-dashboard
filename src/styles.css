@@ -4778,6 +4778,9 @@ a {
 }
 
 .deferred-panel--error {
+  flex-direction: column;
+  padding: 16px;
+  text-align: center;
   color: var(--red);
 }
 
@@ -4861,6 +4864,70 @@ a {
   margin: 5px 0 0;
   font-size: 1rem;
   line-height: 1.35;
+}
+
+.dram-observation__readiness,
+.dram-observation__product > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dram-observation progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--teal);
+}
+
+.dram-observation__products {
+  display: grid;
+  gap: 12px;
+  position: relative;
+}
+
+.dram-observation__product {
+  position: relative;
+  min-width: 0;
+}
+
+.dram-observation__product strong {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dram-observation__sparkline {
+  height: 48px;
+  margin-top: 4px;
+}
+
+.dram-observation__sparkline svg {
+  width: 100%;
+  height: 48px;
+}
+
+.dram-observation__note {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.recovery-actions button,
+.loading-panel [data-reload-dashboard] {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
 }
 
 .indicator-card__score {
