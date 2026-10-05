@@ -1,20 +1,22 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-05 15:38:04 KST",
+  "generatedAt": "2026-10-05 18:30:10 KST",
   "current": {
-    "runId": "20261005T153504-1535-full",
+    "runId": "20261005T183004-1830-krx",
     "status": "success",
-    "mode": "full",
+    "mode": "krx",
     "trigger": "scheduled",
-    "scheduledTime": "15:35",
-    "startedAt": "2026-10-05 15:35:04 KST",
-    "completedAt": "2026-10-05 15:38:04 KST",
-    "durationSeconds": 180,
+    "scheduledTime": "18:30",
+    "startedAt": "2026-10-05 18:30:04 KST",
+    "completedAt": "2026-10-05 18:30:10 KST",
+    "durationSeconds": 6,
     "dataAsOf": "2026-10-05",
     "dashboardGeneratedAt": "2026-10-05 15:35 KST",
     "mlGeneratedAt": "2026-10-05 15:38 KST",
     "qualityScore": 97.1,
-    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+    "krxReferenceDate": "2026-10-05",
+    "krxSessionDate": "2026-10-02"
   },
   "schedule": {
     "timezone": "Asia/Seoul",
@@ -118,21 +120,21 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 106,
-      "detail": "시장 데이터 수집, 위험점수, M7·KB 시장자금, ELS·HMM 산출"
+      "durationSeconds": 3,
+      "detail": "KRX 휴장(2026-10-05) · 최근 거래일 2026-10-02 확정치 점검"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
-      "durationSeconds": 39,
-      "detail": "최신 ML 신호 갱신 · 워크포워드 OOS 검증 수행"
+      "durationSeconds": 0,
+      "detail": "직전 확정 ML·HMM 산출물 재사용"
     },
     {
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 1,
+      "durationSeconds": 0,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -302,13 +304,13 @@
       "id": "breadth",
       "label": "KOSPI 시장 내부강도",
       "status": "ok",
-      "generatedAt": "2026-10-05 15:35:20 KST"
+      "generatedAt": "2026-10-05 18:30:09 KST"
     },
     {
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-10-05 15:38:04 KST"
+      "generatedAt": "2026-10-05 18:30:10 KST"
     }
   ],
   "quality": {
@@ -472,6 +474,23 @@
     }
   ],
   "history": [
+    {
+      "runId": "20261005T183004-1830-krx",
+      "status": "success",
+      "mode": "krx",
+      "trigger": "scheduled",
+      "scheduledTime": "18:30",
+      "startedAt": "2026-10-05 18:30:04 KST",
+      "completedAt": "2026-10-05 18:30:10 KST",
+      "durationSeconds": 6,
+      "dataAsOf": "2026-10-05",
+      "dashboardGeneratedAt": "2026-10-05 15:35 KST",
+      "mlGeneratedAt": "2026-10-05 15:38 KST",
+      "qualityScore": 97.1,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "krxReferenceDate": "2026-10-05",
+      "krxSessionDate": "2026-10-02"
+    },
     {
       "runId": "20261005T153504-1535-full",
       "status": "success",
@@ -910,31 +929,14 @@
       "mlGeneratedAt": "2026-10-01 07:31 KST",
       "qualityScore": 96.3,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20260930T183003-1830-krx",
-      "status": "success",
-      "mode": "krx",
-      "trigger": "scheduled",
-      "scheduledTime": "18:30",
-      "startedAt": "2026-09-30 18:30:03 KST",
-      "completedAt": "2026-09-30 18:30:23 KST",
-      "durationSeconds": 20,
-      "dataAsOf": "2026-09-30",
-      "dashboardGeneratedAt": "2026-09-30 15:36 KST",
-      "mlGeneratedAt": "2026-09-30 15:38 KST",
-      "qualityScore": 97.5,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-      "krxReferenceDate": "2026-09-30",
-      "krxSessionDate": "2026-09-30"
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261005T153504-1535-full",
-    "mode": "full",
+    "runId": "20261005T183004-1830-krx",
+    "mode": "krx",
     "state": "generated",
-    "startedAt": "2026-10-05 15:35:04 KST",
-    "preparedAt": "2026-10-05 15:38:04 KST"
+    "startedAt": "2026-10-05 18:30:04 KST",
+    "preparedAt": "2026-10-05 18:30:11 KST"
   }
 }
