@@ -42,6 +42,21 @@ def test_issuance_stance_covers_four_operating_zones():
     assert module._issuance_stance(45, 20)["label"] == "선별발행"
 
 
+def test_drawdown_uses_trailing_252_closes_not_all_time_or_future_high():
+    module = load_els_module()
+    close = np.full(300, 100.0)
+    close[47] = 1000.0
+    close[48] = 200.0
+    close[-1] = 150.0
+    frame = pd.DataFrame({"date": pd.bdate_range("2025-01-01", periods=300), "close": close})
+    features = module._features(frame)
+    assert np.isclose(features.iloc[-1]["drawdown_252d"], -0.25)
+    future = pd.concat([frame, pd.DataFrame([{"date": frame.iloc[-1]["date"] + pd.offsets.BDay(), "close": 10000.0}])], ignore_index=True)
+    extended = module._features(future)
+    assert np.isclose(extended.iloc[-2]["drawdown_252d"], -0.25)
+    assert extended.iloc[-1]["drawdown_252d"] == 0.0
+
+
 def test_long_history_is_merged_with_fresher_recent_prices(monkeypatch):
     module = load_els_module()
     dates = pd.date_range("2024-01-02", periods=300, freq="B")

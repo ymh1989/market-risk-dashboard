@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20261003-1";
+const ASSET_VERSION = "20261006-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -2195,6 +2195,7 @@ function renderElsPerformancePanel(elsRisk, hmmRegime) {
               <th scope="col">기초자산</th>
               <th scope="col"><span data-els-performance-range-label>${elsPerformanceRangeOptions.find((option) => option.id === activeElsPerformanceRange)?.label ?? "3M"}</span> 흐름</th>
               ${elsPerformanceReturnColumns.map(([label]) => `<th scope="col">${label}</th>`).join("")}
+              <th scope="col" class="els-performance-row__drawdown" title="(현재 종가 / 최근 252거래일 최고 종가 - 1) × 100 · 차트 기간 선택과 별개"><span>고점 대비</span><small>252D 종가</small></th>
               <th scope="col">변동성</th>
             </tr>
           </thead>
@@ -2222,6 +2223,7 @@ function renderElsPerformancePanel(elsRisk, hmmRegime) {
                     ${elsPerformanceReturnColumns
                       .map(([, field]) => `<td>${renderElsReturn(returns[field])}</td>`)
                       .join("")}
+                    <td class="els-performance-row__drawdown" data-els-drawdown="${item.id}">${renderElsReturn(item.metrics?.drawdown252dPct)}</td>
                     <td class="els-performance-row__vol">${elsVolatilityLabel(item, hmmById)}</td>
                   </tr>
                 `;

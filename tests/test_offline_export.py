@@ -56,6 +56,8 @@ def test_offline_export_is_single_file_and_interactive(tmp_path):
     assert '"data/dram-spot-prices.json":' in html
     assert "data-pending-dram" in html
     assert "공식 이력 축적 중" in html
+    assert 'data-els-drawdown="${item.id}"' in html
+    assert "252D 종가" in html
     assert "async function startDashboard()" in html
     assert "IS_OFFLINE_SNAPSHOT ? 1 : 3" in html
     assert 'src="./src/app.js' not in html

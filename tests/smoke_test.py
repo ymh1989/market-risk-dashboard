@@ -590,6 +590,9 @@ def test_dashboard_data_requests_bypass_stale_cache():
     assert "renderElsIssuanceHedgePage" in app_source
     assert "renderElsPerformancePanel" in app_source
     assert "기초자산 수익률" in app_source
+    assert 'data-els-drawdown="${item.id}"' in app_source
+    assert "renderElsReturn(item.metrics?.drawdown252dPct)" in app_source
+    assert "252D 종가" in app_source
     assert 'const stocks = elsRisk?.singleStocks' in app_source
     assert '["1D", "return1dPct"]' in app_source
     assert '["6M", "return6mPct"]' in app_source

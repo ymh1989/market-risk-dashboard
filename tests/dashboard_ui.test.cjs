@@ -133,3 +133,25 @@ test("응답 없는 필수 요청을 취소하고 타이머 정리", async () =>
   await rejected;
   assert.equal(timers.size, 0);
 });
+
+test("ELS 고점 대비는 기간수익률·차트 이력과 별도로 원천 252D 낙폭 표시", () => {
+  const { context } = harness();
+  const cases = [[-25.82, "-25.82%"], [0, "0.00%"], [null, "–"], [undefined, "–"], ["", "–"], [NaN, "–"]];
+  for (const [value, expected] of cases) {
+    const asset = {
+      id: "kospi200", label: "KOSPI200", lastDate: "2026-10-06",
+      metrics: { drawdown252dPct: value, return1dPct: 4.2 },
+      sixMonthPriceSeries: [{ date: "2026-10-05", close: 100 }, { date: "2026-10-06", close: 90 }]
+    };
+    const payload = { indices: [asset], singleStocks: [{ ...asset, id: "samsung", label: "삼성전자", assetType: "single-stock" }] };
+    for (const range of ["1m", "3m", "6m", "ytd"]) {
+      vm.runInContext(`activeElsPerformanceRange = "${range}"`, context);
+      const html = context.renderElsPerformancePanel(payload);
+      assert.match(html, /252D 종가/);
+      for (const id of ["kospi200", "samsung"]) {
+        const cell = html.match(new RegExp(`data-els-drawdown="${id}">([\\s\\S]*?)</td>`))[1];
+        assert.ok(cell.includes(expected));
+      }
+    }
+  }
+});
