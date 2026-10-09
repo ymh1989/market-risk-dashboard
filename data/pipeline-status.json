@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-09 09:01:34 KST",
+  "generatedAt": "2026-10-09 10:00:54 KST",
   "current": {
-    "runId": "20261009T090003-0900-live",
+    "runId": "20261009T100005-1000-live",
     "status": "success",
     "mode": "live",
     "trigger": "scheduled",
-    "scheduledTime": "09:00",
-    "startedAt": "2026-10-09 09:00:03 KST",
-    "completedAt": "2026-10-09 09:01:34 KST",
-    "durationSeconds": 91,
+    "scheduledTime": "10:00",
+    "startedAt": "2026-10-09 10:00:05 KST",
+    "completedAt": "2026-10-09 10:00:54 KST",
+    "durationSeconds": 49,
     "dataAsOf": "2026-10-09",
-    "dashboardGeneratedAt": "2026-10-09 09:01 KST",
+    "dashboardGeneratedAt": "2026-10-09 10:00 KST",
     "mlGeneratedAt": "2026-10-09 07:31 KST",
-    "qualityScore": 96.9,
+    "qualityScore": 97.1,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
@@ -118,7 +118,7 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 86,
+      "durationSeconds": 44,
       "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
     },
     {
@@ -183,14 +183,14 @@
     {
       "id": "fred",
       "label": "FRED",
-      "status": "warning",
+      "status": "ok",
       "lastDate": "2026-10-08",
       "seriesCount": 5,
-      "detail": "5/5개 수집 · 허용시차 내 5개 · 대체값 1개",
+      "detail": "5/5개 수집 · 허용시차 내 5개",
       "oldestLastDate": "2026-10-02",
       "freshCount": 5,
       "staleCount": 0,
-      "fallbackCount": 1
+      "fallbackCount": 0
     },
     {
       "id": "krx-breadth",
@@ -254,7 +254,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-10-09 09:01 KST"
+      "generatedAt": "2026-10-09 10:00 KST"
     },
     {
       "id": "ml",
@@ -308,36 +308,25 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-10-09 09:01:34 KST"
+      "generatedAt": "2026-10-09 10:00:53 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 96.9,
+    "score": 97.1,
     "referenceDate": "2026-10-09",
     "summary": {
       "checks": 255,
-      "ok": 239,
-      "warning": 16,
+      "ok": 240,
+      "warning": 15,
       "error": 0,
       "sourceSeriesExpected": 100,
       "sourceSeriesPresent": 100,
       "freshSeries": 99,
       "staleSeries": 1,
-      "fallbackSeries": 14
+      "fallbackSeries": 13
     },
     "issues": [
-      {
-        "id": "source:fred:us_yield_curve_10y2y",
-        "category": "source",
-        "label": "US 10Y-2Y Treasury Spread",
-        "status": "warning",
-        "detail": "최신 2026-10-08 · 영업일 시차 1일 · 관측치 7307개 · cached",
-        "groupId": "fred",
-        "lastDate": "2026-10-08",
-        "observations": 7307,
-        "fetchStatus": "cached"
-      },
       {
         "id": "source:ml:CSI300",
         "category": "source",
@@ -409,6 +398,16 @@
         "groupId": "m7-credit",
         "lastDate": "2026-10-08",
         "fetchStatus": "dashboard_yahoo"
+      },
+      {
+        "id": "source:m7:price:LQD",
+        "category": "source",
+        "label": "price:LQD",
+        "status": "warning",
+        "detail": "최신 2026-10-08 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-10-08",
+        "fetchStatus": "dashboard_yahoo"
       }
     ]
   },
@@ -435,7 +434,7 @@
       "id": "macro-rates",
       "title": "매크로 금리 불확실성",
       "status": "부담 높음",
-      "score": 84.2,
+      "score": 84.4,
       "tone": "danger",
       "decision": "기존 가중지표 유지",
       "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -469,6 +468,21 @@
     }
   ],
   "history": [
+    {
+      "runId": "20261009T100005-1000-live",
+      "status": "success",
+      "mode": "live",
+      "trigger": "scheduled",
+      "scheduledTime": "10:00",
+      "startedAt": "2026-10-09 10:00:05 KST",
+      "completedAt": "2026-10-09 10:00:54 KST",
+      "durationSeconds": 49,
+      "dataAsOf": "2026-10-09",
+      "dashboardGeneratedAt": "2026-10-09 10:00 KST",
+      "mlGeneratedAt": "2026-10-09 07:31 KST",
+      "qualityScore": 97.1,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20261009T090003-0900-live",
       "status": "success",
@@ -909,29 +923,14 @@
       "mlGeneratedAt": "2026-10-06 07:31 KST",
       "qualityScore": 96.1,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
-    },
-    {
-      "runId": "20261006T100003-1000-live",
-      "status": "success",
-      "mode": "live",
-      "trigger": "scheduled",
-      "scheduledTime": "10:00",
-      "startedAt": "2026-10-06 10:00:03 KST",
-      "completedAt": "2026-10-06 10:00:54 KST",
-      "durationSeconds": 51,
-      "dataAsOf": "2026-10-06",
-      "dashboardGeneratedAt": "2026-10-06 10:00 KST",
-      "mlGeneratedAt": "2026-10-06 07:31 KST",
-      "qualityScore": 96.3,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261009T090003-0900-live",
+    "runId": "20261009T100005-1000-live",
     "mode": "live",
     "state": "generated",
-    "startedAt": "2026-10-09 09:00:03 KST",
-    "preparedAt": "2026-10-09 09:01:34 KST"
+    "startedAt": "2026-10-09 10:00:05 KST",
+    "preparedAt": "2026-10-09 10:00:54 KST"
   }
 }
