@@ -1,25 +1,25 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-13 11:00:55 KST",
+  "generatedAt": "2026-10-13 12:00:48 KST",
   "current": {
-    "runId": "20261013T110007-1100-live",
+    "runId": "20261013T120007-1200-live",
     "status": "success",
     "mode": "live",
     "trigger": "scheduled",
-    "scheduledTime": "11:00",
-    "startedAt": "2026-10-13 11:00:07 KST",
-    "completedAt": "2026-10-13 11:00:55 KST",
-    "durationSeconds": 48,
+    "scheduledTime": "12:00",
+    "startedAt": "2026-10-13 12:00:07 KST",
+    "completedAt": "2026-10-13 12:00:48 KST",
+    "durationSeconds": 41,
     "statusScope": "calculation",
-    "calculationCompletedAt": "2026-10-13 11:00:55 KST",
-    "calculationDurationSeconds": 48,
+    "calculationCompletedAt": "2026-10-13 12:00:48 KST",
+    "calculationDurationSeconds": 41,
     "publicationStatus": "awaiting-verification",
     "publishedAt": null,
     "endToEndDurationSeconds": null,
     "dataAsOf": "2026-10-13",
-    "dashboardGeneratedAt": "2026-10-13 11:00 KST",
+    "dashboardGeneratedAt": "2026-10-13 12:00 KST",
     "mlGeneratedAt": "2026-10-13 07:31 KST",
-    "qualityScore": 99.2,
+    "qualityScore": 99.6,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
@@ -124,7 +124,7 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 45,
+      "durationSeconds": 37,
       "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
     },
     {
@@ -260,7 +260,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-10-13 11:00 KST"
+      "generatedAt": "2026-10-13 12:00 KST"
     },
     {
       "id": "ml",
@@ -314,24 +314,24 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-10-13 11:00:55 KST"
+      "generatedAt": "2026-10-13 12:00:48 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 99.2,
+    "score": 99.6,
     "referenceDate": "2026-10-13",
     "summary": {
       "checks": 254,
-      "ok": 250,
-      "warning": 4,
+      "ok": 252,
+      "warning": 2,
       "error": 0,
       "sourceSeriesExpected": 100,
       "sourceSeriesPresent": 100,
       "freshSeries": 99,
       "staleSeries": 1,
       "fallbackSeries": 13,
-      "actionRequired": 4,
+      "actionRequired": 2,
       "information": 12
     },
     "issues": [
@@ -355,30 +355,6 @@
         "status": "warning",
         "attention": "action",
         "detail": "시장지표 2026-10-13 · ML 2026-10-12"
-      },
-      {
-        "id": "cache:naver-market-live:bdti",
-        "category": "cache",
-        "label": "시장지표 최신값/bdti",
-        "status": "warning",
-        "attention": "action",
-        "detail": "2026-10-09 · 7,964.0000 · 원천표기 실시간 · live",
-        "lastDate": "2026-10-09",
-        "lagBusinessDays": 2,
-        "calendarBasis": "weekdays",
-        "reason": null
-      },
-      {
-        "id": "cache:naver-market-live:bdi",
-        "category": "cache",
-        "label": "시장지표 최신값/bdi",
-        "status": "warning",
-        "attention": "action",
-        "detail": "2026-10-09 · 2,917.0000 · 원천표기 실시간 · live",
-        "lastDate": "2026-10-09",
-        "lagBusinessDays": 2,
-        "calendarBasis": "weekdays",
-        "reason": null
       }
     ],
     "notices": [
@@ -542,7 +518,7 @@
       "id": "geopolitics-reinflation",
       "title": "지정학·재인플레이션",
       "status": "주의",
-      "score": 66.4,
+      "score": 66.5,
       "tone": "caution",
       "decision": "관찰지표 보강",
       "operation": "DBC·DBA 관찰카드 유지 · 기존 에너지 가중치 변경 없음"
@@ -559,9 +535,9 @@
     {
       "id": "domestic-funding-leverage",
       "title": "국내 레버리지·대기자금",
-      "status": "주의",
-      "score": 60.1,
-      "tone": "caution",
+      "status": "관찰",
+      "score": 55.2,
+      "tone": "watch",
       "decision": "직접 시장통계 관찰",
       "operation": "연결일 이후 일별 누적 · 60개 관측과 OOS 검증 전 가중치 0 유지"
     },
@@ -569,7 +545,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "관찰",
-      "score": 57.2,
+      "score": 52.3,
       "tone": "watch",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -586,6 +562,27 @@
   ],
   "history": [
     {
+      "runId": "20261013T120007-1200-live",
+      "status": "success",
+      "mode": "live",
+      "trigger": "scheduled",
+      "scheduledTime": "12:00",
+      "startedAt": "2026-10-13 12:00:07 KST",
+      "completedAt": "2026-10-13 12:00:48 KST",
+      "durationSeconds": 41,
+      "statusScope": "calculation",
+      "calculationCompletedAt": "2026-10-13 12:00:48 KST",
+      "calculationDurationSeconds": 41,
+      "publicationStatus": "awaiting-verification",
+      "publishedAt": null,
+      "endToEndDurationSeconds": null,
+      "dataAsOf": "2026-10-13",
+      "dashboardGeneratedAt": "2026-10-13 12:00 KST",
+      "mlGeneratedAt": "2026-10-13 07:31 KST",
+      "qualityScore": 99.6,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
+    {
       "runId": "20261013T110007-1100-live",
       "status": "success",
       "mode": "live",
@@ -597,14 +594,15 @@
       "statusScope": "calculation",
       "calculationCompletedAt": "2026-10-13 11:00:55 KST",
       "calculationDurationSeconds": 48,
-      "publicationStatus": "awaiting-verification",
-      "publishedAt": null,
-      "endToEndDurationSeconds": null,
+      "publicationStatus": "verified",
+      "publishedAt": "2026-10-13 11:01:55 KST",
+      "endToEndDurationSeconds": 109,
       "dataAsOf": "2026-10-13",
       "dashboardGeneratedAt": "2026-10-13 11:00 KST",
       "mlGeneratedAt": "2026-10-13 07:31 KST",
       "qualityScore": 99.2,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "deploymentDurationSeconds": 61
     },
     {
       "runId": "20261013T100007-1000-live",
@@ -1092,53 +1090,36 @@
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
       "calculationCompletedAt": "2026-10-08 13:00:55 KST",
       "calculationDurationSeconds": 51
-    },
-    {
-      "runId": "20261008T120004-1200-live",
-      "status": "success",
-      "mode": "live",
-      "trigger": "scheduled",
-      "scheduledTime": "12:00",
-      "startedAt": "2026-10-08 12:00:04 KST",
-      "completedAt": "2026-10-08 12:00:47 KST",
-      "durationSeconds": 43,
-      "dataAsOf": "2026-10-08",
-      "dashboardGeneratedAt": "2026-10-08 12:00 KST",
-      "mlGeneratedAt": "2026-10-08 07:31 KST",
-      "qualityScore": 97.2,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-      "calculationCompletedAt": "2026-10-08 12:00:47 KST",
-      "calculationDurationSeconds": 43
     }
   ],
   "lastVerifiedPublication": {
-    "runId": "20261013T100007-1000-live",
+    "runId": "20261013T110007-1100-live",
     "status": "success",
     "mode": "live",
     "trigger": "scheduled",
-    "scheduledTime": "10:00",
-    "startedAt": "2026-10-13 10:00:07 KST",
-    "completedAt": "2026-10-13 10:00:51 KST",
-    "durationSeconds": 44,
+    "scheduledTime": "11:00",
+    "startedAt": "2026-10-13 11:00:07 KST",
+    "completedAt": "2026-10-13 11:00:55 KST",
+    "durationSeconds": 48,
     "statusScope": "calculation",
-    "calculationCompletedAt": "2026-10-13 10:00:51 KST",
-    "calculationDurationSeconds": 44,
+    "calculationCompletedAt": "2026-10-13 11:00:55 KST",
+    "calculationDurationSeconds": 48,
     "publicationStatus": "verified",
-    "publishedAt": "2026-10-13 10:01:40 KST",
-    "endToEndDurationSeconds": 94,
+    "publishedAt": "2026-10-13 11:01:55 KST",
+    "endToEndDurationSeconds": 109,
     "dataAsOf": "2026-10-13",
-    "dashboardGeneratedAt": "2026-10-13 10:00 KST",
+    "dashboardGeneratedAt": "2026-10-13 11:00 KST",
     "mlGeneratedAt": "2026-10-13 07:31 KST",
-    "qualityScore": 98.2,
+    "qualityScore": 99.2,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-    "deploymentDurationSeconds": 50
+    "deploymentDurationSeconds": 61
   },
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261013T110007-1100-live",
+    "runId": "20261013T120007-1200-live",
     "mode": "live",
     "state": "generated",
-    "startedAt": "2026-10-13 11:00:07 KST",
-    "preparedAt": "2026-10-13 11:00:56 KST"
+    "startedAt": "2026-10-13 12:00:07 KST",
+    "preparedAt": "2026-10-13 12:00:48 KST"
   }
 }
