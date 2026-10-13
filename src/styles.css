@@ -5388,6 +5388,7 @@ a {
 }
 
 .operations-page {
+  grid-template-columns: minmax(0, 1fr);
   display: grid;
   gap: 16px;
 }
@@ -5450,7 +5451,7 @@ a {
 
 .operations-facts {
   display: grid;
-  grid-template-columns: 1.25fr 1fr 1.35fr 0.7fr;
+  grid-template-columns: 1.1fr 1.1fr 1fr 1.5fr 0.7fr;
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
@@ -5662,7 +5663,7 @@ a {
 
 .data-quality-summary {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   border: 1px solid var(--line);
   border-radius: 6px;
   overflow: hidden;
@@ -5684,6 +5685,29 @@ a {
   color: var(--muted);
   font-size: 0.73rem;
   font-weight: 700;
+}
+
+.data-quality-notices {
+  margin-top: 14px;
+}
+
+.data-quality-notices summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.data-quality-notices .data-quality-issue {
+  border-left-color: var(--blue);
+}
+
+.data-quality-notices .data-quality-issue span {
+  color: var(--blue);
+}
+
+.operations-page > *,
+.operations-section--split > * {
+  min-width: 0;
 }
 
 .data-quality-summary strong {

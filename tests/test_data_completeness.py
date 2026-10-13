@@ -8,6 +8,32 @@ from scripts.audit_data_completeness import (
 )
 
 
+def test_market_calendar_excludes_known_closed_session(monkeypatch):
+    class Calendar:
+        def sessions_in_range(self, start, end):
+            assert start == date(2026, 10, 10)
+            assert end == date(2026, 10, 13)
+            return [date(2026, 10, 13)]
+    monkeypatch.setattr(audit_data_completeness, "session_calendar", lambda *args: Calendar())
+    assert audit_data_completeness.business_day_lag(date(2026, 10, 9), date(2026, 10, 13), "XTKS") == 1
+    assert audit_data_completeness.business_day_lag(date(2026, 10, 9), date(2026, 10, 13)) == 2
+    assert audit_data_completeness.market_calendar_name("us10y_naver") is None
+
+
+def test_only_validated_fresh_m7_fallback_is_information():
+    source = {"source": "price:AAPL", "provider": "dashboard_yahoo", "status": "warning",
+              "last_value_date": "2026-10-12", "row_count": 1254, "is_stale": False,
+              "duplicate_count": 0, "null_count": 0}
+    def assess(patch):
+        _, checks = audit_data_completeness.assess_m7_source_group({"sources": [{**source, **patch}]}, date(2026, 10, 13))
+        return next(check for check in checks if check["id"] == "source:m7:price:AAPL")
+    check = assess({})
+    assert check["status"] == "ok"
+    assert check["attention"] == "information"
+    for patch in [{"null_count": 1}, {"duplicate_count": 1}, {"is_stale": True}, {"row_count": 2}, {"provider": "local_cache"}, {"last_value_date": "2026-09-01"}]:
+        assert assess(patch)["attention"] == "action"
+
+
 def test_source_audit_detects_missing_and_stale_series():
     expected = {
         "fresh": {"label": "최신 지표"},

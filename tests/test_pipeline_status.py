@@ -123,6 +123,21 @@ def test_pipeline_status_keeps_previous_run_history(tmp_path):
     assert payload["schedule"]["expectedDurationMinutes"]["live"] == 3
     assert payload["schedule"]["expectedDurationMinutes"]["krx"] == 4
     assert all(source["lastDate"] for source in payload["sources"])
+    assert payload["current"]["calculationDurationSeconds"] == 1128
+    assert payload["current"]["publishedAt"] is None
+    assert payload["stages"][-1]["status"] == "pending"
+
+    receipts = tmp_path / "receipts"
+    receipts.mkdir()
+    receipt = {"runId": args.run_id, "publicationStatus": "verified",
+               "publishedAt": "2026-07-20 15:54:38 KST",
+               "endToEndDurationSeconds": 1178, "deploymentDurationSeconds": 50}
+    (receipts / "receipt.json").write_text(json.dumps(receipt))
+    args.delivery_receipts = receipts
+    verified = module.build_payload(args)
+    assert verified["lastVerifiedPublication"]["runId"] == args.run_id
+    assert verified["history"][0]["endToEndDurationSeconds"] == 1178
+    assert verified["history"][0]["calculationDurationSeconds"] == 1128
 
 
 def test_research_log_copies_operational_fields_without_market_narrative():

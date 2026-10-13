@@ -89,6 +89,23 @@ def test_remote_requires_all_files_not_just_run_id(candidate, monkeypatch):
         delivery.verify_remote_publication(candidate, "https://example.invalid/dashboard")
 
 
+def test_delivery_receipt_records_real_verification_separately(candidate, tmp_path, monkeypatch):
+    mock_remote(monkeypatch, candidate)
+    manifest = delivery.verify_remote_publication(candidate, "https://example.invalid/dashboard")
+    path = candidate / "data/pipeline-status.json"
+    payload = json.loads(path.read_text())
+    payload["current"].update(startedAt="2026-09-23 15:35:00 KST", calculationCompletedAt="2026-09-23 15:36:04 KST")
+    path.write_text(json.dumps(payload))
+    receipt = delivery.record_delivery_receipt(candidate, manifest, tmp_path / "receipts", now=datetime(2026, 9, 23, 6, 36, 54, tzinfo=timezone.utc))
+    assert receipt["publishedAt"] == "2026-09-23 15:36:54 KST"
+    assert receipt["endToEndDurationSeconds"] == 114
+    assert receipt["deploymentDurationSeconds"] == 50
+    assert json.loads((tmp_path / "receipts" / f"{RUN_ID}.json").read_text()) == receipt
+    assert delivery.record_delivery_receipt(candidate, manifest, tmp_path / "receipts") == receipt
+    with pytest.raises(PublicationError, match="실행번호"):
+        delivery.record_delivery_receipt(candidate, {**manifest, "runId": "../wrong"}, tmp_path / "receipts")
+
+
 def test_remote_rejects_old_manifest_and_unreachable_files(candidate, monkeypatch):
     mock_remote(monkeypatch, candidate, {"data/publication-manifest.json": b'{"runId":"old"}'})
     with pytest.raises(PublicationError, match="manifest"):

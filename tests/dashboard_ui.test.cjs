@@ -41,6 +41,51 @@ function harness(options = {}) {
   return { context, app, timers, errorNode };
 }
 
+test("잠정값은 확정값보다 최근 날짜·유효 시각·신선한 원천일 때만 채택", () => {
+  const { context } = harness();
+  const definition = { id: "us10y_naver", type: "yield" };
+  const confirmed = { date: "2026-10-09", close: 5.244 };
+  const snapshot = { date: "2026-10-12", close: 5.25, observedAt: "2026-10-12T17:00:00-04:00", isProvisional: true, fetchStatus: "live" };
+  const payload = (patch = {}) => ({ generatedAt: "2026-10-13 09:00:00 KST", liveSnapshots: { us10y_naver: { ...snapshot, ...patch } } });
+  assert.equal(context.usableMarketLiveSnapshot(definition, payload(), confirmed).close, 5.25);
+  for (const patch of [
+    { date: "2026-10-09", observedAt: "2026-10-09T17:00:00-04:00" },
+    { date: "2026-10-10", observedAt: "2026-10-10T17:00:00-04:00" },
+    { observedAt: "2026-10-13T17:00:00-04:00" },
+    { observedAt: "2026-10-12T17:00:00" }, { observedAt: "invalid" },
+    { close: null }, { close: "" }, { close: Infinity }, { fetchStatus: "cache_fallback: timeout" }
+  ]) assert.equal(context.usableMarketLiveSnapshot(definition, payload(patch), confirmed), null);
+  const sameDate = { ...confirmed, date: snapshot.date };
+  assert.equal(context.usableMarketLiveSnapshot(definition, payload(), sameDate), null);
+  assert.equal(context.usableMarketLiveSnapshot(definition, payload({ fetchStatus: "derived: live + live" }), confirmed).close, 5.25);
+});
+
+test("ELS 수익률 월말 보정·전년말 기준·명시된 원천값 우선", () => {
+  const { context } = harness();
+  const item = { sixMonthPriceSeries: [
+    { date: "2025-11-28", close: 100 }, { date: "2025-12-31", close: 110 },
+    { date: "2026-02-27", close: 120 }, { date: "2026-03-02", close: 160 },
+    { date: "2026-05-31", close: 132 }
+  ] };
+  const result = context.elsDerivedPeriodReturns(item);
+  assert.ok(Math.abs(result.return3mPct - 10) < 1e-9);
+  assert.ok(Math.abs(result.return6mPct - 32) < 1e-9);
+  assert.ok(Math.abs(result.returnYtdPct - 20) < 1e-9);
+  assert.equal(context.elsDerivedPeriodReturns({ sixMonthPriceSeries: item.sixMonthPriceSeries.slice(2) }).returnYtdPct, null);
+  assert.equal(context.elsDerivedPeriodReturns({ ...item, metrics: { return3mPct: 0 } }).return3mPct, 0);
+});
+
+test("운영 화면은 계산시간과 게시시간·안내를 구분", () => {
+  const { context } = harness();
+  const payload = JSON.parse(readFileSync(join(root, "data/pipeline-status.json"), "utf8"));
+  payload.lastVerifiedPublication = { mode: "live", publishedAt: "2026-10-13 09:02:02 KST", endToEndDurationSeconds: 114 };
+  payload.quality.notices = [{ label: "AAPL", reason: "검증된 대체값", detail: "결측·중복 없음" }];
+  payload.quality.summary.information = 1;
+  const html = context.renderOperationsPage(payload);
+  for (const expected of ["데이터 계산 완료", "최근 홈페이지 게시 확인", "09:02:02", "정상 대체값·휴장 내역 1건", "검증된 대체값"]) assert.ok(html.includes(expected));
+  assert.doesNotMatch(html, /undefined|NaN/);
+});
+
 test("변화값 누락은 상승·하락 정렬 모두 마지막, 실제 0 변화는 유효", () => {
   const { context } = harness();
   const section = { indicators: [

@@ -435,7 +435,7 @@ def test_operation_mode_distinguishes_active_and_completed_runs():
     assert "activeRun: null" in app_source
     assert "elapsedSeconds: Math.floor(elapsedMinutes * 60)" in app_source
     assert "state.activeRun.mode" in app_source
-    assert "최근 완료 · ${pipelineModeLabel(current.mode)}" in app_source
+    assert "최근 계산 · ${pipelineModeLabel(current.mode)}" in app_source
     assert "<span>${current.mode}" not in app_source
 
 
@@ -483,7 +483,7 @@ def test_operations_page_exposes_daily_schedule_overview():
     assert "토 ${saturdayScheduleText}" in app_source
     assert 'statusLabel: matched.replacement ? "보완 완료" : "완료"' in app_source
     assert 'statusLabel: delayed ? "지연" : "진행 중"' in app_source
-    assert "최근 성공 중앙 소요시간" in app_source
+    assert "최근 계산 중앙 소요시간" in app_source
     assert "${renderScheduleOverview(pipelineStatus)}" in app_source
     assert "function renderResearchOperationsLog" not in app_source
     assert "관찰지표 운영일지" not in app_source
@@ -1109,7 +1109,12 @@ def test_pipeline_status_contract():
     assert status["schedule"]["saturdayTimes"] == [{"time": "07:30", "mode": "full"}]
     assert status["schedule"]["weekdaysOnly"] is False
     assert {stage["id"] for stage in status["stages"]} == {"market", "ml", "validation", "deployment"}
-    assert all(stage["status"] == "success" for stage in status["stages"])
+    for stage in status["stages"]:
+        if stage["id"] == "deployment" and stage["status"] == "pending":
+            assert stage["durationSeconds"] is None
+            assert not status["current"].get("publishedAt")
+        else:
+            assert stage["status"] == "success"
     assert {source["id"] for source in status["sources"]} == {
         "yahoo",
         "naver-equity",

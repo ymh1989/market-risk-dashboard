@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>ELS 상품 조건 점검 · 로컬 전용</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f7f8;color:#1c292e;font:15px/1.65 system-ui,sans-serif;letter-spacing:0}main{max-width:1080px;margin:auto;padding:32px 24px}h1{font-size:25px;margin:0}h2{font-size:18px}p{color:#52636b;margin:6px 0 22px}header{border-bottom:2px solid #277d87;padding-bottom:16px}section{padding:20px 0;border-bottom:1px solid #d1dce0}label{display:grid;gap:5px;min-width:0;font-size:13px;font-weight:600}.terms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}input,select,button{font:inherit;border:1px solid #b5c5cc;border-radius:4px;padding:8px 10px;background:#fff;color:inherit;width:100%;min-width:0}input:focus,select:focus{outline:2px solid #277d87}button{cursor:pointer;width:auto}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{padding:10px 8px;text-align:right;border-bottom:1px solid #e0e6e9}th:first-child,td:first-child{text-align:left}th{font-size:13px;color:#52636b}td small{display:block;font-size:12px;color:#52636b}td button{padding:4px 10px}output{display:block;min-height:118px}.results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.results strong{display:block;font-size:25px}.results span{color:#52636b;font-size:13px}.negative{color:#b33e44}.positive{color:#227469}.actions{display:flex;gap:8px;margin-top:14px}#message{color:#994044}.note{font-size:13px}fieldset{border:0;padding:0;margin:0}.table-wrap{overflow:auto}table{min-width:620px}
+fieldset{min-width:0}
+@media(max-width:640px){main{padding:20px 14px}.terms,.results{grid-template-columns:1fr}.results strong{font-size:22px}}
+</style>
+<main>
+<header><h1>ELS 상품 조건 점검</h1><p>로컬 전용 · 입력값은 메모리에만 유지 · 새로고침 시 삭제</p></header>
+<p id="message" role="status"></p>
+<fieldset id="editor">
+<section><div class="terms">
+<label>다음 조기상환 기준 (% of initial)<input id="autocall" type="number" min="0.01" step="0.1" placeholder="상품 조건 입력"></label>
+<label>낙인 기준 (% of initial)<input id="knockin" type="number" min="0.01" step="0.1" placeholder="상품 조건 입력"></label>
+<label>다음 평가일<input id="evaluation" type="date"></label>
+</div></section>
+<section><h2>기초자산 · 발행기준가</h2><div class="table-wrap"><table><thead><tr><th>기초자산</th><th>최근 종가</th><th>발행기준가</th><th>기준가 대비</th><th style="width:64px">삭제</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="actions"><button type="button" id="add">기초자산 추가</button><button type="button" id="reset">입력 초기화</button></div></section>
+<section><h2>현재 조건 여유</h2><output id="result" aria-live="polite">발행기준가와 상품 조건 입력 대기</output>
+<p class="note">종가 기준 위치 비교 · 실제 낙인 이력·장중 터치·조기상환 확정 여부는 별도 확인<br>기준 대비 여유는 %p · 손익·쿠폰·필요 헤지량을 산출하는 평가모형은 아님</p></section>
+</fieldset></main>
+<script>
+"use strict";
+const quotes = __PUBLIC_QUOTES__;
+const rows = document.querySelector("#rows");
+const localOnly = location.protocol === "file:" || ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+document.querySelector("#editor").disabled = !localOnly;
+if (!localOnly) document.querySelector("#message").textContent = "공개 주소에서는 상품 입력 불가 · 로컬 파일로 열기";
+const numeric = (value) => value === "" || value == null || !Number.isFinite(Number(value)) ? null : Number(value);
+function evaluateTerms(positions, autocall, knockin) {
+  if (!positions.length || autocall == null || autocall <= 0 || knockin == null || knockin <= 0 ||
+      positions.some(p => !Number.isFinite(p.base) || p.base <= 0 || !Number.isFinite(p.close) || p.close <= 0)) return null;
+  const worst = Math.min(...positions.map(p => p.close / p.base * 100));
+  return { worst, autocallMargin: worst - autocall, knockinMargin: worst - knockin };
+}
+function update() {
+  const positions = [...rows.children].map(row => {
+    const quote = quotes[Number(row.querySelector("select").value)];
+    const base = numeric(row.querySelector("input").value);
+    row.querySelector("[data-price]").textContent = quote.close.toLocaleString("ko-KR", {maximumFractionDigits: 3});
+    row.querySelector("small").textContent = quote.date;
+    row.querySelector("[data-ratio]").textContent = base > 0 ? (quote.close / base * 100).toFixed(2) + "%" : "–";
+    return { ...quote, base };
+  });
+  const result = evaluateTerms(positions, numeric(document.querySelector("#autocall").value), numeric(document.querySelector("#knockin").value));
+  const target = document.querySelector("#result");
+  target.replaceChildren();
+  if (!result) { target.textContent = "유효한 발행기준가와 상품 조건 입력 대기"; return; }
+  const grid = document.createElement("div"); grid.className = "results";
+  for (const [label, value, unit] of [["최저 기초자산 / 발행기준가", result.worst, "%"], ["조기상환 기준 대비 여유", result.autocallMargin, "%p"], ["낙인 기준 대비 현재 여유", result.knockinMargin, "%p"]]) {
+    const item = document.createElement("div"), caption = document.createElement("span"), number = document.createElement("strong");
+    caption.textContent = label; number.textContent = value.toFixed(2) + unit;
+    number.className = value < 0 ? "negative" : "positive"; item.append(caption, number); grid.append(item);
+  }
+  target.append(grid);
+  const evalDate = document.querySelector("#evaluation").value;
+  const dates = [...new Set(positions.map(p => p.date))].sort();
+  const note = document.createElement("p");
+  note.className = "note";
+  note.textContent = "관측일 " + dates.join(" / ") + (evalDate ? " · 평가일 " + evalDate : " · 평가일 미입력") +
+    (dates.length > 1 ? " · 기초자산별 관측일 다름" : "") +
+    (evalDate && evalDate < dates.at(-1) ? " · 지난 평가일의 상환 결과로 해석 불가" : "");
+  target.append(note);
+}
+function addRow(index = 0) {
+  if (rows.children.length >= quotes.length) return;
+  const row = document.createElement("tr");
+  row.innerHTML = '<td><select aria-label="기초자산"></select></td><td><span data-price></span><small></small></td><td><input type="number" min="0.001" step="any" aria-label="발행기준가" autocomplete="off"></td><td data-ratio></td><td><button type="button" aria-label="기초자산 삭제">×</button></td>';
+  const select = row.querySelector("select");
+  quotes.forEach((q, i) => { const option = document.createElement("option"); option.value = i; option.textContent = q.label; select.append(option); });
+  select.value = index; row.querySelector("button").onclick = () => { row.remove(); update(); };
+  rows.append(row); update();
+}
+document.querySelector("#editor").addEventListener("input", update);
+document.querySelector("#add").onclick = () => addRow(rows.children.length);
+document.querySelector("#reset").onclick = () => { rows.replaceChildren(); document.querySelectorAll(".terms input").forEach(el => el.value = ""); addRow(); };
+addRow();
+</script>
+</html>

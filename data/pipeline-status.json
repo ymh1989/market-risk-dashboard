@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-13 09:01:12 KST",
+  "generatedAt": "2026-10-13 09:38:48 KST",
   "current": {
     "runId": "20261013T090008-0900-live",
     "status": "success",
@@ -14,7 +14,9 @@
     "dashboardGeneratedAt": "2026-10-13 09:00 KST",
     "mlGeneratedAt": "2026-10-13 07:31 KST",
     "qualityScore": 95.5,
-    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+    "calculationCompletedAt": "2026-10-13 09:01:12 KST",
+    "calculationDurationSeconds": 64
   },
   "schedule": {
     "timezone": "Asia/Seoul",
@@ -138,9 +140,9 @@
     {
       "id": "deployment",
       "label": "Git·Pages 배포",
-      "status": "success",
+      "status": "pending",
       "durationSeconds": null,
-      "detail": "공개된 상태 파일은 Git 푸시와 Pages 배포가 완료된 실행입니다."
+      "detail": "계산 완료 후 별도 확인 · 실제 게시 확인 기록은 다음 갱신에 반영"
     }
   ],
   "sources": [
@@ -227,7 +229,7 @@
     {
       "id": "m7-credit",
       "label": "M7 Credit Stress Proxy",
-      "status": "warning",
+      "status": "ok",
       "lastDate": "2026-10-12",
       "oldestLastDate": "2026-10-08",
       "seriesCount": 14,
@@ -308,23 +310,25 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-10-13 09:01:12 KST"
+      "generatedAt": "2026-10-13 09:38:47 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 95.5,
+    "score": 98.8,
     "referenceDate": "2026-10-13",
     "summary": {
       "checks": 255,
-      "ok": 232,
-      "warning": 23,
+      "ok": 249,
+      "warning": 6,
       "error": 0,
       "sourceSeriesExpected": 100,
       "sourceSeriesPresent": 100,
       "freshSeries": 99,
       "staleSeries": 1,
-      "fallbackSeries": 13
+      "fallbackSeries": 13,
+      "actionRequired": 6,
+      "information": 17
     },
     "issues": [
       {
@@ -332,6 +336,7 @@
         "category": "source",
         "label": "CSI 300",
         "status": "warning",
+        "attention": "action",
         "detail": "yahoo · skipped_low_coverage · 최신 2026-10-12 · 관측치 1개 · 커버리지 7.7%",
         "groupId": "ml-input",
         "lastDate": "2026-10-12",
@@ -340,74 +345,270 @@
         "required": false
       },
       {
+        "id": "cache:naver-market-live:bdti",
+        "category": "cache",
+        "label": "시장지표 최신값/bdti",
+        "status": "warning",
+        "attention": "action",
+        "detail": "2026-10-09 · 7,964.0000 · 원천표기 실시간 · live",
+        "lastDate": "2026-10-09",
+        "lagBusinessDays": 2,
+        "calendarBasis": "weekdays",
+        "reason": null
+      },
+      {
+        "id": "cache:naver-market-live:bdi",
+        "category": "cache",
+        "label": "시장지표 최신값/bdi",
+        "status": "warning",
+        "attention": "action",
+        "detail": "2026-10-09 · 2,917.0000 · 원천표기 실시간 · live",
+        "lastDate": "2026-10-09",
+        "lagBusinessDays": 2,
+        "calendarBasis": "weekdays",
+        "reason": null
+      },
+      {
+        "id": "cache:naver-market-live:us2y_naver",
+        "category": "cache",
+        "label": "시장지표 최신값/us2y_naver",
+        "status": "warning",
+        "attention": "action",
+        "detail": "2026-10-09 · 4.7910 · 원천표기 실시간 · live",
+        "lastDate": "2026-10-09",
+        "lagBusinessDays": 2,
+        "calendarBasis": "weekdays",
+        "reason": null
+      },
+      {
+        "id": "cache:naver-market-live:us10y_naver",
+        "category": "cache",
+        "label": "시장지표 최신값/us10y_naver",
+        "status": "warning",
+        "attention": "action",
+        "detail": "2026-10-09 · 5.2420 · 원천표기 실시간 · live",
+        "lastDate": "2026-10-09",
+        "lagBusinessDays": 2,
+        "calendarBasis": "weekdays",
+        "reason": null
+      },
+      {
+        "id": "cache:naver-market-live:us_10y2y_spread",
+        "category": "cache",
+        "label": "시장지표 최신값/us_10y2y_spread",
+        "status": "warning",
+        "attention": "action",
+        "detail": "2026-10-09 · 0.4510 · 원천표기 장중 계산 · derived: live + live",
+        "lastDate": "2026-10-09",
+        "lagBusinessDays": 2,
+        "calendarBasis": "weekdays",
+        "reason": null
+      }
+    ],
+    "notices": [
+      {
         "id": "source:m7:price:AAPL",
         "category": "source",
         "label": "price:AAPL",
-        "status": "warning",
+        "status": "ok",
+        "attention": "information",
         "detail": "최신 2026-10-12 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
         "lastDate": "2026-10-12",
-        "fetchStatus": "dashboard_yahoo"
+        "fetchStatus": "dashboard_yahoo",
+        "reason": "검증된 대체값"
       },
       {
         "id": "source:m7:price:AMZN",
         "category": "source",
         "label": "price:AMZN",
-        "status": "warning",
+        "status": "ok",
+        "attention": "information",
         "detail": "최신 2026-10-12 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
         "lastDate": "2026-10-12",
-        "fetchStatus": "dashboard_yahoo"
+        "fetchStatus": "dashboard_yahoo",
+        "reason": "검증된 대체값"
       },
       {
         "id": "source:m7:price:GOOGL",
         "category": "source",
         "label": "price:GOOGL",
-        "status": "warning",
+        "status": "ok",
+        "attention": "information",
         "detail": "최신 2026-10-12 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
         "lastDate": "2026-10-12",
-        "fetchStatus": "dashboard_yahoo"
+        "fetchStatus": "dashboard_yahoo",
+        "reason": "검증된 대체값"
       },
       {
         "id": "source:m7:price:HYG",
         "category": "source",
         "label": "price:HYG",
-        "status": "warning",
+        "status": "ok",
+        "attention": "information",
         "detail": "최신 2026-10-12 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
         "lastDate": "2026-10-12",
-        "fetchStatus": "dashboard_yahoo"
+        "fetchStatus": "dashboard_yahoo",
+        "reason": "검증된 대체값"
       },
       {
         "id": "source:m7:price:IEF",
         "category": "source",
         "label": "price:IEF",
-        "status": "warning",
+        "status": "ok",
+        "attention": "information",
         "detail": "최신 2026-10-12 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
         "lastDate": "2026-10-12",
-        "fetchStatus": "dashboard_yahoo"
+        "fetchStatus": "dashboard_yahoo",
+        "reason": "검증된 대체값"
       },
       {
         "id": "source:m7:price:IGIB",
         "category": "source",
         "label": "price:IGIB",
-        "status": "warning",
+        "status": "ok",
+        "attention": "information",
         "detail": "최신 2026-10-12 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
         "lastDate": "2026-10-12",
-        "fetchStatus": "dashboard_yahoo"
+        "fetchStatus": "dashboard_yahoo",
+        "reason": "검증된 대체값"
       },
       {
         "id": "source:m7:price:LQD",
         "category": "source",
         "label": "price:LQD",
-        "status": "warning",
+        "status": "ok",
+        "attention": "information",
         "detail": "최신 2026-10-12 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
         "lastDate": "2026-10-12",
-        "fetchStatus": "dashboard_yahoo"
+        "fetchStatus": "dashboard_yahoo",
+        "reason": "검증된 대체값"
+      },
+      {
+        "id": "source:m7:price:META",
+        "category": "source",
+        "label": "price:META",
+        "status": "ok",
+        "attention": "information",
+        "detail": "최신 2026-10-12 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-10-12",
+        "fetchStatus": "dashboard_yahoo",
+        "reason": "검증된 대체값"
+      },
+      {
+        "id": "source:m7:price:MSFT",
+        "category": "source",
+        "label": "price:MSFT",
+        "status": "ok",
+        "attention": "information",
+        "detail": "최신 2026-10-12 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-10-12",
+        "fetchStatus": "dashboard_yahoo",
+        "reason": "검증된 대체값"
+      },
+      {
+        "id": "source:m7:price:NVDA",
+        "category": "source",
+        "label": "price:NVDA",
+        "status": "ok",
+        "attention": "information",
+        "detail": "최신 2026-10-12 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-10-12",
+        "fetchStatus": "dashboard_yahoo",
+        "reason": "검증된 대체값"
+      },
+      {
+        "id": "source:m7:price:QQQ",
+        "category": "source",
+        "label": "price:QQQ",
+        "status": "ok",
+        "attention": "information",
+        "detail": "최신 2026-10-12 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-10-12",
+        "fetchStatus": "dashboard_yahoo",
+        "reason": "검증된 대체값"
+      },
+      {
+        "id": "source:m7:price:TSLA",
+        "category": "source",
+        "label": "price:TSLA",
+        "status": "ok",
+        "attention": "information",
+        "detail": "최신 2026-10-12 · 영업일 시차 1일 · dashboard_yahoo",
+        "groupId": "m7-credit",
+        "lastDate": "2026-10-12",
+        "fetchStatus": "dashboard_yahoo",
+        "reason": "검증된 대체값"
+      },
+      {
+        "id": "cache:naver-market-live:jp10y_naver",
+        "category": "cache",
+        "label": "시장지표 최신값/jp10y_naver",
+        "status": "ok",
+        "attention": "information",
+        "detail": "2026-10-10 · 3.0160 · 원천표기 2시간 지연 · live",
+        "lastDate": "2026-10-10",
+        "lagBusinessDays": 1,
+        "calendarBasis": "XTKS",
+        "reason": "휴장 반영"
+      },
+      {
+        "id": "cache:naver-market-live:jp2y_naver",
+        "category": "cache",
+        "label": "시장지표 최신값/jp2y_naver",
+        "status": "ok",
+        "attention": "information",
+        "detail": "2026-10-10 · 1.9120 · 원천표기 2시간 지연 · live",
+        "lastDate": "2026-10-10",
+        "lagBusinessDays": 1,
+        "calendarBasis": "XTKS",
+        "reason": "휴장 반영"
+      },
+      {
+        "id": "cache:naver-market-live:jp30y_naver",
+        "category": "cache",
+        "label": "시장지표 최신값/jp30y_naver",
+        "status": "ok",
+        "attention": "information",
+        "detail": "2026-10-10 · 4.0680 · 원천표기 2시간 지연 · live",
+        "lastDate": "2026-10-10",
+        "lagBusinessDays": 1,
+        "calendarBasis": "XTKS",
+        "reason": "휴장 반영"
+      },
+      {
+        "id": "cache:naver-market-live:jp_10y2y_spread",
+        "category": "cache",
+        "label": "시장지표 최신값/jp_10y2y_spread",
+        "status": "ok",
+        "attention": "information",
+        "detail": "2026-10-10 · 1.1040 · 원천표기 장중 계산 · derived: live + live",
+        "lastDate": "2026-10-10",
+        "lagBusinessDays": 1,
+        "calendarBasis": "XTKS",
+        "reason": "휴장 반영"
+      },
+      {
+        "id": "cache:naver-market-live:jp_30y10y_spread",
+        "category": "cache",
+        "label": "시장지표 최신값/jp_30y10y_spread",
+        "status": "ok",
+        "attention": "information",
+        "detail": "2026-10-10 · 1.0520 · 원천표기 장중 계산 · derived: live + live",
+        "lastDate": "2026-10-10",
+        "lagBusinessDays": 1,
+        "calendarBasis": "XTKS",
+        "reason": "휴장 반영"
       }
     ]
   },
@@ -481,7 +682,9 @@
       "dashboardGeneratedAt": "2026-10-13 09:00 KST",
       "mlGeneratedAt": "2026-10-13 07:31 KST",
       "qualityScore": 95.5,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-13 09:01:12 KST",
+      "calculationDurationSeconds": 64
     },
     {
       "runId": "20261013T073008-0730-fast",
@@ -496,7 +699,9 @@
       "dashboardGeneratedAt": "2026-10-13 07:30 KST",
       "mlGeneratedAt": "2026-10-13 07:31 KST",
       "qualityScore": 94.9,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-13 07:31:50 KST",
+      "calculationDurationSeconds": 102
     },
     {
       "runId": "20261012T183006-1830-krx",
@@ -513,7 +718,9 @@
       "qualityScore": 97.5,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
       "krxReferenceDate": "2026-10-12",
-      "krxSessionDate": "2026-10-12"
+      "krxSessionDate": "2026-10-12",
+      "calculationCompletedAt": "2026-10-12 18:30:27 KST",
+      "calculationDurationSeconds": 21
     },
     {
       "runId": "20261012T153502-1535-full",
@@ -528,7 +735,9 @@
       "dashboardGeneratedAt": "2026-10-12 15:36 KST",
       "mlGeneratedAt": "2026-10-12 15:38 KST",
       "qualityScore": 97.5,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-12 15:38:35 KST",
+      "calculationDurationSeconds": 213
     },
     {
       "runId": "20261012T150003-1500-live",
@@ -543,7 +752,9 @@
       "dashboardGeneratedAt": "2026-10-12 15:01 KST",
       "mlGeneratedAt": "2026-10-10 07:49 KST",
       "qualityScore": 97.0,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-12 15:01:53 KST",
+      "calculationDurationSeconds": 110
     },
     {
       "runId": "20261012T140003-1400-live",
@@ -558,7 +769,9 @@
       "dashboardGeneratedAt": "2026-10-12 14:00 KST",
       "mlGeneratedAt": "2026-10-10 07:49 KST",
       "qualityScore": 97.2,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-12 14:00:48 KST",
+      "calculationDurationSeconds": 45
     },
     {
       "runId": "20261012T130005-1300-live",
@@ -573,7 +786,9 @@
       "dashboardGeneratedAt": "2026-10-12 13:00 KST",
       "mlGeneratedAt": "2026-10-10 07:49 KST",
       "qualityScore": 97.2,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-12 13:01:11 KST",
+      "calculationDurationSeconds": 66
     },
     {
       "runId": "20261012T120003-1200-live",
@@ -588,7 +803,9 @@
       "dashboardGeneratedAt": "2026-10-12 12:00 KST",
       "mlGeneratedAt": "2026-10-10 07:49 KST",
       "qualityScore": 97.2,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-12 12:00:47 KST",
+      "calculationDurationSeconds": 44
     },
     {
       "runId": "20261012T110005-1100-live",
@@ -603,7 +820,9 @@
       "dashboardGeneratedAt": "2026-10-12 11:00 KST",
       "mlGeneratedAt": "2026-10-10 07:49 KST",
       "qualityScore": 97.2,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-12 11:00:52 KST",
+      "calculationDurationSeconds": 47
     },
     {
       "runId": "20261012T100004-1000-live",
@@ -618,7 +837,9 @@
       "dashboardGeneratedAt": "2026-10-12 10:00 KST",
       "mlGeneratedAt": "2026-10-10 07:49 KST",
       "qualityScore": 97.0,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-12 10:01:02 KST",
+      "calculationDurationSeconds": 58
     },
     {
       "runId": "20261012T090007-0900-live",
@@ -633,7 +854,9 @@
       "dashboardGeneratedAt": "2026-10-12 09:00 KST",
       "mlGeneratedAt": "2026-10-10 07:49 KST",
       "qualityScore": 96.5,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-12 09:01:07 KST",
+      "calculationDurationSeconds": 60
     },
     {
       "runId": "20261010T073003-0730-full",
@@ -648,7 +871,9 @@
       "dashboardGeneratedAt": "2026-10-10 07:30 KST",
       "mlGeneratedAt": "2026-10-10 07:49 KST",
       "qualityScore": 97.5,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-10 07:49:39 KST",
+      "calculationDurationSeconds": 1176
     },
     {
       "runId": "20261009T183003-1830-krx",
@@ -665,7 +890,9 @@
       "qualityScore": 97.5,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
       "krxReferenceDate": "2026-10-09",
-      "krxSessionDate": "2026-10-08"
+      "krxSessionDate": "2026-10-08",
+      "calculationCompletedAt": "2026-10-09 18:30:09 KST",
+      "calculationDurationSeconds": 6
     },
     {
       "runId": "20261009T153506-1535-full",
@@ -680,7 +907,9 @@
       "dashboardGeneratedAt": "2026-10-09 15:35 KST",
       "mlGeneratedAt": "2026-10-09 15:38 KST",
       "qualityScore": 97.5,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-09 15:38:06 KST",
+      "calculationDurationSeconds": 180
     },
     {
       "runId": "20261009T150005-1500-live",
@@ -695,7 +924,9 @@
       "dashboardGeneratedAt": "2026-10-09 15:01 KST",
       "mlGeneratedAt": "2026-10-09 07:31 KST",
       "qualityScore": 97.1,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-09 15:01:50 KST",
+      "calculationDurationSeconds": 105
     },
     {
       "runId": "20261009T140004-1400-live",
@@ -710,7 +941,9 @@
       "dashboardGeneratedAt": "2026-10-09 14:00 KST",
       "mlGeneratedAt": "2026-10-09 07:31 KST",
       "qualityScore": 97.5,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-09 14:01:03 KST",
+      "calculationDurationSeconds": 59
     },
     {
       "runId": "20261009T130005-1300-live",
@@ -725,7 +958,9 @@
       "dashboardGeneratedAt": "2026-10-09 13:00 KST",
       "mlGeneratedAt": "2026-10-09 07:31 KST",
       "qualityScore": 97.5,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-09 13:01:03 KST",
+      "calculationDurationSeconds": 58
     },
     {
       "runId": "20261009T120006-1200-live",
@@ -740,7 +975,9 @@
       "dashboardGeneratedAt": "2026-10-09 12:00 KST",
       "mlGeneratedAt": "2026-10-09 07:31 KST",
       "qualityScore": 97.5,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-09 12:00:51 KST",
+      "calculationDurationSeconds": 45
     },
     {
       "runId": "20261009T110007-1100-live",
@@ -755,7 +992,9 @@
       "dashboardGeneratedAt": "2026-10-09 11:00 KST",
       "mlGeneratedAt": "2026-10-09 07:31 KST",
       "qualityScore": 97.1,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-09 11:01:01 KST",
+      "calculationDurationSeconds": 54
     },
     {
       "runId": "20261009T100005-1000-live",
@@ -770,7 +1009,9 @@
       "dashboardGeneratedAt": "2026-10-09 10:00 KST",
       "mlGeneratedAt": "2026-10-09 07:31 KST",
       "qualityScore": 97.1,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-09 10:00:54 KST",
+      "calculationDurationSeconds": 49
     },
     {
       "runId": "20261009T090003-0900-live",
@@ -785,7 +1026,9 @@
       "dashboardGeneratedAt": "2026-10-09 09:01 KST",
       "mlGeneratedAt": "2026-10-09 07:31 KST",
       "qualityScore": 96.9,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-09 09:01:34 KST",
+      "calculationDurationSeconds": 91
     },
     {
       "runId": "20261009T073003-0730-fast",
@@ -800,7 +1043,9 @@
       "dashboardGeneratedAt": "2026-10-09 07:30 KST",
       "mlGeneratedAt": "2026-10-09 07:31 KST",
       "qualityScore": 96.5,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-09 07:31:49 KST",
+      "calculationDurationSeconds": 106
     },
     {
       "runId": "20261008T183006-1830-krx",
@@ -817,7 +1062,9 @@
       "qualityScore": 97.5,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
       "krxReferenceDate": "2026-10-08",
-      "krxSessionDate": "2026-10-08"
+      "krxSessionDate": "2026-10-08",
+      "calculationCompletedAt": "2026-10-08 18:30:25 KST",
+      "calculationDurationSeconds": 19
     },
     {
       "runId": "20261008T153504-1535-full",
@@ -832,7 +1079,9 @@
       "dashboardGeneratedAt": "2026-10-08 15:36 KST",
       "mlGeneratedAt": "2026-10-08 15:38 KST",
       "qualityScore": 97.5,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-08 15:38:39 KST",
+      "calculationDurationSeconds": 215
     },
     {
       "runId": "20261008T150005-1500-live",
@@ -847,7 +1096,9 @@
       "dashboardGeneratedAt": "2026-10-08 15:01 KST",
       "mlGeneratedAt": "2026-10-08 07:31 KST",
       "qualityScore": 97.0,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-08 15:01:35 KST",
+      "calculationDurationSeconds": 90
     },
     {
       "runId": "20261008T140007-1400-live",
@@ -862,7 +1113,9 @@
       "dashboardGeneratedAt": "2026-10-08 14:00 KST",
       "mlGeneratedAt": "2026-10-08 07:31 KST",
       "qualityScore": 97.2,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-08 14:00:52 KST",
+      "calculationDurationSeconds": 45
     },
     {
       "runId": "20261008T130004-1300-live",
@@ -877,7 +1130,9 @@
       "dashboardGeneratedAt": "2026-10-08 13:00 KST",
       "mlGeneratedAt": "2026-10-08 07:31 KST",
       "qualityScore": 97.2,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-08 13:00:55 KST",
+      "calculationDurationSeconds": 51
     },
     {
       "runId": "20261008T120004-1200-live",
@@ -892,7 +1147,9 @@
       "dashboardGeneratedAt": "2026-10-08 12:00 KST",
       "mlGeneratedAt": "2026-10-08 07:31 KST",
       "qualityScore": 97.2,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-08 12:00:47 KST",
+      "calculationDurationSeconds": 43
     },
     {
       "runId": "20261008T110004-1100-live",
@@ -907,7 +1164,9 @@
       "dashboardGeneratedAt": "2026-10-08 11:00 KST",
       "mlGeneratedAt": "2026-10-08 07:31 KST",
       "qualityScore": 96.9,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-08 11:00:52 KST",
+      "calculationDurationSeconds": 48
     },
     {
       "runId": "20261008T100005-1000-live",
@@ -922,15 +1181,18 @@
       "dashboardGeneratedAt": "2026-10-08 10:00 KST",
       "mlGeneratedAt": "2026-10-08 07:31 KST",
       "qualityScore": 96.9,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "calculationCompletedAt": "2026-10-08 10:01:14 KST",
+      "calculationDurationSeconds": 69
     }
   ],
+  "lastVerifiedPublication": null,
   "publication": {
     "schemaVersion": 1,
     "runId": "20261013T090008-0900-live",
     "mode": "live",
     "state": "generated",
     "startedAt": "2026-10-13 09:00:08 KST",
-    "preparedAt": "2026-10-13 09:01:12 KST"
+    "preparedAt": "2026-10-13 09:38:48 KST"
   }
 }

@@ -233,7 +233,7 @@ wait_for_pages_deployment() {
   local attempt
 
   for ((attempt = 1; attempt <= PAGES_VERIFY_ATTEMPTS; attempt++)); do
-    if "$PYTHON_BIN" scripts/publication_delivery.py verify-remote --url "$PAGES_URL"; then
+    if "$PYTHON_BIN" scripts/publication_delivery.py verify-remote --url "$PAGES_URL" --receipt-dir "$STATE_DIR/delivery"; then
       echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] GitHub Pages 전체 게시 파일 반영을 확인했습니다: $expected_run_id"
       return 0
     fi
@@ -637,7 +637,8 @@ KEEP_FAILED_CANDIDATE=1
   --total-duration "$((RUN_COMPLETED_EPOCH - RUN_STARTED_EPOCH))" \
   --market-duration "$((MARKET_STAGE_COMPLETED_EPOCH - MARKET_STAGE_STARTED_EPOCH))" \
   --ml-duration "$((ML_STAGE_COMPLETED_EPOCH - ML_STAGE_STARTED_EPOCH))" \
-  --validation-duration "$((VALIDATION_STAGE_COMPLETED_EPOCH - VALIDATION_STAGE_STARTED_EPOCH))"
+  --validation-duration "$((VALIDATION_STAGE_COMPLETED_EPOCH - VALIDATION_STAGE_STARTED_EPOCH))" \
+  --delivery-receipts "$STATE_DIR/delivery"
 
 ATOMIC_PUBLICATION_ARGS=(
   --run-id "$RUN_ID"

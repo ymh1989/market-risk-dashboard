@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20261006-1";
+const ASSET_VERSION = "20261013-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -769,7 +769,7 @@ function buildScheduleOverview(pipelineStatus) {
         status: "success",
         tone: "good",
         statusLabel: matched.replacement ? "보완 완료" : "완료",
-        detail: `${formatKstClock(matched.run.completedAt)} ${matched.replacement ? "보완 실행 완료" : "완료"} · ${formatDurationSeconds(matched.run.durationSeconds)}`
+        detail: `${formatKstClock(matched.run.publishedAt ?? matched.run.completedAt)} ${matched.run.publishedAt ? "게시 확인" : "계산 완료"} · ${formatDurationSeconds(matched.run.endToEndDurationSeconds ?? matched.run.durationSeconds)}`
       };
     }
     if (item.timestamp > now) {
@@ -887,7 +887,7 @@ function renderOperationStatusStrip(pipelineStatus) {
       </div>
       <div>
         <small>마지막 성공</small>
-        <strong>${latestSuccess?.completedAt ?? "-"}</strong>
+        <strong>${latestSuccess?.publishedAt ?? latestSuccess?.completedAt ?? "-"} · ${latestSuccess?.publishedAt ? "게시 확인" : "계산 완료"}</strong>
       </div>
       <div>
         <small>다음 예약</small>
@@ -906,7 +906,8 @@ function operationStatusLabel(status) {
     success: "성공",
     ok: "정상",
     warning: "확인",
-    error: "오류"
+    error: "오류",
+    pending: "시각 미기록"
   }[status] ?? "확인";
 }
 
@@ -941,7 +942,7 @@ function renderScheduleOverview(pipelineStatus) {
           .join("")}
       </div>
       <footer class="operations-schedule-baseline">
-        <span>최근 성공 중앙 소요시간</span>
+        <span>최근 계산 중앙 소요시간</span>
         <strong>장중 갱신 ${formatDurationSeconds(overview.liveMedian)}</strong>
         <strong>KRX 확정 ${formatDurationSeconds(overview.krxMedian)}</strong>
         <strong>전체 갱신 ${formatDurationSeconds(overview.fullMedian)}</strong>
@@ -967,7 +968,7 @@ function renderOperationsPage(pipelineStatus) {
   const current = pipelineStatus.current;
   const runSummary = state.activeRun
     ? `${pipelineModeLabel(state.activeRun.mode)} · ${formatDurationSeconds(state.activeRun.elapsedSeconds)} 경과`
-    : `최근 완료 · ${pipelineModeLabel(current.mode)} · ${formatDurationSeconds(current.durationSeconds)}`;
+    : `최근 계산 · ${pipelineModeLabel(current.mode)} · ${formatDurationSeconds(current.calculationDurationSeconds ?? current.durationSeconds)}`;
   const quality = pipelineStatus.quality ?? {};
   const qualitySummary = quality.summary ?? {};
   const qualityIssues = quality.issues ?? [];
@@ -997,7 +998,8 @@ function renderOperationsPage(pipelineStatus) {
       </header>
 
       <section class="operations-facts" aria-label="운영 요약">
-        <div><small>마지막 성공</small><strong>${state.latestSuccess?.completedAt ?? "-"}</strong></div>
+        <div><small>데이터 계산 완료</small><strong>${current.calculationCompletedAt ?? current.completedAt ?? "-"}</strong></div>
+        <div><small>최근 홈페이지 게시 확인</small><strong>${pipelineStatus.lastVerifiedPublication?.publishedAt ?? "확인 기록 수집 전"}</strong><small>${pipelineStatus.lastVerifiedPublication ? `${pipelineModeLabel(pipelineStatus.lastVerifiedPublication.mode)} · 전체 ${formatDurationSeconds(pipelineStatus.lastVerifiedPublication.endToEndDurationSeconds)}` : "다음 갱신부터 실제 검증시각 표시"}</small></div>
         <div><small>다음 예약</small><strong>${state.nextRun ? `${state.nextRun.label} · ${pipelineModeLabel(state.nextRun.mode)}` : "-"}</strong></div>
         <div><small>예약 스케줄</small><strong>월 ${mondayScheduleText || "-"} · 화~금 ${scheduleText || "-"}${saturdayScheduleText ? ` · 토 ${saturdayScheduleText}` : ""}</strong></div>
         <div><small>데이터 기준일</small><strong>${current.dataAsOf ?? "-"}</strong></div>
@@ -1015,7 +1017,8 @@ function renderOperationsPage(pipelineStatus) {
           <div><small>원천 수집</small><strong>${qualitySummary.sourceSeriesPresent ?? "-"} / ${qualitySummary.sourceSeriesExpected ?? "-"}</strong></div>
           <div><small>허용시차 내</small><strong>${qualitySummary.freshSeries ?? "-"}개</strong></div>
           <div><small>보강·대체</small><strong>${qualitySummary.fallbackSeries ?? "-"}개</strong></div>
-          <div><small>확인·오류</small><strong>${(qualitySummary.warning ?? 0) + (qualitySummary.error ?? 0)}건</strong></div>
+          <div><small>조치 필요</small><strong>${qualitySummary.actionRequired ?? ((qualitySummary.warning ?? 0) + (qualitySummary.error ?? 0))}건</strong></div>
+          <div><small>대체값·휴장 안내</small><strong>${qualitySummary.information ?? 0}건</strong></div>
         </div>
         ${
           qualityIssues.length
@@ -1032,6 +1035,7 @@ function renderOperationsPage(pipelineStatus) {
                 .join("")}</div>`
             : `<p class="data-quality-clear">필수 원천 · 최신성 · 시계열 정렬 · 산출물 기준일 검사 통과</p>`
         }
+        ${quality.notices?.length ? `<details class="data-quality-notices"><summary>정상 대체값·휴장 내역 ${quality.notices.length}건</summary><div class="data-quality-issues">${quality.notices.map((notice) => `<div class="data-quality-issue"><span>${notice.reason ?? "안내"}</span><strong>${notice.label}</strong>${renderNarrativeList(notice.detail, "narrative-list--compact")}</div>`).join("")}</div></details>` : ""}
       </section>
 
       <section class="operations-section">
@@ -1105,7 +1109,7 @@ function renderOperationsPage(pipelineStatus) {
         </div>
         <div>
           <div class="operations-section__heading">
-            <div><span class="eyebrow">History</span><h3>최근 성공 이력</h3></div>
+            <div><span class="eyebrow">History</span><h3>최근 실행 이력</h3></div>
           </div>
           <div class="run-history-list">
             ${(pipelineStatus.history ?? [])
@@ -1113,8 +1117,8 @@ function renderOperationsPage(pipelineStatus) {
                 (run) => `
                   <div>
                     <span>${run.scheduledTime ?? "수동"} · ${pipelineModeLabel(run.mode)}</span>
-                    <strong>${run.completedAt}</strong>
-                    <small>${formatDurationSeconds(run.durationSeconds)}</small>
+                    <strong>계산 ${run.calculationCompletedAt ?? run.completedAt}</strong>
+                    <small>${run.publishedAt ? `게시 확인 ${run.publishedAt} · 전체 ${formatDurationSeconds(run.endToEndDurationSeconds)}` : `계산 ${formatDurationSeconds(run.durationSeconds)} · 게시시각 미기록`}</small>
                   </div>
                 `
               )
@@ -2006,7 +2010,7 @@ function renderElsReturn(value) {
 function elsPriceHistory(item) {
   const byDate = new Map();
   [...(item.ytdPriceSeries ?? []), ...(item.sixMonthPriceSeries ?? [])].forEach((point) => {
-    if (!point?.date || !Number.isFinite(Number(point.close))) return;
+    if (!point?.date || point.close == null || point.close === "" || !Number.isFinite(Number(point.close)) || Number(point.close) <= 0) return;
     byDate.set(point.date, { date: point.date, close: Number(point.close) });
   });
   return [...byDate.values()].sort((left, right) => dateMs(left.date) - dateMs(right.date));
@@ -2032,10 +2036,14 @@ function elsDerivedPeriodReturns(item) {
   };
   const monthAnchor = new Date(Date.UTC(latestDate.getUTCFullYear(), latestDate.getUTCMonth(), 0));
   const yearAnchor = new Date(Date.UTC(latestDate.getUTCFullYear(), 0, 0));
-  const threeMonthAnchor = new Date(latestDate);
-  threeMonthAnchor.setUTCMonth(threeMonthAnchor.getUTCMonth() - 3);
-  const sixMonthAnchor = new Date(latestDate);
-  sixMonthAnchor.setUTCMonth(sixMonthAnchor.getUTCMonth() - 6);
+  const monthOffset = (months) => {
+    const anchor = new Date(Date.UTC(latestDate.getUTCFullYear(), latestDate.getUTCMonth() - months, 1));
+    const lastDay = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 0)).getUTCDate();
+    anchor.setUTCDate(Math.min(latestDate.getUTCDate(), lastDay));
+    return anchor;
+  };
+  const threeMonthAnchor = monthOffset(3);
+  const sixMonthAnchor = monthOffset(6);
   const fallback = {
     return1dPct: observationReturn(1),
     return1wPct: observationReturn(5),
@@ -3296,13 +3304,23 @@ function formatMarketSnapshotTime(observedAt) {
 
 function usableMarketLiveSnapshot(definition, marketIndexes, confirmedLatest) {
   const snapshot = marketIndexes?.liveSnapshots?.[definition.id];
+  // 오프라인도 저장 당시 시점으로 판독하며, 오래된 잠정값으로 확정값을 덮지 않습니다.
+  const generatedAt = String(marketIndexes?.liveSnapshotsGeneratedAt ?? marketIndexes?.generatedAt ?? "");
+  const parsedReference = generatedAt.endsWith("KST")
+    ? parseKstTimestamp(generatedAt) : Date.parse(generatedAt);
+  const reference = Number.isFinite(parsedReference) ? parsedReference : Date.now();
+  const observed = Date.parse(snapshot?.observedAt ?? "");
+  const ageHours = (reference - observed) / 3600000;
   if (
     !snapshot?.isProvisional ||
+    snapshot.close === null || snapshot.close === "" ||
     !Number.isFinite(Number(snapshot.close)) ||
     !snapshot.date ||
-    typeof snapshot.observedAt !== "string" ||
-    snapshot.observedAt.length < 16 ||
-    snapshot.date < confirmedLatest.date
+    !Number.isFinite(observed) ||
+    !/[Zz]|[+-]\d{2}:\d{2}$/.test(snapshot.observedAt) ||
+    ageHours < 0 || ageHours > (definition.type === "crypto" ? 6 : 36) ||
+    !["live", "naver-crypto", "derived: live + live"].includes(snapshot.fetchStatus) ||
+    snapshot.date <= confirmedLatest.date
   ) {
     return null;
   }
@@ -3447,8 +3465,8 @@ function renderMarketTrendRow(item, seriesIndex, timelineDomains) {
         <strong>${item.label}</strong>
         ${
           item.hasLive
-            ? `<span class="market-trend-row__asof market-trend-row__asof--live">${item.liveSnapshot.displayStatus || "최신"} ${formatMarketSnapshotTime(item.liveSnapshot.observedAt)} KST · 잠정</span>`
-            : `<span class="market-trend-row__asof">${item.latest.date}</span>`
+            ? `<span class="market-trend-row__asof market-trend-row__asof--live">${item.latest.date} · ${formatMarketSnapshotTime(item.liveSnapshot.observedAt)} KST · 잠정</span>`
+            : `<span class="market-trend-row__asof">${item.latest.date} · 확정</span>`
         }
       </div>
       <div class="market-trend-row__chart">

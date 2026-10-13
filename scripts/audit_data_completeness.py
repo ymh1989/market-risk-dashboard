@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+from functools import lru_cache
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -77,10 +78,32 @@ def artifact_generated_at(payload: dict[str, Any]) -> Any:
     return payload.get("generatedAt") or (payload.get("metadata") or {}).get("generatedAt")
 
 
-def business_day_lag(last_date: date, reference_date: date) -> int:
+@lru_cache(maxsize=16)
+def session_calendar(name: str, year: int) -> Any:
+    """설치된 거래소 달력만 사용하며 미지원 시장은 평일 기준을 유지합니다."""
+    try:
+        import exchange_calendars
+        return exchange_calendars.get_calendar(name, start=f"{year - 1}-01-01", end=f"{year + 1}-12-31")
+    except (ImportError, ValueError, KeyError):
+        return None
+
+
+def market_calendar_name(item_id: str) -> str | None:
+    # 미국 채권에 주식 휴장일을 적용하지 않습니다. 시장별 달력이 없으면 보수적으로 유지합니다.
+    if item_id.startswith(("jp", "jgb")):
+        return "XTKS"
+    if item_id.startswith(("kr", "kospi")):
+        return "XKRX"
+    return None
+
+
+def business_day_lag(last_date: date, reference_date: date, calendar_name: str | None = None) -> int:
     if last_date >= reference_date:
         return 0
     lag = 0
+    calendar = session_calendar(calendar_name, reference_date.year) if calendar_name else None
+    if calendar is not None:
+        return len(calendar.sessions_in_range(last_date + timedelta(days=1), reference_date))
     cursor = last_date + timedelta(days=1)
     while cursor <= reference_date:
         if cursor.weekday() < 5:
@@ -116,6 +139,7 @@ def make_check(
         "category": category,
         "label": label,
         "status": status,
+        "attention": "action" if status != "ok" else "none",
         "detail": detail,
         **extra,
     }
@@ -382,6 +406,15 @@ def assess_m7_source_group(
             status = "warning"
         else:
             status = "ok"
+        verified_fallback = (
+            provider == "dashboard_yahoo" and lag <= allowed_lag
+            and item.get("is_stale") is False
+            and (item.get("row_count") or 0) >= 252
+            and item.get("duplicate_count") == 0 and item.get("null_count") == 0
+            and item.get("status") in {"ok", "warning"}
+        )
+        if verified_fallback:
+            status = "ok"
         fresh_count += int(last_date is not None and lag <= allowed_lag)
         checks.append(
             make_check(
@@ -396,6 +429,8 @@ def assess_m7_source_group(
                 groupId="m7-credit",
                 lastDate=item.get("last_value_date"),
                 fetchStatus=provider,
+                attention="information" if verified_fallback else ("action" if status != "ok" else "none"),
+                reason="검증된 대체값" if verified_fallback else None,
             )
         )
     present_count = sum(source_id in sources for source_id in required)
@@ -860,7 +895,10 @@ def cache_series_checks(
             or not isinstance(current_value, (int, float))
             or not isinstance(previous_close, (int, float))
         )
-        lag = business_day_lag(observed_date, reference_date) if observed_date else 999
+        calendar_name = market_calendar_name(item_id)
+        calendar = session_calendar(calendar_name, reference_date.year) if calendar_name else None
+        lag = business_day_lag(observed_date, reference_date, calendar_name) if observed_date else 999
+        weekday_lag = business_day_lag(observed_date, reference_date) if observed_date else 999
         allowed_lag = (
             7
             if MARKET_DIRECTION_INDEXES.get(item_id, {}).get("frequency") == "weekly"
@@ -871,7 +909,7 @@ def cache_series_checks(
             "필수값 누락"
             if malformed
             else f"{observed_date.isoformat()} · {float(current_value):,.4f}"
-            f" · {snapshot.get('displayStatus', '상태 미상')}"
+            f" · 원천표기 {snapshot.get('displayStatus', '상태 미상')}"
             f" · {snapshot.get('fetchStatus', '상태 미상')}"
         )
         checks.append(
@@ -883,6 +921,9 @@ def cache_series_checks(
                 detail,
                 lastDate=observed_date.isoformat() if observed_date else None,
                 lagBusinessDays=lag,
+                calendarBasis=calendar_name if calendar is not None else "weekdays",
+                attention="information" if status == "ok" and weekday_lag > lag else ("action" if status != "ok" else "none"),
+                reason="휴장 반영" if weekday_lag > lag else None,
             )
         )
     return checks
@@ -1059,7 +1100,11 @@ def build_report(now: datetime | None = None) -> dict[str, Any]:
     source_present = sum(group["seriesPresent"] for group in groups)
     fresh_series = sum(group["freshCount"] for group in groups)
     fallback_series = sum(group["fallbackCount"] for group in groups)
-    issues = [item for item in checks if item["status"] != "ok"]
+    issues = sorted(
+        (item for item in checks if item["status"] != "ok"),
+        key=lambda item: -STATUS_RANK[item["status"]],
+    )
+    notices = [item for item in checks if item.get("attention") == "information"]
 
     return {
         "schemaVersion": 1,
@@ -1077,9 +1122,12 @@ def build_report(now: datetime | None = None) -> dict[str, Any]:
             "freshSeries": fresh_series,
             "staleSeries": max(0, source_present - fresh_series),
             "fallbackSeries": fallback_series,
+            "actionRequired": len(issues),
+            "information": len(notices),
         },
         "sourceGroups": groups,
         "issues": issues,
+        "notices": notices,
         "checks": checks,
     }
 

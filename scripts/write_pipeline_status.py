@@ -216,9 +216,9 @@ def stage_status(args):
         {
             "id": "deployment",
             "label": "Git·Pages 배포",
-            "status": "success",
+            "status": "pending",
             "durationSeconds": None,
-            "detail": "공개된 상태 파일은 Git 푸시와 Pages 배포가 완료된 실행입니다.",
+            "detail": "계산 완료 후 별도 확인 · 실제 게시 확인 기록은 다음 갱신에 반영",
         },
     ]
 
@@ -287,6 +287,12 @@ def build_payload(args):
         "startedAt": args.started_at,
         "completedAt": args.completed_at,
         "durationSeconds": args.total_duration,
+        "statusScope": "calculation",
+        "calculationCompletedAt": args.completed_at,
+        "calculationDurationSeconds": args.total_duration,
+        "publicationStatus": "awaiting-verification",
+        "publishedAt": None,
+        "endToEndDurationSeconds": None,
         "dataAsOf": dashboard_metadata.get("asOf"),
         "dashboardGeneratedAt": dashboard_metadata.get("generatedAt"),
         "mlGeneratedAt": data["ml"].get("generatedAt"),
@@ -331,6 +337,7 @@ def build_payload(args):
             "referenceDate": data["quality"].get("referenceDate"),
             "summary": data["quality"].get("summary") or {},
             "issues": (data["quality"].get("issues") or [])[:8],
+            "notices": data["quality"].get("notices") or [],
         },
         "researchLog": research_log(data["dashboard"]),
         "history": history[:30],
@@ -339,6 +346,31 @@ def build_payload(args):
         for key in ("current", "schedule", "stages", "history"):
             if key in previous:
                 payload[key] = previous[key]
+    receipts_dir = getattr(args, "delivery_receipts", None)
+    if payload["current"].get("completedAt"):
+        for run in [payload["current"], *payload["history"]]:
+            if run.get("completedAt"):
+                run.setdefault("calculationCompletedAt", run["completedAt"])
+                run.setdefault("calculationDurationSeconds", run.get("durationSeconds"))
+        for stage in payload["stages"]:
+            if stage.get("id") == "deployment" and not payload["current"].get("publishedAt"):
+                stage.update(status="pending", durationSeconds=None, detail="계산 완료 후 별도 확인 · 실제 게시 확인 기록은 다음 갱신에 반영")
+    if receipts_dir:
+        receipts = [read_json(path) for path in sorted(Path(receipts_dir).glob("*.json"), reverse=True)[:60]]
+        for run in [payload["current"], *payload["history"]]:
+            # 경로 구성에 외부 실행번호를 사용하지 않고 파일 안의 실행번호를 대조합니다.
+            for receipt in receipts:
+                if receipt.get("runId") == run.get("runId") and receipt.get("publicationStatus") == "verified":
+                    for key in ("publicationStatus", "publishedAt", "endToEndDurationSeconds", "deploymentDurationSeconds"):
+                        run[key] = receipt.get(key)
+                    break
+    if payload["current"].get("publicationStatus") == "verified":
+        for stage in payload["stages"]:
+            if stage.get("id") == "deployment":
+                stage.update(status="success", durationSeconds=payload["current"].get("deploymentDurationSeconds"),
+                             detail=f"전체 게시 파일 검증 완료 · {payload['current']['publishedAt']}")
+    verified = [run for run in payload["history"] if run.get("publicationStatus") == "verified"]
+    payload["lastVerifiedPublication"] = verified[0] if verified else previous.get("lastVerifiedPublication")
     return payload
 
 
@@ -373,6 +405,7 @@ def parse_args():
     parser.add_argument("--market-duration", type=int, default=0)
     parser.add_argument("--ml-duration", type=int, default=0)
     parser.add_argument("--validation-duration", type=int, default=0)
+    parser.add_argument("--delivery-receipts", type=Path, help="원격 게시 검증 영수증 디렉터리")
     parser.add_argument(
         "--preserve-current",
         action="store_true",

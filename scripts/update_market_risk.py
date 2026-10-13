@@ -1223,14 +1223,11 @@ def fetch_naver_market_index_latest_snapshots(
             confirmed_rows = series_map.get(key) or []
             confirmed_date = str(confirmed_rows[-1].get("date") or "") if confirmed_rows else ""
             snapshot["confirmedDate"] = confirmed_date or None
-            same_day_open = (
-                snapshot.get("date") == confirmed_date
-                and snapshot.get("marketStatus") == "OPEN"
-                and snapshot.get("priceDataType") != "CLOSING_PRICE"
-            )
+            # 같은 날짜의 확정값은 잠정값보다 우선하며, 조회 성공과 시세 최신성은 구분합니다.
             snapshot["isProvisional"] = bool(
                 snapshot.get("date")
-                and (snapshot["date"] > confirmed_date or same_day_open)
+                and snapshot["date"] > confirmed_date
+                and _is_recent_live_snapshot(snapshot)
             )
             snapshot["fetchStatus"] = statuses[key]
             snapshots[key] = snapshot
@@ -1291,10 +1288,15 @@ def build_rate_spread_live_snapshots(series_map, snapshots, statuses=None):
         previous_close = long_snapshot["previousClose"] - short_snapshot["previousClose"]
         confirmed_rows = series_map.get(key) or []
         confirmed_date = confirmed_rows[-1]["date"] if confirmed_rows else None
-        observed_at = max(
-            str(long_snapshot.get("observedAt") or ""),
-            str(short_snapshot.get("observedAt") or ""),
-        )
+        # 스프레드는 더 오래된 구성 금리의 관측시각으로 최신성을 평가합니다.
+        try:
+            source_times = [str(item.get("observedAt") or "") for item in (long_snapshot, short_snapshot)]
+            parsed_times = [datetime.fromisoformat(value.replace("Z", "+00:00")) for value in source_times]
+            if any(value.tzinfo is None for value in parsed_times):
+                continue
+            observed_at = source_times[parsed_times.index(min(parsed_times))]
+        except ValueError:
+            continue
         is_provisional = bool(
             long_snapshot.get("isProvisional") or short_snapshot.get("isProvisional")
         )

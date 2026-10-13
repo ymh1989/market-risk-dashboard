@@ -5,12 +5,15 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import re
 import subprocess
 import tempfile
 import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from datetime import datetime, timedelta, timezone
 
 try:
     from prepare_atomic_publication import MANIFEST_PATH, PublicationError, verify_publication
@@ -20,6 +23,43 @@ except ModuleNotFoundError:
 
 ROOT = Path(__file__).resolve().parents[1]
 UI_ONLY_PATHS = {"index.html", "src/app.js", "src/styles.css", "README.md"}
+
+
+def record_delivery_receipt(root: Path, manifest: dict, directory: Path, *, now: datetime | None = None) -> dict:
+    """실제 원격 파일 검증 직후에만 로컬 게시 확인 영수증을 기록합니다."""
+    run_id = manifest["runId"]
+    if not re.fullmatch(r"[A-Za-z0-9_:-]+", run_id):
+        raise PublicationError("게시 확인 실행번호 형식이 올바르지 않습니다.")
+    current = json.loads((root / "data/pipeline-status.json").read_text())["current"]
+    if current.get("runId") != run_id:
+        raise PublicationError("게시 확인 실행번호가 운영 상태와 다릅니다.")
+    existing = directory / f"{run_id}.json"
+    if existing.exists():
+        previous = json.loads(existing.read_text(encoding="utf-8"))
+        if previous.get("runId") == run_id and previous.get("publicationStatus") == "verified":
+            return previous
+    kst = timezone(timedelta(hours=9))
+    confirmed = (now or datetime.now(kst)).astimezone(kst)
+    def elapsed(value):
+        if not value:
+            return None
+        started = datetime.fromisoformat(value.replace(" KST", "+09:00"))
+        if started.tzinfo is None or started > confirmed:
+            raise PublicationError("게시 확인 시각이 실행 시각보다 이전입니다.")
+        return round((confirmed - started).total_seconds())
+    receipt = {
+        "runId": run_id, "publicationStatus": "verified",
+        "publishedAt": confirmed.strftime("%Y-%m-%d %H:%M:%S KST"),
+        "endToEndDurationSeconds": elapsed(current.get("startedAt")),
+        "deploymentDurationSeconds": elapsed(current.get("calculationCompletedAt") or current.get("completedAt")),
+        "artifactCount": manifest["artifactCount"],
+    }
+    directory.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=directory, delete=False) as handle:
+        json.dump(receipt, handle, ensure_ascii=False, indent=2)
+        temporary = Path(handle.name)
+    os.replace(temporary, directory / f"{run_id}.json")
+    return receipt
 
 
 def git(root: Path, *arguments: str) -> bytes:
@@ -114,6 +154,7 @@ def main() -> None:
     parser.add_argument("--url", default="https://ymh1989.github.io/market-risk-dashboard")
     parser.add_argument("--base", default="")
     parser.add_argument("--target", default="origin/main")
+    parser.add_argument("--receipt-dir", type=Path, help="실제 게시 확인 결과의 로컬 보관 경로")
     args = parser.parse_args()
     try:
         if args.command == "files":
@@ -129,6 +170,8 @@ def main() -> None:
                 if args.command == "verify-staged"
                 else verify_remote_publication(args.root, args.url)
             )
+            if args.command == "verify-remote" and args.receipt_dir:
+                record_delivery_receipt(args.root, manifest, args.receipt_dir)
             print(f"게시 검증 완료: {manifest['runId']} · {manifest['artifactCount']}개 파일")
     except PublicationError as error:
         raise SystemExit(f"게시 검증 실패: {error}") from None

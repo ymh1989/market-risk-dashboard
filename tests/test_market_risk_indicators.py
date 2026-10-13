@@ -170,6 +170,7 @@ def test_rate_spread_series_and_live_snapshot_are_derived_from_source_yields():
     assert live["us_10y2y_spread"]["changeBps"] == 4.0
     assert live["us_10y2y_spread"]["confirmedDate"] == "2026-08-25"
     assert live["us_10y2y_spread"]["isProvisional"] is True
+    assert live["us_10y2y_spread"]["observedAt"] == "2026-08-26T14:00:00+09:00"
     assert statuses["us_10y2y_spread"].startswith("derived:")
 
     mismatched = json.loads(json.dumps(snapshots))
@@ -402,6 +403,7 @@ def test_latest_snapshot_is_appended_as_provisional_without_changing_eod(monkeyp
         fake_latest,
     )
 
+    monkeypatch.setattr("scripts.update_market_risk._is_recent_live_snapshot", lambda snapshot: True)
     snapshots, statuses = fetch_naver_market_index_latest_snapshots(series_map)
 
     assert series_map == original
