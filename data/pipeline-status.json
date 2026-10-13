@@ -1,22 +1,26 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-13 09:38:48 KST",
+  "generatedAt": "2026-10-13 10:00:51 KST",
   "current": {
-    "runId": "20261013T090008-0900-live",
+    "runId": "20261013T100007-1000-live",
     "status": "success",
     "mode": "live",
     "trigger": "scheduled",
-    "scheduledTime": "09:00",
-    "startedAt": "2026-10-13 09:00:08 KST",
-    "completedAt": "2026-10-13 09:01:12 KST",
-    "durationSeconds": 64,
+    "scheduledTime": "10:00",
+    "startedAt": "2026-10-13 10:00:07 KST",
+    "completedAt": "2026-10-13 10:00:51 KST",
+    "durationSeconds": 44,
+    "statusScope": "calculation",
+    "calculationCompletedAt": "2026-10-13 10:00:51 KST",
+    "calculationDurationSeconds": 44,
+    "publicationStatus": "awaiting-verification",
+    "publishedAt": null,
+    "endToEndDurationSeconds": null,
     "dataAsOf": "2026-10-13",
-    "dashboardGeneratedAt": "2026-10-13 09:00 KST",
+    "dashboardGeneratedAt": "2026-10-13 10:00 KST",
     "mlGeneratedAt": "2026-10-13 07:31 KST",
-    "qualityScore": 95.5,
-    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-    "calculationCompletedAt": "2026-10-13 09:01:12 KST",
-    "calculationDurationSeconds": 64
+    "qualityScore": 98.2,
+    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
     "timezone": "Asia/Seoul",
@@ -120,7 +124,7 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 61,
+      "durationSeconds": 40,
       "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
     },
     {
@@ -256,7 +260,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-10-13 09:00 KST"
+      "generatedAt": "2026-10-13 10:00 KST"
     },
     {
       "id": "ml",
@@ -310,25 +314,25 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-10-13 09:38:47 KST"
+      "generatedAt": "2026-10-13 10:00:50 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 98.8,
+    "score": 98.2,
     "referenceDate": "2026-10-13",
     "summary": {
-      "checks": 255,
-      "ok": 249,
-      "warning": 6,
+      "checks": 254,
+      "ok": 245,
+      "warning": 9,
       "error": 0,
       "sourceSeriesExpected": 100,
       "sourceSeriesPresent": 100,
       "freshSeries": 99,
       "staleSeries": 1,
       "fallbackSeries": 13,
-      "actionRequired": 6,
-      "information": 17
+      "actionRequired": 9,
+      "information": 12
     },
     "issues": [
       {
@@ -343,6 +347,14 @@
         "observations": 1,
         "fetchStatus": "skipped_low_coverage",
         "required": false
+      },
+      {
+        "id": "cross:kospi-ml-snapshot",
+        "category": "alignment",
+        "label": "KOSPI 시장지표·ML 기준일",
+        "status": "warning",
+        "attention": "action",
+        "detail": "시장지표 2026-10-13 · ML 2026-10-12"
       },
       {
         "id": "cache:naver-market-live:bdti",
@@ -369,37 +381,49 @@
         "reason": null
       },
       {
-        "id": "cache:naver-market-live:us2y_naver",
+        "id": "cache:naver-market-live:jp10y_naver",
         "category": "cache",
-        "label": "시장지표 최신값/us2y_naver",
+        "label": "시장지표 최신값/jp10y_naver",
         "status": "warning",
         "attention": "action",
-        "detail": "2026-10-09 · 4.7910 · 원천표기 실시간 · live",
-        "lastDate": "2026-10-09",
+        "detail": "2026-10-10 · 3.0160 · 원천표기 2시간 지연 · live",
+        "lastDate": "2026-10-10",
         "lagBusinessDays": 2,
         "calendarBasis": "weekdays",
         "reason": null
       },
       {
-        "id": "cache:naver-market-live:us10y_naver",
+        "id": "cache:naver-market-live:jp2y_naver",
         "category": "cache",
-        "label": "시장지표 최신값/us10y_naver",
+        "label": "시장지표 최신값/jp2y_naver",
         "status": "warning",
         "attention": "action",
-        "detail": "2026-10-09 · 5.2420 · 원천표기 실시간 · live",
-        "lastDate": "2026-10-09",
+        "detail": "2026-10-10 · 1.9120 · 원천표기 2시간 지연 · live",
+        "lastDate": "2026-10-10",
         "lagBusinessDays": 2,
         "calendarBasis": "weekdays",
         "reason": null
       },
       {
-        "id": "cache:naver-market-live:us_10y2y_spread",
+        "id": "cache:naver-market-live:jp30y_naver",
         "category": "cache",
-        "label": "시장지표 최신값/us_10y2y_spread",
+        "label": "시장지표 최신값/jp30y_naver",
         "status": "warning",
         "attention": "action",
-        "detail": "2026-10-09 · 0.4510 · 원천표기 장중 계산 · derived: live + live",
-        "lastDate": "2026-10-09",
+        "detail": "2026-10-10 · 4.0680 · 원천표기 2시간 지연 · live",
+        "lastDate": "2026-10-10",
+        "lagBusinessDays": 2,
+        "calendarBasis": "weekdays",
+        "reason": null
+      },
+      {
+        "id": "cache:naver-market-live:jp_10y2y_spread",
+        "category": "cache",
+        "label": "시장지표 최신값/jp_10y2y_spread",
+        "status": "warning",
+        "attention": "action",
+        "detail": "2026-10-10 · 1.1040 · 원천표기 최근 EOD 계산 · derived: live + live",
+        "lastDate": "2026-10-10",
         "lagBusinessDays": 2,
         "calendarBasis": "weekdays",
         "reason": null
@@ -549,66 +573,6 @@
         "lastDate": "2026-10-12",
         "fetchStatus": "dashboard_yahoo",
         "reason": "검증된 대체값"
-      },
-      {
-        "id": "cache:naver-market-live:jp10y_naver",
-        "category": "cache",
-        "label": "시장지표 최신값/jp10y_naver",
-        "status": "ok",
-        "attention": "information",
-        "detail": "2026-10-10 · 3.0160 · 원천표기 2시간 지연 · live",
-        "lastDate": "2026-10-10",
-        "lagBusinessDays": 1,
-        "calendarBasis": "XTKS",
-        "reason": "휴장 반영"
-      },
-      {
-        "id": "cache:naver-market-live:jp2y_naver",
-        "category": "cache",
-        "label": "시장지표 최신값/jp2y_naver",
-        "status": "ok",
-        "attention": "information",
-        "detail": "2026-10-10 · 1.9120 · 원천표기 2시간 지연 · live",
-        "lastDate": "2026-10-10",
-        "lagBusinessDays": 1,
-        "calendarBasis": "XTKS",
-        "reason": "휴장 반영"
-      },
-      {
-        "id": "cache:naver-market-live:jp30y_naver",
-        "category": "cache",
-        "label": "시장지표 최신값/jp30y_naver",
-        "status": "ok",
-        "attention": "information",
-        "detail": "2026-10-10 · 4.0680 · 원천표기 2시간 지연 · live",
-        "lastDate": "2026-10-10",
-        "lagBusinessDays": 1,
-        "calendarBasis": "XTKS",
-        "reason": "휴장 반영"
-      },
-      {
-        "id": "cache:naver-market-live:jp_10y2y_spread",
-        "category": "cache",
-        "label": "시장지표 최신값/jp_10y2y_spread",
-        "status": "ok",
-        "attention": "information",
-        "detail": "2026-10-10 · 1.1040 · 원천표기 장중 계산 · derived: live + live",
-        "lastDate": "2026-10-10",
-        "lagBusinessDays": 1,
-        "calendarBasis": "XTKS",
-        "reason": "휴장 반영"
-      },
-      {
-        "id": "cache:naver-market-live:jp_30y10y_spread",
-        "category": "cache",
-        "label": "시장지표 최신값/jp_30y10y_spread",
-        "status": "ok",
-        "attention": "information",
-        "detail": "2026-10-10 · 1.0520 · 원천표기 장중 계산 · derived: live + live",
-        "lastDate": "2026-10-10",
-        "lagBusinessDays": 1,
-        "calendarBasis": "XTKS",
-        "reason": "휴장 반영"
       }
     ]
   },
@@ -617,7 +581,7 @@
       "id": "ai-roi",
       "title": "AI 투자 ROI 회의론",
       "status": "확산 미확인",
-      "score": 37.0,
+      "score": 36.7,
       "tone": "good",
       "decision": "기존 가중지표 유지",
       "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검"
@@ -644,7 +608,7 @@
       "id": "domestic-funding-leverage",
       "title": "국내 레버리지·대기자금",
       "status": "주의",
-      "score": 66.2,
+      "score": 64.9,
       "tone": "caution",
       "decision": "직접 시장통계 관찰",
       "operation": "연결일 이후 일별 누적 · 60개 관측과 OOS 검증 전 가중치 0 유지"
@@ -653,7 +617,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "주의",
-      "score": 63.3,
+      "score": 62.0,
       "tone": "caution",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -669,6 +633,27 @@
     }
   ],
   "history": [
+    {
+      "runId": "20261013T100007-1000-live",
+      "status": "success",
+      "mode": "live",
+      "trigger": "scheduled",
+      "scheduledTime": "10:00",
+      "startedAt": "2026-10-13 10:00:07 KST",
+      "completedAt": "2026-10-13 10:00:51 KST",
+      "durationSeconds": 44,
+      "statusScope": "calculation",
+      "calculationCompletedAt": "2026-10-13 10:00:51 KST",
+      "calculationDurationSeconds": 44,
+      "publicationStatus": "awaiting-verification",
+      "publishedAt": null,
+      "endToEndDurationSeconds": null,
+      "dataAsOf": "2026-10-13",
+      "dashboardGeneratedAt": "2026-10-13 10:00 KST",
+      "mlGeneratedAt": "2026-10-13 07:31 KST",
+      "qualityScore": 98.2,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
     {
       "runId": "20261013T090008-0900-live",
       "status": "success",
@@ -1167,32 +1152,15 @@
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
       "calculationCompletedAt": "2026-10-08 11:00:52 KST",
       "calculationDurationSeconds": 48
-    },
-    {
-      "runId": "20261008T100005-1000-live",
-      "status": "success",
-      "mode": "live",
-      "trigger": "scheduled",
-      "scheduledTime": "10:00",
-      "startedAt": "2026-10-08 10:00:05 KST",
-      "completedAt": "2026-10-08 10:01:14 KST",
-      "durationSeconds": 69,
-      "dataAsOf": "2026-10-08",
-      "dashboardGeneratedAt": "2026-10-08 10:00 KST",
-      "mlGeneratedAt": "2026-10-08 07:31 KST",
-      "qualityScore": 96.9,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-      "calculationCompletedAt": "2026-10-08 10:01:14 KST",
-      "calculationDurationSeconds": 69
     }
   ],
   "lastVerifiedPublication": null,
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261013T090008-0900-live",
+    "runId": "20261013T100007-1000-live",
     "mode": "live",
     "state": "generated",
-    "startedAt": "2026-10-13 09:00:08 KST",
-    "preparedAt": "2026-10-13 09:38:48 KST"
+    "startedAt": "2026-10-13 10:00:07 KST",
+    "preparedAt": "2026-10-13 10:00:51 KST"
   }
 }
