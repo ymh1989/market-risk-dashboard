@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "name": "국내 증시주변자금 원장",
-  "generatedAt": "2026-10-14 15:35:41 KST",
+  "generatedAt": "2026-10-15 07:30:23 KST",
   "fetchStatus": "direct",
   "lastFetchError": null,
   "sourceStatus": {
@@ -27,15 +27,15 @@
     "selectionRule": "동일일 핵심 금액은 FreeSIS 고정밀 값 우선, KB는 최신일·부가 금리 보강"
   },
   "historyDiagnostics": {
-    "fundsRows": 10,
-    "creditRows": 10,
-    "mergedRows": 10,
+    "fundsRows": 9,
+    "creditRows": 9,
+    "mergedRows": 9,
     "fundsOnlyDates": [],
     "creditOnlyDates": [],
-    "firstDate": "2026-09-28",
+    "firstDate": "2026-09-29",
     "lastDate": "2026-10-13",
-    "requestedStartDate": "2026-09-28",
-    "requestedEndDate": "2026-10-14",
+    "requestedStartDate": "2026-09-29",
+    "requestedEndDate": "2026-10-15",
     "fundsLatestDate": "2026-10-13",
     "creditLatestDate": "2026-10-13",
     "effectiveEndDate": "2026-10-13",
@@ -47,52 +47,60 @@
   },
   "reconciliation": {
     "status": "matched",
-    "overlapDate": "2026-10-12",
+    "overlapDate": "2026-10-13",
     "absoluteToleranceKrwMillion": 1000,
     "relativeTolerancePct": 0.1,
     "fields": [
       {
         "field": "customerDeposits",
-        "kofiaKrwMillion": 100438881.0,
-        "kbKrwMillion": 100438000.0,
-        "absoluteDifferenceKrwMillion": 881.0,
-        "relativeDifferencePct": 0.000877,
+        "kofiaKrwMillion": 100098275.0,
+        "kbKrwMillion": 100098000.0,
+        "absoluteDifferenceKrwMillion": 275.0,
+        "relativeDifferencePct": 0.000275,
         "matched": true
       },
       {
         "field": "receivables",
-        "kofiaKrwMillion": 1063467.0,
-        "kbKrwMillion": 1063000.0,
-        "absoluteDifferenceKrwMillion": 467.0,
-        "relativeDifferencePct": 0.043913,
+        "kofiaKrwMillion": 1241525.0,
+        "kbKrwMillion": 1241000.0,
+        "absoluteDifferenceKrwMillion": 525.0,
+        "relativeDifferencePct": 0.042287,
         "matched": true
       },
       {
         "field": "creditBalance",
-        "kofiaKrwMillion": 34288699.0,
-        "kbKrwMillion": 34288000.0,
-        "absoluteDifferenceKrwMillion": 699.0,
-        "relativeDifferencePct": 0.002039,
+        "kofiaKrwMillion": 34252868.0,
+        "kbKrwMillion": 34252000.0,
+        "absoluteDifferenceKrwMillion": 868.0,
+        "relativeDifferencePct": 0.002534,
         "matched": true
       },
       {
         "field": "futuresDeposits",
-        "kofiaKrwMillion": 39747976.0,
-        "kbKrwMillion": 39748000.0,
-        "absoluteDifferenceKrwMillion": 24.0,
-        "relativeDifferencePct": 6e-05,
+        "kofiaKrwMillion": 38193745.0,
+        "kbKrwMillion": 38193000.0,
+        "absoluteDifferenceKrwMillion": 745.0,
+        "relativeDifferencePct": 0.001951,
         "matched": true
       }
     ]
   },
   "latest": {
     "date": "2026-10-13",
-    "retrievedAt": "2026-10-14 15:35:41 KST",
+    "retrievedAt": "2026-10-15 07:30:28 KST",
     "amountsKrwMillion": {
       "customerDeposits": 100098275.0,
       "futuresDeposits": 38193745.0,
       "receivables": 1241525.0,
       "creditBalance": 34252868.0,
+      "stockFunds": 327175000.0,
+      "stockFundsChange": -8018000.0,
+      "bondFunds": 217324000.0,
+      "bondFundsChange": 239000.0,
+      "mixedFunds": 46864000.0,
+      "mixedFundsChange": -247000.0,
+      "mmf": 259312000.0,
+      "mmfChange": 2016000.0,
       "customerDepositsChange": -340606.0,
       "receivablesChange": 178058.0,
       "creditBalanceChange": -35831.0,
@@ -103,15 +111,31 @@
       "futuresDeposits": 38193.745,
       "receivables": 1241.525,
       "creditBalance": 34252.868,
+      "stockFunds": 327175.0,
+      "stockFundsChange": -8018.0,
+      "bondFunds": 217324.0,
+      "bondFundsChange": 239.0,
+      "mixedFunds": 46864.0,
+      "mixedFundsChange": -247.0,
+      "mmf": 259312.0,
+      "mmfChange": 2016.0,
       "customerDepositsChange": -340.606,
       "receivablesChange": 178.058,
       "creditBalanceChange": -35.831,
       "futuresDepositsChange": -1554.231
     },
     "sourceProviders": [
-      "KOFIA FreeSIS"
+      "KOFIA FreeSIS",
+      "KB Securities OpenAPI"
     ],
-    "ratesPct": {},
+    "ratesPct": {
+      "corporateAa3y": 4.57,
+      "corporateBbb3y": 10.375,
+      "cd91d": 3.25,
+      "cp91d": 3.63,
+      "treasury3y": 3.883,
+      "treasury10y": 4.261
+    },
     "derived": {
       "creditToDepositsPct": 34.21923904283066,
       "receivablesToDepositsPct": 1.2403060891908477,
@@ -119,8 +143,8 @@
       "creditBalanceChangePct": -0.10449798634821345,
       "receivablesChangePct": 16.743161753021017,
       "futuresDepositsChangePct": -3.910214195560549,
-      "bbbAaSpreadPctp": null,
-      "cpCdSpreadPctp": null
+      "bbbAaSpreadPctp": 5.805,
+      "cpCdSpreadPctp": 0.3799999999999999
     },
     "score": 52.1,
     "rawScore": 50.5,
@@ -150,7 +174,39 @@
         "score": 56.3,
         "weight": 0.1
       }
-    ]
+    ],
+    "sourceSnapshots": {
+      "kb": {
+        "date": "2026-10-13",
+        "retrievedAt": "2026-10-15 07:30:28 KST",
+        "amountsKrwMillion": {
+          "customerDeposits": 100098000.0,
+          "customerDepositsChange": -340000.0,
+          "receivables": 1241000.0,
+          "receivablesChange": 178000.0,
+          "creditBalance": 34252000.0,
+          "creditBalanceChange": -36000.0,
+          "futuresDeposits": 38193000.0,
+          "futuresDepositsChange": -1555000.0,
+          "stockFunds": 327175000.0,
+          "stockFundsChange": -8018000.0,
+          "bondFunds": 217324000.0,
+          "bondFundsChange": 239000.0,
+          "mixedFunds": 46864000.0,
+          "mixedFundsChange": -247000.0,
+          "mmf": 259312000.0,
+          "mmfChange": 2016000.0
+        },
+        "ratesPct": {
+          "corporateAa3y": 4.57,
+          "corporateBbb3y": 10.375,
+          "cd91d": 3.25,
+          "cp91d": 3.63,
+          "treasury3y": 3.883,
+          "treasury10y": 4.261
+        }
+      }
+    }
   },
   "series": [
     {
@@ -86053,7 +86109,7 @@
     },
     {
       "date": "2026-09-29",
-      "retrievedAt": "2026-10-14 15:35:41 KST",
+      "retrievedAt": "2026-10-15 07:30:23 KST",
       "amountsKrwMillion": {
         "customerDeposits": 107725670.0,
         "futuresDeposits": 39289619.0,
@@ -86160,7 +86216,7 @@
     },
     {
       "date": "2026-09-30",
-      "retrievedAt": "2026-10-14 15:35:41 KST",
+      "retrievedAt": "2026-10-15 07:30:23 KST",
       "amountsKrwMillion": {
         "customerDeposits": 104664400.0,
         "futuresDeposits": 38359002.0,
@@ -86267,7 +86323,7 @@
     },
     {
       "date": "2026-10-01",
-      "retrievedAt": "2026-10-14 15:35:41 KST",
+      "retrievedAt": "2026-10-15 07:30:23 KST",
       "amountsKrwMillion": {
         "customerDeposits": 104637666.0,
         "futuresDeposits": 38375727.0,
@@ -86374,7 +86430,7 @@
     },
     {
       "date": "2026-10-02",
-      "retrievedAt": "2026-10-14 15:35:41 KST",
+      "retrievedAt": "2026-10-15 07:30:23 KST",
       "amountsKrwMillion": {
         "customerDeposits": 100842194.0,
         "futuresDeposits": 40188465.0,
@@ -86481,7 +86537,7 @@
     },
     {
       "date": "2026-10-06",
-      "retrievedAt": "2026-10-14 15:35:41 KST",
+      "retrievedAt": "2026-10-15 07:30:23 KST",
       "amountsKrwMillion": {
         "customerDeposits": 101048627.0,
         "futuresDeposits": 39983218.0,
@@ -86588,7 +86644,7 @@
     },
     {
       "date": "2026-10-07",
-      "retrievedAt": "2026-10-14 15:35:41 KST",
+      "retrievedAt": "2026-10-15 07:30:23 KST",
       "amountsKrwMillion": {
         "customerDeposits": 100379607.0,
         "futuresDeposits": 39538190.0,
@@ -86695,7 +86751,7 @@
     },
     {
       "date": "2026-10-08",
-      "retrievedAt": "2026-10-14 15:35:41 KST",
+      "retrievedAt": "2026-10-15 07:30:23 KST",
       "amountsKrwMillion": {
         "customerDeposits": 100109941.0,
         "futuresDeposits": 39391418.0,
@@ -86802,20 +86858,12 @@
     },
     {
       "date": "2026-10-12",
-      "retrievedAt": "2026-10-14 15:35:45 KST",
+      "retrievedAt": "2026-10-15 07:30:23 KST",
       "amountsKrwMillion": {
         "customerDeposits": 100438881.0,
         "futuresDeposits": 39747976.0,
         "receivables": 1063467.0,
         "creditBalance": 34288699.0,
-        "stockFunds": 335193000.0,
-        "stockFundsChange": -8134000.0,
-        "bondFunds": 217085000.0,
-        "bondFundsChange": 400000.0,
-        "mixedFunds": 47111000.0,
-        "mixedFundsChange": -160000.0,
-        "mmf": 257296000.0,
-        "mmfChange": -2918000.0,
         "customerDepositsChange": 328940.0,
         "receivablesChange": 72005.0,
         "creditBalanceChange": 477378.0,
@@ -86826,14 +86874,6 @@
         "futuresDeposits": 39747.976,
         "receivables": 1063.467,
         "creditBalance": 34288.699,
-        "stockFunds": 335193.0,
-        "stockFundsChange": -8134.0,
-        "bondFunds": 217085.0,
-        "bondFundsChange": 400.0,
-        "mixedFunds": 47111.0,
-        "mixedFundsChange": -160.0,
-        "mmf": 257296.0,
-        "mmfChange": -2918.0,
         "customerDepositsChange": 328.94,
         "receivablesChange": 72.005,
         "creditBalanceChange": 477.378,
@@ -86925,12 +86965,20 @@
     },
     {
       "date": "2026-10-13",
-      "retrievedAt": "2026-10-14 15:35:41 KST",
+      "retrievedAt": "2026-10-15 07:30:28 KST",
       "amountsKrwMillion": {
         "customerDeposits": 100098275.0,
         "futuresDeposits": 38193745.0,
         "receivables": 1241525.0,
         "creditBalance": 34252868.0,
+        "stockFunds": 327175000.0,
+        "stockFundsChange": -8018000.0,
+        "bondFunds": 217324000.0,
+        "bondFundsChange": 239000.0,
+        "mixedFunds": 46864000.0,
+        "mixedFundsChange": -247000.0,
+        "mmf": 259312000.0,
+        "mmfChange": 2016000.0,
         "customerDepositsChange": -340606.0,
         "receivablesChange": 178058.0,
         "creditBalanceChange": -35831.0,
@@ -86941,15 +86989,31 @@
         "futuresDeposits": 38193.745,
         "receivables": 1241.525,
         "creditBalance": 34252.868,
+        "stockFunds": 327175.0,
+        "stockFundsChange": -8018.0,
+        "bondFunds": 217324.0,
+        "bondFundsChange": 239.0,
+        "mixedFunds": 46864.0,
+        "mixedFundsChange": -247.0,
+        "mmf": 259312.0,
+        "mmfChange": 2016.0,
         "customerDepositsChange": -340.606,
         "receivablesChange": 178.058,
         "creditBalanceChange": -35.831,
         "futuresDepositsChange": -1554.231
       },
       "sourceProviders": [
-        "KOFIA FreeSIS"
+        "KOFIA FreeSIS",
+        "KB Securities OpenAPI"
       ],
-      "ratesPct": {},
+      "ratesPct": {
+        "corporateAa3y": 4.57,
+        "corporateBbb3y": 10.375,
+        "cd91d": 3.25,
+        "cp91d": 3.63,
+        "treasury3y": 3.883,
+        "treasury10y": 4.261
+      },
       "derived": {
         "creditToDepositsPct": 34.21923904283066,
         "receivablesToDepositsPct": 1.2403060891908477,
@@ -86957,8 +87021,8 @@
         "creditBalanceChangePct": -0.10449798634821345,
         "receivablesChangePct": 16.743161753021017,
         "futuresDepositsChangePct": -3.910214195560549,
-        "bbbAaSpreadPctp": null,
-        "cpCdSpreadPctp": null
+        "bbbAaSpreadPctp": 5.805,
+        "cpCdSpreadPctp": 0.3799999999999999
       },
       "score": 52.1,
       "rawScore": 50.5,
@@ -86988,7 +87052,39 @@
           "score": 56.3,
           "weight": 0.1
         }
-      ]
+      ],
+      "sourceSnapshots": {
+        "kb": {
+          "date": "2026-10-13",
+          "retrievedAt": "2026-10-15 07:30:28 KST",
+          "amountsKrwMillion": {
+            "customerDeposits": 100098000.0,
+            "customerDepositsChange": -340000.0,
+            "receivables": 1241000.0,
+            "receivablesChange": 178000.0,
+            "creditBalance": 34252000.0,
+            "creditBalanceChange": -36000.0,
+            "futuresDeposits": 38193000.0,
+            "futuresDepositsChange": -1555000.0,
+            "stockFunds": 327175000.0,
+            "stockFundsChange": -8018000.0,
+            "bondFunds": 217324000.0,
+            "bondFundsChange": 239000.0,
+            "mixedFunds": 46864000.0,
+            "mixedFundsChange": -247000.0,
+            "mmf": 259312000.0,
+            "mmfChange": 2016000.0
+          },
+          "ratesPct": {
+            "corporateAa3y": 4.57,
+            "corporateBbb3y": 10.375,
+            "cd91d": 3.25,
+            "cp91d": 3.63,
+            "treasury3y": 3.883,
+            "treasury10y": 4.261
+          }
+        }
+      }
     }
   ],
   "methodology": {
@@ -87036,10 +87132,10 @@
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261014T183003-1830-krx",
-    "mode": "krx",
-    "state": "reused",
-    "startedAt": "2026-10-14 18:30:03 KST",
-    "preparedAt": "2026-10-14 18:30:23 KST"
+    "runId": "20261015T073008-0730-fast",
+    "mode": "fast",
+    "state": "generated",
+    "startedAt": "2026-10-15 07:30:08 KST",
+    "preparedAt": "2026-10-15 07:31:52 KST"
   }
 }

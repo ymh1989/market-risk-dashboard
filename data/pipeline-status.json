@@ -1,28 +1,26 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-14 18:30:23 KST",
+  "generatedAt": "2026-10-15 07:31:52 KST",
   "current": {
-    "runId": "20261014T183003-1830-krx",
+    "runId": "20261015T073008-0730-fast",
     "status": "success",
-    "mode": "krx",
+    "mode": "fast",
     "trigger": "scheduled",
-    "scheduledTime": "18:30",
-    "startedAt": "2026-10-14 18:30:03 KST",
-    "completedAt": "2026-10-14 18:30:23 KST",
-    "durationSeconds": 20,
+    "scheduledTime": "07:30",
+    "startedAt": "2026-10-15 07:30:08 KST",
+    "completedAt": "2026-10-15 07:31:52 KST",
+    "durationSeconds": 104,
     "statusScope": "calculation",
-    "calculationCompletedAt": "2026-10-14 18:30:23 KST",
-    "calculationDurationSeconds": 20,
+    "calculationCompletedAt": "2026-10-15 07:31:52 KST",
+    "calculationDurationSeconds": 104,
     "publicationStatus": "awaiting-verification",
     "publishedAt": null,
     "endToEndDurationSeconds": null,
     "dataAsOf": "2026-10-14",
-    "dashboardGeneratedAt": "2026-10-14 15:36 KST",
-    "mlGeneratedAt": "2026-10-14 15:38 KST",
-    "qualityScore": 99.8,
-    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-    "krxReferenceDate": "2026-10-14",
-    "krxSessionDate": "2026-10-14"
+    "dashboardGeneratedAt": "2026-10-15 07:30 KST",
+    "mlGeneratedAt": "2026-10-15 07:31 KST",
+    "qualityScore": 98.8,
+    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
     "timezone": "Asia/Seoul",
@@ -126,15 +124,15 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 15,
-      "detail": "KRX 2026-10-14 외국인·기관·프로그램 확정치 점검"
+      "durationSeconds": 50,
+      "detail": "시장 데이터 수집, 위험점수, M7·KB 시장자금, ELS·HMM 산출"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
-      "durationSeconds": 0,
-      "detail": "직전 확정 ML·HMM 산출물 재사용"
+      "durationSeconds": 29,
+      "detail": "최신 ML 신호 갱신 · 직전 OOS 검증 결과 재사용"
     },
     {
       "id": "validation",
@@ -159,7 +157,7 @@
       "lastDate": "2026-10-14",
       "seriesCount": 36,
       "detail": "36/36개 수집 · 허용시차 내 36개",
-      "oldestLastDate": "2026-10-13",
+      "oldestLastDate": "2026-10-14",
       "freshCount": 36,
       "staleCount": 0,
       "fallbackCount": 0
@@ -192,7 +190,7 @@
       "id": "fred",
       "label": "FRED",
       "status": "ok",
-      "lastDate": "2026-10-13",
+      "lastDate": "2026-10-14",
       "seriesCount": 5,
       "detail": "5/5개 수집 · 허용시차 내 5개",
       "oldestLastDate": "2026-10-02",
@@ -236,8 +234,8 @@
       "id": "m7-credit",
       "label": "M7 Credit Stress Proxy",
       "status": "ok",
-      "lastDate": "2026-10-13",
-      "oldestLastDate": "2026-10-09",
+      "lastDate": "2026-10-14",
+      "oldestLastDate": "2026-10-12",
       "seriesCount": 14,
       "freshCount": 14,
       "staleCount": 0,
@@ -262,31 +260,31 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-10-14 15:36 KST"
+      "generatedAt": "2026-10-15 07:30 KST"
     },
     {
       "id": "ml",
       "label": "ML 위험신호",
       "status": "ok",
-      "generatedAt": "2026-10-14 15:38 KST"
+      "generatedAt": "2026-10-15 07:31 KST"
     },
     {
       "id": "els",
       "label": "ELS 지수위험",
       "status": "ok",
-      "generatedAt": "2026-10-14 15:37 KST"
+      "generatedAt": "2026-10-15 07:31 KST"
     },
     {
       "id": "hmm",
       "label": "HMM 레짐",
       "status": "ok",
-      "generatedAt": "2026-10-14 15:37 KST"
+      "generatedAt": "2026-10-15 07:31 KST"
     },
     {
       "id": "backtest",
       "label": "시장 백테스트",
       "status": "ok",
-      "generatedAt": "2026-10-14 15:36 KST"
+      "generatedAt": "2026-10-15 07:30 KST"
     },
     {
       "id": "stress",
@@ -298,42 +296,42 @@
       "id": "m7",
       "label": "M7 신용스트레스 프록시",
       "status": "ok",
-      "generatedAt": "2026-10-14T15:35:41+09:00"
+      "generatedAt": "2026-10-15T07:30:23+09:00"
     },
     {
       "id": "kb-funds",
       "label": "FreeSIS·KB 증시주변자금",
       "status": "ok",
-      "generatedAt": "2026-10-14 15:35:41 KST"
+      "generatedAt": "2026-10-15 07:30:23 KST"
     },
     {
       "id": "breadth",
       "label": "KOSPI 시장 내부강도",
       "status": "ok",
-      "generatedAt": "2026-10-14 18:30:22 KST"
+      "generatedAt": "2026-10-15 07:30:13 KST"
     },
     {
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-10-14 18:30:23 KST"
+      "generatedAt": "2026-10-15 07:31:52 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 99.8,
-    "referenceDate": "2026-10-14",
+    "score": 98.8,
+    "referenceDate": "2026-10-15",
     "summary": {
       "checks": 255,
-      "ok": 254,
-      "warning": 1,
+      "ok": 249,
+      "warning": 6,
       "error": 0,
       "sourceSeriesExpected": 100,
       "sourceSeriesPresent": 100,
       "freshSeries": 99,
       "staleSeries": 1,
       "fallbackSeries": 13,
-      "actionRequired": 1,
+      "actionRequired": 6,
       "information": 12
     },
     "issues": [
@@ -343,12 +341,72 @@
         "label": "CSI 300",
         "status": "warning",
         "attention": "action",
-        "detail": "yahoo · skipped_low_coverage · 최신 2026-10-14 · 관측치 1개 · 커버리지 6.7%",
+        "detail": "yahoo · skipped_low_coverage · 최신 2026-10-14 · 관측치 1개 · 커버리지 7.1%",
         "groupId": "ml-input",
         "lastDate": "2026-10-14",
         "observations": 1,
         "fetchStatus": "skipped_low_coverage",
         "required": false
+      },
+      {
+        "id": "cache:naver-market-live:bdti",
+        "category": "cache",
+        "label": "시장지표 최신값/bdti",
+        "status": "warning",
+        "attention": "action",
+        "detail": "2026-10-13 · 7,999.0000 · 원천표기 실시간 · live",
+        "lastDate": "2026-10-13",
+        "lagBusinessDays": 2,
+        "calendarBasis": "weekdays",
+        "reason": null
+      },
+      {
+        "id": "cache:naver-market-live:bdi",
+        "category": "cache",
+        "label": "시장지표 최신값/bdi",
+        "status": "warning",
+        "attention": "action",
+        "detail": "2026-10-13 · 2,801.0000 · 원천표기 실시간 · live",
+        "lastDate": "2026-10-13",
+        "lagBusinessDays": 2,
+        "calendarBasis": "weekdays",
+        "reason": null
+      },
+      {
+        "id": "cache:naver-market-live:usdcny",
+        "category": "cache",
+        "label": "시장지표 최신값/usdcny",
+        "status": "warning",
+        "attention": "action",
+        "detail": "2026-10-13 · 6.6937 · 원천표기 마감 · live",
+        "lastDate": "2026-10-13",
+        "lagBusinessDays": 2,
+        "calendarBasis": "weekdays",
+        "reason": null
+      },
+      {
+        "id": "cache:naver-market-live:usdjpy",
+        "category": "cache",
+        "label": "시장지표 최신값/usdjpy",
+        "status": "warning",
+        "attention": "action",
+        "detail": "2026-10-13 · 158.3500 · 원천표기 마감 · live",
+        "lastDate": "2026-10-13",
+        "lagBusinessDays": 2,
+        "calendarBasis": "weekdays",
+        "reason": null
+      },
+      {
+        "id": "cache:naver-market-live:eurusd",
+        "category": "cache",
+        "label": "시장지표 최신값/eurusd",
+        "status": "warning",
+        "attention": "action",
+        "detail": "2026-10-13 · 1.1199 · 원천표기 마감 · live",
+        "lastDate": "2026-10-13",
+        "lagBusinessDays": 2,
+        "calendarBasis": "weekdays",
+        "reason": null
       }
     ],
     "notices": [
@@ -358,9 +416,9 @@
         "label": "price:AAPL",
         "status": "ok",
         "attention": "information",
-        "detail": "최신 2026-10-13 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-10-14 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-10-13",
+        "lastDate": "2026-10-14",
         "fetchStatus": "dashboard_yahoo",
         "reason": "검증된 대체값"
       },
@@ -370,9 +428,9 @@
         "label": "price:AMZN",
         "status": "ok",
         "attention": "information",
-        "detail": "최신 2026-10-13 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-10-14 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-10-13",
+        "lastDate": "2026-10-14",
         "fetchStatus": "dashboard_yahoo",
         "reason": "검증된 대체값"
       },
@@ -382,9 +440,9 @@
         "label": "price:GOOGL",
         "status": "ok",
         "attention": "information",
-        "detail": "최신 2026-10-13 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-10-14 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-10-13",
+        "lastDate": "2026-10-14",
         "fetchStatus": "dashboard_yahoo",
         "reason": "검증된 대체값"
       },
@@ -394,9 +452,9 @@
         "label": "price:HYG",
         "status": "ok",
         "attention": "information",
-        "detail": "최신 2026-10-13 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-10-14 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-10-13",
+        "lastDate": "2026-10-14",
         "fetchStatus": "dashboard_yahoo",
         "reason": "검증된 대체값"
       },
@@ -406,9 +464,9 @@
         "label": "price:IEF",
         "status": "ok",
         "attention": "information",
-        "detail": "최신 2026-10-13 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-10-14 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-10-13",
+        "lastDate": "2026-10-14",
         "fetchStatus": "dashboard_yahoo",
         "reason": "검증된 대체값"
       },
@@ -418,9 +476,9 @@
         "label": "price:IGIB",
         "status": "ok",
         "attention": "information",
-        "detail": "최신 2026-10-13 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-10-14 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-10-13",
+        "lastDate": "2026-10-14",
         "fetchStatus": "dashboard_yahoo",
         "reason": "검증된 대체값"
       },
@@ -430,9 +488,9 @@
         "label": "price:LQD",
         "status": "ok",
         "attention": "information",
-        "detail": "최신 2026-10-13 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-10-14 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-10-13",
+        "lastDate": "2026-10-14",
         "fetchStatus": "dashboard_yahoo",
         "reason": "검증된 대체값"
       },
@@ -442,9 +500,9 @@
         "label": "price:META",
         "status": "ok",
         "attention": "information",
-        "detail": "최신 2026-10-13 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-10-14 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-10-13",
+        "lastDate": "2026-10-14",
         "fetchStatus": "dashboard_yahoo",
         "reason": "검증된 대체값"
       },
@@ -454,9 +512,9 @@
         "label": "price:MSFT",
         "status": "ok",
         "attention": "information",
-        "detail": "최신 2026-10-13 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-10-14 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-10-13",
+        "lastDate": "2026-10-14",
         "fetchStatus": "dashboard_yahoo",
         "reason": "검증된 대체값"
       },
@@ -466,9 +524,9 @@
         "label": "price:NVDA",
         "status": "ok",
         "attention": "information",
-        "detail": "최신 2026-10-13 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-10-14 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-10-13",
+        "lastDate": "2026-10-14",
         "fetchStatus": "dashboard_yahoo",
         "reason": "검증된 대체값"
       },
@@ -478,9 +536,9 @@
         "label": "price:QQQ",
         "status": "ok",
         "attention": "information",
-        "detail": "최신 2026-10-13 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-10-14 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-10-13",
+        "lastDate": "2026-10-14",
         "fetchStatus": "dashboard_yahoo",
         "reason": "검증된 대체값"
       },
@@ -490,9 +548,9 @@
         "label": "price:TSLA",
         "status": "ok",
         "attention": "information",
-        "detail": "최신 2026-10-13 · 영업일 시차 1일 · dashboard_yahoo",
+        "detail": "최신 2026-10-14 · 영업일 시차 1일 · dashboard_yahoo",
         "groupId": "m7-credit",
-        "lastDate": "2026-10-13",
+        "lastDate": "2026-10-14",
         "fetchStatus": "dashboard_yahoo",
         "reason": "검증된 대체값"
       }
@@ -503,7 +561,7 @@
       "id": "ai-roi",
       "title": "AI 투자 ROI 회의론",
       "status": "확산 미확인",
-      "score": 36.6,
+      "score": 39.1,
       "tone": "good",
       "decision": "기존 가중지표 유지",
       "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검"
@@ -512,7 +570,7 @@
       "id": "geopolitics-reinflation",
       "title": "지정학·재인플레이션",
       "status": "주의",
-      "score": 67.9,
+      "score": 68.8,
       "tone": "caution",
       "decision": "관찰지표 보강",
       "operation": "DBC·DBA 관찰카드 유지 · 기존 에너지 가중치 변경 없음"
@@ -521,7 +579,7 @@
       "id": "macro-rates",
       "title": "매크로 금리 불확실성",
       "status": "부담 높음",
-      "score": 82.3,
+      "score": 76.8,
       "tone": "danger",
       "decision": "기존 가중지표 유지",
       "operation": "금리·금융여건 기존 가중치 유지 · 방향성 패널 잠정값 병행"
@@ -530,7 +588,7 @@
       "id": "domestic-funding-leverage",
       "title": "국내 레버리지·대기자금",
       "status": "관찰",
-      "score": 51.8,
+      "score": 51.3,
       "tone": "watch",
       "decision": "직접 시장통계 관찰",
       "operation": "연결일 이후 일별 누적 · 60개 관측과 OOS 검증 전 가중치 0 유지"
@@ -538,9 +596,9 @@
     {
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
-      "status": "관찰",
-      "score": 51.5,
-      "tone": "watch",
+      "status": "주의",
+      "score": 62.9,
+      "tone": "caution",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
     },
@@ -556,6 +614,27 @@
   ],
   "history": [
     {
+      "runId": "20261015T073008-0730-fast",
+      "status": "success",
+      "mode": "fast",
+      "trigger": "scheduled",
+      "scheduledTime": "07:30",
+      "startedAt": "2026-10-15 07:30:08 KST",
+      "completedAt": "2026-10-15 07:31:52 KST",
+      "durationSeconds": 104,
+      "statusScope": "calculation",
+      "calculationCompletedAt": "2026-10-15 07:31:52 KST",
+      "calculationDurationSeconds": 104,
+      "publicationStatus": "awaiting-verification",
+      "publishedAt": null,
+      "endToEndDurationSeconds": null,
+      "dataAsOf": "2026-10-14",
+      "dashboardGeneratedAt": "2026-10-15 07:30 KST",
+      "mlGeneratedAt": "2026-10-15 07:31 KST",
+      "qualityScore": 98.8,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
+    {
       "runId": "20261014T183003-1830-krx",
       "status": "success",
       "mode": "krx",
@@ -567,16 +646,17 @@
       "statusScope": "calculation",
       "calculationCompletedAt": "2026-10-14 18:30:23 KST",
       "calculationDurationSeconds": 20,
-      "publicationStatus": "awaiting-verification",
-      "publishedAt": null,
-      "endToEndDurationSeconds": null,
+      "publicationStatus": "verified",
+      "publishedAt": "2026-10-14 18:31:02 KST",
+      "endToEndDurationSeconds": 60,
       "dataAsOf": "2026-10-14",
       "dashboardGeneratedAt": "2026-10-14 15:36 KST",
       "mlGeneratedAt": "2026-10-14 15:38 KST",
       "qualityScore": 99.8,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
       "krxReferenceDate": "2026-10-14",
-      "krxSessionDate": "2026-10-14"
+      "krxSessionDate": "2026-10-14",
+      "deploymentDurationSeconds": 40
     },
     {
       "runId": "20261014T153503-1535-full",
@@ -1142,53 +1222,38 @@
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
       "calculationCompletedAt": "2026-10-12 09:01:07 KST",
       "calculationDurationSeconds": 60
-    },
-    {
-      "runId": "20261010T073003-0730-full",
-      "status": "success",
-      "mode": "full",
-      "trigger": "scheduled",
-      "scheduledTime": "07:30",
-      "startedAt": "2026-10-10 07:30:03 KST",
-      "completedAt": "2026-10-10 07:49:39 KST",
-      "durationSeconds": 1176,
-      "dataAsOf": "2026-10-09",
-      "dashboardGeneratedAt": "2026-10-10 07:30 KST",
-      "mlGeneratedAt": "2026-10-10 07:49 KST",
-      "qualityScore": 97.5,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-      "calculationCompletedAt": "2026-10-10 07:49:39 KST",
-      "calculationDurationSeconds": 1176
     }
   ],
   "lastVerifiedPublication": {
-    "runId": "20261014T153503-1535-full",
+    "runId": "20261014T183003-1830-krx",
     "status": "success",
-    "mode": "full",
+    "mode": "krx",
     "trigger": "scheduled",
-    "scheduledTime": "15:35",
-    "startedAt": "2026-10-14 15:35:03 KST",
-    "completedAt": "2026-10-14 15:38:40 KST",
-    "durationSeconds": 217,
+    "scheduledTime": "18:30",
+    "startedAt": "2026-10-14 18:30:03 KST",
+    "completedAt": "2026-10-14 18:30:23 KST",
+    "durationSeconds": 20,
     "statusScope": "calculation",
-    "calculationCompletedAt": "2026-10-14 15:38:40 KST",
-    "calculationDurationSeconds": 217,
+    "calculationCompletedAt": "2026-10-14 18:30:23 KST",
+    "calculationDurationSeconds": 20,
     "publicationStatus": "verified",
-    "publishedAt": "2026-10-14 15:39:09 KST",
-    "endToEndDurationSeconds": 247,
+    "publishedAt": "2026-10-14 18:31:02 KST",
+    "endToEndDurationSeconds": 60,
     "dataAsOf": "2026-10-14",
     "dashboardGeneratedAt": "2026-10-14 15:36 KST",
     "mlGeneratedAt": "2026-10-14 15:38 KST",
     "qualityScore": 99.8,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-    "deploymentDurationSeconds": 30
+    "krxReferenceDate": "2026-10-14",
+    "krxSessionDate": "2026-10-14",
+    "deploymentDurationSeconds": 40
   },
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261014T183003-1830-krx",
-    "mode": "krx",
+    "runId": "20261015T073008-0730-fast",
+    "mode": "fast",
     "state": "generated",
-    "startedAt": "2026-10-14 18:30:03 KST",
-    "preparedAt": "2026-10-14 18:30:23 KST"
+    "startedAt": "2026-10-15 07:30:08 KST",
+    "preparedAt": "2026-10-15 07:31:52 KST"
   }
 }
