@@ -78,7 +78,7 @@ def test_ad_line_base_date_is_explicit() -> None:
     assert any("시작일에 종속" in item for item in payload["methodology"])
 
 
-def test_build_payload_exports_direct_krx_flow_in_eok_units() -> None:
+def flow_frame() -> pd.DataFrame:
     frame = sample_frame()
     frame["foreign_net_buy_value"] = -120_000_000_000
     frame["institution_net_buy_value"] = 80_000_000_000
@@ -91,19 +91,72 @@ def test_build_payload_exports_direct_krx_flow_in_eok_units() -> None:
     frame["foreign_sell_pressure"] = 90.0
     frame["institution_sell_pressure"] = 35.0
     frame["program_sell_pressure"] = 80.0
-    frame["direct_flow_pressure"] = 72.75
+    frame["direct_flow_pressure"] = 68.75
+    return frame
+
+
+def test_build_payload_exports_direct_krx_flow_in_eok_units() -> None:
+    frame = flow_frame()
 
     payload = build_breadth_payload(
         frame,
         {"investorFlowStatus": "available", "programFlowStatus": "available"},
     )
 
-    assert payload["schemaVersion"] == 3
+    assert payload["schemaVersion"] == 4
     assert payload["source"]["investorFlowStatus"] == "available"
     assert payload["latest"]["foreignNetBuyEok"] == -1200.0
     assert payload["latest"]["foreignNetBuy5dEok"] == -5000.0
-    assert payload["latest"]["directFlowPressure"] == 72.8
+    assert payload["latest"]["directFlowPressure"] == 68.8
     assert payload["series"][-1]["programNetBuy5dEok"] == -2000.0
+    assert payload["directFlow"]["status"] == "complete"
+    assert payload["directFlow"]["availableWeightPct"] == 100
+
+
+def test_export_rejects_legacy_program_only_composite_and_labels_last_complete():
+    frame = flow_frame()
+    frame.loc[frame.index[-1], ["foreign_net_buy_value", "institution_net_buy_value"]] = float("nan")
+    frame.loc[frame.index[-1], "direct_flow_pressure"] = 39.6
+    payload = build_breadth_payload(frame)
+    assert payload["latest"]["directFlowPressure"] is None
+    assert payload["latest"]["foreignNetBuy5dEok"] is None
+    assert payload["latest"]["foreignSellPressure"] is None
+    assert payload["series"][-1]["directFlowPressure"] is None
+    assert payload["quality"]["directFlowLatestMissing"] is True
+    assert payload["directFlow"]["status"] == "partial"
+    assert payload["directFlow"]["availableWeightPct"] == 20
+    assert payload["directFlow"]["missingComponents"] == ["외국인", "기관"]
+    assert payload["directFlow"]["lastComplete"]["date"] == frame.iloc[-2]["date"].date().isoformat()
+    assert payload["directFlow"]["lastComplete"]["directFlowPressure"] == 68.8
+    assert all("수급 중립" not in line for line in payload["latest"]["interpretation"])
+
+
+@pytest.mark.parametrize("prefix", ["foreign", "institution", "program"])
+@pytest.mark.parametrize("suffix", ["net_buy_value", "net_buy_5d", "sell_pressure"])
+def test_each_missing_flow_input_blocks_latest_score(prefix, suffix):
+    frame = flow_frame()
+    frame.loc[frame.index[-1], f"{prefix}_{suffix}"] = float("nan")
+    payload = build_breadth_payload(frame)
+    assert payload["latest"]["directFlowPressure"] is None
+
+
+def test_zero_flows_and_zero_pressure_are_valid_and_not_missing():
+    frame = flow_frame()
+    for prefix in ("foreign", "institution", "program"):
+        for suffix in ("net_buy_value", "net_buy_5d", "sell_pressure"):
+            frame[f"{prefix}_{suffix}"] = 0.0
+    payload = build_breadth_payload(frame)
+    assert payload["latest"]["directFlowPressure"] == 0
+    assert payload["directFlow"]["status"] == "complete"
+
+
+def test_missing_history_is_distinct_from_missing_daily_flows():
+    frame = flow_frame()
+    frame["program_sell_pressure"] = float("nan")
+    payload = build_breadth_payload(frame)
+    assert payload["directFlow"]["status"] == "insufficient_history"
+    assert payload["directFlow"]["lastComplete"] is None
+    assert payload["quality"]["directFlowLatestMissing"] is False
 
 
 def test_build_payload_exports_vkospi_source_and_latest_value() -> None:

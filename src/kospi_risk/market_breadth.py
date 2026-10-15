@@ -632,7 +632,9 @@ def calculate_direct_flow_metrics(frame: pd.DataFrame) -> pd.DataFrame:
     for column in DIRECT_FLOW_COLUMNS:
         if column not in result.columns:
             result[column] = np.nan
-        result[column] = pd.to_numeric(result[column], errors="coerce")
+        result[column] = pd.to_numeric(result[column], errors="coerce").replace(
+            [np.inf, -np.inf], np.nan
+        )
 
     pressure_specs = [
         ("foreign", "foreign_net_buy_value"),
@@ -650,13 +652,11 @@ def calculate_direct_flow_metrics(frame: pd.DataFrame) -> pd.DataFrame:
         ("institution_sell_pressure", 0.35),
         ("program_sell_pressure", 0.20),
     ]
-    weighted = pd.Series(0.0, index=result.index)
-    available_weight = pd.Series(0.0, index=result.index)
-    for column, weight in pressure_columns:
-        available = result[column].notna()
-        weighted = weighted.add(result[column].fillna(0.0) * weight)
-        available_weight = available_weight.add(available.astype(float) * weight)
-    result["direct_flow_pressure"] = weighted.div(available_weight.replace(0.0, np.nan))
+    # 결측 구성요소의 비중을 나머지로 넘기면 날짜별로 다른 점수가 됩니다.
+    contributions = pd.concat(
+        [result[column] * weight for column, weight in pressure_columns], axis=1
+    )
+    result["direct_flow_pressure"] = contributions.sum(axis=1, min_count=3)
     return result
 
 

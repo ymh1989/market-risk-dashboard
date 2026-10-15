@@ -31,6 +31,44 @@ REQUIRED_COLUMNS = {
     "breadth_ma5",
     "breadth_ma20",
 }
+FLOW_COMPONENTS = [("foreign", "외국인", 0.45), ("institution", "기관", 0.35), ("program", "프로그램", 0.20)]
+
+
+def _flow_observation(row: pd.Series) -> dict:
+    """구버전 원장도 원자료·5일 누계·점수가 모두 있는 고정 구성으로 판독합니다."""
+    point = {"date": row["date"].date().isoformat()}
+    contributions = []
+    for prefix, _, weight in FLOW_COMPONENTS:
+        daily = _eok(row.get(f"{prefix}_net_buy_value"))
+        cumulative = _eok(row.get(f"{prefix}_net_buy_5d")) if daily is not None else None
+        pressure = _number(row.get(f"{prefix}_sell_pressure"), 6) if cumulative is not None else None
+        if pressure is not None and not 0 <= pressure <= 100:
+            pressure = None
+        point[f"{prefix}NetBuyEok"] = daily
+        point[f"{prefix}NetBuy5dEok"] = cumulative
+        point[f"{prefix}SellPressure"] = _number(pressure, 1)
+        if pressure is not None:
+            contributions.append(pressure * weight)
+    point["financialInvestmentNetBuyEok"] = _eok(row.get("financial_investment_net_buy_value"))
+    point["pensionNetBuyEok"] = _eok(row.get("pension_net_buy_value"))
+    point["directFlowPressure"] = _number(sum(contributions), 1) if len(contributions) == 3 else None
+    return point
+
+
+def _flow_quality(points: list[dict]) -> dict:
+    """최신일의 자료 충족 범위와 날짜가 명시된 직전 완비 관측을 분리합니다."""
+    latest = points[-1]
+    available = [prefix for prefix, _, _ in FLOW_COMPONENTS if latest[f"{prefix}SellPressure"] is not None]
+    missing_raw = [label for prefix, label, _ in FLOW_COMPONENTS if latest[f"{prefix}NetBuyEok"] is None]
+    status = "complete" if len(available) == 3 else "unavailable" if len(missing_raw) == 3 else "partial" if missing_raw else "insufficient_history"
+    return {
+        "date": latest["date"],
+        "status": status,
+        "availableWeightPct": round(sum(weight * 100 for prefix, _, weight in FLOW_COMPONENTS if prefix in available)),
+        "missingComponents": [label for prefix, label, _ in FLOW_COMPONENTS if prefix not in available],
+        "missingRawComponents": missing_raw,
+        "lastComplete": next((point for point in reversed(points) if point["directFlowPressure"] is not None), None),
+    }
 
 
 def _number(value: object, digits: int = 4) -> float | int | None:
@@ -139,9 +177,12 @@ def build_breadth_payload(frame: pd.DataFrame, metadata: dict | None = None) -> 
             else "VKOSPI 최근 관측치 확인 필요"
         )
 
-    direct_flow_pressure = _number(latest.get("direct_flow_pressure"), 1)
+    flow_points = [_flow_observation(row) for _, row in data.iterrows()]
+    flow_quality = _flow_quality(flow_points)
+    direct_flow_pressure = flow_points[-1]["directFlowPressure"]
     if direct_flow_pressure is None:
-        interpretations.append("KRX 직접 순매수 미결합 · 기존 수급 proxy만 사용")
+        missing = "·".join(flow_quality["missingComponents"])
+        interpretations.append(f"직접 수급 판독 대기 · {missing} 자료 또는 과거 관측 부족 · 결측 비중 재배분 없음")
     else:
         flow_label = (
             "매도 압력 높음"
@@ -157,7 +198,7 @@ def build_breadth_payload(frame: pd.DataFrame, metadata: dict | None = None) -> 
         )
 
     series = []
-    for row in data.itertuples(index=False):
+    for row, flow_point in zip(data.itertuples(index=False), flow_points):
         item = {
             "date": row.date.date().isoformat(),
             "kospiClose": _number(row.kospi_close, 2),
@@ -177,28 +218,11 @@ def build_breadth_payload(frame: pd.DataFrame, metadata: dict | None = None) -> 
         }
         if vkospi_merged:
             item["vkospi"] = _number(getattr(row, "vkospi", None), 2)
-        for json_key, column in [
-            ("foreignNetBuyEok", "foreign_net_buy_value"),
-            ("institutionNetBuyEok", "institution_net_buy_value"),
-            ("financialInvestmentNetBuyEok", "financial_investment_net_buy_value"),
-            ("pensionNetBuyEok", "pension_net_buy_value"),
-            ("programNetBuyEok", "program_net_buy_value"),
-            ("foreignNetBuy5dEok", "foreign_net_buy_5d"),
-            ("institutionNetBuy5dEok", "institution_net_buy_5d"),
-            ("programNetBuy5dEok", "program_net_buy_5d"),
-        ]:
-            item[json_key] = _eok(getattr(row, column, None))
-        for json_key, column in [
-            ("foreignSellPressure", "foreign_sell_pressure"),
-            ("institutionSellPressure", "institution_sell_pressure"),
-            ("programSellPressure", "program_sell_pressure"),
-            ("directFlowPressure", "direct_flow_pressure"),
-        ]:
-            item[json_key] = _number(getattr(row, column, None), 1)
+        item.update(flow_point)
         series.append(item)
 
     return {
-        "schemaVersion": 3,
+        "schemaVersion": 4,
         "generatedAt": generated_at,
         "source": {
             "provider": "KRX",
@@ -240,7 +264,7 @@ def build_breadth_payload(frame: pd.DataFrame, metadata: dict | None = None) -> 
             "anomalies": quality.get("anomalies", []),
             "failedDates": metadata.get("failedDates", []),
             "emptyDatesCount": len(metadata.get("emptyDates", [])),
-            "directFlowLatestMissing": quality.get("directFlowLatestMissing", False),
+            "directFlowLatestMissing": bool(flow_quality["missingRawComponents"]),
             "programFlowFailedDates": metadata.get("programFlowFailedDates", []),
         },
         "latest": {
@@ -261,31 +285,18 @@ def build_breadth_payload(frame: pd.DataFrame, metadata: dict | None = None) -> 
             "adMa5": _number(latest["AD_ma5"], 2),
             "adMa20": _number(latest["AD_ma20"], 2),
             "adDistance20": _number(latest["AD_line"] - latest["AD_ma20"], 2),
-            "foreignNetBuyEok": _eok(latest.get("foreign_net_buy_value")),
-            "institutionNetBuyEok": _eok(latest.get("institution_net_buy_value")),
-            "financialInvestmentNetBuyEok": _eok(
-                latest.get("financial_investment_net_buy_value")
-            ),
-            "pensionNetBuyEok": _eok(latest.get("pension_net_buy_value")),
-            "programNetBuyEok": _eok(latest.get("program_net_buy_value")),
-            "foreignNetBuy5dEok": _eok(latest.get("foreign_net_buy_5d")),
-            "institutionNetBuy5dEok": _eok(latest.get("institution_net_buy_5d")),
-            "programNetBuy5dEok": _eok(latest.get("program_net_buy_5d")),
-            "foreignSellPressure": _number(latest.get("foreign_sell_pressure"), 1),
-            "institutionSellPressure": _number(
-                latest.get("institution_sell_pressure"), 1
-            ),
-            "programSellPressure": _number(latest.get("program_sell_pressure"), 1),
-            "directFlowPressure": direct_flow_pressure,
+            **flow_points[-1],
             "vkospi": _number(latest.get("vkospi"), 2) if vkospi_merged else None,
             "vkospiChangePct": _percent(latest.get("vkospi_change"), 2) if vkospi_merged else None,
             "interpretation": interpretations,
         },
+        "directFlow": flow_quality,
         "methodology": [
             "breadth_pct = (상승 - 하락) / (상승 + 하락)",
             "AD Line = 저장 시작일부터 일별 (상승 - 하락) 누적",
             "AD Line 절대값은 시작일에 종속 · 방향과 20일선 비교 중심",
             "직접 수급: 외국인 45% · 기관 35% · 프로그램 20% 매도압력 분위수",
+            "3개 구성요소 완비 시에만 고정 가중합 · 결측값을 0으로 처리하거나 가중치 재배분하지 않음",
             "프로그램은 주문 방식 · 외국인·기관 거래와 일부 중첩 가능",
             "매도압력 분위수: 5거래일 순매수 누계를 직전 최대 252거래일과 비교",
             "최소 60개 과거 관측 필요 · 각 날짜까지 공개된 값만 사용",

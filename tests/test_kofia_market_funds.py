@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import date, datetime, timedelta, timezone
+from types import SimpleNamespace
 
 import pytest
 
@@ -22,6 +23,7 @@ from kospi_risk.kofia_market_funds import (
     parse_freesis_funds_rows,
 )
 from scripts.update_kb_market_funds import latest_existing_kb_snapshot
+from scripts import update_kb_market_funds as updater
 
 
 KST = timezone(timedelta(hours=9))
@@ -91,6 +93,40 @@ def merged_kofia_rows() -> list[dict]:
     funds = parse_freesis_funds_rows(funds_payload(), retrieved_at=RETRIEVED_AT)
     credit = parse_freesis_credit_rows(credit_payload(), retrieved_at=RETRIEVED_AT)
     return merge_freesis_rows(funds, credit)[0]
+
+
+@pytest.mark.parametrize("failed", [False, True])
+def test_intraday_kofia_only_preserves_dates_and_history_without_calling_kb(tmp_path, monkeypatch, failed):
+    output = tmp_path / "funds.json"
+    existing = build_market_funds_payload(
+        None, kofia_rows=merged_kofia_rows(), generated_at=RETRIEVED_AT,
+        source_status={"kofia": "direct"},
+    )
+    output.write_text(json.dumps(existing), encoding="utf-8")
+    monkeypatch.setattr(updater, "parse_args", lambda: SimpleNamespace(
+        output=output, env_file=None, strict=False, kofia_only=True,
+        skip_kofia=False, start_date=None,
+    ))
+    monkeypatch.setattr(updater, "load_env_file", lambda _path: None)
+    def unexpected_kb():
+        pytest.fail("장중 재조회가 KB 인증을 호출했습니다.")
+    monkeypatch.setattr(updater, "build_config", unexpected_kb)
+    class Client:
+        def __init__(self, _config):
+            pass
+        def fetch_history(self, **_kwargs):
+            if failed:
+                raise KofiaMarketFundsError("일시 조회 실패")
+            return merged_kofia_rows(), {"lastDate": "2026-09-08"}
+    monkeypatch.setattr(updater, "KofiaFreeSisClient", Client)
+    assert updater.main() == 0
+    updated = json.loads(output.read_text())
+    assert updated["latest"]["date"] == existing["latest"]["date"]
+    assert updated["latest"]["amountsKrwMillion"] == existing["latest"]["amountsKrwMillion"]
+    assert updated["latest"]["score"] == existing["latest"]["score"]
+    assert len(updated["series"]) == len(existing["series"])
+    assert updated["sourceStatus"]["kofiaHistory"] == ("stale-fallback" if failed else "direct")
+    assert updated["generatedAt"] != existing["generatedAt"]
 
 
 def test_freesis_parsers_merge_exact_krw_million_values():

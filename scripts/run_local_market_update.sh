@@ -524,8 +524,11 @@ refresh_els_index_risk() {
 CURRENT_STAGE="시장데이터·지표"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 갱신 모드: $UPDATE_MODE"
 if [[ "$UPDATE_MODE" == "live" ]]; then
-  echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 장중 경량 갱신: 현재 시장값과 위험점수만 갱신합니다."
+  echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 장중 경량 갱신: 현재 시장값·위험점수와 예탁금·신용잔고를 갱신합니다."
   MARKET_STAGE_STARTED_EPOCH="$(date +%s)"
+  # 정각에는 인증 없는 증분 원장만 조회하고, KB 대조는 fast/full에서 수행합니다.
+  KOFIA_FREESIS_TIMEOUT_SECONDS=10 KOFIA_FREESIS_RETRY_COUNT=1 \
+    "$PYTHON_BIN" scripts/update_kb_market_funds.py --kofia-only
   make update-market-risk
   MARKET_STAGE_COMPLETED_EPOCH="$(date +%s)"
   ML_STAGE_STARTED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"
@@ -660,7 +663,6 @@ elif [[ "$UPDATE_MODE" == "live" ]]; then
     --reused-file data/hmm-regime.json
     --reused-file data/ml-risk-signal.json
     --reused-file data/m7-credit-proxy.json
-    --reused-file data/kb-market-funds.json
     --reused-file data/kospi-breadth.json
   )
 elif [[ "$UPDATE_MODE" == "krx" ]]; then

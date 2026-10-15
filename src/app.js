@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20261013-1";
+const ASSET_VERSION = "20261015-1";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -4461,6 +4461,28 @@ function finiteNumberOrNull(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function breadthFlowReadiness(point) {
+  const components = [
+    { prefix: "foreign", label: "외국인", weight: 45 },
+    { prefix: "institution", label: "기관", weight: 35 },
+    { prefix: "program", label: "프로그램", weight: 20 }
+  ];
+  const missing = components.filter(({ prefix }) =>
+    ["NetBuyEok", "NetBuy5dEok", "SellPressure"].some((suffix) =>
+      finiteNumberOrNull(point?.[`${prefix}${suffix}`]) === null
+    ) || Number(point?.[`${prefix}SellPressure`]) < 0 || Number(point?.[`${prefix}SellPressure`]) > 100
+  );
+  return {
+    missing,
+    coverage: 100 - missing.reduce((sum, component) => sum + component.weight, 0),
+    pressure: missing.length ? null : finiteNumberOrNull(point?.directFlowPressure)
+  };
+}
+
+function completeDirectFlowScore(point) {
+  return breadthFlowReadiness(point).pressure;
+}
+
 function trailingReturnPct(points, index, offset, valueKey = "kospiClose") {
   if (index < offset) return null;
   const current = Number(points[index]?.[valueKey]);
@@ -4531,7 +4553,7 @@ function buildMarketParticipationContext(market, timeseries, breadthData) {
     return20dPct: trailingReturnPct(breadthPoints, latestIndex, 20),
     breadthMa5Pct: finiteNumberOrNull(latest.breadthMa5Pct),
     breadthMa20Pct: finiteNumberOrNull(latest.breadthMa20Pct),
-    directFlowPressure: finiteNumberOrNull(latest.directFlowPressure)
+    directFlowPressure: completeDirectFlowScore(latest)
   };
   current.state = marketParticipationState(current);
 
@@ -4557,7 +4579,7 @@ function buildMarketParticipationContext(market, timeseries, breadthData) {
         return20dPct: trailingReturnPct(breadthPoints, index, 20),
         breadthMa5Pct: finiteNumberOrNull(point.breadthMa5Pct),
         breadthMa20Pct: finiteNumberOrNull(point.breadthMa20Pct),
-        directFlowPressure: finiteNumberOrNull(point.directFlowPressure)
+        directFlowPressure: completeDirectFlowScore(point)
       };
     })
     .filter(Boolean);
@@ -4973,7 +4995,7 @@ function renderShockDecomposition(market, timeseries, breadthData, participation
   const priceShock = groupScore(market, "crash");
   const macroConfirmation = groupScore(market, "macro");
   const fallbackFlowScore = groupScore(market, "flow");
-  const directFlowValue = breadthData?.latest?.directFlowPressure;
+  const directFlowValue = completeDirectFlowScore(breadthData?.latest);
   const directFlowScore = directFlowValue == null ? Number.NaN : Number(directFlowValue);
   const flowScore = Number.isFinite(directFlowScore) ? directFlowScore : fallbackFlowScore;
   const liquidityScore = groupScore(market, "liquidity");
@@ -5067,6 +5089,7 @@ function renderBreadthSummaryPanel(breadthData) {
   if (!latest) return "";
 
   const state = latest.state ?? { label: "확인 필요", tone: "watch" };
+  const flowScore = completeDirectFlowScore(latest);
   return `
     <section class="breadth-summary breadth-summary--${state.tone}">
       <div>
@@ -5078,7 +5101,7 @@ function renderBreadthSummaryPanel(breadthData) {
         <div><dt>일간 확산도</dt><dd>${formatSignedPct(latest.breadthPct)}</dd><small>-100~+100%</small></div>
         <div><dt>5일 평균</dt><dd>${formatSignedPct(latest.breadthMa5Pct)}</dd><small>20일 ${formatSignedPct(latest.breadthMa20Pct)}</small></div>
         <div><dt>AD-20일선</dt><dd>${formatSignedThousands(latest.adDistance20)}</dd><small>누적 순확산</small></div>
-        <div><dt>직접 수급 압력</dt><dd>${latest.directFlowPressure == null ? "-" : `${formatNumber(latest.directFlowPressure, 1)} / 100`}</dd><small>외국인·기관·프로그램</small></div>
+        <div><dt>직접 수급 압력</dt><dd>${flowScore === null ? "집계 대기" : `${formatNumber(flowScore, 1)} / 100`}</dd><small>외국인·기관·프로그램 완비 기준</small></div>
       </dl>
       <button type="button" data-open-tab="market-breadth">내부 흐름 보기</button>
     </section>
@@ -5640,10 +5663,54 @@ function renderDomesticFundingPanel(marketFunds) {
         ${renderFundingPressureChart(marketFunds)}
       </div>
       <footer class="breadth-funding-panel__footer">
-        <span>금융투자협회 FreeSIS 일별 확정치</span>
+        <span>금융투자협회 FreeSIS · 기준일 ${latest.date}</span>
+        <span>최근 조회 시도 ${marketFunds.generatedAt ?? "-"}</span>
+        ${marketFunds.sourceStatus?.kofiaHistory === "stale-fallback" ? "<span>원천 조회 실패 · 이전 관측 유지</span>" : ""}
         <span>${formatNumber(observations)}거래일 · ${marketFunds.series[0]?.date} ~ ${latest.date}</span>
         <span>KB증권 OpenAPI는 최신일 대조·금리 보강</span>
       </footer>
+    </section>
+  `;
+}
+
+function renderBreadthFlowPanel(breadthData) {
+  const latest = breadthData?.latest;
+  if (!latest) return "";
+  const readiness = breadthFlowReadiness(latest);
+  const pressure = readiness.pressure;
+  const level = diagnosticLevel(pressure);
+  const lastComplete = [...(breadthData.series ?? [])]
+    .filter((point) => point.date < latest.date && completeDirectFlowScore(point) !== null)
+    .sort((left, right) => left.date.localeCompare(right.date)).at(-1);
+  const formatFlow = (value) => finiteNumberOrNull(value) === null ? "집계 대기" : formatSignedEok(value);
+  const missingLabels = readiness.missing.map((item) => item.label).join("·");
+  return `
+    <section class="breadth-flow-panel" aria-label="KRX 직접 수급 판독">
+      <header>
+        <div><span class="eyebrow">Direct Order Flow · ${latest.date}</span><h3>외국인·기관·프로그램 수급</h3></div>
+        <div class="status-pill status-pill--${level.tone}" data-direct-flow-status>
+          ${pressure === null ? "당일 판독 대기" : `매도압력 ${formatNumber(pressure, 1)} / 100`}
+        </div>
+      </header>
+      ${pressure === null ? `
+        <div class="breadth-flow-status" role="status">
+          <strong>${missingLabels || "수급"} 자료 또는 누적 관측 부족</strong>
+          <span>구성 점수 ${3 - readiness.missing.length}/3 확인 · 결측 비중 재배분 없음</span>
+          ${lastComplete ? `<span>직전 완비 ${lastComplete.date} · 매도압력 ${formatNumber(lastComplete.directFlowPressure, 1)} / 100 · 당일값 아님</span>` : ""}
+        </div>` : ""}
+      <div class="breadth-flow-metrics">
+        <article><span>외국인 · 5D 누계</span><strong>${formatFlow(latest.foreignNetBuy5dEok)}</strong><small>당일 ${formatFlow(latest.foreignNetBuyEok)}</small></article>
+        <article><span>기관 · 5D 누계</span><strong>${formatFlow(latest.institutionNetBuy5dEok)}</strong><small>당일 ${formatFlow(latest.institutionNetBuyEok)}</small></article>
+        <article><span>프로그램 · 5D 누계</span><strong>${formatFlow(latest.programNetBuy5dEok)}</strong><small>당일 ${formatFlow(latest.programNetBuyEok)} · 차익+비차익</small></article>
+        <article><span>기관 내부 · 당일</span><strong>금투 ${formatFlow(latest.financialInvestmentNetBuyEok)}</strong><small>연기금 ${formatFlow(latest.pensionNetBuyEok)}</small></article>
+      </div>
+      ${renderNarrativeList([
+        "양수 = 순매수 · 음수 = 순매도",
+        "압력점수 = 5일 순매도 강도를 직전 최대 252거래일과 비교",
+        "외국인 45% · 기관 35% · 프로그램 20% 고정 · 세 항목 완비 시에만 판독",
+        "프로그램 = 주문 방식 · 외국인·기관 거래와 일부 중첩 가능",
+        "수급 진단 전용 · 기존 종합점수와 6개 가중치에는 미반영"
+      ], "narrative-list--compact")}
     </section>
   `;
 }
@@ -5663,7 +5730,6 @@ function renderMarketBreadthPage(breadthData, marketFunds) {
   const latest = breadthData.latest;
   const quality = breadthData.quality ?? {};
   const state = latest.state ?? { label: "확인 필요", tone: "watch" };
-  const directFlowLevel = diagnosticLevel(latest.directFlowPressure);
   const qualityLabel = quality.status === "ok" ? "정상" : quality.status === "warning" ? "주의" : "확인 필요";
   const investorFlowLabel = breadthData.source?.investorFlowStatus === "available" ? "연결" : "미연결";
   const programFlowLabel = breadthData.source?.programFlowStatus === "available" ? "연결" : "미연결";
@@ -5693,26 +5759,7 @@ function renderMarketBreadthPage(breadthData, marketFunds) {
         ${vkospiMerged ? `<article class="is-vkospi"><span>VKOSPI</span><strong>${formatNumber(latest.vkospi, 2)}</strong><small>전일 ${formatSignedPct(latest.vkospiChangePct)} · ${vkospiValueStatus}</small></article>` : ""}
       </div>
 
-      <section class="breadth-flow-panel" aria-label="KRX 직접 수급 판독">
-        <header>
-          <div><span class="eyebrow">Direct Order Flow</span><h3>외국인·기관·프로그램 수급</h3></div>
-          <div class="status-pill status-pill--${directFlowLevel.tone}">
-            ${latest.directFlowPressure == null ? "자료 준비중" : `매도압력 ${formatNumber(latest.directFlowPressure, 1)}`}
-          </div>
-        </header>
-        <div class="breadth-flow-metrics">
-          <article><span>외국인</span><strong>${formatSignedEok(latest.foreignNetBuy5dEok)}</strong><small>당일 ${formatSignedEok(latest.foreignNetBuyEok)} · 5D 누계</small></article>
-          <article><span>기관</span><strong>${formatSignedEok(latest.institutionNetBuy5dEok)}</strong><small>당일 ${formatSignedEok(latest.institutionNetBuyEok)} · 5D 누계</small></article>
-          <article><span>프로그램</span><strong>${formatSignedEok(latest.programNetBuy5dEok)}</strong><small>당일 ${formatSignedEok(latest.programNetBuyEok)} · 차익+비차익</small></article>
-          <article><span>기관 내부</span><strong>금투 ${formatSignedEok(latest.financialInvestmentNetBuyEok)}</strong><small>연기금 ${formatSignedEok(latest.pensionNetBuyEok)} · 당일</small></article>
-        </div>
-        ${renderNarrativeList([
-          "양수 = 순매수 · 음수 = 순매도",
-          "압력점수 = 5일 순매도 강도를 직전 최대 252거래일과 비교",
-          "프로그램 = 주문 방식 · 외국인·기관 거래와 일부 중첩 가능",
-          "수급 진단 전용 · 기존 종합점수와 6개 가중치에는 미반영"
-        ], "narrative-list--compact")}
-      </section>
+      ${renderBreadthFlowPanel(breadthData)}
 
       ${renderDomesticFundingPanel(marketFunds)}
 
@@ -5744,7 +5791,9 @@ function renderMarketBreadthPage(breadthData, marketFunds) {
       </section>
 
       <div class="breadth-reading">
-        ${renderNarrativeList(latest.interpretation, "narrative-list--compact")}
+        ${renderNarrativeList((latest.interpretation ?? []).filter((line) =>
+          completeDirectFlowScore(latest) !== null || !line.startsWith("직접 수급 압력")
+        ), "narrative-list--compact")}
       </div>
 
       <div class="breadth-chart-grid">

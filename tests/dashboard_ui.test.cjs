@@ -41,6 +41,62 @@ function harness(options = {}) {
   return { context, app, timers, errorNode };
 }
 
+function completeFlowPoint(date = "2026-10-14", pressure = 70.9) {
+  return {
+    date, directFlowPressure: pressure,
+    foreignNetBuyEok: -11705.1, foreignNetBuy5dEok: -124235.5, foreignSellPressure: 87.1,
+    institutionNetBuyEok: 7901.7, institutionNetBuy5dEok: 3328, institutionSellPressure: 56.2,
+    programNetBuyEok: -40.9, programNetBuy5dEok: -61120.7, programSellPressure: 60.1
+  };
+}
+
+test("외국인·기관 결측 때 프로그램 점수를 종합압력으로 오인하지 않음", () => {
+  const { context } = harness();
+  const previous = completeFlowPoint();
+  const latest = {
+    ...completeFlowPoint("2026-10-15", 39.6),
+    foreignNetBuyEok: null, institutionNetBuyEok: null,
+    foreignNetBuy5dEok: null, institutionNetBuy5dEok: null,
+    foreignSellPressure: null, institutionSellPressure: null,
+    programNetBuyEok: 5688.5, programNetBuy5dEok: -36639, programSellPressure: 39.6
+  };
+  const payload = { latest, series: [previous, latest] };
+  const original = JSON.stringify(payload);
+  assert.equal(context.completeDirectFlowScore(latest), null);
+  const html = context.renderBreadthFlowPanel(payload);
+  for (const label of ["당일 판독 대기", "외국인·기관", "1/3 확인", "직전 완비 2026-10-14", "70.9 / 100", "당일값 아님", "집계 대기"]) {
+    assert.ok(html.includes(label), label);
+  }
+  assert.doesNotMatch(html, /매도압력 39\.6|NaN|undefined/);
+  assert.match(context.renderBreadthSummaryPanel(payload), /집계 대기/);
+  assert.equal(JSON.stringify(payload), original);
+});
+
+test("수급 0은 유효하고, 구버전 캐시의 결측·무한대 점수는 차단", () => {
+  const { context } = harness();
+  const complete = completeFlowPoint("2026-10-15", 0);
+  assert.equal(context.completeDirectFlowScore(complete), 0);
+  assert.match(context.renderBreadthFlowPanel({ latest: complete, series: [complete] }), /매도압력 0\.0 \/ 100/);
+  for (const prefix of ["foreign", "institution", "program"]) {
+    for (const suffix of ["NetBuyEok", "NetBuy5dEok", "SellPressure"]) {
+      for (const invalid of [null, undefined, "", Infinity, NaN]) {
+        assert.equal(context.completeDirectFlowScore({ ...complete, [`${prefix}${suffix}`]: invalid }), null);
+      }
+    }
+  }
+});
+
+test("자금 원장의 관측일과 재조회 시각·실패 상태를 구분", () => {
+  const { context } = harness();
+  const payload = JSON.parse(readFileSync(join(root, "data/kb-market-funds.json"), "utf8"));
+  payload.generatedAt = "2026-10-16 10:00:05 KST";
+  payload.sourceStatus.kofiaHistory = "stale-fallback";
+  const html = context.renderDomesticFundingPanel(payload);
+  assert.match(html, /최근 조회 시도 2026-10-16 10:00:05 KST/);
+  assert.ok(html.includes(`기준일 ${payload.latest.date}`));
+  assert.match(html, /원천 조회 실패 · 이전 관측 유지/);
+});
+
 test("잠정값은 확정값보다 최근 날짜·유효 시각·신선한 원천일 때만 채택", () => {
   const { context } = harness();
   const definition = { id: "us10y_naver", type: "yield" };

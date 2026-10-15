@@ -201,6 +201,27 @@ def test_krx_policy_reuses_new_non_krx_artifact_without_runner_argument(tmp_path
     assert str(funding_path) in manifest["reusePolicy"]["implicitPaths"]
 
 
+@pytest.mark.parametrize("fresh", [True, False])
+def test_live_requires_a_new_funding_lookup_not_an_implicitly_reused_file(tmp_path, fresh):
+    make_publication_candidate(tmp_path)
+    funding_path = Path("data/kb-market-funds.json")
+    write_json(tmp_path, funding_path, {
+        "generatedAt": "2026-08-19 12:32:00 KST" if fresh else "2026-08-19 11:00:00 KST",
+        "latest": {"date": "2026-08-18"},
+    })
+    kwargs = dict(root=tmp_path, run_id=RUN_ID, mode="live", started_at=STARTED_AT,
+                  artifact_paths=ARTIFACTS + (funding_path,), prepared_at=PREPARED_AT)
+    if not fresh:
+        with pytest.raises(PublicationError, match="신규 산출물이 아닙니다"):
+            prepare_publication(**kwargs)
+        return
+    manifest = prepare_publication(**kwargs)
+    funding = json.loads((tmp_path / funding_path).read_text())
+    assert funding["publication"]["state"] == "generated"
+    assert funding["latest"]["date"] == "2026-08-18"
+    assert str(funding_path) not in manifest["reusePolicy"]["implicitPaths"]
+
+
 def test_verify_detects_file_changed_after_manifest(tmp_path):
     make_publication_candidate(tmp_path)
     prepare_publication(

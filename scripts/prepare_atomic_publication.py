@@ -47,7 +47,6 @@ PARTIAL_MODE_REUSED_ARTIFACTS = {
         Path("data/hmm-regime.json"),
         Path("data/ml-risk-signal.json"),
         Path("data/m7-credit-proxy.json"),
-        Path("data/kb-market-funds.json"),
         Path("data/dram-spot-prices.json"),
         Path("data/kospi-breadth.json"),
     },

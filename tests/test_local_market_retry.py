@@ -74,3 +74,17 @@ def test_runtime_uses_calendar_before_query_and_keeps_failure_audit():
     assert krx.index("--resolve-date") < krx.index('update_kospi_breadth_data "$BREADTH_END_DATE"')
     assert '"${SCHEDULE_FAILED_FILE}.before-retry-$RUN_ID"' in source
     assert '--krx-session-date "${BREADTH_END_DATE:-}"' in source
+
+
+def test_live_refreshes_funds_without_kb_or_model_training_and_seals_new_output():
+    source = SCRIPT.read_text(encoding="utf-8")
+    stage = source.split('CURRENT_STAGE="시장데이터·지표"', 1)[1]
+    live = stage.split('if [[ "$UPDATE_MODE" == "live" ]]; then', 1)[1].split('elif [[ "$UPDATE_MODE" == "krx" ]]', 1)[0]
+    assert 'scripts/update_kb_market_funds.py --kofia-only' in live
+    assert 'KOFIA_FREESIS_TIMEOUT_SECONDS=10 KOFIA_FREESIS_RETRY_COUNT=1' in live
+    assert live.index('scripts/update_kb_market_funds.py') < live.index('make update-market-risk')
+    assert 'train' not in live and 'update_kospi_breadth_data' not in live
+    publication = source.split('ATOMIC_PUBLICATION_ARGS=(', 1)[1]
+    live_files = publication.split('elif [[ "$UPDATE_MODE" == "live" ]]; then', 1)[1].split('elif [[ "$UPDATE_MODE" == "krx" ]]', 1)[0]
+    assert '--reused-file data/kb-market-funds.json' not in live_files
+    assert '--reused-file data/kospi-breadth.json' in live_files

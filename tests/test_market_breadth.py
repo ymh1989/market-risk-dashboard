@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from kospi_risk.data_loader import load_frame
 from kospi_risk.market_breadth import (
@@ -212,14 +213,14 @@ def test_program_flow_circuit_breaker_stops_source_wide_failures():
     assert result.attrs["failed_dates"][-1]["scope"] == "source-circuit-breaker"
 
 
-def test_direct_flow_pressure_is_trailing_only_and_reweights_missing_program():
+def test_direct_flow_pressure_is_trailing_only_with_fixed_weights():
     rows = 70
     frame = pd.DataFrame(
         {
             "date": pd.bdate_range("2025-01-02", periods=rows),
             "foreign_net_buy_value": np.linspace(100, -100, rows),
             "institution_net_buy_value": np.linspace(50, -50, rows),
-            "program_net_buy_value": [np.nan] * rows,
+            "program_net_buy_value": np.linspace(20, -20, rows),
         }
     )
     result = calculate_direct_flow_metrics(frame)
@@ -232,7 +233,33 @@ def test_direct_flow_pressure_is_trailing_only_and_reweights_missing_program():
     assert result.loc[65, "foreign_net_buy_5d"] < 0
     assert result.loc[65, "direct_flow_pressure"] > 90
     assert changed.loc[65, "direct_flow_pressure"] == original_pressure
-    assert np.isnan(result.loc[65, "program_sell_pressure"])
+    assert result.loc[65, "program_sell_pressure"] > 90
+
+
+@pytest.mark.parametrize("missing", ["foreign", "institution", "program"])
+@pytest.mark.parametrize("invalid", [np.nan, np.inf, -np.inf])
+def test_direct_flow_pressure_never_reweights_missing_components(missing, invalid):
+    frame = pd.DataFrame({
+        "date": pd.bdate_range("2025-01-02", periods=80),
+        **{f"{prefix}_net_buy_value": np.linspace(100, -100, 80)
+           for prefix in ("foreign", "institution", "program")},
+    })
+    frame.loc[74, f"{missing}_net_buy_value"] = invalid
+    result = calculate_direct_flow_metrics(frame)
+    assert pd.notna(result.loc[73, "direct_flow_pressure"])
+    assert result.loc[74:78, "direct_flow_pressure"].isna().all()
+    assert pd.notna(result.loc[79, "direct_flow_pressure"])
+    assert result.loc[74:78, f"{missing}_net_buy_5d"].isna().all()
+
+
+def test_program_only_cannot_become_total_flow_pressure():
+    frame = pd.DataFrame({
+        "date": pd.bdate_range("2025-01-02", periods=80),
+        "program_net_buy_value": np.zeros(80),
+    })
+    result = calculate_direct_flow_metrics(frame)
+    assert result["direct_flow_pressure"].isna().all()
+    assert result.iloc[-1]["program_sell_pressure"] == 50
 
 
 def test_update_breadth_data_only_fetches_dates_after_existing_tail(tmp_path: Path):
