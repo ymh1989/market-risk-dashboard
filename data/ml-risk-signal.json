@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16 07:32 KST",
+  "generatedAt": "2026-10-16 15:38 KST",
   "source": {
     "features": "data/processed/features.parquet",
     "model": "models/model_bundle.joblib",
@@ -8,23 +8,23 @@
     "walkForwardPredictions": "reports/walk_forward_predictions.csv",
     "seriesWindow": "YTD",
     "trainingStartDate": "1996-01-03",
-    "trainingEndDate": "2026-10-15",
-    "trainingObservations": 7727,
-    "oosSignalEndDate": "2026-10-07",
-    "oosResultKnownThroughDate": "2026-10-15"
+    "trainingEndDate": "2026-10-16",
+    "trainingObservations": 7728,
+    "oosSignalEndDate": "2026-10-08",
+    "oosResultKnownThroughDate": "2026-10-16"
   },
   "latest": {
-    "date": "2026-10-15",
+    "date": "2026-10-16",
     "regime": "risk-off",
-    "riskOffProbabilityPct": 83.91,
-    "crash5d5pctProbabilityPct": 55.81,
-    "crash5d10pctProbabilityPct": 38.31,
-    "elsRiskScore": 69.32,
+    "riskOffProbabilityPct": 78.59,
+    "crash5d5pctProbabilityPct": 54.15,
+    "crash5d10pctProbabilityPct": 43.94,
+    "elsRiskScore": 66.87,
     "elsRiskBucket": "위험 상승",
-    "kospi": 5554.22,
-    "kospiReturn20dPct": -19.62,
-    "realizedVol20dPct": 41.71,
-    "drawdownFrom60dHighPct": -21.74,
+    "kospi": 5668.05,
+    "kospiReturn20dPct": -15.2,
+    "realizedVol20dPct": 42.24,
+    "drawdownFrom60dHighPct": -20.13,
     "baselineRiskOffSignal": 1,
     "interpretationLevel": "Risk-off 우세"
   },
@@ -46,26 +46,26 @@
       "riskOffBrier": 0.2916326530612245
     },
     "crash5d5pct": {
-      "auc": 0.8112050456253355,
-      "averagePrecision": 0.2959887860326424,
-      "eventCount": 138.0,
-      "eventRate": 0.0784982935153583,
+      "auc": 0.8121858069100274,
+      "averagePrecision": 0.2981708877573095,
+      "eventCount": 139.0,
+      "eventRate": 0.0790221716884593,
       "topDecileHitRate": 0.3409090909090909,
-      "topDecileLift": 4.34288537549407,
-      "brier": 0.0840890651198539,
-      "baselineAuc": 0.5923555197709787,
-      "baselineBrier": 0.0775434834456716
+      "topDecileLift": 4.314094179202093,
+      "brier": 0.0841888924028004,
+      "baselineAuc": 0.5945154987121415,
+      "baselineBrier": 0.0778861887375517
     },
     "crash5d10pct": {
-      "auc": 0.9029834761321908,
-      "averagePrecision": 0.2142536431549787,
-      "eventCount": 38.0,
-      "eventRate": 0.0216154721274175,
-      "topDecileHitRate": 0.1477272727272727,
-      "topDecileLift": 6.83433014354067,
-      "brier": 0.022043328303938,
-      "baselineAuc": 0.5820685434516524,
-      "baselineBrier": 0.0232563066186121
+      "auc": 0.9038908765652952,
+      "averagePrecision": 0.2148300512479178,
+      "eventCount": 39.0,
+      "eventRate": 0.0221716884593519,
+      "topDecileHitRate": 0.1534090909090909,
+      "topDecileLift": 6.919143356643357,
+      "brier": 0.0223803143912147,
+      "baselineAuc": 0.5898181276088251,
+      "baselineBrier": 0.0238051708406766
     }
   },
   "thresholds": {
@@ -2652,7 +2652,7 @@
       "date": "2026-10-02",
       "resultKnownThroughDate": "2026-10-13",
       "riskOffProbabilityPct": null,
-      "crash5d5pctProbabilityPct": 50.7080997601306,
+      "crash5d5pctProbabilityPct": 49.75053388970821,
       "crash5d10pctProbabilityPct": 16.97999733319817,
       "baselineCrash5d5pctProbabilityPct": 1.0,
       "baselineCrash5d10pctProbabilityPct": 0.5,
@@ -2666,7 +2666,7 @@
       "date": "2026-10-06",
       "resultKnownThroughDate": "2026-10-14",
       "riskOffProbabilityPct": null,
-      "crash5d5pctProbabilityPct": 39.694607044550416,
+      "crash5d5pctProbabilityPct": 39.25014511742785,
       "crash5d10pctProbabilityPct": 8.85088698559913,
       "baselineCrash5d5pctProbabilityPct": 1.0,
       "baselineCrash5d10pctProbabilityPct": 0.5,
@@ -2680,7 +2680,7 @@
       "date": "2026-10-07",
       "resultKnownThroughDate": "2026-10-15",
       "riskOffProbabilityPct": null,
-      "crash5d5pctProbabilityPct": 43.68096245254101,
+      "crash5d5pctProbabilityPct": 42.41547304449186,
       "crash5d10pctProbabilityPct": 11.1580208571973,
       "baselineCrash5d5pctProbabilityPct": 1.0,
       "baselineCrash5d10pctProbabilityPct": 0.5,
@@ -2689,44 +2689,58 @@
       "forwardReturn5dPct": -18.36711297932067,
       "forwardMinReturn5dPct": -18.36711297932067,
       "fold": 84
+    },
+    {
+      "date": "2026-10-08",
+      "resultKnownThroughDate": "2026-10-16",
+      "riskOffProbabilityPct": null,
+      "crash5d5pctProbabilityPct": 52.00430290167933,
+      "crash5d10pctProbabilityPct": 21.5906985221972,
+      "baselineCrash5d5pctProbabilityPct": 17.51593536549458,
+      "baselineCrash5d10pctProbabilityPct": 0.56617913255194,
+      "targetCrash5d5pct": 1,
+      "targetCrash5d10pct": 1,
+      "forwardReturn5dPct": -14.456536667305569,
+      "forwardMinReturn5dPct": -16.174484185616212,
+      "fold": 84
     }
   ],
   "monitoring": {
     "generatedFrom": "walk-forward OOS predictions only",
     "status": {
-      "label": "연구용 전환 경고",
-      "tone": "danger",
-      "researchOnly": true,
-      "reason": "최근 선별력 또는 확률오차가 운영 기준 하회"
+      "label": "주의 관찰",
+      "tone": "caution",
+      "researchOnly": false,
+      "reason": "최근 지표 혼조 · 누적 관찰 필요"
     },
     "tasks": {
       "crash5d5pct": {
         "label": "5일 중 -5% 도달",
         "metrics": {
           "3m": {
-            "startDate": "2026-07-07",
-            "endDate": "2026-10-07",
+            "startDate": "2026-07-08",
+            "endDate": "2026-10-08",
             "observations": 62,
             "eventCount": 23,
             "eventRate": 0.3709677419354839,
-            "auc": 0.5105908584169454,
-            "averagePrecision": 0.3835435610389784,
-            "brier": 0.26104803821970207,
-            "baselineBrier": 0.3624582533796595,
-            "dailyWinRate": 0.4032258064516129,
-            "foldWinRate": 0.75
+            "auc": 0.5284280936454848,
+            "averagePrecision": 0.3901117142511033,
+            "brier": 0.25936882713161225,
+            "baselineBrier": 0.3721941462039224,
+            "dailyWinRate": 0.41935483870967744,
+            "foldWinRate": 1.0
           },
           "6m": {
             "startDate": "2026-04-06",
-            "endDate": "2026-10-07",
-            "observations": 124,
-            "eventCount": 43,
-            "eventRate": 0.3467741935483871,
-            "auc": 0.5983347688774046,
-            "averagePrecision": 0.42357516849313515,
-            "brier": 0.23502502545368528,
-            "baselineBrier": 0.3350255593782013,
-            "dailyWinRate": 0.3870967741935484,
+            "endDate": "2026-10-08",
+            "observations": 125,
+            "eventCount": 44,
+            "eventRate": 0.352,
+            "auc": 0.6001683501683501,
+            "averagePrecision": 0.4289198239833516,
+            "brier": 0.23522230729663646,
+            "baselineBrier": 0.3377882516380791,
+            "dailyWinRate": 0.392,
             "foldWinRate": 0.8333333333333334
           }
         },
@@ -2745,14 +2759,14 @@
           },
           {
             "label": "25-50",
-            "observations": 100,
-            "averageProbabilityPct": 39.568589922625215,
-            "actualFrequencyPct": 24.0
+            "observations": 101,
+            "averageProbabilityPct": 39.65247103779266,
+            "actualFrequencyPct": 24.752475247524753
           },
           {
             "label": "50-75",
             "observations": 80,
-            "averageProbabilityPct": 57.442036206975516,
+            "averageProbabilityPct": 57.45823874624487,
             "actualFrequencyPct": 45.0
           },
           {
@@ -2765,15 +2779,15 @@
         "cases": {
           "alertThresholdPct": 50.0,
           "alerts": 80,
-          "actualEvents": 60,
+          "actualEvents": 61,
           "hits": 36,
           "falsePositives": 44,
-          "misses": 24,
+          "misses": 25,
           "hitDates": [
             {
-              "date": "2026-10-02",
-              "probabilityPct": 50.7080997601306,
-              "forwardMinReturn5dPct": -13.82675541924742
+              "date": "2026-10-08",
+              "probabilityPct": 52.00430290167933,
+              "forwardMinReturn5dPct": -16.174484185616212
             },
             {
               "date": "2026-09-10",
@@ -2856,13 +2870,18 @@
           "missedDates": [
             {
               "date": "2026-10-07",
-              "probabilityPct": 43.68096245254101,
+              "probabilityPct": 42.41547304449186,
               "forwardMinReturn5dPct": -18.36711297932067
             },
             {
               "date": "2026-10-06",
-              "probabilityPct": 39.694607044550416,
+              "probabilityPct": 39.25014511742785,
               "forwardMinReturn5dPct": -13.435061277352231
+            },
+            {
+              "date": "2026-10-02",
+              "probabilityPct": 49.75053388970821,
+              "forwardMinReturn5dPct": -13.82675541924742
             },
             {
               "date": "2026-10-01",
@@ -2888,48 +2907,43 @@
               "date": "2026-07-09",
               "probabilityPct": 40.40058013973887,
               "forwardMinReturn5dPct": -6.65093233460094
-            },
-            {
-              "date": "2026-07-08",
-              "probabilityPct": 44.887043072929075,
-              "forwardMinReturn5dPct": -6.069721904456999
             }
           ]
         },
         "status": {
-          "label": "연구용 전환 경고",
-          "tone": "danger",
-          "researchOnly": true,
-          "reason": "최근 선별력 또는 확률오차가 운영 기준 하회"
+          "label": "주의 관찰",
+          "tone": "caution",
+          "researchOnly": false,
+          "reason": "최근 지표 혼조 · 누적 관찰 필요"
         }
       },
       "crash5d10pct": {
         "label": "5일 중 -10% 도달",
         "metrics": {
           "3m": {
-            "startDate": "2026-07-07",
-            "endDate": "2026-10-07",
+            "startDate": "2026-07-08",
+            "endDate": "2026-10-08",
             "observations": 62,
             "eventCount": 11,
             "eventRate": 0.1774193548387097,
-            "auc": 0.39037433155080214,
-            "averagePrecision": 0.15450971478311673,
-            "brier": 0.17160620201396842,
-            "baselineBrier": 0.1944230642219355,
-            "dailyWinRate": 0.2903225806451613,
-            "foldWinRate": 0.75
+            "auc": 0.4099821746880571,
+            "averagePrecision": 0.15798845345035326,
+            "brier": 0.16946573266400064,
+            "baselineBrier": 0.2039862250129226,
+            "dailyWinRate": 0.3064516129032258,
+            "foldWinRate": 0.6666666666666666
           },
           "6m": {
             "startDate": "2026-04-06",
-            "endDate": "2026-10-07",
-            "observations": 124,
-            "eventCount": 19,
-            "eventRate": 0.1532258064516129,
-            "auc": 0.5102756892230577,
-            "averagePrecision": 0.16247414365312904,
-            "brier": 0.14857089889192027,
-            "baselineBrier": 0.1703464063269838,
-            "dailyWinRate": 0.25806451612903225,
+            "endDate": "2026-10-08",
+            "observations": 125,
+            "eventCount": 20,
+            "eventRate": 0.16,
+            "auc": 0.5076190476190476,
+            "averagePrecision": 0.16658018243552716,
+            "brier": 0.15230074654737447,
+            "baselineBrier": 0.17689330286220772,
+            "dailyWinRate": 0.264,
             "foldWinRate": 0.6666666666666666
           }
         },
@@ -2942,9 +2956,9 @@
           },
           {
             "label": "10-25",
-            "observations": 86,
-            "averageProbabilityPct": 18.06320471135674,
-            "actualFrequencyPct": 15.11627906976744
+            "observations": 87,
+            "averageProbabilityPct": 18.10375061722847,
+            "actualFrequencyPct": 16.091954022988507
           },
           {
             "label": "25-50",
@@ -2968,10 +2982,10 @@
         "cases": {
           "alertThresholdPct": 25.0,
           "alerts": 65,
-          "actualEvents": 25,
+          "actualEvents": 26,
           "hits": 11,
           "falsePositives": 54,
-          "misses": 14,
+          "misses": 15,
           "hitDates": [
             {
               "date": "2026-07-27",
@@ -3058,6 +3072,11 @@
           ],
           "missedDates": [
             {
+              "date": "2026-10-08",
+              "probabilityPct": 21.5906985221972,
+              "forwardMinReturn5dPct": -16.174484185616212
+            },
+            {
               "date": "2026-10-07",
               "probabilityPct": 11.1580208571973,
               "forwardMinReturn5dPct": -18.36711297932067
@@ -3091,11 +3110,6 @@
               "date": "2026-07-01",
               "probabilityPct": 19.24836715444668,
               "forwardMinReturn5dPct": -12.725133409045188
-            },
-            {
-              "date": "2026-06-04",
-              "probabilityPct": 24.6029480042999,
-              "forwardMinReturn5dPct": -13.368968482801492
             }
           ]
         },
@@ -3115,10 +3129,10 @@
       "kospiReturn20dPct": 7.877484711872307,
       "realizedVol20dPct": 21.033827030829407,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 51.50783012755459,
-      "crash5d5pctProbabilityPct": 19.50626854649697,
-      "crash5d10pctProbabilityPct": 0.6188589021354647,
-      "elsRiskScore": 30.475376259912107,
+      "riskOffProbabilityPct": 52.9367026579202,
+      "crash5d5pctProbabilityPct": 19.17417717451316,
+      "crash5d10pctProbabilityPct": 0.5527990193216974,
+      "elsRiskScore": 30.77881800759947,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3127,10 +3141,10 @@
       "kospiReturn20dPct": 10.435795158932692,
       "realizedVol20dPct": 23.4972464343265,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 65.56993859757588,
-      "crash5d5pctProbabilityPct": 31.411894834654714,
-      "crash5d10pctProbabilityPct": 7.416577603455332,
-      "elsRiskScore": 40.800502531636766,
+      "riskOffProbabilityPct": 67.64522371047799,
+      "crash5d5pctProbabilityPct": 27.83454878808579,
+      "crash5d10pctProbabilityPct": 9.734265784114102,
+      "elsRiskScore": 41.302364459444604,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3139,10 +3153,10 @@
       "kospiReturn20dPct": 12.336322858823712,
       "realizedVol20dPct": 23.61348204425331,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 76.9653392299276,
-      "crash5d5pctProbabilityPct": 23.939767945849592,
-      "crash5d10pctProbabilityPct": 7.168838399537804,
-      "elsRiskScore": 45.255527811310124,
+      "riskOffProbabilityPct": 78.70131834932157,
+      "crash5d5pctProbabilityPct": 26.692988594806742,
+      "crash5d10pctProbabilityPct": 5.494671528660781,
+      "elsRiskScore": 45.996857058325645,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3151,10 +3165,10 @@
       "kospiReturn20dPct": 11.000109754759091,
       "realizedVol20dPct": 23.19971357306369,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 83.60317923809919,
-      "crash5d5pctProbabilityPct": 27.48254703429595,
-      "crash5d10pctProbabilityPct": 7.202086926610038,
-      "elsRiskScore": 47.04130066397498,
+      "riskOffProbabilityPct": 81.58694921541408,
+      "crash5d5pctProbabilityPct": 29.725299085455138,
+      "crash5d10pctProbabilityPct": 6.144465715740263,
+      "elsRiskScore": 46.611146341039515,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3163,10 +3177,10 @@
       "kospiReturn20dPct": 9.567613752602377,
       "realizedVol20dPct": 23.05899847337056,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 80.50929565315415,
-      "crash5d5pctProbabilityPct": 25.921641341140035,
-      "crash5d10pctProbabilityPct": 4.880720534996344,
-      "elsRiskScore": 47.90288019854694,
+      "riskOffProbabilityPct": 80.99692612700451,
+      "crash5d5pctProbabilityPct": 25.700483150926974,
+      "crash5d10pctProbabilityPct": 4.076859945984438,
+      "elsRiskScore": 48.05757253451696,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3175,10 +3189,10 @@
       "kospiReturn20dPct": 10.68576462212354,
       "realizedVol20dPct": 22.914345539253198,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 76.98398583704433,
-      "crash5d5pctProbabilityPct": 23.224151357764796,
-      "crash5d10pctProbabilityPct": 2.713138323957042,
-      "elsRiskScore": 46.552623317857204,
+      "riskOffProbabilityPct": 81.69906693367889,
+      "crash5d5pctProbabilityPct": 22.511663359011276,
+      "crash5d10pctProbabilityPct": 2.2019631069062844,
+      "elsRiskScore": 47.95155167975626,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3187,10 +3201,10 @@
       "kospiReturn20dPct": 11.844981862152348,
       "realizedVol20dPct": 22.781714105755583,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 82.22112296860698,
-      "crash5d5pctProbabilityPct": 24.31160942304169,
-      "crash5d10pctProbabilityPct": 3.9440290501094473,
-      "elsRiskScore": 49.102715894525765,
+      "riskOffProbabilityPct": 83.08385104918258,
+      "crash5d5pctProbabilityPct": 21.12395485678411,
+      "crash5d10pctProbabilityPct": 1.6252970418460861,
+      "elsRiskScore": 49.167020962970604,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3199,10 +3213,10 @@
       "kospiReturn20dPct": 14.158934661924484,
       "realizedVol20dPct": 22.568064647330345,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 83.28515616827478,
-      "crash5d5pctProbabilityPct": 30.678023756803697,
-      "crash5d10pctProbabilityPct": 3.9440290501094473,
-      "elsRiskScore": 50.13068236539315,
+      "riskOffProbabilityPct": 85.85701557325498,
+      "crash5d5pctProbabilityPct": 27.084653869503573,
+      "crash5d10pctProbabilityPct": 2.2019631069062844,
+      "elsRiskScore": 50.78227585477676,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3211,10 +3225,10 @@
       "kospiReturn20dPct": 13.340980427917337,
       "realizedVol20dPct": 22.414383492317665,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 82.83436030600258,
-      "crash5d5pctProbabilityPct": 33.069527624192716,
-      "crash5d10pctProbabilityPct": 3.9440290501094473,
-      "elsRiskScore": 51.12460227885769,
+      "riskOffProbabilityPct": 83.90412739332864,
+      "crash5d5pctProbabilityPct": 37.53187577581675,
+      "crash5d10pctProbabilityPct": 2.2019631069062844,
+      "elsRiskScore": 51.1491350550743,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3223,10 +3237,10 @@
       "kospiReturn20dPct": 17.282592486658398,
       "realizedVol20dPct": 20.608252968722148,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 80.82250022968958,
-      "crash5d5pctProbabilityPct": 21.28490334256293,
-      "crash5d10pctProbabilityPct": 4.4061817944686155,
-      "elsRiskScore": 49.22631744910758,
+      "riskOffProbabilityPct": 82.18518405607986,
+      "crash5d5pctProbabilityPct": 26.061828126306008,
+      "crash5d10pctProbabilityPct": 2.0566044486850736,
+      "elsRiskScore": 49.70128521081267,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3235,10 +3249,10 @@
       "kospiReturn20dPct": 21.044827249926847,
       "realizedVol20dPct": 17.15122783848778,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 82.53724803248997,
-      "crash5d5pctProbabilityPct": 27.850645165584865,
-      "crash5d10pctProbabilityPct": 3.1078136721631076,
-      "elsRiskScore": 51.15718130527183,
+      "riskOffProbabilityPct": 85.5015268386341,
+      "crash5d5pctProbabilityPct": 27.614275497384096,
+      "crash5d10pctProbabilityPct": 1.1302573573215773,
+      "elsRiskScore": 51.946348386558,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3247,10 +3261,10 @@
       "kospiReturn20dPct": 20.91134771879568,
       "realizedVol20dPct": 17.115800767618428,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 82.24547090388003,
-      "crash5d5pctProbabilityPct": 24.933926255772278,
-      "crash5d10pctProbabilityPct": 6.805671716861298,
-      "elsRiskScore": 50.74477630136061,
+      "riskOffProbabilityPct": 87.4851094001991,
+      "crash5d5pctProbabilityPct": 27.425414891542445,
+      "crash5d10pctProbabilityPct": 4.040846008003866,
+      "elsRiskScore": 52.19194243600148,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3259,10 +3273,10 @@
       "kospiReturn20dPct": 22.311622702158694,
       "realizedVol20dPct": 15.286876495217944,
       "drawdownFrom60dHighPct": -0.38555169981201454,
-      "riskOffProbabilityPct": 82.54086189834186,
-      "crash5d5pctProbabilityPct": 33.58279950714859,
-      "crash5d10pctProbabilityPct": 3.978529565271242,
-      "elsRiskScore": 51.04612401567686,
+      "riskOffProbabilityPct": 85.00504982625736,
+      "crash5d5pctProbabilityPct": 44.94236601775993,
+      "crash5d10pctProbabilityPct": 4.018095213769944,
+      "elsRiskScore": 51.856626231726025,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3271,10 +3285,10 @@
       "kospiReturn20dPct": 22.1208541119996,
       "realizedVol20dPct": 15.34518505646437,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 82.41482996569334,
-      "crash5d5pctProbabilityPct": 31.738328731959918,
-      "crash5d10pctProbabilityPct": 3.9874691007876084,
-      "elsRiskScore": 50.29453042505502,
+      "riskOffProbabilityPct": 84.45724349637231,
+      "crash5d5pctProbabilityPct": 35.46055437912451,
+      "crash5d10pctProbabilityPct": 3.7804441976193726,
+      "elsRiskScore": 50.61358672340164,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3283,10 +3297,10 @@
       "kospiReturn20dPct": 20.61895843329038,
       "realizedVol20dPct": 14.784816482924725,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 80.78358498869491,
-      "crash5d5pctProbabilityPct": 32.27602438839619,
-      "crash5d10pctProbabilityPct": 3.9874691007876084,
-      "elsRiskScore": 49.27138446187223,
+      "riskOffProbabilityPct": 83.21944773364798,
+      "crash5d5pctProbabilityPct": 30.855086466516703,
+      "crash5d10pctProbabilityPct": 3.198700118874372,
+      "elsRiskScore": 49.78328854321374,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3295,10 +3309,10 @@
       "kospiReturn20dPct": 21.19704079352589,
       "realizedVol20dPct": 14.597827682988191,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 80.81100349790876,
-      "crash5d5pctProbabilityPct": 31.762167272112002,
-      "crash5d10pctProbabilityPct": 7.03386141262468,
-      "elsRiskScore": 49.47363592654706,
+      "riskOffProbabilityPct": 82.05670063182706,
+      "crash5d5pctProbabilityPct": 36.32991414064659,
+      "crash5d10pctProbabilityPct": 2.769885217158239,
+      "elsRiskScore": 49.88176191858509,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3307,10 +3321,10 @@
       "kospiReturn20dPct": 20.468429789077614,
       "realizedVol20dPct": 15.37649231144277,
       "drawdownFrom60dHighPct": -0.8112110651754323,
-      "riskOffProbabilityPct": 77.96582641527029,
-      "crash5d5pctProbabilityPct": 34.23794871819463,
-      "crash5d10pctProbabilityPct": 7.093320587225368,
-      "elsRiskScore": 49.15928532378683,
+      "riskOffProbabilityPct": 77.99623909379308,
+      "crash5d5pctProbabilityPct": 32.34527442715191,
+      "crash5d10pctProbabilityPct": 2.8275334455553103,
+      "elsRiskScore": 49.06281272820961,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3319,10 +3333,10 @@
       "kospiReturn20dPct": 23.129395013657227,
       "realizedVol20dPct": 16.50002217695132,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 84.01187897457525,
-      "crash5d5pctProbabilityPct": 36.22079629395735,
-      "crash5d10pctProbabilityPct": 5.7715372640177485,
-      "elsRiskScore": 50.46305028814839,
+      "riskOffProbabilityPct": 83.83788334484257,
+      "crash5d5pctProbabilityPct": 46.43662893207538,
+      "crash5d10pctProbabilityPct": 5.897118034775102,
+      "elsRiskScore": 50.483550243569724,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3331,10 +3345,10 @@
       "kospiReturn20dPct": 22.5147847678981,
       "realizedVol20dPct": 16.13445081704862,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 86.59105399791999,
-      "crash5d5pctProbabilityPct": 41.0531777670658,
-      "crash5d10pctProbabilityPct": 5.419517241741861,
-      "elsRiskScore": 51.29699165585643,
+      "riskOffProbabilityPct": 85.06902552633203,
+      "crash5d5pctProbabilityPct": 42.427788020763316,
+      "crash5d10pctProbabilityPct": 6.839216357084305,
+      "elsRiskScore": 50.82457167434504,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3343,10 +3357,10 @@
       "kospiReturn20dPct": 23.89746972713487,
       "realizedVol20dPct": 15.538793392264472,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 87.38637443171277,
-      "crash5d5pctProbabilityPct": 60.02923208296801,
-      "crash5d10pctProbabilityPct": 8.732788127339743,
-      "elsRiskScore": 52.26134715654782,
+      "riskOffProbabilityPct": 83.82616571620915,
+      "crash5d5pctProbabilityPct": 58.19876516687048,
+      "crash5d10pctProbabilityPct": 6.839216357084305,
+      "elsRiskScore": 51.29117022905423,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3355,10 +3369,10 @@
       "kospiReturn20dPct": 21.22525599645444,
       "realizedVol20dPct": 15.289584231129606,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 83.0138448630249,
-      "crash5d5pctProbabilityPct": 61.98216983384201,
-      "crash5d10pctProbabilityPct": 8.088407018605267,
-      "elsRiskScore": 50.72190453741747,
+      "riskOffProbabilityPct": 82.20419310759466,
+      "crash5d5pctProbabilityPct": 63.05607279800148,
+      "crash5d10pctProbabilityPct": 9.123815965572426,
+      "elsRiskScore": 50.443270888336336,
       "baselineRiskOffSignal": 0
     },
     {
@@ -3367,10 +3381,10 @@
       "kospiReturn20dPct": 11.040892693695149,
       "realizedVol20dPct": 25.35060814738803,
       "drawdownFrom60dHighPct": -5.257868906430641,
-      "riskOffProbabilityPct": 83.77479316719642,
-      "crash5d5pctProbabilityPct": 34.53134826665275,
-      "crash5d10pctProbabilityPct": 6.407303848370953,
-      "elsRiskScore": 52.891063324758655,
+      "riskOffProbabilityPct": 82.79672116451057,
+      "crash5d5pctProbabilityPct": 32.9169581445019,
+      "crash5d10pctProbabilityPct": 5.146328195700102,
+      "elsRiskScore": 52.27526481189669,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3379,10 +3393,10 @@
       "kospiReturn20dPct": 16.851251138000833,
       "realizedVol20dPct": 33.23083912923444,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 90.06683279807939,
-      "crash5d5pctProbabilityPct": 64.28542804455387,
-      "crash5d10pctProbabilityPct": 14.898340535950688,
-      "elsRiskScore": 56.101986763891034,
+      "riskOffProbabilityPct": 89.35325064854807,
+      "crash5d5pctProbabilityPct": 62.67445935540079,
+      "crash5d10pctProbabilityPct": 17.242268184013536,
+      "elsRiskScore": 55.52958338924913,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3391,10 +3405,10 @@
       "kospiReturn20dPct": 18.018659389241186,
       "realizedVol20dPct": 33.332727511984714,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 89.64366005328463,
-      "crash5d5pctProbabilityPct": 73.49736356690835,
-      "crash5d10pctProbabilityPct": 19.789153472532167,
-      "elsRiskScore": 57.42256043999627,
+      "riskOffProbabilityPct": 90.17887343424069,
+      "crash5d5pctProbabilityPct": 70.49918135954852,
+      "crash5d10pctProbabilityPct": 19.444358206950934,
+      "elsRiskScore": 57.71921151651775,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3403,10 +3417,10 @@
       "kospiReturn20dPct": 13.425973723576945,
       "realizedVol20dPct": 37.33321173946765,
       "drawdownFrom60dHighPct": -3.8638267766379464,
-      "riskOffProbabilityPct": 88.08370742662616,
-      "crash5d5pctProbabilityPct": 55.24305209121747,
-      "crash5d10pctProbabilityPct": 16.985256711646205,
-      "elsRiskScore": 62.60636427703275,
+      "riskOffProbabilityPct": 89.2831172376345,
+      "crash5d5pctProbabilityPct": 55.58720054731603,
+      "crash5d10pctProbabilityPct": 15.093802808612466,
+      "elsRiskScore": 63.12351309594666,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3415,10 +3429,10 @@
       "kospiReturn20dPct": 10.963473983498773,
       "realizedVol20dPct": 38.05111267506293,
       "drawdownFrom60dHighPct": -5.249576436856507,
-      "riskOffProbabilityPct": 88.68533837345582,
-      "crash5d5pctProbabilityPct": 45.82578813118594,
-      "crash5d10pctProbabilityPct": 12.195641162538584,
-      "elsRiskScore": 64.38375098055955,
+      "riskOffProbabilityPct": 88.50634310014122,
+      "crash5d5pctProbabilityPct": 38.237136879697196,
+      "crash5d10pctProbabilityPct": 13.957766335562601,
+      "elsRiskScore": 64.27096961849581,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3427,10 +3441,10 @@
       "kospiReturn20dPct": 14.557417742210998,
       "realizedVol20dPct": 40.031890580396364,
       "drawdownFrom60dHighPct": -1.3602427808084072,
-      "riskOffProbabilityPct": 90.37138596854109,
-      "crash5d5pctProbabilityPct": 50.934334786355365,
-      "crash5d10pctProbabilityPct": 19.285114385694392,
-      "elsRiskScore": 56.19509726823442,
+      "riskOffProbabilityPct": 88.10376344468175,
+      "crash5d5pctProbabilityPct": 56.76326955253095,
+      "crash5d10pctProbabilityPct": 26.12362265523188,
+      "elsRiskScore": 55.4335226246472,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3439,10 +3453,10 @@
       "kospiReturn20dPct": 12.978834941525431,
       "realizedVol20dPct": 39.977693176020814,
       "drawdownFrom60dHighPct": -1.2922864962484515,
-      "riskOffProbabilityPct": 89.50243829395642,
-      "crash5d5pctProbabilityPct": 51.96455231786775,
-      "crash5d10pctProbabilityPct": 14.500243947059339,
-      "elsRiskScore": 55.10512947261191,
+      "riskOffProbabilityPct": 87.81531758537288,
+      "crash5d5pctProbabilityPct": 56.739820438470744,
+      "crash5d10pctProbabilityPct": 21.388094176548975,
+      "elsRiskScore": 54.71078031341232,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3451,10 +3465,10 @@
       "kospiReturn20dPct": 13.368126865829622,
       "realizedVol20dPct": 40.0005382080329,
       "drawdownFrom60dHighPct": -0.3092476401482136,
-      "riskOffProbabilityPct": 91.30660046080858,
-      "crash5d5pctProbabilityPct": 55.12892201206614,
-      "crash5d10pctProbabilityPct": 13.934236062067567,
-      "elsRiskScore": 55.68595017899953,
+      "riskOffProbabilityPct": 88.36317302296231,
+      "crash5d5pctProbabilityPct": 57.19542522744361,
+      "crash5d10pctProbabilityPct": 21.489831321547875,
+      "elsRiskScore": 54.907134563518554,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3463,10 +3477,10 @@
       "kospiReturn20dPct": 15.106043709810212,
       "realizedVol20dPct": 40.82897692736786,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 91.11141298389349,
-      "crash5d5pctProbabilityPct": 61.010010049094156,
-      "crash5d10pctProbabilityPct": 25.977661946965412,
-      "elsRiskScore": 56.45781548945662,
+      "riskOffProbabilityPct": 87.1236482059692,
+      "crash5d5pctProbabilityPct": 61.40525740452707,
+      "crash5d10pctProbabilityPct": 25.167933147446515,
+      "elsRiskScore": 55.45939462459265,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3475,10 +3489,10 @@
       "kospiReturn20dPct": 13.763804707544725,
       "realizedVol20dPct": 40.96756559055004,
       "drawdownFrom60dHighPct": -0.2763356373375436,
-      "riskOffProbabilityPct": 88.20924392749306,
-      "crash5d5pctProbabilityPct": 62.89419752899923,
-      "crash5d10pctProbabilityPct": 30.44623449764915,
-      "elsRiskScore": 55.826719121407066,
+      "riskOffProbabilityPct": 86.66016287653427,
+      "crash5d5pctProbabilityPct": 59.94568278057532,
+      "crash5d10pctProbabilityPct": 28.79809265145009,
+      "elsRiskScore": 55.53147323897306,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3487,10 +3501,10 @@
       "kospiReturn20dPct": 15.75216222939002,
       "realizedVol20dPct": 41.79507639624733,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 88.0579149746264,
-      "crash5d5pctProbabilityPct": 64.81342966640055,
-      "crash5d10pctProbabilityPct": 31.901408037774548,
-      "elsRiskScore": 55.56046407579715,
+      "riskOffProbabilityPct": 85.6815815515513,
+      "crash5d5pctProbabilityPct": 64.95497298434343,
+      "crash5d10pctProbabilityPct": 32.728267267812825,
+      "elsRiskScore": 55.082296124335954,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3499,10 +3513,10 @@
       "kospiReturn20dPct": 18.887171877398544,
       "realizedVol20dPct": 41.9234969966659,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 89.56421922505588,
-      "crash5d5pctProbabilityPct": 70.61344743264522,
-      "crash5d10pctProbabilityPct": 53.07984639885003,
-      "elsRiskScore": 56.21999460412625,
+      "riskOffProbabilityPct": 86.53097811730873,
+      "crash5d5pctProbabilityPct": 64.31747595588406,
+      "crash5d10pctProbabilityPct": 47.90240385945575,
+      "elsRiskScore": 55.66636417657803,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3511,10 +3525,10 @@
       "kospiReturn20dPct": 19.066666938225186,
       "realizedVol20dPct": 41.90919149192506,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 87.40764333118585,
-      "crash5d5pctProbabilityPct": 73.32530954439041,
-      "crash5d10pctProbabilityPct": 56.031091176259,
-      "elsRiskScore": 57.06853503985732,
+      "riskOffProbabilityPct": 85.33734714842186,
+      "crash5d5pctProbabilityPct": 69.2956086262095,
+      "crash5d10pctProbabilityPct": 59.87627262077888,
+      "elsRiskScore": 56.75370908827202,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3523,10 +3537,10 @@
       "kospiReturn20dPct": 20.53717998679465,
       "realizedVol20dPct": 42.13172071010901,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 87.36203459269557,
-      "crash5d5pctProbabilityPct": 81.48374674923208,
-      "crash5d10pctProbabilityPct": 71.58192290140867,
-      "elsRiskScore": 56.48594181372398,
+      "riskOffProbabilityPct": 85.93533331096246,
+      "crash5d5pctProbabilityPct": 80.58754122132629,
+      "crash5d10pctProbabilityPct": 73.13702059486793,
+      "elsRiskScore": 56.54367110123078,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3535,10 +3549,10 @@
       "kospiReturn20dPct": 21.91933179294079,
       "realizedVol20dPct": 42.261721773607434,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 87.84870624481371,
-      "crash5d5pctProbabilityPct": 78.28075043920084,
-      "crash5d10pctProbabilityPct": 80.36108101105415,
-      "elsRiskScore": 55.631706424092066,
+      "riskOffProbabilityPct": 82.55079518085144,
+      "crash5d5pctProbabilityPct": 73.75859191517888,
+      "crash5d10pctProbabilityPct": 78.06903422139942,
+      "elsRiskScore": 54.36044862609403,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3547,10 +3561,10 @@
       "kospiReturn20dPct": 27.43015078016564,
       "realizedVol20dPct": 42.66829209380919,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 85.35212891802404,
-      "crash5d5pctProbabilityPct": 79.12827825692209,
-      "crash5d10pctProbabilityPct": 84.28739426176459,
-      "elsRiskScore": 56.59351481528839,
+      "riskOffProbabilityPct": 80.98436127225348,
+      "crash5d5pctProbabilityPct": 78.00785342198206,
+      "crash5d10pctProbabilityPct": 80.92205453272476,
+      "elsRiskScore": 55.47156739307754,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3559,10 +3573,10 @@
       "kospiReturn20dPct": 22.798705959861152,
       "realizedVol20dPct": 42.98297216402672,
       "drawdownFrom60dHighPct": -1.0010670226579865,
-      "riskOffProbabilityPct": 85.37756765336108,
-      "crash5d5pctProbabilityPct": 78.71554353745987,
-      "crash5d10pctProbabilityPct": 82.22164710585798,
-      "elsRiskScore": 57.82665767444315,
+      "riskOffProbabilityPct": 83.30065409437711,
+      "crash5d5pctProbabilityPct": 77.88469842038783,
+      "crash5d10pctProbabilityPct": 81.18230920721719,
+      "elsRiskScore": 57.682646495954984,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3571,10 +3585,10 @@
       "kospiReturn20dPct": 12.011657748012382,
       "realizedVol20dPct": 52.48126170360096,
       "drawdownFrom60dHighPct": -8.170888514365181,
-      "riskOffProbabilityPct": 88.52601295462551,
-      "crash5d5pctProbabilityPct": 79.80383387693034,
-      "crash5d10pctProbabilityPct": 63.51796053598123,
-      "elsRiskScore": 67.1178623078184,
+      "riskOffProbabilityPct": 86.40672966904009,
+      "crash5d5pctProbabilityPct": 82.34544470126973,
+      "crash5d10pctProbabilityPct": 70.15260141602607,
+      "elsRiskScore": 66.60154063617126,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3583,10 +3597,10 @@
       "kospiReturn20dPct": -2.445966004309319,
       "realizedVol20dPct": 70.8005535304228,
       "drawdownFrom60dHighPct": -19.243349341315664,
-      "riskOffProbabilityPct": 76.26883029002352,
-      "crash5d5pctProbabilityPct": 63.80476944121048,
-      "crash5d10pctProbabilityPct": 29.837231307145057,
-      "elsRiskScore": 70.64895979919693,
+      "riskOffProbabilityPct": 77.38815252348788,
+      "crash5d5pctProbabilityPct": 61.45612476483032,
+      "crash5d10pctProbabilityPct": 31.830621178209334,
+      "elsRiskScore": 71.41014904482397,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3595,10 +3609,10 @@
       "kospiReturn20dPct": 6.881991286971045,
       "realizedVol20dPct": 78.15285213347556,
       "drawdownFrom60dHighPct": -11.468828827686162,
-      "riskOffProbabilityPct": 89.56116544096948,
-      "crash5d5pctProbabilityPct": 78.68884349665551,
-      "crash5d10pctProbabilityPct": 31.161441794139566,
-      "elsRiskScore": 72.42683991151425,
+      "riskOffProbabilityPct": 88.51568228553249,
+      "crash5d5pctProbabilityPct": 76.23489296783875,
+      "crash5d10pctProbabilityPct": 33.20542561980099,
+      "elsRiskScore": 72.20124203672913,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3607,10 +3621,10 @@
       "kospiReturn20dPct": 12.83317877757506,
       "realizedVol20dPct": 75.19078408132147,
       "drawdownFrom60dHighPct": -11.453449749257615,
-      "riskOffProbabilityPct": 90.61465141493181,
-      "crash5d5pctProbabilityPct": 79.41688286309035,
-      "crash5d10pctProbabilityPct": 34.183909472401226,
-      "elsRiskScore": 77.42092821994137,
+      "riskOffProbabilityPct": 87.81135537884829,
+      "crash5d5pctProbabilityPct": 79.9148960691043,
+      "crash5d10pctProbabilityPct": 35.4581056258036,
+      "elsRiskScore": 76.68103330641497,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3619,10 +3633,10 @@
       "kospiReturn20dPct": -0.6847475832438277,
       "realizedVol20dPct": 75.30730458121548,
       "drawdownFrom60dHighPct": -16.733071519056587,
-      "riskOffProbabilityPct": 77.44737101458747,
-      "crash5d5pctProbabilityPct": 56.632992949583816,
-      "crash5d10pctProbabilityPct": 21.94734509592023,
-      "elsRiskScore": 69.01553531508459,
+      "riskOffProbabilityPct": 77.61554966229977,
+      "crash5d5pctProbabilityPct": 53.684726511763984,
+      "crash5d10pctProbabilityPct": 32.77125350952429,
+      "elsRiskScore": 69.35062027929365,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3631,10 +3645,10 @@
       "kospiReturn20dPct": 3.006646683174763,
       "realizedVol20dPct": 77.41529040453766,
       "drawdownFrom60dHighPct": -12.28233451239602,
-      "riskOffProbabilityPct": 80.55270989398258,
-      "crash5d5pctProbabilityPct": 55.392770947362415,
-      "crash5d10pctProbabilityPct": 36.028286459918185,
-      "elsRiskScore": 66.38869971742184,
+      "riskOffProbabilityPct": 77.49844066843042,
+      "crash5d5pctProbabilityPct": 54.02756340195343,
+      "crash5d10pctProbabilityPct": 32.77251546752983,
+      "elsRiskScore": 65.19951262909368,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3643,10 +3657,10 @@
       "kospiReturn20dPct": 8.644794202460693,
       "realizedVol20dPct": 75.98019948996793,
       "drawdownFrom60dHighPct": -11.055813370919598,
-      "riskOffProbabilityPct": 86.45171791183606,
-      "crash5d5pctProbabilityPct": 61.90191308915702,
-      "crash5d10pctProbabilityPct": 37.06893693159209,
-      "elsRiskScore": 60.93462398781971,
+      "riskOffProbabilityPct": 87.31333638506993,
+      "crash5d5pctProbabilityPct": 57.14600776036263,
+      "crash5d10pctProbabilityPct": 32.89556949036453,
+      "elsRiskScore": 61.15393647207892,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3655,10 +3669,10 @@
       "kospiReturn20dPct": 9.709106057212026,
       "realizedVol20dPct": 75.74099606772178,
       "drawdownFrom60dHighPct": -11.479134395705282,
-      "riskOffProbabilityPct": 86.62661209902046,
-      "crash5d5pctProbabilityPct": 73.08410556938576,
-      "crash5d10pctProbabilityPct": 32.5388440894922,
-      "elsRiskScore": 66.6767359746249,
+      "riskOffProbabilityPct": 86.80683319568837,
+      "crash5d5pctProbabilityPct": 69.460244266286,
+      "crash5d10pctProbabilityPct": 34.09416841480378,
+      "elsRiskScore": 66.79078377164971,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3667,10 +3681,10 @@
       "kospiReturn20dPct": 3.5711319657835583,
       "realizedVol20dPct": 74.90488525796442,
       "drawdownFrom60dHighPct": -13.001346065730512,
-      "riskOffProbabilityPct": 84.00886109373229,
-      "crash5d5pctProbabilityPct": 69.28452716405228,
-      "crash5d10pctProbabilityPct": 27.75544226978397,
-      "elsRiskScore": 68.26380174391231,
+      "riskOffProbabilityPct": 88.77752064619987,
+      "crash5d5pctProbabilityPct": 65.74346380277393,
+      "crash5d10pctProbabilityPct": 27.54385954359384,
+      "elsRiskScore": 69.8759097628338,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3679,10 +3693,10 @@
       "kospiReturn20dPct": 4.680771603017164,
       "realizedVol20dPct": 74.98025532020742,
       "drawdownFrom60dHighPct": -12.008682044688113,
-      "riskOffProbabilityPct": 85.104365501855,
-      "crash5d5pctProbabilityPct": 63.08027411017571,
-      "crash5d10pctProbabilityPct": 34.94685836319002,
-      "elsRiskScore": 66.75069418852085,
+      "riskOffProbabilityPct": 89.72338867629566,
+      "crash5d5pctProbabilityPct": 62.76882142629259,
+      "crash5d10pctProbabilityPct": 35.55237354529565,
+      "elsRiskScore": 68.32188778758001,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3691,10 +3705,10 @@
       "kospiReturn20dPct": 5.34112492506289,
       "realizedVol20dPct": 75.09817864319147,
       "drawdownFrom60dHighPct": -10.571768768421219,
-      "riskOffProbabilityPct": 81.55899864382496,
-      "crash5d5pctProbabilityPct": 66.80469136020044,
-      "crash5d10pctProbabilityPct": 33.82072572711705,
-      "elsRiskScore": 65.42914084896861,
+      "riskOffProbabilityPct": 84.19060624284657,
+      "crash5d5pctProbabilityPct": 62.23173023680955,
+      "crash5d10pctProbabilityPct": 37.72554497798548,
+      "elsRiskScore": 66.42944075761184,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3703,10 +3717,10 @@
       "kospiReturn20dPct": 7.2933775422063585,
       "realizedVol20dPct": 76.28787339334112,
       "drawdownFrom60dHighPct": -6.060308184047947,
-      "riskOffProbabilityPct": 86.01067524675582,
-      "crash5d5pctProbabilityPct": 81.55587186892407,
-      "crash5d10pctProbabilityPct": 39.948306339377844,
-      "elsRiskScore": 64.81573875092337,
+      "riskOffProbabilityPct": 88.91819135429884,
+      "crash5d5pctProbabilityPct": 78.74255566634359,
+      "crash5d10pctProbabilityPct": 42.16519368910067,
+      "elsRiskScore": 65.55072610953302,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3715,10 +3729,10 @@
       "kospiReturn20dPct": 4.652433897886521,
       "realizedVol20dPct": 77.06921266433636,
       "drawdownFrom60dHighPct": -8.625760432009411,
-      "riskOffProbabilityPct": 83.63275381683899,
-      "crash5d5pctProbabilityPct": 79.98847601352377,
-      "crash5d10pctProbabilityPct": 37.42904727913881,
-      "elsRiskScore": 66.78563953516536,
+      "riskOffProbabilityPct": 83.10709204437907,
+      "crash5d5pctProbabilityPct": 80.46525479201765,
+      "crash5d10pctProbabilityPct": 38.9284768511304,
+      "elsRiskScore": 66.90994142532473,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3727,10 +3741,10 @@
       "kospiReturn20dPct": 1.8309921176625998,
       "realizedVol20dPct": 76.35144944439824,
       "drawdownFrom60dHighPct": -8.340692565880337,
-      "riskOffProbabilityPct": 75.94556417482777,
-      "crash5d5pctProbabilityPct": 80.21756935277,
-      "crash5d10pctProbabilityPct": 38.37861621295906,
-      "elsRiskScore": 66.27174518065104,
+      "riskOffProbabilityPct": 80.4857520475722,
+      "crash5d5pctProbabilityPct": 81.16097748659293,
+      "crash5d10pctProbabilityPct": 38.71396979133228,
+      "elsRiskScore": 67.48542368721185,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3739,10 +3753,10 @@
       "kospiReturn20dPct": -6.934284578025762,
       "realizedVol20dPct": 79.5372999847637,
       "drawdownFrom60dHighPct": -14.293347200928464,
-      "riskOffProbabilityPct": 68.92543878965907,
-      "crash5d5pctProbabilityPct": 63.55139980720348,
-      "crash5d10pctProbabilityPct": 36.54072287960663,
-      "elsRiskScore": 71.3367100917042,
+      "riskOffProbabilityPct": 70.11495797691612,
+      "crash5d5pctProbabilityPct": 66.01939404224352,
+      "crash5d10pctProbabilityPct": 33.96546098156815,
+      "elsRiskScore": 71.44874335645908,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3751,10 +3765,10 @@
       "kospiReturn20dPct": -4.9976993169793875,
       "realizedVol20dPct": 80.21514876799252,
       "drawdownFrom60dHighPct": -11.94415333416835,
-      "riskOffProbabilityPct": 73.57765231729871,
-      "crash5d5pctProbabilityPct": 80.02585345363207,
-      "crash5d10pctProbabilityPct": 50.81827778277328,
-      "elsRiskScore": 68.90369802450407,
+      "riskOffProbabilityPct": 74.83090444572102,
+      "crash5d5pctProbabilityPct": 76.12584792155826,
+      "crash5d10pctProbabilityPct": 45.716319573944794,
+      "elsRiskScore": 69.36829885506562,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3763,10 +3777,10 @@
       "kospiReturn20dPct": -5.484920363707024,
       "realizedVol20dPct": 80.03612126057409,
       "drawdownFrom60dHighPct": -10.544340102770299,
-      "riskOffProbabilityPct": 70.60136213666655,
-      "crash5d5pctProbabilityPct": 73.354430501218,
-      "crash5d10pctProbabilityPct": 60.44438918929149,
-      "elsRiskScore": 71.07566457315637,
+      "riskOffProbabilityPct": 75.03133487856411,
+      "crash5d5pctProbabilityPct": 76.49490085070049,
+      "crash5d10pctProbabilityPct": 58.063384975668455,
+      "elsRiskScore": 72.26425773747775,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3775,10 +3789,10 @@
       "kospiReturn20dPct": -10.24678411403286,
       "realizedVol20dPct": 80.27410194107041,
       "drawdownFrom60dHighPct": -13.425935468118544,
-      "riskOffProbabilityPct": 73.278006608439,
-      "crash5d5pctProbabilityPct": 80.352662522195,
-      "crash5d10pctProbabilityPct": 42.615186043689505,
-      "elsRiskScore": 77.24124388427678,
+      "riskOffProbabilityPct": 73.71908074990907,
+      "crash5d5pctProbabilityPct": 80.50268788344196,
+      "crash5d10pctProbabilityPct": 39.214883154689865,
+      "elsRiskScore": 77.17931171500243,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3787,10 +3801,10 @@
       "kospiReturn20dPct": -13.768238873553862,
       "realizedVol20dPct": 78.7750055906229,
       "drawdownFrom60dHighPct": -13.768238873553862,
-      "riskOffProbabilityPct": 56.4169972749053,
-      "crash5d5pctProbabilityPct": 70.12577981519838,
-      "crash5d10pctProbabilityPct": 34.54600875455691,
-      "elsRiskScore": 74.84443919640631,
+      "riskOffProbabilityPct": 56.649614682161406,
+      "crash5d5pctProbabilityPct": 68.45572059905489,
+      "crash5d10pctProbabilityPct": 34.722138869407495,
+      "elsRiskScore": 74.82292514782037,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3799,10 +3813,10 @@
       "kospiReturn20dPct": -15.483822406003721,
       "realizedVol20dPct": 79.18670849971525,
       "drawdownFrom60dHighPct": -16.32988598870827,
-      "riskOffProbabilityPct": 53.41677807887899,
-      "crash5d5pctProbabilityPct": 58.6001535054261,
-      "crash5d10pctProbabilityPct": 34.534335120647164,
-      "elsRiskScore": 72.63914015053707,
+      "riskOffProbabilityPct": 50.8359778384474,
+      "crash5d5pctProbabilityPct": 57.85369949676337,
+      "crash5d10pctProbabilityPct": 31.750283238209313,
+      "elsRiskScore": 71.70705974741995,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3811,10 +3825,10 @@
       "kospiReturn20dPct": -12.766945618975434,
       "realizedVol20dPct": 76.39559425999813,
       "drawdownFrom60dHighPct": -19.8946612401245,
-      "riskOffProbabilityPct": 52.892616285572835,
-      "crash5d5pctProbabilityPct": 49.38454736310637,
-      "crash5d10pctProbabilityPct": 23.72041809090564,
-      "elsRiskScore": 67.26301330239828,
+      "riskOffProbabilityPct": 49.79627940592099,
+      "crash5d5pctProbabilityPct": 42.51461635277835,
+      "crash5d10pctProbabilityPct": 23.920993339028257,
+      "elsRiskScore": 66.00070446328873,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3823,10 +3837,10 @@
       "kospiReturn20dPct": 7.561735060488384,
       "realizedVol20dPct": 67.86112076337292,
       "drawdownFrom60dHighPct": -13.13674537478181,
-      "riskOffProbabilityPct": 60.436667690072866,
-      "crash5d5pctProbabilityPct": 57.77021244253441,
-      "crash5d10pctProbabilityPct": 39.567886612274876,
-      "elsRiskScore": 62.263119254207666,
+      "riskOffProbabilityPct": 60.170561098704965,
+      "crash5d5pctProbabilityPct": 52.897934327273376,
+      "crash5d10pctProbabilityPct": 34.98166816790241,
+      "elsRiskScore": 61.976408485014296,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3835,10 +3849,10 @@
       "kospiReturn20dPct": -6.26533426458209,
       "realizedVol20dPct": 61.39128247200843,
       "drawdownFrom60dHighPct": -17.015602629980965,
-      "riskOffProbabilityPct": 51.33830287779057,
-      "crash5d5pctProbabilityPct": 51.19803937412748,
-      "crash5d10pctProbabilityPct": 32.445434785958795,
-      "elsRiskScore": 61.36128435929688,
+      "riskOffProbabilityPct": 44.53724227821699,
+      "crash5d5pctProbabilityPct": 45.45712409613987,
+      "crash5d10pctProbabilityPct": 32.03265521094309,
+      "elsRiskScore": 59.32152309030272,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3847,10 +3861,10 @@
       "kospiReturn20dPct": -3.716648731304395,
       "realizedVol20dPct": 62.320386552764376,
       "drawdownFrom60dHighPct": -14.744413985765636,
-      "riskOffProbabilityPct": 52.21903864263753,
-      "crash5d5pctProbabilityPct": 42.170345583523286,
-      "crash5d10pctProbabilityPct": 23.26575186292211,
-      "elsRiskScore": 54.0716735479224,
+      "riskOffProbabilityPct": 45.278371683360625,
+      "crash5d5pctProbabilityPct": 46.92209835640799,
+      "crash5d10pctProbabilityPct": 23.960934609004546,
+      "elsRiskScore": 51.82908813733202,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3859,10 +3873,10 @@
       "kospiReturn20dPct": 3.7788444877729255,
       "realizedVol20dPct": 58.37024386905051,
       "drawdownFrom60dHighPct": -13.586543782016635,
-      "riskOffProbabilityPct": 53.83697372523444,
-      "crash5d5pctProbabilityPct": 42.70903241281708,
-      "crash5d10pctProbabilityPct": 16.147329339795483,
-      "elsRiskScore": 50.90854736344009,
+      "riskOffProbabilityPct": 47.33584512180423,
+      "crash5d5pctProbabilityPct": 47.11833157822354,
+      "crash5d10pctProbabilityPct": 14.815209917165348,
+      "elsRiskScore": 48.805453022662746,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3871,10 +3885,10 @@
       "kospiReturn20dPct": -0.6834050598363617,
       "realizedVol20dPct": 55.362621200478415,
       "drawdownFrom60dHighPct": -12.881801476708631,
-      "riskOffProbabilityPct": 53.53081505781259,
-      "crash5d5pctProbabilityPct": 55.13174803977812,
-      "crash5d10pctProbabilityPct": 37.55998208230307,
-      "elsRiskScore": 51.876589435024606,
+      "riskOffProbabilityPct": 53.00594984679818,
+      "crash5d5pctProbabilityPct": 49.191981074727245,
+      "crash5d10pctProbabilityPct": 36.97617626636872,
+      "elsRiskScore": 51.98033475570983,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3883,10 +3897,10 @@
       "kospiReturn20dPct": 4.677225287212905,
       "realizedVol20dPct": 60.096852746117705,
       "drawdownFrom60dHighPct": -6.895693382398416,
-      "riskOffProbabilityPct": 55.45859961418027,
-      "crash5d5pctProbabilityPct": 28.37118707323394,
-      "crash5d10pctProbabilityPct": 24.07381515343135,
-      "elsRiskScore": 45.92744469974673,
+      "riskOffProbabilityPct": 54.29729535260874,
+      "crash5d5pctProbabilityPct": 42.8000534471209,
+      "crash5d10pctProbabilityPct": 27.038189041847318,
+      "elsRiskScore": 45.45569545694033,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3895,10 +3909,10 @@
       "kospiReturn20dPct": 3.488290870012989,
       "realizedVol20dPct": 60.41071648586664,
       "drawdownFrom60dHighPct": -8.391269122774203,
-      "riskOffProbabilityPct": 51.75552014954745,
-      "crash5d5pctProbabilityPct": 26.252710608544515,
-      "crash5d10pctProbabilityPct": 18.119672007526802,
-      "elsRiskScore": 44.503822833124424,
+      "riskOffProbabilityPct": 47.84737074961072,
+      "crash5d5pctProbabilityPct": 38.04400186942358,
+      "crash5d10pctProbabilityPct": 18.3217316094497,
+      "elsRiskScore": 43.41606895334003,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3907,10 +3921,10 @@
       "kospiReturn20dPct": 6.772621572958348,
       "realizedVol20dPct": 60.12057985683352,
       "drawdownFrom60dHighPct": -7.109256461194791,
-      "riskOffProbabilityPct": 57.68989807619178,
-      "crash5d5pctProbabilityPct": 26.332839279484944,
-      "crash5d10pctProbabilityPct": 15.354938510066669,
-      "elsRiskScore": 46.45335006670957,
+      "riskOffProbabilityPct": 56.5867064765019,
+      "crash5d5pctProbabilityPct": 40.18265088243599,
+      "crash5d10pctProbabilityPct": 13.672587524396013,
+      "elsRiskScore": 46.165724006307805,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3919,10 +3933,10 @@
       "kospiReturn20dPct": 4.662648540050629,
       "realizedVol20dPct": 60.182707653697584,
       "drawdownFrom60dHighPct": -7.905956142673465,
-      "riskOffProbabilityPct": 56.14606997386209,
-      "crash5d5pctProbabilityPct": 22.41085232335261,
-      "crash5d10pctProbabilityPct": 12.097747966787905,
-      "elsRiskScore": 45.448043689951206,
+      "riskOffProbabilityPct": 53.08018326268515,
+      "crash5d5pctProbabilityPct": 38.20672572697122,
+      "crash5d10pctProbabilityPct": 12.091553906082146,
+      "elsRiskScore": 44.35163564309699,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3931,10 +3945,10 @@
       "kospiReturn20dPct": 5.802165773125689,
       "realizedVol20dPct": 60.63593529392553,
       "drawdownFrom60dHighPct": -5.38299454439084,
-      "riskOffProbabilityPct": 57.02790160065507,
-      "crash5d5pctProbabilityPct": 21.085861586032166,
-      "crash5d10pctProbabilityPct": 12.754183202911856,
-      "elsRiskScore": 44.55037405956687,
+      "riskOffProbabilityPct": 58.307441557153275,
+      "crash5d5pctProbabilityPct": 32.94255879621325,
+      "crash5d10pctProbabilityPct": 14.162253872362577,
+      "elsRiskScore": 45.03158365771104,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3943,10 +3957,10 @@
       "kospiReturn20dPct": 2.807749496627032,
       "realizedVol20dPct": 58.54255070311831,
       "drawdownFrom60dHighPct": -3.4227169599525653,
-      "riskOffProbabilityPct": 63.60452302059115,
-      "crash5d5pctProbabilityPct": 21.972458104707098,
-      "crash5d10pctProbabilityPct": 10.14283298667828,
-      "elsRiskScore": 46.55834157346632,
+      "riskOffProbabilityPct": 62.35938486808126,
+      "crash5d5pctProbabilityPct": 37.348508199392896,
+      "crash5d10pctProbabilityPct": 13.966908484433397,
+      "elsRiskScore": 46.370501572962546,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3955,10 +3969,10 @@
       "kospiReturn20dPct": 8.030753641193634,
       "realizedVol20dPct": 57.91777786520038,
       "drawdownFrom60dHighPct": -1.2877203607900123,
-      "riskOffProbabilityPct": 70.27808688608394,
-      "crash5d5pctProbabilityPct": 25.30094929163746,
-      "crash5d10pctProbabilityPct": 11.688084530857374,
-      "elsRiskScore": 48.22651146961299,
+      "riskOffProbabilityPct": 65.97815856307332,
+      "crash5d5pctProbabilityPct": 37.65222254514374,
+      "crash5d10pctProbabilityPct": 17.17468338426407,
+      "elsRiskScore": 46.72578934373014,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3967,10 +3981,10 @@
       "kospiReturn20dPct": 7.104407389469314,
       "realizedVol20dPct": 58.01310922048233,
       "drawdownFrom60dHighPct": -1.8288419553943336,
-      "riskOffProbabilityPct": 70.70935293474099,
-      "crash5d5pctProbabilityPct": 23.852884026706164,
-      "crash5d10pctProbabilityPct": 12.074962973290138,
-      "elsRiskScore": 48.78980384884251,
+      "riskOffProbabilityPct": 76.60045257117257,
+      "crash5d5pctProbabilityPct": 38.09356629330005,
+      "crash5d10pctProbabilityPct": 16.456445478123413,
+      "elsRiskScore": 50.70307898597863,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3979,10 +3993,10 @@
       "kospiReturn20dPct": 15.0458308282847,
       "realizedVol20dPct": 51.681791950668234,
       "drawdownFrom60dHighPct": -1.398069212194819,
-      "riskOffProbabilityPct": 76.80804558241674,
-      "crash5d5pctProbabilityPct": 24.732500695068182,
-      "crash5d10pctProbabilityPct": 9.526121393968188,
-      "elsRiskScore": 50.338144380881324,
+      "riskOffProbabilityPct": 81.32215149435659,
+      "crash5d5pctProbabilityPct": 35.5915866817638,
+      "crash5d10pctProbabilityPct": 20.82422066801664,
+      "elsRiskScore": 51.570546170735355,
       "baselineRiskOffSignal": 1
     },
     {
@@ -3991,10 +4005,10 @@
       "kospiReturn20dPct": 15.026323749711912,
       "realizedVol20dPct": 51.673108443497874,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 78.45805550248069,
-      "crash5d5pctProbabilityPct": 32.39694530032211,
-      "crash5d10pctProbabilityPct": 26.267614581963134,
-      "elsRiskScore": 52.28497206543222,
+      "riskOffProbabilityPct": 82.45887249198354,
+      "crash5d5pctProbabilityPct": 40.85148924619769,
+      "crash5d10pctProbabilityPct": 23.364660291083766,
+      "elsRiskScore": 53.302179648780246,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4003,10 +4017,10 @@
       "kospiReturn20dPct": 13.748513437110631,
       "realizedVol20dPct": 51.573629497769105,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 76.21561812401075,
-      "crash5d5pctProbabilityPct": 29.07739791598598,
-      "crash5d10pctProbabilityPct": 20.44222904914977,
-      "elsRiskScore": 49.90549586696105,
+      "riskOffProbabilityPct": 83.10802454735851,
+      "crash5d5pctProbabilityPct": 38.91859015988787,
+      "crash5d10pctProbabilityPct": 24.51684376889211,
+      "elsRiskScore": 51.763095668621276,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4015,10 +4029,10 @@
       "kospiReturn20dPct": 18.594587269204442,
       "realizedVol20dPct": 49.4521122392181,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 83.37379635526486,
-      "crash5d5pctProbabilityPct": 34.131742641631625,
-      "crash5d10pctProbabilityPct": 14.304687110622988,
-      "elsRiskScore": 52.01652464404876,
+      "riskOffProbabilityPct": 84.6708319592227,
+      "crash5d5pctProbabilityPct": 38.89492979184025,
+      "crash5d10pctProbabilityPct": 16.141248058949685,
+      "elsRiskScore": 52.25345861581485,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4027,10 +4041,10 @@
       "kospiReturn20dPct": 19.062047815079232,
       "realizedVol20dPct": 49.33993347089481,
       "drawdownFrom60dHighPct": -0.002779575064748574,
-      "riskOffProbabilityPct": 83.87115824124514,
-      "crash5d5pctProbabilityPct": 29.69122190079552,
-      "crash5d10pctProbabilityPct": 21.442010672253257,
-      "elsRiskScore": 51.563024560790126,
+      "riskOffProbabilityPct": 82.45303129786501,
+      "crash5d5pctProbabilityPct": 39.182293123950984,
+      "crash5d10pctProbabilityPct": 18.57627243100575,
+      "elsRiskScore": 50.915451592907985,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4039,10 +4053,10 @@
       "kospiReturn20dPct": 25.34875788755613,
       "realizedVol20dPct": 47.30058650718811,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 86.26871641241569,
-      "crash5d5pctProbabilityPct": 29.86137084984114,
-      "crash5d10pctProbabilityPct": 17.641171893249737,
-      "elsRiskScore": 52.74752557799608,
+      "riskOffProbabilityPct": 83.20821619130554,
+      "crash5d5pctProbabilityPct": 40.589627540558055,
+      "crash5d10pctProbabilityPct": 13.42749795708581,
+      "elsRiskScore": 51.648545671474096,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4051,10 +4065,10 @@
       "kospiReturn20dPct": 31.44131769474672,
       "realizedVol20dPct": 42.78788585403095,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 88.91962709262984,
-      "crash5d5pctProbabilityPct": 42.66685769134682,
-      "crash5d10pctProbabilityPct": 16.254468450350885,
-      "elsRiskScore": 53.24148126466166,
+      "riskOffProbabilityPct": 84.10634959040377,
+      "crash5d5pctProbabilityPct": 42.65901322143481,
+      "crash5d10pctProbabilityPct": 16.221818718722286,
+      "elsRiskScore": 51.93993038951658,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4063,10 +4077,10 @@
       "kospiReturn20dPct": 22.125686750506503,
       "realizedVol20dPct": 34.62521850273537,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 88.02678304530893,
-      "crash5d5pctProbabilityPct": 37.32220367082335,
-      "crash5d10pctProbabilityPct": 12.773301085493358,
-      "elsRiskScore": 53.86577602037556,
+      "riskOffProbabilityPct": 83.19700711841328,
+      "crash5d5pctProbabilityPct": 41.25984315032489,
+      "crash5d10pctProbabilityPct": 11.852294000040922,
+      "elsRiskScore": 52.09334814161455,
       "baselineRiskOffSignal": 0
     },
     {
@@ -4075,10 +4089,10 @@
       "kospiReturn20dPct": 26.075792168588375,
       "realizedVol20dPct": 29.265176062227656,
       "drawdownFrom60dHighPct": -1.3754502383834688,
-      "riskOffProbabilityPct": 83.43548524496569,
-      "crash5d5pctProbabilityPct": 34.72163808430323,
-      "crash5d10pctProbabilityPct": 12.291298323837117,
-      "elsRiskScore": 51.775222188382955,
+      "riskOffProbabilityPct": 81.29009253955839,
+      "crash5d5pctProbabilityPct": 37.88815543867315,
+      "crash5d10pctProbabilityPct": 11.42541283400353,
+      "elsRiskScore": 51.006081805570396,
       "baselineRiskOffSignal": 0
     },
     {
@@ -4087,10 +4101,10 @@
       "kospiReturn20dPct": 29.005076897327655,
       "realizedVol20dPct": 31.88798196025048,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 90.84566427742394,
-      "crash5d5pctProbabilityPct": 49.19131088751968,
-      "crash5d10pctProbabilityPct": 23.744415392109865,
-      "elsRiskScore": 54.46880695373384,
+      "riskOffProbabilityPct": 84.41075058801721,
+      "crash5d5pctProbabilityPct": 49.25281333507757,
+      "crash5d10pctProbabilityPct": 14.734015390653735,
+      "elsRiskScore": 52.62002118351688,
       "baselineRiskOffSignal": 0
     },
     {
@@ -4099,10 +4113,10 @@
       "kospiReturn20dPct": 35.48830988215392,
       "realizedVol20dPct": 36.46386668165252,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 90.83395046848443,
-      "crash5d5pctProbabilityPct": 46.78191414812772,
-      "crash5d10pctProbabilityPct": 21.989235411248515,
-      "elsRiskScore": 55.3666659998577,
+      "riskOffProbabilityPct": 88.9570276768955,
+      "crash5d5pctProbabilityPct": 44.081093861321904,
+      "crash5d10pctProbabilityPct": 24.05472464156379,
+      "elsRiskScore": 55.176956663304956,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4111,10 +4125,10 @@
       "kospiReturn20dPct": 36.312099847491616,
       "realizedVol20dPct": 36.37149735136085,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 91.2543028604614,
-      "crash5d5pctProbabilityPct": 49.86093199896558,
-      "crash5d10pctProbabilityPct": 16.010340184073907,
-      "elsRiskScore": 56.53039881973168,
+      "riskOffProbabilityPct": 88.4635375666261,
+      "crash5d5pctProbabilityPct": 52.23345520685802,
+      "crash5d10pctProbabilityPct": 24.970567313566843,
+      "elsRiskScore": 55.88397177739176,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4123,10 +4137,10 @@
       "kospiReturn20dPct": 27.68334258574945,
       "realizedVol20dPct": 31.266983757747397,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 83.26232394252428,
-      "crash5d5pctProbabilityPct": 50.38557727197368,
-      "crash5d10pctProbabilityPct": 16.39709589464104,
-      "elsRiskScore": 52.89324039570143,
+      "riskOffProbabilityPct": 84.25424014592538,
+      "crash5d5pctProbabilityPct": 48.23753285397971,
+      "crash5d10pctProbabilityPct": 19.605848226361505,
+      "elsRiskScore": 53.351244646357756,
       "baselineRiskOffSignal": 0
     },
     {
@@ -4135,10 +4149,10 @@
       "kospiReturn20dPct": 35.3794818631328,
       "realizedVol20dPct": 31.114675560952794,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 87.02709011011562,
-      "crash5d5pctProbabilityPct": 59.06387371346471,
-      "crash5d10pctProbabilityPct": 17.125949958818346,
-      "elsRiskScore": 55.32473667953922,
+      "riskOffProbabilityPct": 89.23859192075592,
+      "crash5d5pctProbabilityPct": 58.10626586695336,
+      "crash5d10pctProbabilityPct": 21.381333529659283,
+      "elsRiskScore": 56.121691724851395,
       "baselineRiskOffSignal": 0
     },
     {
@@ -4147,10 +4161,10 @@
       "kospiReturn20dPct": 30.454336757770694,
       "realizedVol20dPct": 33.96223214250247,
       "drawdownFrom60dHighPct": -2.2894976375053666,
-      "riskOffProbabilityPct": 88.6651238842562,
-      "crash5d5pctProbabilityPct": 58.76806408100619,
-      "crash5d10pctProbabilityPct": 21.75961969592233,
-      "elsRiskScore": 59.52847902092534,
+      "riskOffProbabilityPct": 89.16001644368554,
+      "crash5d5pctProbabilityPct": 61.68333357861269,
+      "crash5d10pctProbabilityPct": 26.034770860911294,
+      "elsRiskScore": 59.751021832957406,
       "baselineRiskOffSignal": 0
     },
     {
@@ -4159,10 +4173,10 @@
       "kospiReturn20dPct": 35.040853076978706,
       "realizedVol20dPct": 33.2126937128089,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 87.77730685145472,
-      "crash5d5pctProbabilityPct": 73.44802992234695,
-      "crash5d10pctProbabilityPct": 29.15043269579237,
-      "elsRiskScore": 59.27089492796484,
+      "riskOffProbabilityPct": 91.00513995961404,
+      "crash5d5pctProbabilityPct": 72.65654597768336,
+      "crash5d10pctProbabilityPct": 35.08284100105766,
+      "elsRiskScore": 60.37341498828903,
       "baselineRiskOffSignal": 0
     },
     {
@@ -4171,10 +4185,10 @@
       "kospiReturn20dPct": 33.74236521301999,
       "realizedVol20dPct": 32.92526469276571,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 88.3827396823704,
-      "crash5d5pctProbabilityPct": 73.48208186279,
-      "crash5d10pctProbabilityPct": 21.46621476957163,
-      "elsRiskScore": 60.10316361662317,
+      "riskOffProbabilityPct": 89.93239842666826,
+      "crash5d5pctProbabilityPct": 74.2422489093711,
+      "crash5d10pctProbabilityPct": 22.31801003389507,
+      "elsRiskScore": 60.72058054454025,
       "baselineRiskOffSignal": 0
     },
     {
@@ -4183,10 +4197,10 @@
       "kospiReturn20dPct": 23.01264571797241,
       "realizedVol20dPct": 42.81191759143525,
       "drawdownFrom60dHighPct": -6.117089586927616,
-      "riskOffProbabilityPct": 91.2766448138935,
-      "crash5d5pctProbabilityPct": 55.76472435127794,
-      "crash5d10pctProbabilityPct": 32.33895023203929,
-      "elsRiskScore": 63.195716580538296,
+      "riskOffProbabilityPct": 90.4517503923107,
+      "crash5d5pctProbabilityPct": 51.15350009082537,
+      "crash5d10pctProbabilityPct": 34.43796853580302,
+      "elsRiskScore": 62.94314276849374,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4195,10 +4209,10 @@
       "kospiReturn20dPct": 20.719236112784188,
       "realizedVol20dPct": 42.66177885003151,
       "drawdownFrom60dHighPct": -5.830674028774363,
-      "riskOffProbabilityPct": 91.2043525124084,
-      "crash5d5pctProbabilityPct": 54.7014301992754,
-      "crash5d10pctProbabilityPct": 34.102145040433754,
-      "elsRiskScore": 65.98763316099657,
+      "riskOffProbabilityPct": 89.87942961907352,
+      "crash5d5pctProbabilityPct": 51.59030464218619,
+      "crash5d10pctProbabilityPct": 33.03005403387288,
+      "elsRiskScore": 65.60689845589286,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4207,10 +4221,10 @@
       "kospiReturn20dPct": 17.437886794403035,
       "realizedVol20dPct": 44.99692263229838,
       "drawdownFrom60dHighPct": -8.892539037588598,
-      "riskOffProbabilityPct": 90.53358395605355,
-      "crash5d5pctProbabilityPct": 52.1854566982506,
-      "crash5d10pctProbabilityPct": 37.54627959042672,
-      "elsRiskScore": 67.63422394265943,
+      "riskOffProbabilityPct": 89.01443553349269,
+      "crash5d5pctProbabilityPct": 51.96374246810777,
+      "crash5d10pctProbabilityPct": 33.38416363393152,
+      "elsRiskScore": 67.3921662343693,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4219,10 +4233,10 @@
       "kospiReturn20dPct": 15.916476526308498,
       "realizedVol20dPct": 45.37402410354248,
       "drawdownFrom60dHighPct": -9.678239809757926,
-      "riskOffProbabilityPct": 88.8687115294848,
-      "crash5d5pctProbabilityPct": 44.45020982328155,
-      "crash5d10pctProbabilityPct": 34.13583988342833,
-      "elsRiskScore": 66.06393037235813,
+      "riskOffProbabilityPct": 90.11824035490118,
+      "crash5d5pctProbabilityPct": 44.270014773548965,
+      "crash5d10pctProbabilityPct": 35.1899093000033,
+      "elsRiskScore": 66.6937026525249,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4231,10 +4245,10 @@
       "kospiReturn20dPct": 22.338995095852376,
       "realizedVol20dPct": 51.999546736350965,
       "drawdownFrom60dHighPct": -2.077577771346162,
-      "riskOffProbabilityPct": 94.0090330129714,
-      "crash5d5pctProbabilityPct": 66.54299556643176,
-      "crash5d10pctProbabilityPct": 52.764541787208806,
-      "elsRiskScore": 63.60993982236873,
+      "riskOffProbabilityPct": 92.93138966060425,
+      "crash5d5pctProbabilityPct": 65.6147301975212,
+      "crash5d10pctProbabilityPct": 53.68980915499969,
+      "elsRiskScore": 63.15664495547702,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4243,10 +4257,10 @@
       "kospiReturn20dPct": 22.277899571980363,
       "realizedVol20dPct": 52.00683112233803,
       "drawdownFrom60dHighPct": -1.67514261264613,
-      "riskOffProbabilityPct": 93.4657976786377,
-      "crash5d5pctProbabilityPct": 73.45137092470601,
-      "crash5d10pctProbabilityPct": 56.66628254545486,
-      "elsRiskScore": 60.24095538802668,
+      "riskOffProbabilityPct": 92.01989606973665,
+      "crash5d5pctProbabilityPct": 72.34163261829335,
+      "crash5d10pctProbabilityPct": 59.02091525371278,
+      "elsRiskScore": 60.06333017352796,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4255,10 +4269,10 @@
       "kospiReturn20dPct": 24.270322940296275,
       "realizedVol20dPct": 52.27813817869153,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 94.77514933176909,
-      "crash5d5pctProbabilityPct": 70.60238698896868,
-      "crash5d10pctProbabilityPct": 49.26898517259268,
-      "elsRiskScore": 59.56007818844213,
+      "riskOffProbabilityPct": 93.25235048268141,
+      "crash5d5pctProbabilityPct": 71.18065254900394,
+      "crash5d10pctProbabilityPct": 44.210139030150245,
+      "elsRiskScore": 59.26543679046875,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4267,10 +4281,10 @@
       "kospiReturn20dPct": 27.071806140869704,
       "realizedVol20dPct": 52.2609970785208,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 94.13252667315263,
-      "crash5d5pctProbabilityPct": 71.21123124029974,
-      "crash5d10pctProbabilityPct": 41.05614967374625,
-      "elsRiskScore": 58.820453340465086,
+      "riskOffProbabilityPct": 92.11931058202171,
+      "crash5d5pctProbabilityPct": 71.3719706557598,
+      "crash5d10pctProbabilityPct": 36.70126698173863,
+      "elsRiskScore": 58.373916806054716,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4279,10 +4293,10 @@
       "kospiReturn20dPct": 23.737760826481512,
       "realizedVol20dPct": 52.483861935218115,
       "drawdownFrom60dHighPct": -0.5275438404608312,
-      "riskOffProbabilityPct": 94.4484546229084,
-      "crash5d5pctProbabilityPct": 69.30072902030322,
-      "crash5d10pctProbabilityPct": 50.58604224694354,
-      "elsRiskScore": 59.13891169731775,
+      "riskOffProbabilityPct": 92.93765884478681,
+      "crash5d5pctProbabilityPct": 72.59343883346482,
+      "crash5d10pctProbabilityPct": 53.85439397011949,
+      "elsRiskScore": 58.86228829581585,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4291,10 +4305,10 @@
       "kospiReturn20dPct": 27.633255132494682,
       "realizedVol20dPct": 53.106412770175325,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 92.36526560922577,
-      "crash5d5pctProbabilityPct": 77.96830541736061,
-      "crash5d10pctProbabilityPct": 76.82718305626724,
-      "elsRiskScore": 59.09708858653971,
+      "riskOffProbabilityPct": 89.97825255280756,
+      "crash5d5pctProbabilityPct": 76.6510318054215,
+      "crash5d10pctProbabilityPct": 80.00112833875234,
+      "elsRiskScore": 58.27989659563157,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4303,10 +4317,10 @@
       "kospiReturn20dPct": 31.348249114468896,
       "realizedVol20dPct": 53.74118532963753,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 92.96674358201734,
-      "crash5d5pctProbabilityPct": 83.1226231308414,
-      "crash5d10pctProbabilityPct": 83.45675298408402,
-      "elsRiskScore": 60.41864574376315,
+      "riskOffProbabilityPct": 90.44689419036416,
+      "crash5d5pctProbabilityPct": 81.63002566251396,
+      "crash5d10pctProbabilityPct": 85.74409520195118,
+      "elsRiskScore": 59.73352422298119,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4315,10 +4329,10 @@
       "kospiReturn20dPct": 33.37874514879062,
       "realizedVol20dPct": 52.97099443428506,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 94.33397169789718,
-      "crash5d5pctProbabilityPct": 85.55374916372087,
-      "crash5d10pctProbabilityPct": 83.40985133092038,
-      "elsRiskScore": 62.172084839540496,
+      "riskOffProbabilityPct": 94.24020423870931,
+      "crash5d5pctProbabilityPct": 82.72108426785462,
+      "crash5d10pctProbabilityPct": 86.74209272726499,
+      "elsRiskScore": 61.84063683474389,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4327,10 +4341,10 @@
       "kospiReturn20dPct": 24.541191496600124,
       "realizedVol20dPct": 52.45277740654058,
       "drawdownFrom60dHighPct": -1.8415063813058907,
-      "riskOffProbabilityPct": 93.95242949480132,
-      "crash5d5pctProbabilityPct": 85.13910144137517,
-      "crash5d10pctProbabilityPct": 88.21527398080671,
-      "elsRiskScore": 64.91009568027789,
+      "riskOffProbabilityPct": 92.65560667161922,
+      "crash5d5pctProbabilityPct": 83.4203857668881,
+      "crash5d10pctProbabilityPct": 83.98993401614364,
+      "elsRiskScore": 64.44176327230544,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4339,10 +4353,10 @@
       "kospiReturn20dPct": 10.50881839947133,
       "realizedVol20dPct": 54.01111297288228,
       "drawdownFrom60dHighPct": -7.281721617589742,
-      "riskOffProbabilityPct": 90.7713870418241,
-      "crash5d5pctProbabilityPct": 80.53472731489883,
-      "crash5d10pctProbabilityPct": 49.08886150437654,
-      "elsRiskScore": 68.59875661745944,
+      "riskOffProbabilityPct": 89.40257247846878,
+      "crash5d5pctProbabilityPct": 74.84463298808545,
+      "crash5d10pctProbabilityPct": 50.73721698288494,
+      "elsRiskScore": 68.20418303865326,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4351,10 +4365,10 @@
       "kospiReturn20dPct": -0.07529989786450031,
       "realizedVol20dPct": 62.840913101574344,
       "drawdownFrom60dHighPct": -14.964284456381815,
-      "riskOffProbabilityPct": 91.11028976138626,
-      "crash5d5pctProbabilityPct": 66.42550755675514,
-      "crash5d10pctProbabilityPct": 42.06554935343697,
-      "elsRiskScore": 72.83099591409163,
+      "riskOffProbabilityPct": 88.33446274751573,
+      "crash5d5pctProbabilityPct": 63.393791376114784,
+      "crash5d10pctProbabilityPct": 42.38661541180965,
+      "elsRiskScore": 71.68575638101154,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4363,10 +4377,10 @@
       "kospiReturn20dPct": 7.9878634302480656,
       "realizedVol20dPct": 68.7777059624429,
       "drawdownFrom60dHighPct": -8.005008242922496,
-      "riskOffProbabilityPct": 94.17255351213825,
-      "crash5d5pctProbabilityPct": 69.49417167533355,
-      "crash5d10pctProbabilityPct": 59.03670631874049,
-      "elsRiskScore": 72.08146872652044,
+      "riskOffProbabilityPct": 89.41936569136475,
+      "crash5d5pctProbabilityPct": 67.62533083168162,
+      "crash5d10pctProbabilityPct": 52.56392738410099,
+      "elsRiskScore": 70.60544935591702,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4375,10 +4389,10 @@
       "kospiReturn20dPct": -1.1687189347296956,
       "realizedVol20dPct": 69.389253503567,
       "drawdownFrom60dHighPct": -12.164644849906093,
-      "riskOffProbabilityPct": 90.34228737807072,
-      "crash5d5pctProbabilityPct": 69.78530216985015,
-      "crash5d10pctProbabilityPct": 48.76051868645773,
-      "elsRiskScore": 73.19343695912768,
+      "riskOffProbabilityPct": 89.22626982368315,
+      "crash5d5pctProbabilityPct": 70.54583926933702,
+      "crash5d10pctProbabilityPct": 52.63970240398207,
+      "elsRiskScore": 72.88729023826824,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4387,10 +4401,10 @@
       "kospiReturn20dPct": 1.580500186441447,
       "realizedVol20dPct": 68.88708876490506,
       "drawdownFrom60dHighPct": -11.788231310834874,
-      "riskOffProbabilityPct": 90.40116430771732,
-      "crash5d5pctProbabilityPct": 59.43335397617609,
-      "crash5d10pctProbabilityPct": 47.1008301774016,
-      "elsRiskScore": 68.58101529132561,
+      "riskOffProbabilityPct": 89.76609625761697,
+      "crash5d5pctProbabilityPct": 63.43455595230021,
+      "crash5d10pctProbabilityPct": 50.433578664524724,
+      "elsRiskScore": 68.75623619389218,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4399,10 +4413,10 @@
       "kospiReturn20dPct": 3.564630845702643,
       "realizedVol20dPct": 70.15458258763823,
       "drawdownFrom60dHighPct": -7.701764133118372,
-      "riskOffProbabilityPct": 87.4140233158895,
-      "crash5d5pctProbabilityPct": 66.12949052599555,
-      "crash5d10pctProbabilityPct": 47.725226812828524,
-      "elsRiskScore": 62.28754294989179,
+      "riskOffProbabilityPct": 87.36722430655043,
+      "crash5d5pctProbabilityPct": 70.44654305467056,
+      "crash5d10pctProbabilityPct": 45.73443316699003,
+      "elsRiskScore": 62.56837270508841,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4411,10 +4425,10 @@
       "kospiReturn20dPct": 7.073562190139326,
       "realizedVol20dPct": 72.10796315726694,
       "drawdownFrom60dHighPct": -2.9030311913096574,
-      "riskOffProbabilityPct": 88.08017054767492,
-      "crash5d5pctProbabilityPct": 66.21501245681952,
-      "crash5d10pctProbabilityPct": 47.996961408982365,
-      "elsRiskScore": 59.19796352063352,
+      "riskOffProbabilityPct": 88.28174064504569,
+      "crash5d5pctProbabilityPct": 68.05470754221663,
+      "crash5d10pctProbabilityPct": 49.422251251622725,
+      "elsRiskScore": 59.07188346791855,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4423,10 +4437,10 @@
       "kospiReturn20dPct": 16.460568143298303,
       "realizedVol20dPct": 67.86834310865814,
       "drawdownFrom60dHighPct": -0.8508786580453953,
-      "riskOffProbabilityPct": 90.00977652089881,
-      "crash5d5pctProbabilityPct": 85.60581629613647,
-      "crash5d10pctProbabilityPct": 60.916743626524784,
-      "elsRiskScore": 58.87892231857168,
+      "riskOffProbabilityPct": 89.27670759891828,
+      "crash5d5pctProbabilityPct": 84.20009045007427,
+      "crash5d10pctProbabilityPct": 70.33693900451044,
+      "elsRiskScore": 58.72767862857263,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4435,10 +4449,10 @@
       "kospiReturn20dPct": 17.937637372871883,
       "realizedVol20dPct": 67.90314954287217,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 91.47932029237434,
-      "crash5d5pctProbabilityPct": 85.02450728418104,
-      "crash5d10pctProbabilityPct": 33.0127216613044,
-      "elsRiskScore": 60.051187427037625,
+      "riskOffProbabilityPct": 89.02644529777784,
+      "crash5d5pctProbabilityPct": 85.64601148983064,
+      "crash5d10pctProbabilityPct": 32.93924278758858,
+      "elsRiskScore": 58.78480424079885,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4447,10 +4461,10 @@
       "kospiReturn20dPct": 24.646091813973705,
       "realizedVol20dPct": 66.25958157768062,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 90.49464265121244,
-      "crash5d5pctProbabilityPct": 83.95460129510084,
-      "crash5d10pctProbabilityPct": 32.62710944805789,
-      "elsRiskScore": 60.84495436924672,
+      "riskOffProbabilityPct": 85.2943019114673,
+      "crash5d5pctProbabilityPct": 83.29448475780806,
+      "crash5d10pctProbabilityPct": 36.42232779824172,
+      "elsRiskScore": 59.176210436735225,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4459,10 +4473,10 @@
       "kospiReturn20dPct": 25.571962629786583,
       "realizedVol20dPct": 66.01973753957644,
       "drawdownFrom60dHighPct": -0.1259951631979339,
-      "riskOffProbabilityPct": 90.06341575796401,
-      "crash5d5pctProbabilityPct": 91.44211639696394,
-      "crash5d10pctProbabilityPct": 44.977155909758125,
-      "elsRiskScore": 61.56090162961285,
+      "riskOffProbabilityPct": 91.78684503939792,
+      "crash5d5pctProbabilityPct": 90.38759842009198,
+      "crash5d10pctProbabilityPct": 45.338612108231224,
+      "elsRiskScore": 62.34711542711681,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4471,10 +4485,10 @@
       "kospiReturn20dPct": 16.620114412347608,
       "realizedVol20dPct": 60.71290334922196,
       "drawdownFrom60dHighPct": 0.0,
-      "riskOffProbabilityPct": 89.17826614431965,
-      "crash5d5pctProbabilityPct": 77.1819095808593,
-      "crash5d10pctProbabilityPct": 37.723127527248785,
-      "elsRiskScore": 61.46137352640996,
+      "riskOffProbabilityPct": 84.93384816598812,
+      "crash5d5pctProbabilityPct": 76.96123859216442,
+      "crash5d10pctProbabilityPct": 33.736146177581375,
+      "elsRiskScore": 60.04830019889321,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4483,10 +4497,10 @@
       "kospiReturn20dPct": 4.53801172571362,
       "realizedVol20dPct": 72.78266334734924,
       "drawdownFrom60dHighPct": -9.991826255821723,
-      "riskOffProbabilityPct": 89.65285219046318,
-      "crash5d5pctProbabilityPct": 75.51406748322493,
-      "crash5d10pctProbabilityPct": 54.3456783370572,
-      "elsRiskScore": 71.68984324046127,
+      "riskOffProbabilityPct": 91.67960787750043,
+      "crash5d5pctProbabilityPct": 73.81304504626749,
+      "crash5d10pctProbabilityPct": 56.62356380986744,
+      "elsRiskScore": 72.25105174131622,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4495,10 +4509,10 @@
       "kospiReturn20dPct": 5.262621605937734,
       "realizedVol20dPct": 73.11175687755572,
       "drawdownFrom60dHighPct": -7.060469249716106,
-      "riskOffProbabilityPct": 92.00512242965611,
-      "crash5d5pctProbabilityPct": 74.41496752357163,
-      "crash5d10pctProbabilityPct": 50.45423974547839,
-      "elsRiskScore": 71.81842176540599,
+      "riskOffProbabilityPct": 87.99106463415482,
+      "crash5d5pctProbabilityPct": 73.93525990417584,
+      "crash5d10pctProbabilityPct": 49.63744327132699,
+      "elsRiskScore": 70.60537395114818,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4507,10 +4521,10 @@
       "kospiReturn20dPct": 8.526255666144088,
       "realizedVol20dPct": 74.98244504353403,
       "drawdownFrom60dHighPct": -2.0214931071747877,
-      "riskOffProbabilityPct": 93.99359089015744,
-      "crash5d5pctProbabilityPct": 83.32069950015718,
-      "crash5d10pctProbabilityPct": 67.98908666509466,
-      "elsRiskScore": 67.01375777049012,
+      "riskOffProbabilityPct": 88.07473083233107,
+      "crash5d5pctProbabilityPct": 84.09367467800554,
+      "crash5d10pctProbabilityPct": 69.45959539758807,
+      "elsRiskScore": 65.46934620139156,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4519,10 +4533,10 @@
       "kospiReturn20dPct": 2.7600732533605843,
       "realizedVol20dPct": 78.31843479369547,
       "drawdownFrom60dHighPct": -7.716672792403356,
-      "riskOffProbabilityPct": 90.89079230167586,
-      "crash5d5pctProbabilityPct": 80.8149275775742,
-      "crash5d10pctProbabilityPct": 62.287973798294885,
-      "elsRiskScore": 71.70486483402865,
+      "riskOffProbabilityPct": 90.8063217246829,
+      "crash5d5pctProbabilityPct": 82.06386715862295,
+      "crash5d10pctProbabilityPct": 59.72245688038169,
+      "elsRiskScore": 71.79350426442458,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4531,10 +4545,10 @@
       "kospiReturn20dPct": -0.9615214454675725,
       "realizedVol20dPct": 77.31027602276129,
       "drawdownFrom60dHighPct": -7.898360314003428,
-      "riskOffProbabilityPct": 86.80240751106211,
-      "crash5d5pctProbabilityPct": 80.87610666791421,
-      "crash5d10pctProbabilityPct": 52.155321822936266,
-      "elsRiskScore": 69.62112555072589,
+      "riskOffProbabilityPct": 90.17174387305666,
+      "crash5d5pctProbabilityPct": 80.04384202021038,
+      "crash5d10pctProbabilityPct": 46.635423182942695,
+      "elsRiskScore": 70.63914483577774,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4543,10 +4557,10 @@
       "kospiReturn20dPct": -3.5490044809168397,
       "realizedVol20dPct": 76.20868060289177,
       "drawdownFrom60dHighPct": -7.000565030637828,
-      "riskOffProbabilityPct": 82.2696865337673,
-      "crash5d5pctProbabilityPct": 80.79563514636781,
-      "crash5d10pctProbabilityPct": 48.181979071343406,
-      "elsRiskScore": 64.47762300044778,
+      "riskOffProbabilityPct": 85.47962525976456,
+      "crash5d5pctProbabilityPct": 82.45299843072779,
+      "crash5d10pctProbabilityPct": 55.12305157791312,
+      "elsRiskScore": 65.36084729898252,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4555,10 +4569,10 @@
       "kospiReturn20dPct": -5.659041821327982,
       "realizedVol20dPct": 76.48571447969235,
       "drawdownFrom60dHighPct": -8.899397117795171,
-      "riskOffProbabilityPct": 83.6746221574353,
-      "crash5d5pctProbabilityPct": 83.67888522613279,
-      "crash5d10pctProbabilityPct": 81.56100107011147,
-      "elsRiskScore": 71.122859983112,
+      "riskOffProbabilityPct": 85.29566608693229,
+      "crash5d5pctProbabilityPct": 87.43890516108598,
+      "crash5d10pctProbabilityPct": 78.70245197587171,
+      "elsRiskScore": 71.46938841379988,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4567,10 +4581,10 @@
       "kospiReturn20dPct": -11.474394663524478,
       "realizedVol20dPct": 81.39187745794867,
       "drawdownFrom60dHighPct": -16.08921998343308,
-      "riskOffProbabilityPct": 82.59835889572216,
-      "crash5d5pctProbabilityPct": 84.23635584583732,
-      "crash5d10pctProbabilityPct": 60.815773149701414,
-      "elsRiskScore": 73.66451417835708,
+      "riskOffProbabilityPct": 81.50781119389023,
+      "crash5d5pctProbabilityPct": 84.96213334632166,
+      "crash5d10pctProbabilityPct": 56.844987305171394,
+      "elsRiskScore": 73.68669723254364,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4579,10 +4593,10 @@
       "kospiReturn20dPct": -0.885352652197946,
       "realizedVol20dPct": 81.89555857480416,
       "drawdownFrom60dHighPct": -11.259030890170107,
-      "riskOffProbabilityPct": 87.30530851098764,
-      "crash5d5pctProbabilityPct": 79.64816824544376,
-      "crash5d10pctProbabilityPct": 80.0250489142178,
-      "elsRiskScore": 67.55044960027186,
+      "riskOffProbabilityPct": 87.61741005622508,
+      "crash5d5pctProbabilityPct": 83.91316357295815,
+      "crash5d10pctProbabilityPct": 79.84836572140597,
+      "elsRiskScore": 67.74155817555798,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4591,10 +4605,10 @@
       "kospiReturn20dPct": 7.574678565177484,
       "realizedVol20dPct": 75.38296208928942,
       "drawdownFrom60dHighPct": -11.665084946596371,
-      "riskOffProbabilityPct": 86.78518939118233,
-      "crash5d5pctProbabilityPct": 79.03269588792286,
-      "crash5d10pctProbabilityPct": 85.2584458219225,
-      "elsRiskScore": 66.43250943084308,
+      "riskOffProbabilityPct": 88.12261817657634,
+      "crash5d5pctProbabilityPct": 76.59004004277564,
+      "crash5d10pctProbabilityPct": 82.50808802367608,
+      "elsRiskScore": 66.77289919468136,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4603,10 +4617,10 @@
       "kospiReturn20dPct": -5.4418156017157155,
       "realizedVol20dPct": 72.1951884270352,
       "drawdownFrom60dHighPct": -15.999034510754772,
-      "riskOffProbabilityPct": 90.69548874245237,
-      "crash5d5pctProbabilityPct": 82.04785557971415,
-      "crash5d10pctProbabilityPct": 76.39129127842284,
-      "elsRiskScore": 71.30824754353249,
+      "riskOffProbabilityPct": 88.06633180600912,
+      "crash5d5pctProbabilityPct": 81.45854464213362,
+      "crash5d10pctProbabilityPct": 75.04828724655216,
+      "elsRiskScore": 70.81654285921309,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4615,10 +4629,10 @@
       "kospiReturn20dPct": -6.261043459814086,
       "realizedVol20dPct": 72.95222793666511,
       "drawdownFrom60dHighPct": -20.492070371000203,
-      "riskOffProbabilityPct": 91.49898721253345,
-      "crash5d5pctProbabilityPct": 83.5830996597023,
-      "crash5d10pctProbabilityPct": 60.26409299856169,
-      "elsRiskScore": 71.20823029062956,
+      "riskOffProbabilityPct": 90.8946432891201,
+      "crash5d5pctProbabilityPct": 81.71998844137069,
+      "crash5d10pctProbabilityPct": 62.95873402037685,
+      "elsRiskScore": 71.27509558152349,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4627,10 +4641,10 @@
       "kospiReturn20dPct": -6.0798948988594725,
       "realizedVol20dPct": 72.98179749488247,
       "drawdownFrom60dHighPct": -19.99703770345217,
-      "riskOffProbabilityPct": 91.58749112395954,
-      "crash5d5pctProbabilityPct": 85.49326372946473,
-      "crash5d10pctProbabilityPct": 64.7903562889608,
-      "elsRiskScore": 71.6768034207201,
+      "riskOffProbabilityPct": 90.26492698643663,
+      "crash5d5pctProbabilityPct": 85.19545924372935,
+      "crash5d10pctProbabilityPct": 66.5104594503267,
+      "elsRiskScore": 71.35863812432699,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4639,10 +4653,10 @@
       "kospiReturn20dPct": -7.972800303313054,
       "realizedVol20dPct": 71.53363913170435,
       "drawdownFrom60dHighPct": -17.977958319390417,
-      "riskOffProbabilityPct": 90.42505799948863,
-      "crash5d5pctProbabilityPct": 84.28847743379704,
-      "crash5d10pctProbabilityPct": 72.94992801748394,
-      "elsRiskScore": 72.60469051297923,
+      "riskOffProbabilityPct": 87.01689411783778,
+      "crash5d5pctProbabilityPct": 81.96874660201054,
+      "crash5d10pctProbabilityPct": 74.43836528654167,
+      "elsRiskScore": 72.04260598467458,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4651,10 +4665,10 @@
       "kospiReturn20dPct": -20.34933383883416,
       "realizedVol20dPct": 75.12989680710162,
       "drawdownFrom60dHighPct": -25.317980591471866,
-      "riskOffProbabilityPct": 91.63401481256756,
-      "crash5d5pctProbabilityPct": 75.37361934626088,
-      "crash5d10pctProbabilityPct": 68.6587840984729,
-      "elsRiskScore": 75.90010916480443,
+      "riskOffProbabilityPct": 93.2154182057418,
+      "crash5d5pctProbabilityPct": 74.08981065269542,
+      "crash5d10pctProbabilityPct": 62.43989785430435,
+      "elsRiskScore": 76.22608912238125,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4663,10 +4677,10 @@
       "kospiReturn20dPct": -21.42609951183737,
       "realizedVol20dPct": 74.50677231792294,
       "drawdownFrom60dHighPct": -24.770504303558592,
-      "riskOffProbabilityPct": 92.04507919737763,
-      "crash5d5pctProbabilityPct": 78.05085777688126,
-      "crash5d10pctProbabilityPct": 61.721235155299524,
-      "elsRiskScore": 73.67409866670812,
+      "riskOffProbabilityPct": 90.87706196337635,
+      "crash5d5pctProbabilityPct": 75.89220261090419,
+      "crash5d10pctProbabilityPct": 68.2004164168275,
+      "elsRiskScore": 73.03992371651282,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4675,10 +4689,10 @@
       "kospiReturn20dPct": -17.82250931833975,
       "realizedVol20dPct": 78.32098912182204,
       "drawdownFrom60dHighPct": -20.079323718669595,
-      "riskOffProbabilityPct": 88.48113729263628,
-      "crash5d5pctProbabilityPct": 79.6911457642834,
-      "crash5d10pctProbabilityPct": 77.50074076035614,
-      "elsRiskScore": 67.84499567185551,
+      "riskOffProbabilityPct": 85.69022562461079,
+      "crash5d5pctProbabilityPct": 80.3331364175852,
+      "crash5d10pctProbabilityPct": 81.89220523159027,
+      "elsRiskScore": 66.95183716111542,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4687,10 +4701,10 @@
       "kospiReturn20dPct": -24.749333615774326,
       "realizedVol20dPct": 79.76088365145871,
       "drawdownFrom60dHighPct": -25.168000614402242,
-      "riskOffProbabilityPct": 91.88137870626805,
-      "crash5d5pctProbabilityPct": 73.17049516573778,
-      "crash5d10pctProbabilityPct": 74.79020784341746,
-      "elsRiskScore": 74.79614650809351,
+      "riskOffProbabilityPct": 91.6773201101509,
+      "crash5d5pctProbabilityPct": 72.9656714231374,
+      "crash5d10pctProbabilityPct": 71.97444598158785,
+      "elsRiskScore": 74.76986201737573,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4699,10 +4713,10 @@
       "kospiReturn20dPct": -28.016265263874185,
       "realizedVol20dPct": 80.35840025783278,
       "drawdownFrom60dHighPct": -28.50694768255151,
-      "riskOffProbabilityPct": 92.94087280952309,
-      "crash5d5pctProbabilityPct": 71.08792657977278,
-      "crash5d10pctProbabilityPct": 73.44426469860346,
-      "elsRiskScore": 74.82731745456414,
+      "riskOffProbabilityPct": 91.87448030966031,
+      "crash5d5pctProbabilityPct": 76.58158731200365,
+      "crash5d10pctProbabilityPct": 70.8707038266968,
+      "elsRiskScore": 74.65373072875629,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4711,10 +4725,10 @@
       "kospiReturn20dPct": -25.965077815141726,
       "realizedVol20dPct": 82.03913549807802,
       "drawdownFrom60dHighPct": -25.965077815141726,
-      "riskOffProbabilityPct": 93.20814863344637,
-      "crash5d5pctProbabilityPct": 80.7128351419282,
-      "crash5d10pctProbabilityPct": 84.87460624336576,
-      "elsRiskScore": 70.91295739058263,
+      "riskOffProbabilityPct": 91.31830701649541,
+      "crash5d5pctProbabilityPct": 84.59193879079766,
+      "crash5d10pctProbabilityPct": 86.3033643399423,
+      "elsRiskScore": 69.97089385496501,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4723,10 +4737,10 @@
       "kospiReturn20dPct": -17.140022233490658,
       "realizedVol20dPct": 75.05147989759283,
       "drawdownFrom60dHighPct": -25.419247247532784,
-      "riskOffProbabilityPct": 94.35574927505223,
-      "crash5d5pctProbabilityPct": 82.63090648015535,
-      "crash5d10pctProbabilityPct": 88.62346601418588,
-      "elsRiskScore": 70.10515692581991,
+      "riskOffProbabilityPct": 93.4835328828135,
+      "crash5d5pctProbabilityPct": 80.8348341319904,
+      "crash5d10pctProbabilityPct": 89.25582287329398,
+      "elsRiskScore": 69.70230450046346,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4735,10 +4749,10 @@
       "kospiReturn20dPct": -16.221541207552338,
       "realizedVol20dPct": 75.95553262948394,
       "drawdownFrom60dHighPct": -22.136693528479178,
-      "riskOffProbabilityPct": 92.07752704200166,
-      "crash5d5pctProbabilityPct": 82.35777915366978,
-      "crash5d10pctProbabilityPct": 79.949665967627,
-      "elsRiskScore": 72.33757989755597,
+      "riskOffProbabilityPct": 91.21580581499167,
+      "crash5d5pctProbabilityPct": 84.26633561253479,
+      "crash5d10pctProbabilityPct": 78.96911720651502,
+      "elsRiskScore": 72.38846675031994,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4747,10 +4761,10 @@
       "kospiReturn20dPct": -25.079560597068408,
       "realizedVol20dPct": 74.2648281324022,
       "drawdownFrom60dHighPct": -26.594072115463728,
-      "riskOffProbabilityPct": 89.91665837221407,
-      "crash5d5pctProbabilityPct": 82.11025491689095,
-      "crash5d10pctProbabilityPct": 89.23233870768841,
-      "elsRiskScore": 71.15461813991314,
+      "riskOffProbabilityPct": 89.29022474622063,
+      "crash5d5pctProbabilityPct": 83.40223461963303,
+      "crash5d10pctProbabilityPct": 86.10271472302543,
+      "elsRiskScore": 70.88703629857935,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4759,10 +4773,10 @@
       "kospiReturn20dPct": -19.681591590270596,
       "realizedVol20dPct": 72.70770440532316,
       "drawdownFrom60dHighPct": -25.8795003593156,
-      "riskOffProbabilityPct": 89.37362760425461,
-      "crash5d5pctProbabilityPct": 84.52931604270229,
-      "crash5d10pctProbabilityPct": 87.65870009966837,
-      "elsRiskScore": 67.7578648267787,
+      "riskOffProbabilityPct": 89.1320808745304,
+      "crash5d5pctProbabilityPct": 83.48881978591616,
+      "crash5d10pctProbabilityPct": 84.59164399564844,
+      "elsRiskScore": 67.90279412438352,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4771,10 +4785,10 @@
       "kospiReturn20dPct": -28.24406020501152,
       "realizedVol20dPct": 81.35609521530796,
       "drawdownFrom60dHighPct": -33.911602876719094,
-      "riskOffProbabilityPct": 90.53703278820089,
-      "crash5d5pctProbabilityPct": 77.67960253288015,
-      "crash5d10pctProbabilityPct": 52.699996435251016,
-      "elsRiskScore": 72.9215623254925,
+      "riskOffProbabilityPct": 88.8712133972237,
+      "crash5d5pctProbabilityPct": 73.40976097246238,
+      "crash5d10pctProbabilityPct": 52.43468669896443,
+      "elsRiskScore": 72.60296580468922,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4783,10 +4797,10 @@
       "kospiReturn20dPct": -33.18877647325304,
       "realizedVol20dPct": 82.23817975608712,
       "drawdownFrom60dHighPct": -37.86593962400776,
-      "riskOffProbabilityPct": 88.835028252354,
-      "crash5d5pctProbabilityPct": 64.042256291396,
-      "crash5d10pctProbabilityPct": 45.669765378481074,
-      "elsRiskScore": 73.85490638083509,
+      "riskOffProbabilityPct": 88.30310099934773,
+      "crash5d5pctProbabilityPct": 62.13310917436433,
+      "crash5d10pctProbabilityPct": 36.42629882992468,
+      "elsRiskScore": 73.91186187675831,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4795,10 +4809,10 @@
       "kospiReturn20dPct": -32.635387148171645,
       "realizedVol20dPct": 82.28411847566505,
       "drawdownFrom60dHighPct": -38.630431562721135,
-      "riskOffProbabilityPct": 90.73246586502923,
-      "crash5d5pctProbabilityPct": 60.625818783337216,
-      "crash5d10pctProbabilityPct": 41.24192869071949,
-      "elsRiskScore": 72.78234423416191,
+      "riskOffProbabilityPct": 90.99261732110173,
+      "crash5d5pctProbabilityPct": 58.60255006381156,
+      "crash5d10pctProbabilityPct": 39.73003247800364,
+      "elsRiskScore": 72.84896210987513,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4807,10 +4821,10 @@
       "kospiReturn20dPct": -13.763436361235293,
       "realizedVol20dPct": 101.805724404743,
       "drawdownFrom60dHighPct": -27.638226791229403,
-      "riskOffProbabilityPct": 88.96621585964887,
-      "crash5d5pctProbabilityPct": 75.19392522827245,
-      "crash5d10pctProbabilityPct": 48.09441916629534,
-      "elsRiskScore": 68.76109950775563,
+      "riskOffProbabilityPct": 87.18073526921927,
+      "crash5d5pctProbabilityPct": 77.0900965653723,
+      "crash5d10pctProbabilityPct": 48.5227286814676,
+      "elsRiskScore": 68.23244668680604,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4819,10 +4833,10 @@
       "kospiReturn20dPct": -22.6361651463712,
       "realizedVol20dPct": 100.12294016450474,
       "drawdownFrom60dHighPct": -31.346583210361455,
-      "riskOffProbabilityPct": 88.152192770089,
-      "crash5d5pctProbabilityPct": 62.42569178257887,
-      "crash5d10pctProbabilityPct": 33.52407247422946,
-      "elsRiskScore": 69.56068578198936,
+      "riskOffProbabilityPct": 87.44708039706501,
+      "crash5d5pctProbabilityPct": 60.94599294490952,
+      "crash5d10pctProbabilityPct": 34.9150554063941,
+      "elsRiskScore": 69.35779321619601,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4831,10 +4845,10 @@
       "kospiReturn20dPct": -21.01988118733178,
       "realizedVol20dPct": 100.61660307444053,
       "drawdownFrom60dHighPct": -30.23297913775227,
-      "riskOffProbabilityPct": 87.63602385349195,
-      "crash5d5pctProbabilityPct": 59.84445307479829,
-      "crash5d10pctProbabilityPct": 24.239861467904593,
-      "elsRiskScore": 63.66436127753932,
+      "riskOffProbabilityPct": 87.06771225198959,
+      "crash5d5pctProbabilityPct": 62.17459367734942,
+      "crash5d10pctProbabilityPct": 20.725811665620938,
+      "elsRiskScore": 63.254523872143835,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4843,10 +4857,10 @@
       "kospiReturn20dPct": -13.819320273081948,
       "realizedVol20dPct": 100.9536248559814,
       "drawdownFrom60dHighPct": -27.607396964194606,
-      "riskOffProbabilityPct": 85.58863042804647,
-      "crash5d5pctProbabilityPct": 70.10361911802408,
-      "crash5d10pctProbabilityPct": 22.739786581937093,
-      "elsRiskScore": 62.57910736834658,
+      "riskOffProbabilityPct": 84.27880733752863,
+      "crash5d5pctProbabilityPct": 72.98519329298784,
+      "crash5d10pctProbabilityPct": 17.987532541130154,
+      "elsRiskScore": 61.86490111758495,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4855,10 +4869,10 @@
       "kospiReturn20dPct": -13.114910187821094,
       "realizedVol20dPct": 100.48551328459932,
       "drawdownFrom60dHighPct": -30.919463934039527,
-      "riskOffProbabilityPct": 90.08312251059539,
-      "crash5d5pctProbabilityPct": 64.80705563450385,
-      "crash5d10pctProbabilityPct": 28.218918550338145,
-      "elsRiskScore": 63.67292863104273,
+      "riskOffProbabilityPct": 89.47476585276102,
+      "crash5d5pctProbabilityPct": 63.94533632713444,
+      "crash5d10pctProbabilityPct": 26.06537028641919,
+      "elsRiskScore": 63.525409043329425,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4867,10 +4881,10 @@
       "kospiReturn20dPct": -14.168304326301328,
       "realizedVol20dPct": 100.36562301540579,
       "drawdownFrom60dHighPct": -31.332100871683178,
-      "riskOffProbabilityPct": 89.84305073499266,
-      "crash5d5pctProbabilityPct": 59.630331530426275,
-      "crash5d10pctProbabilityPct": 21.251944539999688,
-      "elsRiskScore": 68.29316854463761,
+      "riskOffProbabilityPct": 90.34975774376883,
+      "crash5d5pctProbabilityPct": 54.99319655447679,
+      "crash5d10pctProbabilityPct": 18.863376642128816,
+      "elsRiskScore": 68.46887615868161,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4879,10 +4893,10 @@
       "kospiReturn20dPct": -15.734208674761962,
       "realizedVol20dPct": 99.78441947932228,
       "drawdownFrom60dHighPct": -30.88347751671777,
-      "riskOffProbabilityPct": 92.83038219115264,
-      "crash5d5pctProbabilityPct": 59.92129695379024,
-      "crash5d10pctProbabilityPct": 38.597798509586056,
-      "elsRiskScore": 64.71547073005607,
+      "riskOffProbabilityPct": 93.30081155286742,
+      "crash5d5pctProbabilityPct": 62.72836893404396,
+      "crash5d10pctProbabilityPct": 32.71130808927716,
+      "elsRiskScore": 65.30671930263101,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4891,10 +4905,10 @@
       "kospiReturn20dPct": -6.778386144708415,
       "realizedVol20dPct": 94.65685609965277,
       "drawdownFrom60dHighPct": -30.380216247647983,
-      "riskOffProbabilityPct": 91.67569080875747,
-      "crash5d5pctProbabilityPct": 58.105901341254174,
-      "crash5d10pctProbabilityPct": 39.540089257583446,
-      "elsRiskScore": 63.06441489777254,
+      "riskOffProbabilityPct": 92.28424867830579,
+      "crash5d5pctProbabilityPct": 56.03239127042726,
+      "crash5d10pctProbabilityPct": 31.76946297969272,
+      "elsRiskScore": 63.267259355364246,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4903,10 +4917,10 @@
       "kospiReturn20dPct": -4.051289006727599,
       "realizedVol20dPct": 95.64197380576609,
       "drawdownFrom60dHighPct": -27.81826859252513,
-      "riskOffProbabilityPct": 90.9911536709345,
-      "crash5d5pctProbabilityPct": 63.05487754614488,
-      "crash5d10pctProbabilityPct": 31.617581440618594,
-      "elsRiskScore": 61.18080760767397,
+      "riskOffProbabilityPct": 90.5871142838102,
+      "crash5d5pctProbabilityPct": 62.940637955993296,
+      "crash5d10pctProbabilityPct": 29.779114045338723,
+      "elsRiskScore": 60.88654570942087,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4915,10 +4929,10 @@
       "kospiReturn20dPct": -6.46682435502669,
       "realizedVol20dPct": 93.8412523623924,
       "drawdownFrom60dHighPct": -25.247653477132715,
-      "riskOffProbabilityPct": 88.29199908690913,
-      "crash5d5pctProbabilityPct": 72.56058380740795,
-      "crash5d10pctProbabilityPct": 26.4195049079907,
-      "elsRiskScore": 61.01028215215108,
+      "riskOffProbabilityPct": 89.47800035717484,
+      "crash5d5pctProbabilityPct": 70.52663616494603,
+      "crash5d10pctProbabilityPct": 28.080122671215186,
+      "elsRiskScore": 61.12368710377738,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4927,10 +4941,10 @@
       "kospiReturn20dPct": 2.3068351757909777,
       "realizedVol20dPct": 91.29016615043737,
       "drawdownFrom60dHighPct": -23.441749729827578,
-      "riskOffProbabilityPct": 77.31401455388198,
-      "crash5d5pctProbabilityPct": 69.25870912339806,
-      "crash5d10pctProbabilityPct": 19.325893764599794,
-      "elsRiskScore": 54.13635832473312,
+      "riskOffProbabilityPct": 79.03244634498353,
+      "crash5d5pctProbabilityPct": 72.911145706957,
+      "crash5d10pctProbabilityPct": 18.05665179563192,
+      "elsRiskScore": 54.34958884642674,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4939,10 +4953,10 @@
       "kospiReturn20dPct": 5.425803412074681,
       "realizedVol20dPct": 89.86005432982974,
       "drawdownFrom60dHighPct": -24.62787521051505,
-      "riskOffProbabilityPct": 90.77333875491847,
-      "crash5d5pctProbabilityPct": 70.47432132990924,
-      "crash5d10pctProbabilityPct": 22.65693535076714,
-      "elsRiskScore": 58.63131046511794,
+      "riskOffProbabilityPct": 89.20541517601809,
+      "crash5d5pctProbabilityPct": 75.25360296992318,
+      "crash5d10pctProbabilityPct": 18.361043043339254,
+      "elsRiskScore": 58.0728737031573,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4951,10 +4965,10 @@
       "kospiReturn20dPct": -4.1016901429322905,
       "realizedVol20dPct": 91.61791429972345,
       "drawdownFrom60dHighPct": -29.00176092072565,
-      "riskOffProbabilityPct": 90.54578476483745,
-      "crash5d5pctProbabilityPct": 59.086323346238736,
-      "crash5d10pctProbabilityPct": 33.68560569847564,
-      "elsRiskScore": 60.79455004345983,
+      "riskOffProbabilityPct": 90.17461866546883,
+      "crash5d5pctProbabilityPct": 55.038271489993676,
+      "crash5d10pctProbabilityPct": 25.09795938168503,
+      "elsRiskScore": 60.689206407068255,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4963,10 +4977,10 @@
       "kospiReturn20dPct": 0.8073318916692385,
       "realizedVol20dPct": 93.98337922430954,
       "drawdownFrom60dHighPct": -24.817133045515128,
-      "riskOffProbabilityPct": 89.63071432711696,
-      "crash5d5pctProbabilityPct": 59.04475614457168,
-      "crash5d10pctProbabilityPct": 19.782884634648816,
-      "elsRiskScore": 58.953081346731885,
+      "riskOffProbabilityPct": 89.2876235771609,
+      "crash5d5pctProbabilityPct": 61.28658675730131,
+      "crash5d10pctProbabilityPct": 18.169278657712944,
+      "elsRiskScore": 59.04311947231374,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4975,10 +4989,10 @@
       "kospiReturn20dPct": -2.591839524073225,
       "realizedVol20dPct": 92.69775383532807,
       "drawdownFrom60dHighPct": -24.15478548035832,
-      "riskOffProbabilityPct": 88.84118805571039,
-      "crash5d5pctProbabilityPct": 58.99575755760158,
-      "crash5d10pctProbabilityPct": 24.114230940674545,
-      "elsRiskScore": 58.99907186964463,
+      "riskOffProbabilityPct": 88.4334625147976,
+      "crash5d5pctProbabilityPct": 57.37898726642211,
+      "crash5d10pctProbabilityPct": 21.13189148471833,
+      "elsRiskScore": 58.88293321894295,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4987,10 +5001,10 @@
       "kospiReturn20dPct": 0.09475952901225604,
       "realizedVol20dPct": 90.94047873539604,
       "drawdownFrom60dHighPct": -26.52451300393327,
-      "riskOffProbabilityPct": 90.3024291718871,
-      "crash5d5pctProbabilityPct": 55.15262566907386,
-      "crash5d10pctProbabilityPct": 21.14724354543767,
-      "elsRiskScore": 62.363679045742124,
+      "riskOffProbabilityPct": 87.74720393214155,
+      "crash5d5pctProbabilityPct": 58.858321978425934,
+      "crash5d10pctProbabilityPct": 19.011236723963904,
+      "elsRiskScore": 61.588301491381145,
       "baselineRiskOffSignal": 1
     },
     {
@@ -4999,10 +5013,10 @@
       "kospiReturn20dPct": -0.19257669392739318,
       "realizedVol20dPct": 90.9057793786504,
       "drawdownFrom60dHighPct": -26.02223916704609,
-      "riskOffProbabilityPct": 86.51696694598984,
-      "crash5d5pctProbabilityPct": 55.873774327579696,
-      "crash5d10pctProbabilityPct": 24.08681244866777,
-      "elsRiskScore": 58.60949601547501,
+      "riskOffProbabilityPct": 86.48443201625874,
+      "crash5d5pctProbabilityPct": 60.612733389290696,
+      "crash5d10pctProbabilityPct": 23.050167103750475,
+      "elsRiskScore": 58.655124375353935,
       "baselineRiskOffSignal": 1
     },
     {
@@ -5011,10 +5025,10 @@
       "kospiReturn20dPct": 13.024473492859823,
       "realizedVol20dPct": 80.19962685691654,
       "drawdownFrom60dHighPct": -25.30393711154143,
-      "riskOffProbabilityPct": 90.76673224269175,
-      "crash5d5pctProbabilityPct": 64.82746810930176,
-      "crash5d10pctProbabilityPct": 16.834961083861828,
-      "elsRiskScore": 57.34340939745924,
+      "riskOffProbabilityPct": 88.59794502949497,
+      "crash5d5pctProbabilityPct": 69.2951973351582,
+      "crash5d10pctProbabilityPct": 21.9427306343455,
+      "elsRiskScore": 56.73382439409208,
       "baselineRiskOffSignal": 1
     },
     {
@@ -5023,10 +5037,10 @@
       "kospiReturn20dPct": 22.056808470063082,
       "realizedVol20dPct": 76.11580620364852,
       "drawdownFrom60dHighPct": -24.161148932201804,
-      "riskOffProbabilityPct": 86.7058512701768,
-      "crash5d5pctProbabilityPct": 64.73627750662216,
-      "crash5d10pctProbabilityPct": 17.71525363347019,
-      "elsRiskScore": 56.16655834146745,
+      "riskOffProbabilityPct": 82.2522473548054,
+      "crash5d5pctProbabilityPct": 76.14943419177409,
+      "crash5d10pctProbabilityPct": 13.046891615788603,
+      "elsRiskScore": 54.909561599631786,
       "baselineRiskOffSignal": 1
     },
     {
@@ -5035,10 +5049,10 @@
       "kospiReturn20dPct": 21.369575011262953,
       "realizedVol20dPct": 76.36165403705512,
       "drawdownFrom60dHighPct": -25.516015601428478,
-      "riskOffProbabilityPct": 90.65936444268135,
-      "crash5d5pctProbabilityPct": 49.44565989905351,
-      "crash5d10pctProbabilityPct": 15.294348338805658,
-      "elsRiskScore": 60.50765590449605,
+      "riskOffProbabilityPct": 86.36541288918285,
+      "crash5d5pctProbabilityPct": 59.97899900580885,
+      "crash5d10pctProbabilityPct": 17.01269150171516,
+      "elsRiskScore": 59.47324942282341,
       "baselineRiskOffSignal": 1
     },
     {
@@ -5047,10 +5061,10 @@
       "kospiReturn20dPct": 3.4049230909187544,
       "realizedVol20dPct": 49.74542222042796,
       "drawdownFrom60dHighPct": -25.174364066245715,
-      "riskOffProbabilityPct": 82.74678275333456,
-      "crash5d5pctProbabilityPct": 48.683992914534834,
-      "crash5d10pctProbabilityPct": 16.05060132336405,
-      "elsRiskScore": 55.37529799198447,
+      "riskOffProbabilityPct": 84.2530234427102,
+      "crash5d5pctProbabilityPct": 55.35210027375589,
+      "crash5d10pctProbabilityPct": 20.296198936106556,
+      "elsRiskScore": 55.68525867795905,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5059,10 +5073,10 @@
       "kospiReturn20dPct": 9.242582841253233,
       "realizedVol20dPct": 45.42978156792365,
       "drawdownFrom60dHighPct": -25.001234290228258,
-      "riskOffProbabilityPct": 84.69119415380632,
-      "crash5d5pctProbabilityPct": 49.092945914969896,
-      "crash5d10pctProbabilityPct": 11.829374950822894,
-      "elsRiskScore": 59.00477048577297,
+      "riskOffProbabilityPct": 82.27002159259223,
+      "crash5d5pctProbabilityPct": 57.008235241322765,
+      "crash5d10pctProbabilityPct": 16.76866056561982,
+      "elsRiskScore": 57.9699788090151,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5071,10 +5085,10 @@
       "kospiReturn20dPct": 3.2044598557938064,
       "realizedVol20dPct": 47.90817963430093,
       "drawdownFrom60dHighPct": -27.99732296163825,
-      "riskOffProbabilityPct": 88.99606537864425,
-      "crash5d5pctProbabilityPct": 46.83558429284358,
-      "crash5d10pctProbabilityPct": 18.03744681113764,
-      "elsRiskScore": 63.35493135465213,
+      "riskOffProbabilityPct": 87.71847366006178,
+      "crash5d5pctProbabilityPct": 49.32932490443497,
+      "crash5d10pctProbabilityPct": 14.65347762174081,
+      "elsRiskScore": 63.41602370416461,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5083,10 +5097,10 @@
       "kospiReturn20dPct": -0.2846204908566907,
       "realizedVol20dPct": 46.06071587072941,
       "drawdownFrom60dHighPct": -27.813441146299045,
-      "riskOffProbabilityPct": 86.82044763007397,
-      "crash5d5pctProbabilityPct": 48.68547118460369,
-      "crash5d10pctProbabilityPct": 16.776604761957962,
-      "elsRiskScore": 61.71950945291115,
+      "riskOffProbabilityPct": 86.2462182038548,
+      "crash5d5pctProbabilityPct": 52.65376935518833,
+      "crash5d10pctProbabilityPct": 13.522110923970693,
+      "elsRiskScore": 61.565598702262065,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5095,10 +5109,10 @@
       "kospiReturn20dPct": 6.207217480520555,
       "realizedVol20dPct": 42.91498406295184,
       "drawdownFrom60dHighPct": -26.631484823715923,
-      "riskOffProbabilityPct": 89.84099100181322,
-      "crash5d5pctProbabilityPct": 50.03560357785952,
-      "crash5d10pctProbabilityPct": 16.472290930821426,
-      "elsRiskScore": 62.42990266307342,
+      "riskOffProbabilityPct": 87.34966386392917,
+      "crash5d5pctProbabilityPct": 53.68363039404551,
+      "crash5d10pctProbabilityPct": 15.340145012549206,
+      "elsRiskScore": 61.0405489806261,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5107,10 +5121,10 @@
       "kospiReturn20dPct": 11.769405170664516,
       "realizedVol20dPct": 45.256101693870605,
       "drawdownFrom60dHighPct": -23.250297601088366,
-      "riskOffProbabilityPct": 90.31307106398471,
-      "crash5d5pctProbabilityPct": 57.40982329965968,
-      "crash5d10pctProbabilityPct": 24.692994108634984,
-      "elsRiskScore": 58.821860815384966,
+      "riskOffProbabilityPct": 86.64503009142749,
+      "crash5d5pctProbabilityPct": 65.02915546455735,
+      "crash5d10pctProbabilityPct": 16.39160774413589,
+      "elsRiskScore": 57.67778705173005,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5119,10 +5133,10 @@
       "kospiReturn20dPct": 10.39516418346389,
       "realizedVol20dPct": 45.43442118198563,
       "drawdownFrom60dHighPct": -23.698701526679855,
-      "riskOffProbabilityPct": 89.43650487650746,
-      "crash5d5pctProbabilityPct": 54.30936885079778,
-      "crash5d10pctProbabilityPct": 21.176494519697446,
-      "elsRiskScore": 57.766186295729185,
+      "riskOffProbabilityPct": 85.85662586708175,
+      "crash5d5pctProbabilityPct": 58.956857054378766,
+      "crash5d10pctProbabilityPct": 20.06426122758414,
+      "elsRiskScore": 56.60961561537251,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5131,10 +5145,10 @@
       "kospiReturn20dPct": 11.127675702423613,
       "realizedVol20dPct": 45.53954634486569,
       "drawdownFrom60dHighPct": -22.633152486957652,
-      "riskOffProbabilityPct": 87.8271094964591,
-      "crash5d5pctProbabilityPct": 70.7197953904068,
-      "crash5d10pctProbabilityPct": 21.386021399008364,
-      "elsRiskScore": 57.86037717139838,
+      "riskOffProbabilityPct": 86.15108124883633,
+      "crash5d5pctProbabilityPct": 70.94135407399702,
+      "crash5d10pctProbabilityPct": 19.74248895467385,
+      "elsRiskScore": 57.02232164362964,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5143,10 +5157,10 @@
       "kospiReturn20dPct": 6.914078649772604,
       "realizedVol20dPct": 44.109645536990584,
       "drawdownFrom60dHighPct": -22.827566912244702,
-      "riskOffProbabilityPct": 85.76971403363277,
-      "crash5d5pctProbabilityPct": 72.58756426702121,
-      "crash5d10pctProbabilityPct": 15.150758106304169,
-      "elsRiskScore": 60.085206862764785,
+      "riskOffProbabilityPct": 84.6077131034867,
+      "crash5d5pctProbabilityPct": 70.2020185414532,
+      "crash5d10pctProbabilityPct": 14.672894082108307,
+      "elsRiskScore": 59.72550398420622,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5155,10 +5169,10 @@
       "kospiReturn20dPct": 1.4173665192108276,
       "realizedVol20dPct": 43.052732194630906,
       "drawdownFrom60dHighPct": -24.188138745193122,
-      "riskOffProbabilityPct": 85.5527346604655,
-      "crash5d5pctProbabilityPct": 60.67899227700446,
-      "crash5d10pctProbabilityPct": 14.916866508742627,
-      "elsRiskScore": 60.02206060550035,
+      "riskOffProbabilityPct": 84.87921911531424,
+      "crash5d5pctProbabilityPct": 60.927429200725605,
+      "crash5d10pctProbabilityPct": 13.668118517538637,
+      "elsRiskScore": 59.663967361515496,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5167,10 +5181,10 @@
       "kospiReturn20dPct": -4.207115567058473,
       "realizedVol20dPct": 43.738747500161075,
       "drawdownFrom60dHighPct": -26.66264379481159,
-      "riskOffProbabilityPct": 81.67567369724777,
-      "crash5d5pctProbabilityPct": 56.63355427479424,
-      "crash5d10pctProbabilityPct": 26.409873659653936,
-      "elsRiskScore": 69.77990079522593,
+      "riskOffProbabilityPct": 84.29025498859816,
+      "crash5d5pctProbabilityPct": 59.07867443657475,
+      "crash5d10pctProbabilityPct": 22.541515843775905,
+      "elsRiskScore": 70.6005228639667,
       "baselineRiskOffSignal": 1
     },
     {
@@ -5179,10 +5193,10 @@
       "kospiReturn20dPct": -3.5309461806187326,
       "realizedVol20dPct": 43.52227050778229,
       "drawdownFrom60dHighPct": -27.28922437202055,
-      "riskOffProbabilityPct": 80.84730781973057,
-      "crash5d5pctProbabilityPct": 56.05066353059075,
-      "crash5d10pctProbabilityPct": 19.850840673490453,
-      "elsRiskScore": 70.40822218240825,
+      "riskOffProbabilityPct": 83.8261378031131,
+      "crash5d5pctProbabilityPct": 54.50536060041061,
+      "crash5d10pctProbabilityPct": 20.85081216622103,
+      "elsRiskScore": 71.0829858628445,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5191,10 +5205,10 @@
       "kospiReturn20dPct": 3.81383891939171,
       "realizedVol20dPct": 37.999500512852805,
       "drawdownFrom60dHighPct": -24.773299889141455,
-      "riskOffProbabilityPct": 79.13488665759226,
-      "crash5d5pctProbabilityPct": 60.49321446978772,
-      "crash5d10pctProbabilityPct": 9.747664407800658,
-      "elsRiskScore": 68.56296667247365,
+      "riskOffProbabilityPct": 81.26404978902625,
+      "crash5d5pctProbabilityPct": 58.812785672115616,
+      "crash5d10pctProbabilityPct": 9.891246149647426,
+      "elsRiskScore": 68.89043559722569,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5203,10 +5217,10 @@
       "kospiReturn20dPct": -2.001727816384491,
       "realizedVol20dPct": 31.8680739268085,
       "drawdownFrom60dHighPct": -24.801966339316706,
-      "riskOffProbabilityPct": 69.84740913588614,
-      "crash5d5pctProbabilityPct": 45.04083965150576,
-      "crash5d10pctProbabilityPct": 10.287612416559764,
-      "elsRiskScore": 64.26586016964791,
+      "riskOffProbabilityPct": 70.9027366600113,
+      "crash5d5pctProbabilityPct": 40.498376994641724,
+      "crash5d10pctProbabilityPct": 15.196262217058335,
+      "elsRiskScore": 64.17018144584564,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5215,10 +5229,10 @@
       "kospiReturn20dPct": -0.2707961145386628,
       "realizedVol20dPct": 33.160712959205114,
       "drawdownFrom60dHighPct": -22.79957000324737,
-      "riskOffProbabilityPct": 70.77894086941748,
-      "crash5d5pctProbabilityPct": 50.808437937564165,
-      "crash5d10pctProbabilityPct": 20.972942456296035,
-      "elsRiskScore": 58.97793188082387,
+      "riskOffProbabilityPct": 78.48501935893124,
+      "crash5d5pctProbabilityPct": 51.63739965534402,
+      "crash5d10pctProbabilityPct": 25.385721634130032,
+      "elsRiskScore": 60.82136257013625,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5227,10 +5241,10 @@
       "kospiReturn20dPct": 4.640314411314983,
       "realizedVol20dPct": 31.42858390078206,
       "drawdownFrom60dHighPct": -17.327475555891112,
-      "riskOffProbabilityPct": 59.086637645887194,
-      "crash5d5pctProbabilityPct": 36.981388432240934,
-      "crash5d10pctProbabilityPct": 16.797576350624542,
-      "elsRiskScore": 54.05576764877611,
+      "riskOffProbabilityPct": 63.896027263910085,
+      "crash5d5pctProbabilityPct": 38.635572443427,
+      "crash5d10pctProbabilityPct": 15.491558468502092,
+      "elsRiskScore": 54.70720719874349,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5239,10 +5253,10 @@
       "kospiReturn20dPct": 4.0809819153637905,
       "realizedVol20dPct": 31.383339488800814,
       "drawdownFrom60dHighPct": -17.20726056098758,
-      "riskOffProbabilityPct": 57.62614388760178,
-      "crash5d5pctProbabilityPct": 38.91775759111971,
-      "crash5d10pctProbabilityPct": 13.890252151606358,
-      "elsRiskScore": 51.09867690455326,
+      "riskOffProbabilityPct": 64.67771795749894,
+      "crash5d5pctProbabilityPct": 38.68829332625796,
+      "crash5d10pctProbabilityPct": 15.424523963769438,
+      "elsRiskScore": 52.39456052384124,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5251,10 +5265,10 @@
       "kospiReturn20dPct": 4.005604997495671,
       "realizedVol20dPct": 31.36092306845244,
       "drawdownFrom60dHighPct": -16.46390954735928,
-      "riskOffProbabilityPct": 60.36314538515112,
-      "crash5d5pctProbabilityPct": 46.33686005390928,
-      "crash5d10pctProbabilityPct": 19.032947063267077,
-      "elsRiskScore": 52.50927627513626,
+      "riskOffProbabilityPct": 62.961808025662826,
+      "crash5d5pctProbabilityPct": 42.850403979313555,
+      "crash5d10pctProbabilityPct": 16.061425991483297,
+      "elsRiskScore": 52.291088762281696,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5263,10 +5277,10 @@
       "kospiReturn20dPct": -0.3273840954694296,
       "realizedVol20dPct": 32.595237529435316,
       "drawdownFrom60dHighPct": -17.025173994780463,
-      "riskOffProbabilityPct": 71.45222919395565,
-      "crash5d5pctProbabilityPct": 56.56389830586507,
-      "crash5d10pctProbabilityPct": 27.424430427849916,
-      "elsRiskScore": 56.12783337004976,
+      "riskOffProbabilityPct": 76.59976696947759,
+      "crash5d5pctProbabilityPct": 52.955634910364004,
+      "crash5d10pctProbabilityPct": 29.608627613579042,
+      "elsRiskScore": 56.72734650752967,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5275,10 +5289,10 @@
       "kospiReturn20dPct": 1.2068264573832588,
       "realizedVol20dPct": 31.92915396403619,
       "drawdownFrom60dHighPct": -15.05290331514253,
-      "riskOffProbabilityPct": 61.99635220055685,
-      "crash5d5pctProbabilityPct": 56.97341335270725,
-      "crash5d10pctProbabilityPct": 27.752231852772546,
-      "elsRiskScore": 53.00192791241178,
+      "riskOffProbabilityPct": 65.03753516899424,
+      "crash5d5pctProbabilityPct": 53.99100761315727,
+      "crash5d10pctProbabilityPct": 31.91072414610914,
+      "elsRiskScore": 52.89569654910516,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5287,10 +5301,10 @@
       "kospiReturn20dPct": 0.26422209905541116,
       "realizedVol20dPct": 31.947343141721845,
       "drawdownFrom60dHighPct": -15.458054433913516,
-      "riskOffProbabilityPct": 62.66720551122922,
-      "crash5d5pctProbabilityPct": 59.24002393991419,
-      "crash5d10pctProbabilityPct": 39.28908214974582,
-      "elsRiskScore": 56.776699587679126,
+      "riskOffProbabilityPct": 65.83909729794935,
+      "crash5d5pctProbabilityPct": 57.64653351386363,
+      "crash5d10pctProbabilityPct": 41.809300336473605,
+      "elsRiskScore": 57.06575525083619,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5299,10 +5313,10 @@
       "kospiReturn20dPct": 1.9829427426197421,
       "realizedVol20dPct": 32.662782133460716,
       "drawdownFrom60dHighPct": -13.413684447165863,
-      "riskOffProbabilityPct": 68.07287003174764,
-      "crash5d5pctProbabilityPct": 72.62110413060275,
-      "crash5d10pctProbabilityPct": 29.84249129808584,
-      "elsRiskScore": 55.911205964145864,
+      "riskOffProbabilityPct": 72.02518770576238,
+      "crash5d5pctProbabilityPct": 70.27800984897043,
+      "crash5d10pctProbabilityPct": 35.16577444470855,
+      "elsRiskScore": 56.79697851270971,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5311,10 +5325,10 @@
       "kospiReturn20dPct": 6.720079479240315,
       "realizedVol20dPct": 28.701398964268055,
       "drawdownFrom60dHighPct": -8.52329647049297,
-      "riskOffProbabilityPct": 67.2275301680691,
-      "crash5d5pctProbabilityPct": 70.33409960253356,
-      "crash5d10pctProbabilityPct": 70.67960546616006,
-      "elsRiskScore": 53.56018582854576,
+      "riskOffProbabilityPct": 71.46738108568702,
+      "crash5d5pctProbabilityPct": 66.26583970181339,
+      "crash5d10pctProbabilityPct": 75.82074222329163,
+      "elsRiskScore": 54.284867111525315,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5323,10 +5337,10 @@
       "kospiReturn20dPct": 5.500586672503016,
       "realizedVol20dPct": 29.026733595366288,
       "drawdownFrom60dHighPct": -7.150271403997344,
-      "riskOffProbabilityPct": 67.67148730389773,
-      "crash5d5pctProbabilityPct": 63.755632487749914,
-      "crash5d10pctProbabilityPct": 66.25773810620237,
-      "elsRiskScore": 51.31320967005234,
+      "riskOffProbabilityPct": 69.48882588939125,
+      "crash5d5pctProbabilityPct": 67.67747117221418,
+      "crash5d10pctProbabilityPct": 69.89514797279983,
+      "elsRiskScore": 51.555780068691995,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5335,10 +5349,10 @@
       "kospiReturn20dPct": 1.7449728661130592,
       "realizedVol20dPct": 29.62568538012676,
       "drawdownFrom60dHighPct": -8.989371236259258,
-      "riskOffProbabilityPct": 70.07298651958558,
-      "crash5d5pctProbabilityPct": 70.35348085701119,
-      "crash5d10pctProbabilityPct": 81.12275601591324,
-      "elsRiskScore": 54.24512423873319,
+      "riskOffProbabilityPct": 69.34327632583128,
+      "crash5d5pctProbabilityPct": 72.50147567909148,
+      "crash5d10pctProbabilityPct": 79.29481623500536,
+      "elsRiskScore": 53.51896196346328,
       "baselineRiskOffSignal": 0
     },
     {
@@ -5347,10 +5361,10 @@
       "kospiReturn20dPct": -5.281478230663339,
       "realizedVol20dPct": 26.155059115976442,
       "drawdownFrom60dHighPct": -11.369941438802334,
-      "riskOffProbabilityPct": 69.47340526150339,
-      "crash5d5pctProbabilityPct": 58.02212177897924,
-      "crash5d10pctProbabilityPct": 38.447345517217215,
-      "elsRiskScore": 62.04748310964191,
+      "riskOffProbabilityPct": 73.24740910882234,
+      "crash5d5pctProbabilityPct": 64.10429472138453,
+      "crash5d10pctProbabilityPct": 70.74709130391226,
+      "elsRiskScore": 62.759099766530156,
       "baselineRiskOffSignal": 1
     },
     {
@@ -5359,10 +5373,10 @@
       "kospiReturn20dPct": -8.200134588727915,
       "realizedVol20dPct": 28.872854894236806,
       "drawdownFrom60dHighPct": -12.357486742234446,
-      "riskOffProbabilityPct": 70.33526745128653,
-      "crash5d5pctProbabilityPct": 52.427216695658096,
-      "crash5d10pctProbabilityPct": 43.857325083120635,
-      "elsRiskScore": 63.717783406457706,
+      "riskOffProbabilityPct": 76.50079795648178,
+      "crash5d5pctProbabilityPct": 55.822006287789904,
+      "crash5d10pctProbabilityPct": 47.0330021259412,
+      "elsRiskScore": 65.07297900731074,
       "baselineRiskOffSignal": 1
     },
     {
@@ -5371,10 +5385,10 @@
       "kospiReturn20dPct": -14.412108388970513,
       "realizedVol20dPct": 33.39090185670823,
       "drawdownFrom60dHighPct": -17.147030438978582,
-      "riskOffProbabilityPct": 72.50927511924375,
-      "crash5d5pctProbabilityPct": 57.79476602040854,
-      "crash5d10pctProbabilityPct": 42.4913386611392,
-      "elsRiskScore": 64.58173765269544,
+      "riskOffProbabilityPct": 70.28635438060849,
+      "crash5d5pctProbabilityPct": 56.17787059222149,
+      "crash5d10pctProbabilityPct": 51.90552214646908,
+      "elsRiskScore": 63.392154007824736,
       "baselineRiskOffSignal": 1
     },
     {
@@ -5383,10 +5397,10 @@
       "kospiReturn20dPct": -14.573808061507664,
       "realizedVol20dPct": 33.35808299049605,
       "drawdownFrom60dHighPct": -17.51137017273876,
-      "riskOffProbabilityPct": 76.6061798349006,
-      "crash5d5pctProbabilityPct": 57.40488123844574,
-      "crash5d10pctProbabilityPct": 35.23083697200985,
-      "elsRiskScore": 65.71303484289588,
+      "riskOffProbabilityPct": 73.7519694914149,
+      "crash5d5pctProbabilityPct": 57.54942335700501,
+      "crash5d10pctProbabilityPct": 45.49935309065775,
+      "elsRiskScore": 64.81258453802914,
       "baselineRiskOffSignal": 1
     },
     {
@@ -5395,19 +5409,31 @@
       "kospiReturn20dPct": -19.61950300365706,
       "realizedVol20dPct": 41.71153203000341,
       "drawdownFrom60dHighPct": -21.737268014581034,
-      "riskOffProbabilityPct": 83.91213863781411,
-      "crash5d5pctProbabilityPct": 55.80726447377305,
-      "crash5d10pctProbabilityPct": 38.30834132872422,
-      "elsRiskScore": 69.32377018911949,
+      "riskOffProbabilityPct": 82.80055044093592,
+      "crash5d5pctProbabilityPct": 58.01190062409276,
+      "crash5d10pctProbabilityPct": 40.83086212299877,
+      "elsRiskScore": 68.85777395266325,
+      "baselineRiskOffSignal": 1
+    },
+    {
+      "date": "2026-10-16",
+      "kospi": 5668.05,
+      "kospiReturn20dPct": -15.20442465034102,
+      "realizedVol20dPct": 42.241097396105644,
+      "drawdownFrom60dHighPct": -20.133326006180173,
+      "riskOffProbabilityPct": 78.58528764685188,
+      "crash5d5pctProbabilityPct": 54.14743879222363,
+      "crash5d10pctProbabilityPct": 43.94193978499729,
+      "elsRiskScore": 66.8676270737744,
       "baselineRiskOffSignal": 1
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261016T150007-1500-live",
-    "mode": "live",
-    "state": "reused",
-    "startedAt": "2026-10-16 15:00:07 KST",
-    "preparedAt": "2026-10-16 15:01:43 KST"
+    "runId": "20261016T153503-1535-full",
+    "mode": "full",
+    "state": "generated",
+    "startedAt": "2026-10-16 15:35:03 KST",
+    "preparedAt": "2026-10-16 15:38:33 KST"
   }
 }
