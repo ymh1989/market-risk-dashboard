@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-19 17:35:53 KST",
+  "generatedAt": "2026-10-19 18:30:14 KST",
   "current": {
-    "runId": "20261019T173553-manual-funding-watch",
+    "runId": "20261019T183007-1830-krx",
     "status": "success",
-    "mode": "fast",
-    "trigger": "manual",
-    "scheduledTime": "",
-    "startedAt": "2026-10-19 17:35:53 KST",
-    "completedAt": "2026-10-19 17:35:53 KST",
-    "durationSeconds": 0,
+    "mode": "krx",
+    "trigger": "scheduled",
+    "scheduledTime": "18:30",
+    "startedAt": "2026-10-19 18:30:07 KST",
+    "completedAt": "2026-10-19 18:30:14 KST",
+    "durationSeconds": 7,
     "statusScope": "calculation",
-    "calculationCompletedAt": "2026-10-19 17:35:53 KST",
-    "calculationDurationSeconds": 0,
+    "calculationCompletedAt": "2026-10-19 18:30:14 KST",
+    "calculationDurationSeconds": 7,
     "publicationStatus": "awaiting-verification",
     "publishedAt": null,
     "endToEndDurationSeconds": null,
@@ -20,7 +20,9 @@
     "dashboardGeneratedAt": "2026-10-19 17:31:16 KST",
     "mlGeneratedAt": "2026-10-19 15:38 KST",
     "qualityScore": 99.4,
-    "message": "조달·실질금리 관찰카드 및 유럽 은행주 보강 게시 · 기존 가중점수·ML·HMM·ELS 유지"
+    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+    "krxReferenceDate": "2026-10-19",
+    "krxSessionDate": "2026-10-19"
   },
   "schedule": {
     "timezone": "Asia/Seoul",
@@ -122,31 +124,31 @@
   "stages": [
     {
       "id": "market",
-      "label": "조달 관찰 보강",
+      "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": null,
-      "detail": "공식 금리·유럽 은행주 실제 이력 연결 · 국내 금리차 원자료 표시"
+      "durationSeconds": 3,
+      "detail": "KRX 2026-10-19 외국인·기관·프로그램 확정치 점검"
     },
     {
       "id": "ml",
-      "label": "ML 신호 재사용",
+      "label": "ML 신호",
       "status": "success",
       "durationSeconds": 0,
-      "detail": "기존 결과 유지 · 이번 게시에서 재학습 없음"
+      "detail": "직전 확정 ML·HMM 산출물 재사용"
     },
     {
       "id": "validation",
-      "label": "품질 검증",
+      "label": "품질검증",
       "status": "success",
-      "durationSeconds": null,
-      "detail": "기존 가중카드 18개 점수·가중치·기여도 동일 · 단위·공통일·미래정보 차단 검증"
+      "durationSeconds": 0,
+      "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
       "id": "deployment",
       "label": "Git·Pages 배포",
       "status": "pending",
       "durationSeconds": null,
-      "detail": "공개 배포 확인 대기"
+      "detail": "계산 완료 후 별도 확인 · 실제 게시 확인 기록은 다음 갱신에 반영"
     }
   ],
   "sources": [
@@ -180,7 +182,7 @@
       "status": "ok",
       "lastDate": "2026-10-19",
       "seriesCount": 21,
-      "detail": "21개 원천 · 프랑스·독일 국채 10년 추가",
+      "detail": "21/21개 수집 · 허용시차 내 21개",
       "oldestLastDate": "2026-10-16",
       "freshCount": 21,
       "staleCount": 0,
@@ -260,7 +262,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-10-19 15:36 KST"
+      "generatedAt": "2026-10-19 17:31:16 KST"
     },
     {
       "id": "ml",
@@ -308,13 +310,13 @@
       "id": "breadth",
       "label": "KOSPI 시장 내부강도",
       "status": "ok",
-      "generatedAt": "2026-10-19 15:35:38 KST"
+      "generatedAt": "2026-10-19 18:30:13 KST"
     },
     {
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-10-19 15:38:35 KST"
+      "generatedAt": "2026-10-19 18:30:14 KST"
     }
   ],
   "quality": {
@@ -322,13 +324,13 @@
     "score": 99.4,
     "referenceDate": "2026-10-19",
     "summary": {
-      "checks": 255,
-      "ok": 252,
+      "checks": 266,
+      "ok": 263,
       "warning": 3,
       "error": 0,
-      "sourceSeriesExpected": 100,
-      "sourceSeriesPresent": 100,
-      "freshSeries": 97,
+      "sourceSeriesExpected": 102,
+      "sourceSeriesPresent": 102,
+      "freshSeries": 99,
       "staleSeries": 3,
       "fallbackSeries": 13,
       "actionRequired": 3,
@@ -580,6 +582,29 @@
   ],
   "history": [
     {
+      "runId": "20261019T183007-1830-krx",
+      "status": "success",
+      "mode": "krx",
+      "trigger": "scheduled",
+      "scheduledTime": "18:30",
+      "startedAt": "2026-10-19 18:30:07 KST",
+      "completedAt": "2026-10-19 18:30:14 KST",
+      "durationSeconds": 7,
+      "statusScope": "calculation",
+      "calculationCompletedAt": "2026-10-19 18:30:14 KST",
+      "calculationDurationSeconds": 7,
+      "publicationStatus": "awaiting-verification",
+      "publishedAt": null,
+      "endToEndDurationSeconds": null,
+      "dataAsOf": "2026-10-19",
+      "dashboardGeneratedAt": "2026-10-19 17:31:16 KST",
+      "mlGeneratedAt": "2026-10-19 15:38 KST",
+      "qualityScore": 99.4,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "krxReferenceDate": "2026-10-19",
+      "krxSessionDate": "2026-10-19"
+    },
+    {
       "runId": "20261019T170318-manual-europe-bonds",
       "status": "success",
       "mode": "fast",
@@ -612,14 +637,15 @@
       "statusScope": "calculation",
       "calculationCompletedAt": "2026-10-19 15:38:35 KST",
       "calculationDurationSeconds": 208,
-      "publicationStatus": "awaiting-verification",
-      "publishedAt": null,
-      "endToEndDurationSeconds": null,
+      "publicationStatus": "verified",
+      "publishedAt": "2026-10-19 15:39:04 KST",
+      "endToEndDurationSeconds": 238,
       "dataAsOf": "2026-10-19",
       "dashboardGeneratedAt": "2026-10-19 15:36 KST",
       "mlGeneratedAt": "2026-10-19 15:38 KST",
       "qualityScore": 99.4,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "deploymentDurationSeconds": 30
     },
     {
       "runId": "20261019T150007-1500-live",
@@ -1218,80 +1244,36 @@
       "qualityScore": 99.2,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
       "deploymentDurationSeconds": 71
-    },
-    {
-      "runId": "20261015T090008-0900-live",
-      "status": "success",
-      "mode": "live",
-      "trigger": "scheduled",
-      "scheduledTime": "09:00",
-      "startedAt": "2026-10-15 09:00:08 KST",
-      "completedAt": "2026-10-15 09:00:52 KST",
-      "durationSeconds": 44,
-      "statusScope": "calculation",
-      "calculationCompletedAt": "2026-10-15 09:00:52 KST",
-      "calculationDurationSeconds": 44,
-      "publicationStatus": "verified",
-      "publishedAt": "2026-10-15 09:01:42 KST",
-      "endToEndDurationSeconds": 94,
-      "dataAsOf": "2026-10-15",
-      "dashboardGeneratedAt": "2026-10-15 09:00 KST",
-      "mlGeneratedAt": "2026-10-15 07:31 KST",
-      "qualityScore": 99.4,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-      "deploymentDurationSeconds": 50
-    },
-    {
-      "runId": "20261015T073008-0730-fast",
-      "status": "success",
-      "mode": "fast",
-      "trigger": "scheduled",
-      "scheduledTime": "07:30",
-      "startedAt": "2026-10-15 07:30:08 KST",
-      "completedAt": "2026-10-15 07:31:52 KST",
-      "durationSeconds": 104,
-      "statusScope": "calculation",
-      "calculationCompletedAt": "2026-10-15 07:31:52 KST",
-      "calculationDurationSeconds": 104,
-      "publicationStatus": "verified",
-      "publishedAt": "2026-10-15 07:32:38 KST",
-      "endToEndDurationSeconds": 150,
-      "dataAsOf": "2026-10-14",
-      "dashboardGeneratedAt": "2026-10-15 07:30 KST",
-      "mlGeneratedAt": "2026-10-15 07:31 KST",
-      "qualityScore": 98.8,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-      "deploymentDurationSeconds": 46
     }
   ],
   "lastVerifiedPublication": {
-    "runId": "20261019T150007-1500-live",
+    "runId": "20261019T153507-1535-full",
     "status": "success",
-    "mode": "live",
+    "mode": "full",
     "trigger": "scheduled",
-    "scheduledTime": "15:00",
-    "startedAt": "2026-10-19 15:00:07 KST",
-    "completedAt": "2026-10-19 15:01:21 KST",
-    "durationSeconds": 74,
+    "scheduledTime": "15:35",
+    "startedAt": "2026-10-19 15:35:07 KST",
+    "completedAt": "2026-10-19 15:38:35 KST",
+    "durationSeconds": 208,
     "statusScope": "calculation",
-    "calculationCompletedAt": "2026-10-19 15:01:21 KST",
-    "calculationDurationSeconds": 74,
+    "calculationCompletedAt": "2026-10-19 15:38:35 KST",
+    "calculationDurationSeconds": 208,
     "publicationStatus": "verified",
-    "publishedAt": "2026-10-19 15:02:11 KST",
-    "endToEndDurationSeconds": 124,
+    "publishedAt": "2026-10-19 15:39:04 KST",
+    "endToEndDurationSeconds": 238,
     "dataAsOf": "2026-10-19",
-    "dashboardGeneratedAt": "2026-10-19 15:01 KST",
-    "mlGeneratedAt": "2026-10-17 07:50 KST",
-    "qualityScore": 99.2,
+    "dashboardGeneratedAt": "2026-10-19 15:36 KST",
+    "mlGeneratedAt": "2026-10-19 15:38 KST",
+    "qualityScore": 99.4,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-    "deploymentDurationSeconds": 50
+    "deploymentDurationSeconds": 30
   },
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261019T173553-manual-funding-watch",
-    "mode": "fast",
+    "runId": "20261019T183007-1830-krx",
+    "mode": "krx",
     "state": "generated",
-    "startedAt": "2026-10-19 17:30:04 KST",
-    "preparedAt": "2026-10-19 17:35:53 KST"
+    "startedAt": "2026-10-19 18:30:07 KST",
+    "preparedAt": "2026-10-19 18:30:15 KST"
   }
 }
