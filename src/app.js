@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20261015-1";
+const ASSET_VERSION = "20261019-frde";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -128,6 +128,15 @@ const marketTrendGroups = [
       { id: "jp10y_naver", label: "일본 10년", type: "yield", upLabel: "금리 상승", downLabel: "금리 하락" },
       { id: "kr3y", label: "한국 3년", type: "yield", upLabel: "금리 상승", downLabel: "금리 하락" },
       { id: "kr10y", label: "한국 10년", type: "yield", upLabel: "금리 상승", downLabel: "금리 하락" }
+    ]
+  },
+  {
+    id: "europe_rates",
+    label: "유럽 국채·국가 간 금리차",
+    items: [
+      { id: "fr10y_naver", label: "프랑스 10년", type: "yield", upLabel: "금리 상승", downLabel: "금리 하락" },
+      { id: "de10y_naver", label: "독일 10년", type: "yield", upLabel: "금리 상승", downLabel: "금리 하락" },
+      { id: "fr_de_10y_spread", label: "프랑스-독일 10년", type: "spread", upLabel: "상대 부담 확대", downLabel: "상대 부담 완화" }
     ]
   },
   {
@@ -3785,6 +3794,13 @@ function indicatorSourceRecords(indicator, snapshot) {
       .map((token) => String(token).toLowerCase());
     return tokens.some((token) => token.length >= 3 && source.includes(token));
   });
+  if (indicator.id === "france_germany_spread_watch") {
+    return matches.map((record) => ({
+      ...record,
+      valueType: "eod",
+      url: `https://stock.naver.com/marketindex/bond/${encodeURIComponent(record.symbol)}/price`
+    }));
+  }
   if (indicator.id === "m7_credit_stress_proxy" && snapshot?.m7CreditProxy?.latest) {
     matches.push({
       id: "m7-credit-proxy",
@@ -3843,6 +3859,7 @@ function renderSourceRecordLabel(record) {
 }
 
 function sourceValueState(record) {
+  if (record.valueType === "eod") return "EOD";
   const status = String(record.fetchStatus ?? "").toLowerCase();
   if (status.includes("reconciliation-failed")) return "불일치 · 보강 제외";
   if (status.includes("live")) return "잠정 · 실시간";
@@ -3852,6 +3869,9 @@ function sourceValueState(record) {
 }
 
 function sourceEnhancementNote(indicator) {
+  if (indicator.id === "france_germany_spread_watch") {
+    return "카드 점수는 공통일 EOD · 방향성은 장중 시세 별도 표시 · TEC10·CDS와 다른 지표";
+  }
   if (["kospi_price_stress", "kosdaq_growth_stress"].includes(indicator.id)) {
     return "Yahoo·Naver 종가 이중 확인";
   }
@@ -3922,6 +3942,10 @@ const indicatorDirectionMeanings = {
   japan_us_rate_spread_watch: {
     up: "미·일 금리차 축소와 엔화 강세·자금 환류 가능성 확대",
     down: "금리차 축소 압력이 줄며 캐리 수급 부담 완화"
+  },
+  france_germany_spread_watch: {
+    up: "독일 대비 프랑스 금리차의 수준·확대 압력 상승",
+    down: "상대 금리부담 완화 또는 확대 속도 둔화 · 금리차 자체 하락과는 구분"
   },
   volatility_term_structure_watch: {
     up: "단기 변동성과 VVIX 상승으로 옵션 헤지·감마 부담 확대",
@@ -4028,6 +4052,8 @@ function renderIndicatorSourceDetail(indicator, provenance) {
   const normalizationText =
     indicator.id === "kb_domestic_funding_watch"
       ? "최근 5년 · 원점수 expanding 혼합 정규화 · 확인점수 과거방향 5D EWM"
+      : indicator.id === "france_germany_spread_watch"
+        ? "공통 관측일 EOD · 금리차 수준 55%(최대 504일) + 20일 양의 확대폭 45%(최대 252일) · 40% 분위수·30% z·30% robust z"
       : indicator.id === "dram_spot_cycle_watch"
         ? "TrendForce 공식 관측 누적 · 20D/60D 모멘텀·고점 근접도·상승 확산 · 과거방향 5D EWM"
         : normalization

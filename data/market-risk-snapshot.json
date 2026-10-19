@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-19 15:36:15 KST",
+  "generatedAt": "2026-10-19 17:03:16 KST",
   "source": "Yahoo Finance, Naver Finance, FRED, KOFIA FreeSIS, and KB Securities OpenAPI endpoints",
   "yahooSymbols": {
     "kospi": {
@@ -653,6 +653,34 @@
       "lastDate": "2026-10-16",
       "lastClose": 4.283,
       "observations": 743
+    },
+    "fr10y_naver": {
+      "category": "bond",
+      "symbol": "FR10YT=RR",
+      "label": "프랑스 국채 10년",
+      "frequency": "daily",
+      "target_observations": 850,
+      "min_observations": 80,
+      "max_cache_age_days": 7,
+      "fetchStatus": "naver-eod",
+      "observations": 761,
+      "firstDate": "2023-10-19",
+      "lastDate": "2026-10-16",
+      "lastClose": 4.781
+    },
+    "de10y_naver": {
+      "category": "bond",
+      "symbol": "DE10YT=RR",
+      "label": "독일 국채 10년",
+      "frequency": "daily",
+      "target_observations": 850,
+      "min_observations": 80,
+      "max_cache_age_days": 7,
+      "fetchStatus": "naver-eod",
+      "observations": 763,
+      "firstDate": "2023-10-19",
+      "lastDate": "2026-10-16",
+      "lastClose": 3.409
     }
   },
   "qualityChecks": {
@@ -1023,7 +1051,7 @@
       "weight": 0.3,
       "contribution": 18.25,
       "indicatorCount": 9,
-      "observationCount": 7
+      "observationCount": 8
     },
     {
       "id": "crash",
@@ -1481,14 +1509,37 @@
       },
       "contribution": 0.0,
       "contributionPct": 0.0
+    },
+    {
+      "id": "france_germany_spread_watch",
+      "name": "프랑스·독일 국채금리차 부담",
+      "category": "관찰/유럽 국채",
+      "group": "macro",
+      "role": "observation",
+      "value": 91.8,
+      "unit": "score",
+      "weight": 0.0,
+      "trend": "flat",
+      "asOf": "2026-10-16",
+      "metrics": {
+        "asOf": "2026-10-16",
+        "fr10yPct": 4.781,
+        "de10yPct": 3.409,
+        "spreadBp": 137.2,
+        "spreadChange20ObsBp": 32.1
+      },
+      "detail": "2026-10-16 EOD · 프랑스 4.781% · 독일 3.409%. 프랑스-독일 +137.2bp · 20거래일 변화 +32.1bp. 독일 대비 프랑스의 상대 금리부담 관찰 · 종합점수 미반영 · CDS·부도확률과 별개",
+      "source": "Naver market index: FR10YT=RR, DE10YT=RR",
+      "contribution": 0.0,
+      "contributionPct": 0.0
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261019T153507-1535-full",
-    "mode": "full",
+    "runId": "20261019T170318-manual-europe-bonds",
+    "mode": "fast",
     "state": "generated",
-    "startedAt": "2026-10-19 15:35:07 KST",
-    "preparedAt": "2026-10-19 15:38:35 KST"
+    "startedAt": "2026-10-19 16:56:30 KST",
+    "preparedAt": "2026-10-19 17:03:18 KST"
   }
 }

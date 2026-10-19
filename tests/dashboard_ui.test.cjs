@@ -50,6 +50,23 @@ function completeFlowPoint(date = "2026-10-14", pressure = 70.9) {
   };
 }
 
+test("유럽 10년 국채는 국가 간 금리차로 구분하고 bp 및 EOD 출처 표시", () => {
+  const { context } = harness();
+  const group = vm.runInContext('marketTrendGroups.find(group => group.id === "europe_rates")', context);
+  assert.equal(group.items.length, 3);
+  assert.equal(group.items[2].id, "fr_de_10y_spread");
+  assert.equal(group.items[2].upLabel, "상대 부담 확대");
+  assert.equal(context.formatMarketTrendValue(1.372, "spread"), "+137.2bp");
+  assert.equal(context.marketTrendChange([{ close: 0 }, { close: -0.05 }], 1, "spread"), -5);
+  const indicator = { id: "france_germany_spread_watch", source: "FR10YT=RR, DE10YT=RR" };
+  const records = context.indicatorSourceRecords(indicator, {
+    naverMarketIndexes: { fr10y_naver: { symbol: "FR10YT=RR", fetchStatus: "live" } }
+  });
+  assert.equal(context.sourceValueState(records[0]), "EOD");
+  assert.match(records[0].url, /FR10YT%3DRR/);
+  assert.match(context.sourceEnhancementNote(indicator), /TEC10·CDS/);
+});
+
 test("외국인·기관 결측 때 프로그램 점수를 종합압력으로 오인하지 않음", () => {
   const { context } = harness();
   const previous = completeFlowPoint();

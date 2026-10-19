@@ -252,6 +252,24 @@ NAVER_MARKET_INDEXES = {
         "min_observations": 80,
         "max_cache_age_days": 7,
     },
+    "fr10y_naver": {
+        "category": "bond",
+        "symbol": "FR10YT=RR",
+        "label": "프랑스 국채 10년",
+        "frequency": "daily",
+        "target_observations": 850,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
+    "de10y_naver": {
+        "category": "bond",
+        "symbol": "DE10YT=RR",
+        "label": "독일 국채 10년",
+        "frequency": "daily",
+        "target_observations": 850,
+        "min_observations": 80,
+        "max_cache_age_days": 7,
+    },
     "jp10y_naver": {
         "category": "bond",
         "symbol": "JP10YT=RR",
@@ -326,6 +344,17 @@ NAVER_CRYPTO_DIRECTION_INDEXES = {
     }
 }
 RATE_SPREAD_DIRECTION_INDEXES = {
+    "fr_de_10y_spread": {
+        "provider": "derived",
+        "category": "bond-spread",
+        "symbol": "FR10YT=RR - DE10YT=RR",
+        "label": "프랑스-독일 10년",
+        "frequency": "daily",
+        "longSeries": "fr10y_naver",
+        "shortSeries": "de10y_naver",
+        "formula": "같은 관측일의 프랑스 10년 금리 - 독일 10년 금리",
+        "unit": "percentagePoint",
+    },
     "us_10y2y_spread": {
         "provider": "derived",
         "category": "bond-spread",
@@ -1253,7 +1282,7 @@ def make_aligned_difference_series(first_series, second_series):
 
 
 def build_rate_spread_series(series_map):
-    """장·단기 국채금리 원천으로 국가별 커브 스프레드를 만듭니다."""
+    """공통 관측일의 국채금리로 만기 간·국가 간 금리차를 만듭니다."""
     augmented = dict(series_map)
     for key, config in RATE_SPREAD_DIRECTION_INDEXES.items():
         augmented.pop(key, None)
@@ -1265,10 +1294,12 @@ def build_rate_spread_series(series_map):
 
 
 def build_rate_spread_live_snapshots(series_map, snapshots, statuses=None):
-    """동일 관측일의 장·단기 잠정값만 결합해 스프레드 최신값을 만듭니다."""
+    """동일 관측일의 두 금리만 결합하고 오래된 파생값은 제거합니다."""
     augmented = dict(snapshots)
     augmented_statuses = dict(statuses or {})
     for key, config in RATE_SPREAD_DIRECTION_INDEXES.items():
+        augmented.pop(key, None)
+        augmented_statuses.pop(key, None)
         long_id = config["longSeries"]
         short_id = config["shortSeries"]
         long_snapshot = snapshots.get(long_id) or {}
@@ -1281,7 +1312,7 @@ def build_rate_spread_live_snapshots(series_map, snapshots, statuses=None):
             long_snapshot.get("previousClose"),
             short_snapshot.get("previousClose"),
         )
-        if not all(isinstance(value, (int, float)) for value in required):
+        if not all(isinstance(value, (int, float)) and math.isfinite(value) for value in required):
             continue
 
         close = long_snapshot["close"] - short_snapshot["close"]
@@ -3149,6 +3180,54 @@ def korea_us_rate_fx_score(series_map, market_index_map):
     }
 
 
+def france_germany_spread_points(market_index_map, limit=850, step=1):
+    """프랑스 상대 금리부담을 과거 관측치만으로 표준화합니다."""
+    spread = make_aligned_difference_series(
+        market_index_map.get("fr10y_naver", []), market_index_map.get("de10y_naver", [])
+    )
+    points = level_and_point_change_component_points(spread, change_periods=20)
+    return points[-limit::step]
+
+
+def france_germany_spread_indicator(market_index_map):
+    """국가 간 금리차 관찰카드이며 종합점수 가중치는 0입니다."""
+    spread = make_aligned_difference_series(
+        market_index_map.get("fr10y_naver", []), market_index_map.get("de10y_naver", [])
+    )
+    points = france_germany_spread_points(market_index_map)
+    if not points:
+        return None
+    latest, trend = _latest_composite_score(points, "프랑스·독일 공통 금리 이력 부족")
+    as_of = latest["date"]
+    france = close_asof(market_index_map["fr10y_naver"], as_of)
+    germany = close_asof(market_index_map["de10y_naver"], as_of)
+    values = closes(spread)
+    spread_bp = values[-1] * 100
+    change_bp = (values[-1] - values[-21]) * 100
+    return {
+        "id": "france_germany_spread_watch",
+        "name": "프랑스·독일 국채금리차 부담",
+        "category": "관찰/유럽 국채",
+        "group": "macro",
+        "role": "observation",
+        "value": latest["value"],
+        "unit": "score",
+        "weight": 0.0,
+        "trend": trend,
+        "asOf": as_of,
+        "metrics": {
+            "asOf": as_of, "fr10yPct": france, "de10yPct": germany,
+            "spreadBp": round(spread_bp, 2), "spreadChange20ObsBp": round(change_bp, 2),
+        },
+        "detail": (
+            f"{as_of} EOD · 프랑스 {france:.3f}% · 독일 {germany:.3f}%. "
+            f"프랑스-독일 {spread_bp:+.1f}bp · 20거래일 변화 {change_bp:+.1f}bp. "
+            "독일 대비 프랑스의 상대 금리부담 관찰 · 종합점수 미반영 · CDS·부도확률과 별개"
+        ),
+        "source": "Naver market index: FR10YT=RR, DE10YT=RR",
+    }
+
+
 def japan_us_rate_spread_component_points(market_index_map, limit=120, step=1):
     rate_spread = make_difference_series(
         market_index_map["us10y_naver"], market_index_map["jp10y_naver"]
@@ -3682,6 +3761,9 @@ def build_timeseries(
             if point.get("date") >= "2025-01-01"
             and isinstance(point.get("score"), (int, float))
         ][::step]
+    european_points = france_germany_spread_points(market_index_map or {}, limit=limit, step=step)
+    if european_points:
+        timeseries["france_germany_spread_watch"] = european_points
     return timeseries
 
 
@@ -4437,6 +4519,9 @@ def build_indicators(
     ]
     if m7_credit_proxy:
         indicators.append(m7_credit_indicator(m7_credit_proxy))
+    european_indicator = france_germany_spread_indicator(market_index_map)
+    if european_indicator:
+        indicators.append(european_indicator)
     if kb_market_funds:
         indicators.append(kb_market_funds_indicator(kb_market_funds))
     if dram_spot_prices:
