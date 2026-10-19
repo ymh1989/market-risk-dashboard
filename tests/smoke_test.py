@@ -116,6 +116,12 @@ def test_dashboard_contract():
     }
     if dram_spot["qualityChecks"]["scoreStatus"] == "ready":
         expected_observations.add("dram_spot_cycle_watch")
+    funding_watch_ids = {"domestic_corporate_funding_watch", "us_real_yield_watch", "usd_short_funding_watch"}
+    raw_watch = market.get("rawObservationCards", [])
+    raw_watch_ids = {item["id"] for item in raw_watch}
+    assert raw_watch_ids <= funding_watch_ids
+    assert all(item["value"] is None and item["weight"] == 0 for item in raw_watch)
+    expected_observations.update(funding_watch_ids - raw_watch_ids)
     assert {indicator["id"] for indicator in observations} == expected_observations
     assert all(float(indicator["weight"]) == 0 for indicator in observations)
     assert len(market["observationJournal"]) == 6
@@ -219,6 +225,10 @@ def test_dashboard_contract():
         assert indicator["source"], f"{indicator['id']} should include a source"
         points = timeseries["series"].get(indicator["id"], [])
         minimum_points = 60
+        if indicator["id"] in {"domestic_corporate_funding_watch", "us_real_yield_watch", "usd_short_funding_watch"}:
+            minimum_points = 1
+            assert indicator["role"] == "observation" and indicator["weight"] == 0
+            assert all(len(item["points"]) >= 120 for item in indicator["observationCharts"])
         assert len(points) >= minimum_points, f"{indicator['id']} should expose enough trend points"
         assert all(0 <= point["value"] <= 100 for point in points), f"{indicator['id']} trend scores must be 0~100"
 

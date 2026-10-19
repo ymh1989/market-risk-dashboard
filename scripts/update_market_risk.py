@@ -8,6 +8,7 @@ import io
 import os
 import subprocess
 import time
+import sys
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -4997,6 +4998,7 @@ def main():
         kb_market_funds=kb_market_funds,
         dram_spot_prices=dram_spot_prices,
     )
+    refresh_market_observations()
 
     total_weight = sum(indicator["weight"] for indicator in indicators)
     weighted_score = sum(indicator["value"] * indicator["weight"] for indicator in indicators) / total_weight
@@ -5004,6 +5006,16 @@ def main():
     print(f"Wrote {DASHBOARD_FILE.relative_to(ROOT)}")
     print(f"Wrote {SNAPSHOT_FILE.relative_to(ROOT)}")
     print(f"Wrote {TIMESERIES_FILE.relative_to(ROOT)}")
+
+
+def refresh_market_observations():
+    """관찰 전용 원천은 별도 모듈에서 갱신하고 기존 가중점수는 보존합니다."""
+    if __package__:
+        from .market_watch import refresh_market_watch
+    else:
+        from market_watch import refresh_market_watch
+    result = refresh_market_watch(sys.modules[__name__])
+    print(f"조달·실질금리 관찰 갱신: {result}", flush=True)
 
 
 def check_fred_api():
@@ -5031,6 +5043,11 @@ def parse_args():
         help="기존 EOD 캐시는 유지하고 시장지표 최신 스냅샷만 갱신합니다.",
     )
     parser.add_argument(
+        "--refresh-observations-only",
+        action="store_true",
+        help="가중점수 재계산 없이 조달·실질금리 관찰과 유럽 은행주 보조값만 갱신합니다.",
+    )
+    parser.add_argument(
         "--check-fred-api",
         action="store_true",
         help="FRED_API_KEY와 공식 DGS2 조회만 점검하고 종료합니다.",
@@ -5042,6 +5059,8 @@ if __name__ == "__main__":
     args = parse_args()
     if args.check_fred_api:
         check_fred_api()
+    elif args.refresh_observations_only:
+        refresh_market_observations()
     elif args.refresh_live_only:
         snapshots = refresh_naver_market_index_latest_cache()
         snapshots.update(refresh_naver_crypto_direction_cache())

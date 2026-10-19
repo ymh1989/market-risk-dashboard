@@ -8445,6 +8445,73 @@ a {
   font-size: 0.72rem;
 }
 
+.observation-raw-charts {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding-block: 12px;
+  border-block: 1px solid var(--line);
+}
+
+.indicator-card--extended,
+.indicator-card[data-raw-observation] {
+  grid-template-rows: none;
+  align-content: start;
+  align-self: start;
+  scroll-margin-top: 100px;
+}
+
+.observation-raw-chart {
+  position: relative;
+  min-width: 0;
+}
+
+.observation-raw-chart__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 13px;
+  word-break: keep-all;
+}
+
+.observation-raw-chart__heading strong {
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+
+.observation-raw-chart > small,
+.observation-raw-note {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.observation-raw-chart__plot svg {
+  width: 100%;
+  height: 94px;
+  overflow: hidden;
+}
+
+.observation-supplement dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.observation-supplement dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.observation-supplement dd {
+  margin: 4px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
 .shock-methodology {
   min-width: 96px;
 }

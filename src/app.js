@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20261019-frde";
+const ASSET_VERSION = "20261019-funding-watch";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -3129,6 +3129,11 @@ function renderCompositeTrend(section, timeseries) {
 
 function renderSparkline(indicator, timeseries) {
   const points = timeseries?.series?.[indicator.id] ?? [];
+  if (indicator.normalizationNote && points.length) {
+    return renderObservationCharts({observationCharts: [{
+      label: "관찰점수", unit: "score", points: points.map((point) => ({date: point.date, close: point.value}))
+    }]}, true);
+  }
   if (points.length < 2) {
     return `<div class="sparkline sparkline--empty">시계열 준비중</div>`;
   }
@@ -3787,6 +3792,7 @@ function sourceCatalog(snapshot) {
 }
 
 function indicatorSourceRecords(indicator, snapshot) {
+  if (indicator.sourceRecords) return indicator.sourceRecords;
   const source = String(indicator.source ?? "").toLowerCase();
   const matches = sourceCatalog(snapshot).filter((record) => {
     const tokens = [record.symbol, record.seriesId, record.label, record.id]
@@ -3795,11 +3801,11 @@ function indicatorSourceRecords(indicator, snapshot) {
     return tokens.some((token) => token.length >= 3 && source.includes(token));
   });
   if (indicator.id === "france_germany_spread_watch") {
-    return matches.map((record) => ({
+    return [...matches.map((record) => ({
       ...record,
       valueType: "eod",
       url: `https://stock.naver.com/marketindex/bond/${encodeURIComponent(record.symbol)}/price`
-    }));
+    })), ...(indicator.supplementalSources ?? [])];
   }
   if (indicator.id === "m7_credit_stress_proxy" && snapshot?.m7CreditProxy?.latest) {
     matches.push({
@@ -3859,6 +3865,8 @@ function renderSourceRecordLabel(record) {
 }
 
 function sourceValueState(record) {
+  if (record.fetchStatus === "cached") return "보관값 · 조회 실패";
+  if (record.fetchStatus === "unavailable") return "미수집";
   if (record.valueType === "eod") return "EOD";
   const status = String(record.fetchStatus ?? "").toLowerCase();
   if (status.includes("reconciliation-failed")) return "불일치 · 보강 제외";
@@ -3869,6 +3877,7 @@ function sourceValueState(record) {
 }
 
 function sourceEnhancementNote(indicator) {
+  if (indicator.sourceRecords) return "동일 관측일 결합 · 전일값 채움 없음 · 종합점수 가중치 0";
   if (indicator.id === "france_germany_spread_watch") {
     return "카드 점수는 공통일 EOD · 방향성은 장중 시세 별도 표시 · TEC10·CDS와 다른 지표";
   }
@@ -3891,6 +3900,18 @@ function sourceEnhancementNote(indicator) {
 }
 
 const indicatorDirectionMeanings = {
+  domestic_corporate_funding_watch: {
+    up: "CP·회사채의 상대 조달금리 부담 확대",
+    down: "상대 조달부담 또는 확대 속도 완화"
+  },
+  us_real_yield_watch: {
+    up: "실질금리 수준·상승 압력 확대 · 성장주 할인율 부담",
+    down: "실질 할인율 부담 완화 · 경기·신용 위험 해소와는 별개"
+  },
+  usd_short_funding_watch: {
+    up: "정책금리 대비 조달비용·거래금리 상단 부담 지속",
+    down: "단기조달 금리차·상단 부담 완화 · 월말 기술적 요인 병행 확인"
+  },
   kospi_price_stress: {
     up: "가격 하락·실현변동성·고점 대비 낙폭 부담 확대",
     down: "가격 회복·변동성 진정·고점 대비 낙폭 축소"
@@ -4050,7 +4071,7 @@ function renderIndicatorSourceDetail(indicator, provenance) {
   const qualityNotes = indicatorQualityNotes(indicator, provenance?.quality);
   const normalization = provenance?.model?.normalization;
   const normalizationText =
-    indicator.id === "kb_domestic_funding_watch"
+    indicator.normalizationNote ?? (indicator.id === "kb_domestic_funding_watch"
       ? "최근 5년 · 원점수 expanding 혼합 정규화 · 확인점수 과거방향 5D EWM"
       : indicator.id === "france_germany_spread_watch"
         ? "공통 관측일 EOD · 금리차 수준 55%(최대 504일) + 20일 양의 확대폭 45%(최대 252일) · 40% 분위수·30% z·30% robust z"
@@ -4058,7 +4079,7 @@ function renderIndicatorSourceDetail(indicator, provenance) {
         ? "TrendForce 공식 관측 누적 · 20D/60D 모멘텀·고점 근접도·상승 확산 · 과거방향 5D EWM"
         : normalization
         ? `최대 2년 · 분위수 ${Number(normalization.percentileWeight) * 100}% · z ${Number(normalization.zScoreWeight) * 100}% · robust z ${Number(normalization.robustZScoreWeight) * 100}%`
-        : "최대 2년 · 가용 관측치 기준";
+        : "최대 2년 · 가용 관측치 기준");
   const detailId = `source-detail-${indicator.id}`;
   return `
     <button
@@ -4070,7 +4091,7 @@ function renderIndicatorSourceDetail(indicator, provenance) {
     >원천·산식</button>
     <div class="source-detail" id="${detailId}" hidden>
       <dl class="source-detail__summary">
-        <div><dt>조회시각</dt><dd>${provenance?.snapshot?.generatedAt ?? "확인 대기"}</dd></div>
+        <div><dt>산출시각</dt><dd>${provenance?.snapshot?.generatedAt ?? "확인 대기"}</dd></div>
         <div><dt>정규화</dt><dd>${normalizationText}</dd></div>
         <div><dt>현재 보강</dt><dd>${sourceEnhancementNote(indicator)}</dd></div>
       </dl>
@@ -4084,6 +4105,7 @@ function renderIndicatorSourceDetail(indicator, provenance) {
                     <div>
                       <strong>${renderSourceRecordLabel(record)}</strong>
                       <span>${record.lastDate ?? "관측일 확인 대기"} · ${sourceValueState(record)} · ${Number.isFinite(Number(record.observations)) ? `${Number(record.observations).toLocaleString()}개 관측` : Number.isFinite(Number(record.coveragePct)) ? `커버리지 ${Number(record.coveragePct).toFixed(0)}%` : "관측수 확인 대기"}</span>
+                      ${record.retrievedAt ? `<span>원천 조회 ${record.retrievedAt}</span>` : ""}
                     </div>
                   `
                 )
@@ -4113,7 +4135,7 @@ function renderIndicator(indicator, thresholds, timeseries, provenance = null) {
   };
 
   return `
-    <article class="indicator-card indicator-card--group-${indicator.group ?? "risk"} ${isObservation ? "indicator-card--observation" : ""}">
+    <article class="indicator-card indicator-card--group-${indicator.group ?? "risk"} ${isObservation ? "indicator-card--observation" : ""} ${indicator.observationCharts ? "indicator-card--extended" : ""}">
       <div>
         <span class="eyebrow">${indicator.category}</span>
         <h3>${indicator.name}</h3>
@@ -4137,6 +4159,8 @@ function renderIndicator(indicator, thresholds, timeseries, provenance = null) {
         <span style="width:${clampScore(indicator.value)}%"></span>
       </div>
       ${renderSparkline(indicator, timeseries)}
+      ${renderObservationCharts(indicator)}
+      ${renderSupplementalObservation(indicator)}
       ${renderNarrativeList(indicator.detail, "narrative-list--compact indicator-detail-list")}
       ${renderIndicatorDirectionMeaning(indicator)}
       <footer>
@@ -4146,6 +4170,69 @@ function renderIndicator(indicator, thresholds, timeseries, provenance = null) {
       ${renderIndicatorSourceDetail(indicator, provenance)}
     </article>
   `;
+}
+
+function formatObservationValue(value, unit) {
+  if (value == null || !Number.isFinite(Number(value))) return "-";
+  const suffix = unit === "index" ? "" : unit === "score" ? "점" : unit;
+  return `${Number(value).toFixed(unit === "%" ? 2 : 1)}${suffix}`;
+}
+
+function renderObservationCharts(indicator, compact = false) {
+  const charts = (indicator.observationCharts ?? []).filter((item) => item.points?.length);
+  if (!charts.length) return indicator.observationCharts ? `<p class="observation-raw-note">원천 관측 확인 대기</p>` : "";
+  const colors = ["var(--teal)", "var(--amber)", "var(--blue)"];
+  const chartId = registerInteractiveChart({
+    width: 260,
+    tooltipMode: "hovered",
+    series: charts.map((item, index) => ({
+      label: item.label, points: item.points, valueKey: "close", color: colors[index % colors.length],
+      format: (value) => formatObservationValue(value, item.unit),
+      detail: (point) => `현재는 ${formatObservationValue(item.points.at(-1).close - point.close, item.unit === "%" ? "%p" : item.unit)} 차이`
+    }))
+  });
+  const lists = charts.map((item) => item.points);
+  return `<div class="observation-raw-charts" data-timeseries-chart="${chartId}">
+    ${charts.map((item, index) => {
+      const latest = item.points.at(-1);
+      return `<div class="observation-raw-chart" data-chart-tooltip-host>
+        ${compact ? "" : `<div class="observation-raw-chart__heading"><span>${item.label}</span><strong>${formatObservationValue(latest.close, item.unit)}</strong></div>
+        <small>${latest.date} · EOD${item.unit === "index" ? " · 최초 공통일=100" : ""}</small>`}
+        <div class="observation-raw-chart__plot">${chartRangeOptions.map((range) => {
+          const domain = chartRangeDomain(lists, range.id);
+          const visible = pointsWithinDomain(item.points, domain, "close");
+          const path = item.unit === "score"
+            ? datedValuePath(visible, "close", domain, {min: 0, max: 100}, 260, 4, 56)
+            : marketTrendPath(marketTrendCoordinates(visible, domain, 260, 56, 4));
+          const axis = renderMonthAxisFromDomain(domain, 260, 4, 56, 72);
+          return `<svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg data-chart-series-index="${index}" viewBox="0 0 260 78" role="img" aria-label="${item.label} ${range.label} 흐름">
+            ${axis.grid}<path d="${path}" fill="none" stroke="${colors[index % colors.length]}" stroke-width="1.6" vector-effect="non-scaling-stroke"></path>
+            ${axis.labels}${renderChartCursorLine(4, 56)}</svg>`;
+        }).join("")}</div>
+      </div>`;
+    }).join("")}${renderChartTooltip()}</div>`;
+}
+
+function renderSupplementalObservation(indicator) {
+  if (!indicator.supplementalNotes) return "";
+  const degraded = (indicator.supplementalSources ?? []).some((item) => ["cached", "unavailable"].includes(item.fetchStatus));
+  return `<div class="observation-supplement">
+    <dl>${(indicator.supplementalMetrics ?? []).map((item) => `<div><dt>${item.label}</dt><dd>${formatObservationValue(item.value, item.unit)}</dd></div>`).join("")}</dl>
+    ${renderNarrativeList(indicator.supplementalNotes, "narrative-list--compact")}
+    ${degraded ? `<p class="observation-raw-note">은행주 원천 조회 실패 · 보관값 또는 미수집</p>` : ""}
+  </div>`;
+}
+
+function renderRawObservationCards(section, provenance = null, group = null) {
+  return (section.rawObservationCards ?? []).filter((item) => !group || item.group === group).map((item) => `
+    <article class="indicator-card indicator-card--observation indicator-card--group-${item.group}" data-raw-observation="${item.id}">
+      <header><span class="eyebrow">${item.category}</span><h3>${item.name}</h3></header>
+      <div class="contribution-line"><span class="status-pill status-pill--watch">원자료 관찰</span><strong>종합점수 미반영</strong></div>
+      ${renderObservationCharts(item)}
+      ${renderNarrativeList(item.detail, "narrative-list--compact indicator-detail-list")}
+      <footer><span>${item.source}</span><span>${item.asOf ?? "관측 확인 대기"}</span></footer>
+      ${renderIndicatorSourceDetail(item, provenance)}
+    </article>`).join("");
 }
 
 function renderIndicatorSortControls(sectionId, indicatorCount) {
@@ -6067,7 +6154,7 @@ function renderGroupScores(section, timeseries) {
               Number(right.contribution ?? 0) - Number(left.contribution ?? 0) ||
               Number(right.value ?? 0) - Number(left.value ?? 0)
           );
-          const observationIndicators = (section.indicators ?? []).filter(
+          const observationIndicators = [...(section.indicators ?? []), ...(section.rawObservationCards ?? [])].filter(
             (indicator) => indicator.group === group.id && indicator.role === "observation"
           ).sort((left, right) => Number(right.value ?? 0) - Number(left.value ?? 0));
           const tooltipId = `group-tooltip-${section.id}-${group.id}`;
@@ -6127,7 +6214,7 @@ function renderGroupScores(section, timeseries) {
                              (indicator) =>
                                `<li>
                                   <span>${indicator.name}</span>
-                                  <small>${clampScore(indicator.value).toFixed(1)} × 0.0%</small>
+                                  <small>${indicator.value == null ? "원자료 관찰" : `${clampScore(indicator.value).toFixed(1)} × 0.0%`}</small>
                                   <strong>+0.00점</strong>
                                 </li>`
                            )
@@ -6332,6 +6419,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
   const isPlanned = section.status !== "active";
   const initiallySortedIndicators = sortedIndicators(section, timeseries);
   const pendingDramCard = renderPendingDramCard(section, provenance?.dramSpotPrices);
+  const rawObservationCards = renderRawObservationCards(section, provenance);
   const isActive = section.id === activeTab;
   const sectionDescription =
     section.id === "market"
@@ -6389,7 +6477,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
             ${renderGauge(section.score, section.level, section.model.thresholds)}
             ${
               section.id === "market"
-                ? renderIndicatorSortControls(section.id, initiallySortedIndicators.length + Number(Boolean(pendingDramCard)))
+                ? renderIndicatorSortControls(section.id, initiallySortedIndicators.length + Number(Boolean(pendingDramCard)) + (section.rawObservationCards?.length ?? 0))
                 : ""
             }
             <div class="indicator-grid" data-indicator-grid="${section.id}">
@@ -6397,6 +6485,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
                 .map((indicator) => renderIndicator(indicator, section.model.thresholds, timeseries, { ...provenance, model: section.model }))
                 .join("")}
               ${pendingDramCard}
+              ${rawObservationCards}
             </div>
           `
       }
@@ -7420,14 +7509,15 @@ function renderDashboard(
     );
     grid.querySelectorAll("[data-timeseries-chart]").forEach((chart) => interactiveChartRegistry.delete(chart.dataset.timeseriesChart));
     const pendingDramCard = renderPendingDramCard(section, dramSpotPrices, state.group);
+    const rawObservationCards = renderRawObservationCards(section, { snapshot: sourceSnapshot, quality: dataQuality }, state.group);
     grid.innerHTML = indicators
       .map((indicator) => renderIndicator(indicator, section.model.thresholds, timeseries, { snapshot: sourceSnapshot, quality: dataQuality, model: section.model }))
-      .join("") + pendingDramCard;
+      .join("") + pendingDramCard + rawObservationCards;
     initializeInteractiveCharts(grid);
 
     const definition = state.group ? riskGroupDefinitions[state.group] : null;
     const status = app.querySelector(`[data-indicator-filter-status="${sectionId}"]`);
-    const count = indicators.length + Number(Boolean(pendingDramCard));
+    const count = indicators.length + Number(Boolean(pendingDramCard)) + (section.rawObservationCards ?? []).filter((item) => !state.group || item.group === state.group).length;
     if (status) status.textContent = definition ? `${definition.label} ${count}개` : `전체 ${count}개`;
     const reset = app.querySelector(`[data-indicator-filter-reset="${sectionId}"]`);
     if (reset) reset.hidden = !state.group;

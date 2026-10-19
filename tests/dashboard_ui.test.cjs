@@ -67,6 +67,45 @@ test("유럽 10년 국채는 국가 간 금리차로 구분하고 bp 및 EOD 출
   assert.match(context.sourceEnhancementNote(indicator), /TEC10·CDS/);
 });
 
+test("조달 관찰 원자료는 점수 0으로 위장하지 않고 공통 기간·단위를 표시", () => {
+  const { context } = harness();
+  const item = {
+    id: "domestic_corporate_funding_watch", name: "국내 기업 조달경색", category: "관찰", group: "macro",
+    value: null, weight: 0, asOf: "2026-10-15", source: "KB", sourceRecords: [],
+    detail: ["금리 이력 24개"], normalizationNote: "최소 120개",
+    observationCharts: [{label: "CP - CD", unit: "bp", points: [
+      {date: "2026-10-14", close: 43}, {date: "2026-10-15", close: 44}
+    ]}]
+  };
+  const section = {rawObservationCards: [item]};
+  const html = context.renderRawObservationCards(section);
+  assert.match(html, /44\.0bp/);
+  assert.match(html, /원자료 관찰/);
+  assert.match(html, /data-chart-range-layer="3y"/);
+  assert.match(html, /data-chart-range-layer="ytd"/);
+  assert.match(html, /data-chart-series-index="0"/);
+  assert.doesNotMatch(html, /0\.0 \/ 100|undefined|NaN/);
+  assert.equal(context.renderRawObservationCards(section, null, "flow"), "");
+  assert.match(context.renderRawObservationCards(section, null, "macro"), /44\.0bp/);
+});
+
+test("신규 관찰카드 출처와 금리·은행주 보조값은 단위 및 조회실패 구분", () => {
+  const { context } = harness();
+  assert.equal(context.formatObservationValue(-1, "bp"), "-1.0bp");
+  assert.equal(context.formatObservationValue(2.78, "%"), "2.78%");
+  assert.equal(context.formatObservationValue(null, "bp"), "-");
+  assert.match(context.sourceValueState({valueType: "eod", fetchStatus: "cached"}), /조회 실패/);
+  const direct = {provider: "FRED", symbol: "DFII10", valueType: "eod"};
+  assert.equal(context.indicatorSourceRecords({sourceRecords: [direct]}, {})[0], direct);
+  const html = context.renderSupplementalObservation({
+    supplementalNotes: ["은행 CDS와 별개"], supplementalSources: [{fetchStatus: "cached"}],
+    supplementalMetrics: [{label: "은행주 20일 상대수익률", value: -9.26, unit: "%p"}]
+  });
+  assert.match(html, /-9\.3%p/);
+  assert.match(html, /조회 실패/);
+  assert.doesNotMatch(html, /undefined|NaN/);
+});
+
 test("외국인·기관 결측 때 프로그램 점수를 종합압력으로 오인하지 않음", () => {
   const { context } = harness();
   const previous = completeFlowPoint();

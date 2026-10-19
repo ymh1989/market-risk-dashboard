@@ -1,26 +1,26 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-19 17:03:18 KST",
+  "generatedAt": "2026-10-19 17:35:53 KST",
   "current": {
-    "runId": "20261019T170318-manual-europe-bonds",
+    "runId": "20261019T173553-manual-funding-watch",
     "status": "success",
     "mode": "fast",
     "trigger": "manual",
     "scheduledTime": "",
-    "startedAt": "2026-10-19 17:03:18 KST",
-    "completedAt": "2026-10-19 17:03:18 KST",
+    "startedAt": "2026-10-19 17:35:53 KST",
+    "completedAt": "2026-10-19 17:35:53 KST",
     "durationSeconds": 0,
     "statusScope": "calculation",
-    "calculationCompletedAt": "2026-10-19 17:03:18 KST",
+    "calculationCompletedAt": "2026-10-19 17:35:53 KST",
     "calculationDurationSeconds": 0,
     "publicationStatus": "awaiting-verification",
     "publishedAt": null,
     "endToEndDurationSeconds": null,
     "dataAsOf": "2026-10-19",
-    "dashboardGeneratedAt": "2026-10-19 17:03:16 KST",
+    "dashboardGeneratedAt": "2026-10-19 17:31:16 KST",
     "mlGeneratedAt": "2026-10-19 15:38 KST",
     "qualityScore": 99.4,
-    "message": "유럽 국채 이력·관찰카드 추가 게시 · 기존 가중점수·ML·HMM·ELS 산출물 유지"
+    "message": "조달·실질금리 관찰카드 및 유럽 은행주 보강 게시 · 기존 가중점수·ML·HMM·ELS 유지"
   },
   "schedule": {
     "timezone": "Asia/Seoul",
@@ -122,24 +122,24 @@
   "stages": [
     {
       "id": "market",
-      "label": "유럽 국채 추가",
+      "label": "조달 관찰 보강",
       "status": "success",
-      "durationSeconds": 0,
-      "detail": "프랑스·독일 이력과 관찰점수 추가 · 기존 가중점수 유지"
+      "durationSeconds": null,
+      "detail": "공식 금리·유럽 은행주 실제 이력 연결 · 국내 금리차 원자료 표시"
     },
     {
       "id": "ml",
       "label": "ML 신호 재사용",
       "status": "success",
       "durationSeconds": 0,
-      "detail": "15:38 산출물 재사용 · 이번 게시에서 재학습 없음"
+      "detail": "기존 결과 유지 · 이번 게시에서 재학습 없음"
     },
     {
       "id": "validation",
       "label": "품질 검증",
       "status": "success",
-      "durationSeconds": 0,
-      "detail": "데이터 완비성·점수 불변·원자적 게시 검증"
+      "durationSeconds": null,
+      "detail": "기존 가중카드 18개 점수·가중치·기여도 동일 · 단위·공통일·미래정보 차단 검증"
     },
     {
       "id": "deployment",
@@ -579,6 +579,27 @@
     }
   ],
   "history": [
+    {
+      "runId": "20261019T170318-manual-europe-bonds",
+      "status": "success",
+      "mode": "fast",
+      "trigger": "manual",
+      "scheduledTime": "",
+      "startedAt": "2026-10-19 17:03:18 KST",
+      "completedAt": "2026-10-19 17:03:18 KST",
+      "durationSeconds": 0,
+      "statusScope": "calculation",
+      "calculationCompletedAt": "2026-10-19 17:03:18 KST",
+      "calculationDurationSeconds": 0,
+      "publicationStatus": "awaiting-verification",
+      "publishedAt": null,
+      "endToEndDurationSeconds": null,
+      "dataAsOf": "2026-10-19",
+      "dashboardGeneratedAt": "2026-10-19 17:03:16 KST",
+      "mlGeneratedAt": "2026-10-19 15:38 KST",
+      "qualityScore": 99.4,
+      "message": "유럽 국채 이력·관찰카드 추가 게시 · 기존 가중점수·ML·HMM·ELS 산출물 유지"
+    },
     {
       "runId": "20261019T153507-1535-full",
       "status": "success",
@@ -1267,10 +1288,10 @@
   },
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261019T170318-manual-europe-bonds",
+    "runId": "20261019T173553-manual-funding-watch",
     "mode": "fast",
     "state": "generated",
-    "startedAt": "2026-10-19 16:56:30 KST",
-    "preparedAt": "2026-10-19 17:03:18 KST"
+    "startedAt": "2026-10-19 17:30:04 KST",
+    "preparedAt": "2026-10-19 17:35:53 KST"
   }
 }
