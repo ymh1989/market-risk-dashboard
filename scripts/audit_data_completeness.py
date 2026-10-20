@@ -3,12 +3,14 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 from functools import lru_cache
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 from kospi_risk.market_data_fetcher import load_source_config
+from kospi_risk.dram_spot import PRODUCTS, calculate_cycle_scores
 
 try:
     from scripts.update_market_risk import (
@@ -51,6 +53,7 @@ ARTIFACTS = {
         "FreeSIS·KB 증시주변자금",
         ROOT / "data" / "kb-market-funds.json",
     ),
+    "dram": ("DRAM 공식 현물가격", ROOT / "data" / "dram-spot-prices.json"),
     "marketHistory": ("장기 시장 캐시", ROOT / "data" / "market-history-cache.json"),
     "naverMarketHistory": ("Naver 시장지표 캐시", ROOT / "data" / "naver-marketindex-history.json"),
     "breadth": ("KOSPI 시장 내부강도", ROOT / "data" / "kospi-breadth.json"),
@@ -482,6 +485,84 @@ def validate_series_rows(
     return make_check(check_id, "series", label, status, detail)
 
 
+def validate_dram_score_history(
+    payload: dict[str, Any],
+    indicator: dict[str, Any] | None,
+    trend: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """공식 21개 관측부터 생기는 점수 이력을 가격 표시 이력과 분리해 검증합니다."""
+    history = payload.get("history") or []
+    expected = []
+    errors = []
+    dates = [row.get("date") for row in history]
+    valid_history = bool(history) and all(
+        isinstance(value, str) and parse_date(value) is not None
+        and parse_date(value).isoformat() == value
+        for value in dates
+    )
+    valid_history = valid_history and dates == sorted(set(dates))
+    for row in history:
+        prices = row.get("pricesUsd") or {}
+        valid_history = valid_history and row.get("source") == "trendforce-official"
+        valid_history = valid_history and all(
+            isinstance(prices.get(key), (int, float))
+            and not isinstance(prices[key], bool)
+            and math.isfinite(prices[key]) and prices[key] > 0
+            for key in PRODUCTS
+        )
+    if not valid_history:
+        errors.append("공식 원자료 날짜·중복·가격·출처 오류")
+    elif len(history) >= 21:
+        expected = calculate_cycle_scores(history)
+
+    quality = payload.get("qualityChecks") or {}
+    if (
+        quality.get("officialObservationCount") != len(history)
+        or quality.get("minimumScoreObservations") != 21
+        or quality.get("scoreStatus") != ("ready" if expected else "building-official-history")
+    ):
+        errors.append("공식 관측 수·점수 준비상태 불일치")
+
+    def aligned(rows: list[dict[str, Any]], value_key: str) -> bool:
+        return len(rows) == len(expected) and all(
+            actual.get("date") == reference["date"]
+            and isinstance(actual.get(value_key), (int, float))
+            and not isinstance(actual[value_key], bool)
+            and math.isfinite(actual[value_key])
+            and math.isclose(actual[value_key], reference["score"], abs_tol=0.001)
+            for actual, reference in zip(rows, expected)
+        )
+
+    if not aligned(payload.get("series") or [], "score") or not aligned(trend, "value"):
+        errors.append("공식 원자료 재계산 대비 점수 시계열 누락·값 불일치")
+    latest = payload.get("latest") or {}
+    if valid_history and latest.get("date") != dates[-1]:
+        errors.append("최신 가격 기준일 불일치")
+    if expected:
+        if latest.get("date") != expected[-1]["date"] or latest.get("score") != expected[-1]["score"]:
+            errors.append("최신 점수 불일치")
+        if (
+            not indicator or indicator.get("role") != "observation"
+            or indicator.get("weight") != 0
+            or indicator.get("asOf") != expected[-1]["date"]
+            or indicator.get("value") != expected[-1]["score"]
+            or payload.get("scoreStart") != expected[0]["date"]
+        ):
+            errors.append("관찰카드·점수 시작일 불일치")
+    elif indicator or trend or latest.get("score") is not None or payload.get("scoreStart") is not None:
+        errors.append("공식 21개 관측 이전 점수 노출")
+
+    status = "error" if errors else "warning" if 0 < len(expected) < 60 else "ok"
+    detail = f"공식 가격 {len(history)}개 · 기대 점수 {len(expected)}개 · 표시 점수 {len(trend)}개"
+    detail += " · " + " / ".join(errors) if errors else " · 원자료 재계산 일치"
+    if status == "warning":
+        detail += " · 점수 이력 초기 축적 중(60개 미만)"
+    return make_check(
+        "series:market:dram_spot_cycle_watch", "series", "DRAM 관찰점수 이력", status, detail,
+        attention="information" if status == "warning" else "action" if errors else "none",
+    )
+
+
 def artifact_checks(
     data: dict[str, dict[str, Any]],
     reference_date: date,
@@ -669,7 +750,15 @@ def cross_artifact_checks(
         )
     )
 
+    checks.append(validate_dram_score_history(
+        data.get("dram") or {},
+        next((item for item in market_section.get("indicators", [])
+              if item.get("id") == "dram_spot_cycle_watch"), None),
+        (timeseries.get("series") or {}).get("dram_spot_cycle_watch", []),
+    ))
     for item_id, rows in (timeseries.get("series") or {}).items():
+        if item_id == "dram_spot_cycle_watch":
+            continue
         minimum_rows = 60
         checks.append(
             validate_series_rows(
@@ -1151,7 +1240,7 @@ def main() -> int:
         f"정상 {summary['ok']} · 확인 {summary['warning']} · 오류 {summary['error']}"
     )
     for line in issue_log_lines(report):
-        print(line)
+        print(line, file=sys.stderr)
     print(f"Wrote {output}")
     return 1 if args.strict and report["status"] == "error" else 0
 

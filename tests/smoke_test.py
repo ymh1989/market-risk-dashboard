@@ -229,6 +229,16 @@ def test_dashboard_contract():
             minimum_points = 1
             assert indicator["role"] == "observation" and indicator["weight"] == 0
             assert all(len(item["points"]) >= 120 for item in indicator["observationCharts"])
+        if indicator["id"] == "dram_spot_cycle_watch":
+            # 첫 공식 점수는 가격 21개부터 생성되며, 차트 전용 복원 이력은 제외합니다.
+            minimum_points = max(1, len(dram_spot["history"]) - 20)
+            assert indicator["role"] == "observation" and indicator["weight"] == 0
+            assert points == [
+                {"date": row["date"], "value": row["score"]} for row in dram_spot["series"]
+            ]
+            assert points[0]["date"] == dram_spot["history"][20]["date"]
+            assert points[-1]["date"] == indicator["asOf"] == dram_spot["latest"]["date"]
+            assert points[-1]["value"] == indicator["value"] == dram_spot["latest"]["score"]
         assert len(points) >= minimum_points, f"{indicator['id']} should expose enough trend points"
         assert all(0 <= point["value"] <= 100 for point in points), f"{indicator['id']} trend scores must be 0~100"
 
