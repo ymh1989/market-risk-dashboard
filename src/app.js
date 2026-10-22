@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20261019-funding-watch";
+const ASSET_VERSION = "20261022-issue-radar";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -4205,9 +4205,12 @@ function renderObservationCharts(indicator, compact = false) {
             ? datedValuePath(visible, "close", domain, {min: 0, max: 100}, 260, 4, 56)
             : marketTrendPath(marketTrendCoordinates(visible, domain, 260, 56, 4));
           const axis = renderMonthAxisFromDomain(domain, 260, 4, 56, 72);
+          const markerX = indicator.anchorDate ? xFromDate(indicator.anchorDate, domain, 260) : NaN;
+          const marker = Number.isFinite(markerX) && markerX >= 0 && markerX <= 260
+            ? `<line class="issue-anchor" x1="${markerX}" x2="${markerX}" y1="4" y2="56"><title>${radarEscape(indicator.anchorDate)} · 보관 기사 첫 보도</title></line>` : "";
           return `<svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg data-chart-series-index="${index}" viewBox="0 0 260 78" role="img" aria-label="${item.label} ${range.label} 흐름">
             ${axis.grid}<path d="${path}" fill="none" stroke="${colors[index % colors.length]}" stroke-width="1.6" vector-effect="non-scaling-stroke"></path>
-            ${axis.labels}${renderChartCursorLine(4, 56)}</svg>`;
+            ${marker}${axis.labels}${renderChartCursorLine(4, 56)}</svg>`;
         }).join("")}</div>
       </div>`;
     }).join("")}${renderChartTooltip()}</div>`;
@@ -5958,6 +5961,7 @@ function renderSummary(data, timeseries, mlRisk, elsRisk, hmmRegime, breadthData
 
   return `
     ${renderDecisionCockpit(data, timeseries, mlRisk, hmmRegime, participation)}
+    ${renderIssueRadar(market.issueRadar, true)}
     ${renderShockDecomposition(market, timeseries, breadthData, participation)}
     ${renderScoreAttribution(market, timeseries)}
     ${renderBreadthSummaryPanel(breadthData)}
@@ -6415,6 +6419,121 @@ function renderObservationJournal(section, timeseries) {
   `;
 }
 
+function radarEscape(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[char]));
+}
+
+function radarSafeUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password && !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) ? url.href : "";
+  } catch { return ""; }
+}
+
+function radarLevelTone(level) {
+  return ({"경계": "danger", "주의": "caution", "보통": "normal"})[level] ?? "muted";
+}
+
+function radarDelta(value, unit) {
+  return value == null || !Number.isFinite(Number(value)) ? "-" : `${value > 0 ? "+" : ""}${radarValue(value, unit)}`;
+}
+
+function radarValue(value, unit) {
+  if (value == null || !Number.isFinite(Number(value))) return "-";
+  if (unit === "억원") return `${Number(value).toLocaleString("ko-KR", {minimumFractionDigits: 1, maximumFractionDigits: 1})}억원`;
+  return formatObservationValue(value, unit);
+}
+
+function renderIssueMetric(metric) {
+  return `<div class="issue-metric">
+    <div class="issue-metric__heading"><span>${radarEscape(metric.label)}</span><strong>${radarValue(metric.value, metric.unit)}</strong></div>
+    <small>${radarEscape(metric.asOf ?? "관측 대기")} · ${metric.status === "stale" ? "지연 · 판정 제외" : metric.status === "missing" ? "미수집" : "EOD"}</small>
+    <dl><div><dt>1D</dt><dd title="${radarEscape(metric.change1dDate ?? "비교값 없음")}">${radarDelta(metric.change1d, metric.deltaUnit)}</dd></div>
+    <div><dt>1W</dt><dd title="${radarEscape(metric.change1wDate ?? "비교값 없음")} · 5개 관측 전">${radarDelta(metric.change1w, metric.deltaUnit)}</dd></div>
+    <div><dt>첫 보도 전 대비</dt><dd title="${radarEscape(metric.anchorBaseDate ?? "기준값 없음")}">${radarDelta(metric.changeSinceAnchor, metric.deltaUnit)}</dd></div></dl>
+    <small class="issue-metric__source">${radarEscape(metric.source)}${metric.riskSign === 0 ? " · 맥락 지표" : ""}</small>
+  </div>`;
+}
+
+function renderIssueRadar(radar, compact = false) {
+  if (!radar?.issues?.length) return "";
+  const issues = radar.issues.filter((item) => /^[a-z-]+$/.test(item.id));
+  if (compact) return `<section class="issue-summary" aria-label="주요 시장 이슈">
+    <h3>시장 이슈</h3><div>${issues.slice(0, 3).map((item) => `<button type="button" data-issue-open="${item.id}">
+      <span>${radarEscape(item.title)}</span><strong class="issue-tone--${radarLevelTone(item.reading.level)}">${radarEscape(item.reading.level)} · ${radarEscape(item.reading.direction)}</strong><span aria-hidden="true">↗</span>
+    </button>`).join("")}</div></section>`;
+  return `<section class="issue-radar" aria-labelledby="issue-radar-title">
+    <header class="issue-radar__heading"><div><h3 id="issue-radar-title">시장 이슈 레이더</h3><small>관찰 전용 · ${radarEscape(radar.generatedAt?.slice(0, 16).replace("T", " "))} KST</small></div>
+      <div class="issue-radar__controls"><label>정렬 <select data-issue-sort aria-label="이슈 정렬"><option value="risk">위험 우선</option><option value="news">최근 보도순</option></select></label>
+      <label>표시 <select data-issue-filter aria-label="이슈 필터"><option value="all">전체</option><option value="worsening">악화</option><option value="high">경계</option></select></label></div></header>
+    <div class="issue-radar__columns" aria-hidden="true"><span>이슈</span><span>뉴스 동향</span><span>위험 수준</span><span>최근 방향</span><span>대표 지표 · EOD</span></div>
+    <div data-issue-list>${issues.map((item, index) => {
+      const news = item.news ?? {}, reading = item.reading ?? {}, metric = item.metrics?.[0] ?? {};
+      const marketTerms = /국채|채권|금리|스프레드|유가|원유|운임|외국인|순매|신용잔고|예탁금|레포|반도체|메모리|SOFR|bond|yield|spread|Brent/i;
+      const rows = [...(news.articles ?? [])].sort((a, b) => Number(marketTerms.test(b.title)) - Number(marketTerms.test(a.title)) || String(b.publishedAt ?? "").localeCompare(String(a.publishedAt ?? ""))).slice(0, 3);
+      const newsTime = news.retrievedAt?.slice(0, 16).replace("T", " ") ?? "성공 이력 없음";
+      const tone = radarLevelTone(reading.level);
+      return `<details class="issue-row" id="issue-${item.id}" data-issue-row="${item.id}" data-risk-order="${index}" data-news-date="${radarEscape(news.articles?.[0]?.publishedAt ?? "")}" data-direction="${radarEscape(reading.direction)}" data-level="${radarEscape(reading.level)}">
+        <summary><span class="issue-row__title"><button type="button" class="issue-pin" data-issue-pin="${item.id}" aria-label="${radarEscape(item.title)} 상단 고정" title="상단 고정" aria-pressed="false"><span aria-hidden="true">☆</span></button><strong>${radarEscape(item.title)}</strong></span>
+          <span class="issue-row__news"><b>${radarEscape(news.label)}</b><small>${["failed", "unavailable"].includes(news.status) ? "최신 집계 미확인" : `24h ${news.count24h ?? 0} · 7일 ${news.count7d ?? 0}건`}</small></span>
+          <span class="issue-row__level"><b class="issue-tone--${tone}">${radarEscape(reading.level)}</b><small>${radarEscape(reading.asOf ?? "기준일 대기")}</small></span>
+          <span class="issue-row__direction"><b class="issue-direction--${reading.direction === "악화" ? "up" : reading.direction === "완화" ? "down" : "flat"}">${radarEscape(reading.direction)}</b><small>${reading.confirmed ?? 0} 악화 · ${reading.improving ?? 0} 개선${reading.partial ? " · 일부 미확인" : ""}</small></span>
+          <span class="issue-row__metric"><small>${radarEscape(metric.label)}</small><strong>${radarValue(metric.value, metric.unit)}</strong><small>1W ${radarDelta(metric.change1w, metric.deltaUnit)}<time>${radarEscape(metric.asOf ?? "대기")}</time></small></span>
+        </summary>
+        <div class="issue-detail">
+          <div class="issue-detail__news"><h4>시장 연결 보도</h4><small>마지막 성공 조회 ${radarEscape(newsTime)} KST${news.status === "failed" ? " · 최신 조회 실패, 보관 기사" : news.status === "unavailable" ? " · 미수집" : ""}</small>
+            ${rows.length ? `<ul>${rows.map((article) => { const url = radarSafeUrl(article.url); return `<li>${url ? `<a href="${radarEscape(url)}" target="_blank" rel="noopener noreferrer">${radarEscape(article.title)}</a>` : radarEscape(article.title)}<small>${radarEscape(article.source)} · ${radarEscape(article.publishedAt?.slice(0, 16).replace("T", " "))} KST</small></li>`; }).join("")}</ul>` : `<p>최근 수집된 관련 기사 없음</p>`}
+          </div>
+          <div class="issue-detail__route"><h4>점검 경로</h4><p>${radarEscape(item.route)}</p><h4>후속 확인</h4><ul>${(item.checkpoints ?? []).map((text) => `<li>${radarEscape(text)}</li>`).join("")}</ul>
+            ${(item.events ?? []).map((event) => `<p>${radarEscape(event.date)} · ${radarEscape(event.label)}</p>`).join("")}</div>
+          <div class="issue-detail__metrics">${(item.metrics ?? []).map((entry) => renderIssueMetric(entry)).join("")}</div>
+          <div class="issue-detail__charts"><div class="issue-detail__chart-heading"><h4>시장 반응</h4><small>${item.anchorDate ? `점선 ${radarEscape(item.anchorDate)} · 보관 기사 첫 보도` : "보도 기준일 없음"}</small></div>
+            ${renderObservationCharts({anchorDate: item.anchorDate, observationCharts: (item.metrics ?? []).map((entry) => ({label: radarEscape(entry.label), unit: entry.unit, points: entry.points}))})}</div>
+          <small class="issue-detail__basis">수준 근거: ${(reading.scoreComponents ?? []).map((entry) => `${radarEscape(entry.label ?? entry.id)} ${Number(entry.value).toFixed(1)}점 (${radarEscape(entry.date)})`).join(" · ") || "관측 대기"}</small>
+        </div>
+      </details>`;
+    }).join("")}</div><p data-issue-empty hidden>해당 조건의 이슈 없음</p>
+    <details class="issue-radar__method"><summary>판독 기준·출처</summary>${renderNarrativeList(radar.methodology, "narrative-list--compact")}</details>
+  </section>`;
+}
+
+function initializeIssueRadar(scope) {
+  const board = scope.querySelector(".issue-radar");
+  if (!board) return;
+  let pins = new Set();
+  try { const stored = JSON.parse(localStorage.getItem("risk-issue-pins") ?? "[]"); if (Array.isArray(stored)) pins = new Set(stored); } catch {}
+  const list = board.querySelector("[data-issue-list]");
+  const rows = [...list.querySelectorAll("[data-issue-row]")];
+  const sort = board.querySelector("[data-issue-sort]"), filter = board.querySelector("[data-issue-filter]");
+  const update = () => {
+    const ordered = [...rows].sort((a, b) => Number(pins.has(b.dataset.issueRow)) - Number(pins.has(a.dataset.issueRow)) || (sort.value === "news" ? b.dataset.newsDate.localeCompare(a.dataset.newsDate) : Number(a.dataset.riskOrder) - Number(b.dataset.riskOrder)));
+    for (const row of ordered) {
+      row.hidden = filter.value === "worsening" ? row.dataset.direction !== "악화" : filter.value === "high" ? row.dataset.level !== "경계" : false;
+      const pin = row.querySelector("[data-issue-pin]"), selected = pins.has(row.dataset.issueRow);
+      pin.setAttribute("aria-pressed", String(selected));
+      pin.title = selected ? "상단 고정 해제" : "상단 고정";
+      pin.querySelector("span").textContent = selected ? "★" : "☆";
+      list.append(row);
+    }
+    board.querySelector("[data-issue-empty]").hidden = rows.some((row) => !row.hidden);
+  };
+  sort.addEventListener("change", update); filter.addEventListener("change", update);
+  board.querySelectorAll("[data-issue-pin]").forEach((pin) => pin.addEventListener("click", (event) => {
+    event.preventDefault(); event.stopPropagation();
+    const id = pin.dataset.issuePin;
+    pins.has(id) ? pins.delete(id) : pins.add(id);
+    try { localStorage.setItem("risk-issue-pins", JSON.stringify([...pins])); } catch {}
+    update();
+  }));
+  scope.querySelectorAll("[data-issue-open]").forEach((button) => button.addEventListener("click", () => {
+    scope.querySelector('[data-tab="market"]')?.click();
+    filter.value = "all"; update();
+    const row = rows.find((entry) => entry.dataset.issueRow === button.dataset.issueOpen);
+    if (row) { row.open = true; row.scrollIntoView({block: "start", behavior: "auto"}); row.querySelector("summary")?.focus(); }
+  }));
+  update();
+}
+
 function renderSection(section, timeseries, backtest, stressEpisodes, marketIndexes, activeTab, provenance = null) {
   const isPlanned = section.status !== "active";
   const initiallySortedIndicators = sortedIndicators(section, timeseries);
@@ -6465,6 +6584,7 @@ function renderSection(section, timeseries, backtest, stressEpisodes, marketInde
               ], "narrative-list--compact")}
             </div>`
           : `
+            ${section.id === "market" ? renderIssueRadar(section.issueRadar) : ""}
             ${renderModelPanel(section)}
             ${renderGroupScores(section, timeseries)}
             ${section.id === "market" ? renderObservationJournal(section, timeseries) : ""}
@@ -7315,6 +7435,7 @@ function renderDashboard(
   `;
   initializeElsPerformanceRangeControls(app);
   initializeInteractiveCharts(app);
+  initializeIssueRadar(app);
   app.querySelectorAll("[data-observation-detail-toggle]").forEach((button) => {
     button.addEventListener("click", () => {
       const detail = document.getElementById(button.getAttribute("aria-controls"));

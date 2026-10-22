@@ -612,6 +612,9 @@ if [[ "$UPDATE_MODE" != "krx" ]]; then
   "$PYTHON_BIN" scripts/update_market_risk.py --refresh-live-only
 fi
 
+CURRENT_STAGE="시장 이슈 레이더"
+"$PYTHON_BIN" scripts/update_issue_radar.py
+
 CURRENT_STAGE="품질 검증"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 대시보드 데이터를 검증합니다."
 VALIDATION_STAGE_STARTED_EPOCH="$(date +%s)"

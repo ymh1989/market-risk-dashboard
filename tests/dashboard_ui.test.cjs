@@ -22,6 +22,7 @@ function harness(options = {}) {
   const context = vm.createContext({
     console: { warn() {} },
     AbortController,
+    URL,
     document: {
       querySelector: (selector) => selector === "#app" ? app : null,
       documentElement: { classList: { toggle() {} }, dataset: {}, style: {} }
@@ -49,6 +50,28 @@ function completeFlowPoint(date = "2026-10-14", pressure = 70.9) {
     programNetBuyEok: -40.9, programNetBuy5dEok: -61120.7, programSellPressure: 60.1
   };
 }
+
+test("이슈 레이더는 외부 제목을 이스케이프하고 조회실패·기준일·범위를 표시", () => {
+  const { context } = harness();
+  const radar = { generatedAt: "2026-10-22T16:00:00+09:00", methodology: [], issues: [{
+    id: "europe", title: "프랑스 <위험>", anchorDate: "2026-10-20", checkpoints: [],
+    news: {status: "failed", label: "조회 실패", articles: [
+      {title: '<img src=x onerror="alert(1)">', url: "javascript:alert(1)"},
+      {title: "공개 뉴스", url: "https://example.com/news", publishedAt: "2026-10-22T10:00:00+09:00"}
+    ]}, reading: {level: "경계", direction: "악화", partial: true},
+    metrics: [{label: "국채 금리차", unit: "bp", value: 157.8, status: "ok", asOf: "2026-10-21", points: [
+      {date: "2026-10-19", close: 150}, {date: "2026-10-21", close: 157.8}
+    ]}]
+  }]};
+  const html = context.renderIssueRadar(radar);
+  for (const text of ['data-chart-range-layer="3y"', 'data-chart-range-layer="ytd"', 'class="issue-anchor"',
+    "157.8bp", "최신 집계 미확인", "일부 미확인", "첫 보도 전 대비", "&lt;img", 'href="https://example.com/news"']) assert.ok(html.includes(text), text);
+  assert.doesNotMatch(html, /href="javascript:|<img|undefined|NaN/);
+  assert.match(context.renderIssueRadar(radar, true), /data-issue-open="europe"/);
+  assert.equal(context.radarSafeUrl("https://user:secret@example.com/"), "");
+  assert.equal(context.radarSafeUrl("https://[::1]/"), "");
+  assert.equal(context.renderIssueRadar(null), "");
+});
 
 test("유럽 10년 국채는 국가 간 금리차로 구분하고 bp 및 EOD 출처 표시", () => {
   const { context } = harness();

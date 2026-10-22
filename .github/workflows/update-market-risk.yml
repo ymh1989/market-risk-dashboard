@@ -66,6 +66,7 @@ jobs:
 
       - name: Validate dashboard data
         run: |
+          python3 scripts/update_issue_radar.py
           python3 scripts/audit_data_completeness.py --strict
           make test
           COMPLETED_AT="$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')"

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "issues": [
+    {
+      "id": "europe", "approved": true, "title": "프랑스·유럽 재정 부담",
+      "query": "(프랑스 OR France) (국채 OR 재정 OR 은행 OR debt OR bond)",
+      "route": "국채 위험 프리미엄 → 은행권 상대약세 → 유럽 주식·ELS",
+      "checkpoints": ["프랑스−독일 금리차 확대 지속 여부", "프랑스 은행주 상대약세 동반 여부"],
+      "scoreIds": ["france_germany_spread_watch"],
+      "metricIds": ["fr_spread", "fr_banks", "fr_yield"]
+    },
+    {
+      "id": "rates", "approved": true, "title": "글로벌 금리·할인율 부담",
+      "query": "(국채금리 OR 실질금리 OR bond yields) (상승 OR 인플레이션 OR 금리 OR inflation)",
+      "route": "명목·실질금리 변화 → 할인율·조달비용 → 주식·채권",
+      "checkpoints": ["실질금리와 기대인플레이션의 동반 상승 여부", "국내 장기금리로 부담 확산 여부"],
+      "scoreIds": ["rates_pressure", "us_real_yield_watch"],
+      "metricIds": ["us_real", "us_breakeven", "kr_yield"]
+    },
+    {
+      "id": "energy", "approved": true, "title": "중동·에너지 공급 위험",
+      "query": "(중동 OR 호르무즈 OR 이란) (유가 OR 원유 OR 해운)",
+      "route": "에너지·운송 비용 → 수입물가·환율 부담 → 기업 마진",
+      "checkpoints": ["유가와 원/달러의 동반 상승 여부", "유조선 운임 상승 지속 여부"],
+      "scoreIds": ["energy_import_cost_pressure", "broad_reinflation_watch"],
+      "metricIds": ["brent", "usdkrw", "bdti"]
+    },
+    {
+      "id": "dollar", "approved": true, "title": "달러 조달·신용 경색",
+      "query": "(달러 OR 미국) (자금시장 OR 조달 OR 신용스프레드 OR 레포 OR SOFR)",
+      "route": "단기 달러 조달 → 기업 신용 프리미엄 → 위험자산",
+      "checkpoints": ["단기 조달금리차 확대의 지속 여부", "하이일드 스프레드 동반 확대 여부"],
+      "scoreIds": ["usd_short_funding_watch", "us_credit_spread_stress"],
+      "metricIds": ["sofr_iorb", "sofr_tail", "hy_oas"]
+    },
+    {
+      "id": "korea", "approved": true, "title": "국내 수급·레버리지 부담",
+      "query": "(코스피 OR 증시) (외국인 OR 신용잔고 OR 반대매매 OR 예탁금)",
+      "route": "외국인 수급·레버리지 → 매도 압력 → 시장 내부강도",
+      "checkpoints": ["외국인 5일 누적 순매도 확대 여부", "확산도 개선과 신용/예탁금 부담 완화 여부"],
+      "scoreIds": ["kb_domestic_funding_watch", "kospi_price_stress"],
+      "metricIds": ["foreign_flow", "credit_deposit", "breadth"]
+    },
+    {
+      "id": "semiconductors", "approved": true, "title": "반도체 사이클 우려",
+      "query": "(삼성전자 OR 하이닉스 OR 반도체) (수요 OR 실적 OR 메모리 OR 투자 OR 가격)",
+      "route": "수요·투자 기대 → 반도체 상대주가 → 국내 지수 집중도",
+      "checkpoints": ["미국·국내 반도체 상대약세 동반 여부", "DRAM 가격과 주가 흐름의 괴리 지속 여부"],
+      "scoreIds": ["global_ai_semiconductor_stress", "bigtech_ai_demand_pressure"],
+      "metricIds": ["sox_relative", "korea_semi_relative", "dram_ddr5"]
+    }
+  ]
+}

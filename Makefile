@@ -23,6 +23,10 @@ update-dram-spot-prices:
 update-market-risk:
 	python3 scripts/update_market_risk.py
 
+.PHONY: update-issue-radar
+update-issue-radar:
+	python3 scripts/update_issue_radar.py
+
 update-vkospi:
 	PYTHONPATH=src python3 scripts/update_vkospi.py
 

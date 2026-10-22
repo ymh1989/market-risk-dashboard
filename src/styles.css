@@ -34,6 +34,83 @@
   --desktop-ui-scale: 0.85;
 }
 
+/* 이슈별 뉴스와 시장 판독은 구분하고, 작은 업무용 화면에서도 숫자를 유지합니다. */
+.issue-radar, .issue-summary { margin: 24px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 18px 0; }
+.issue-radar h3, .issue-summary h3 { margin: 0 0 8px; font-size: 20px; }
+.issue-radar h4 { margin: 0 0 8px; font-size: 15px; }
+.issue-radar small { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.issue-radar__heading, .issue-radar__controls, .issue-detail__chart-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.issue-radar__controls label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.issue-radar__controls select { color: var(--ink); background: var(--surface); border: 1px solid var(--line); padding: 7px 9px; border-radius: 4px; font: inherit; }
+.issue-radar__columns, .issue-row > summary { display: grid; grid-template-columns: minmax(185px, 1.3fr) minmax(115px, .8fr) minmax(85px, .6fr) minmax(140px, .9fr) minmax(160px, 1fr); gap: 16px; align-items: center; }
+.issue-radar__columns { margin-top: 18px; padding: 8px 12px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); }
+.issue-row { border-bottom: 1px solid var(--line); scroll-margin-top: 145px; }
+.issue-row > summary { padding: 14px 12px; cursor: pointer; list-style: none; min-height: 86px; }
+.issue-row > summary::-webkit-details-marker { display: none; }
+.issue-row > summary:hover, .issue-row[open] > summary { background: var(--surface-soft); }
+.issue-row > summary > span { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.issue-row > summary .issue-row__title { flex-direction: row; align-items: center; gap: 10px; }
+.issue-row__title::after { content: "⌄"; margin-left: auto; color: var(--muted); font-size: 18px; }
+.issue-row[open] .issue-row__title::after { transform: rotate(180deg); }
+.issue-row__title strong { font-size: 15px; line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
+.issue-row__metric strong { font-size: 21px; font-variant-numeric: tabular-nums; }
+.issue-row__metric time { display: block; white-space: nowrap; }
+.issue-pin { background: none; border: 0; color: var(--muted); padding: 3px; flex: 0 0 28px; height: 32px; cursor: pointer; font-size: 23px; }
+.issue-pin[aria-pressed="true"] { color: var(--amber); }
+.issue-tone--danger, .issue-direction--up { color: var(--red); }
+.issue-tone--caution { color: var(--amber); }
+.issue-tone--normal, .issue-direction--down { color: var(--green); }
+.issue-tone--muted, .issue-direction--flat { color: var(--muted); }
+.issue-detail { padding: 20px 12px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 22px; }
+.issue-detail p, .issue-detail li { font-size: 14px; line-height: 1.65; word-break: keep-all; overflow-wrap: anywhere; }
+.issue-detail ul { margin: 8px 0; padding-left: 20px; }
+.issue-detail__news li { margin-bottom: 10px; }
+.issue-detail__news li small { display: block; }
+.issue-detail__news a { color: var(--ink); text-decoration-color: var(--line); text-underline-offset: 3px; }
+.issue-detail__news a:hover { color: var(--blue); }
+.issue-detail__route { border-left: 1px solid var(--line); padding-left: 20px; }
+.issue-detail__metrics, .issue-detail__charts, .issue-detail__basis { grid-column: 1 / -1; min-width: 0; }
+.issue-detail__metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; border-top: 1px solid var(--line); padding-top: 18px; }
+.issue-metric { min-width: 0; }
+.issue-metric__heading { display: flex; flex-direction: column; gap: 8px; }
+.issue-metric__heading span { font-size: 14px; word-break: keep-all; }
+.issue-metric__heading strong { font-size: 25px; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.issue-metric dl { margin: 12px 0; display: flex; gap: 12px; flex-wrap: wrap; }
+.issue-metric dl div { display: flex; flex-direction: column; gap: 4px; }
+.issue-metric dt { font-size: 11px; color: var(--muted); }
+.issue-metric dd { margin: 0; font-size: 14px; font-weight: 700; }
+.issue-detail__charts .observation-raw-charts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.issue-detail__charts .observation-raw-chart__heading strong { display: none; }
+.issue-detail__basis { overflow-wrap: anywhere; }
+.issue-anchor { stroke: var(--muted); stroke-dasharray: 3 3; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.issue-radar__method { margin-top: 14px; color: var(--muted); font-size: 13px; }
+.issue-radar__method > summary { cursor: pointer; }
+.issue-summary > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.issue-summary button { display: grid; grid-template-columns: 1fr 20px; gap: 8px; text-align: left; color: var(--ink); background: transparent; border: 0; border-left: 3px solid var(--line); border-radius: 0; padding: 8px 12px; cursor: pointer; font: inherit; }
+.issue-summary button > span:first-child { font-size: 14px; }
+.issue-summary button > strong { grid-column: 1; font-size: 15px; }
+.issue-summary button > span:last-child { grid-column: 2; grid-row: 1 / 3; align-self: center; }
+@media (max-width: 850px) {
+  .issue-radar__columns { display: none; }
+  .issue-row > summary { grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .issue-row__title { grid-column: 1 / 3; }
+  .issue-row__metric { grid-column: 3; grid-row: 1 / 3; }
+  .issue-row__news { grid-column: 1 / 3; }
+  .issue-row__level, .issue-row__direction { grid-row: 3; }
+  .issue-row__direction { grid-column: 2 / 4; }
+  .issue-detail { grid-template-columns: 1fr; }
+  .issue-detail__route { border-left: 0; padding-left: 0; }
+}
+@media (max-width: 600px) {
+  .issue-summary > div, .issue-detail__metrics, .issue-detail__charts .observation-raw-charts { grid-template-columns: 1fr; }
+  .issue-detail__metrics { gap: 16px; }
+  .issue-radar__heading { align-items: flex-start; }
+  .issue-pin { min-width: 34px; min-height: 44px; }
+  .issue-row > summary { padding: 12px 4px; }
+  .issue-row__metric strong { font-size: 19px; }
+  .issue-detail { padding: 16px 4px; }
+}
+
 [data-theme="dark"] {
   --ink: #eef5f7;
   --muted: #9aabb5;

@@ -49,6 +49,9 @@ def test_offline_export_is_single_file_and_interactive(tmp_path):
     assert "data-observation-detail-toggle" in html
     assert "data-source-detail-toggle" in html
     assert "function renderModelMonitoringPage" in html
+    assert "function renderIssueRadar" in html
+    assert "function initializeIssueRadar" in html
+    assert "risk-issue-pins" in html
     assert '"data/market-risk-snapshot.json"' in html
     assert '"data/data-quality.json"' in html
     assert '"data/kb-market-funds.json":' in html
