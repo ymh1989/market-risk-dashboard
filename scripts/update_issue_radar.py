@@ -46,7 +46,7 @@ def plain_text(value: str) -> str:
 def clean_articles(articles: list[dict], now: datetime) -> list[dict]:
     """최근 공개 기사만 남기고 동일 제목·URL을 중복 제거합니다."""
     seen_titles, seen_urls, output = set(), set(), []
-    for item in sorted(articles, key=lambda row: str(row.get("publishedAt") or ""), reverse=True):
+    for item in sorted(articles, key=lambda row: timestamp(row.get("publishedAt")) or datetime.min.replace(tzinfo=KST), reverse=True):
         published = timestamp(item.get("publishedAt"))
         title, url = plain_text(str(item.get("title") or "")), str(item.get("url") or "")
         if not published or not now - timedelta(days=30) <= published <= now or not title or not public_url(url):

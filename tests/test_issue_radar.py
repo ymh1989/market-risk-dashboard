@@ -71,6 +71,13 @@ def test_rss_query_does_not_add_nested_group(monkeypatch):
     assert seen == [query + " when:7d"]
 
 
+def test_mixed_rss_utc_and_stored_kst_dates_sort_by_actual_time():
+    result = radar.clean_articles([article(), article(title="나중 기사", url="https://example.com/later",
+                                                     publishedAt="2026-10-22T06:00:00+00:00")], NOW)
+    assert result[0]["title"] == "나중 기사"
+    assert result[0]["publishedAt"] == "2026-10-22T15:00:00+09:00"
+
+
 def test_cache_ttl_failure_and_query_changes():
     definition = {"query": "프랑스 국채"}
     calls = []
