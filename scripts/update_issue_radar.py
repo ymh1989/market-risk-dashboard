@@ -15,6 +15,11 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 
+if __package__:
+    from .issue_radar_llm import enrich_radar
+else:
+    from issue_radar_llm import enrich_radar
+
 ROOT = Path(__file__).resolve().parents[1]
 KST = timezone(timedelta(hours=9))
 
@@ -269,7 +274,8 @@ def build_radar(data: dict, definitions: list[dict], now: datetime, previous=Non
                             "기준폭: 금리 5bp·국채차 5bp·단기조달차 3bp·HY 10bp·유가/상대주가 2%·환율 1%·운임 5%·확산도 5%p·신용/예탁금 1%p·수급 1조원",
                             "방향 기준은 관찰용 초기 규칙이며 예측성능 검증 전. DRAM 가격은 맥락 지표로 방향 판정에서 제외",
                             "뉴스 건수는 수집된 표본의 중복 제거 제목 수. 첫 보도는 보관 기사 기준이며 사건 발생일·인과관계를 뜻하지 않음",
-                            "뉴스 제목 중 국채·금리·수급 등 시장 관련어를 포함한 보도를 우선 표시. 기사 내용의 사실 여부를 자동 검증한 것은 아님",
+                            "로컬 AI는 공개 제목에서 관련 기사·점검 항목만 선택. 원자료 수치·위험 판독은 기존 계산 유지, 기사 내용의 사실 여부를 자동 검증한 것은 아님",
+                            "AI 미사용·응답 실패 시 국채·금리·수급 등 시장 관련어와 보도시각 순으로 표시",
                             "5영업일(공통 평일 기준) 초과 원자료는 방향 판정 제외. 다음 일정은 승인된 일정만 표시"]}
 
 
@@ -280,7 +286,10 @@ def refresh(root: Path = ROOT, offline=False) -> dict:
     data = {key: json.loads((root / "data" / path).read_text(encoding="utf-8")) for key, path in files.items()}
     definitions = json.loads((root / "config/market_issues.json").read_text(encoding="utf-8"))["issues"]
     market = next(section for section in data["dashboard"]["sections"] if section["id"] == "market")
-    radar = build_radar(data, definitions, datetime.now(KST), previous=market.get("issueRadar"), offline=offline)
+    now = datetime.now(KST)
+    previous = market.get("issueRadar")
+    radar = build_radar(data, definitions, now, previous=previous, offline=offline)
+    enrich_radar(radar, previous, now, offline=offline)
     market["issueRadar"] = radar
     path = root / "data/risk-dashboard.json"
     temporary = path.with_suffix(".json.tmp")
@@ -295,3 +304,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     result = refresh(offline=args.offline)
     print("이슈 레이더: " + " · ".join(f'{item["title"]} {item["reading"]["level"]}/{item["reading"]["direction"]}' for item in result["issues"]))
+    print(f'로컬 LLM: {result["llm"]["status"]} · {result["llm"]["durationSeconds"]}초')

@@ -73,6 +73,29 @@ test("이슈 레이더는 외부 제목을 이스케이프하고 조회실패·�
   assert.equal(context.renderIssueRadar(null), "");
 });
 
+test("로컬 AI 선택은 제공 기사만 표시하고 해설 숫자는 현재 원자료 사용", () => {
+  const { context } = harness();
+  const item = {news: {articles: [
+    {id: "a", title: "정치 발언", publishedAt: "2026-10-22T12:00:00+09:00"},
+    {id: "b", title: "프랑스 국채", publishedAt: "2026-10-22T11:00:00+09:00"}
+  ]}, checkpoints: ["국채차 확대 여부"], metrics: [
+    {id: "spread", label: "국채차", status: "ok", change1w: 16.3, riskSign: 1, threshold: 5, deltaUnit: "bp"}
+  ], analysis: {status: "generated", model: "local", generatedAt: "2026-10-22T13:00:00+09:00", candidateCount: 2,
+    selection: {articleIds: ["b"], metricIds: ["spread"], checkpointIndex: 0}}};
+  assert.equal(context.issueArticles(item).length, 1);
+  assert.equal(context.issueArticles(item)[0].id, "b");
+  assert.match(context.renderIssueFocus(item), /\+16\.3bp · 부담 확대/);
+  assert.match(context.renderIssueSelectionStatus(item), /로컬 AI 제목 선별 1\/2건/);
+  item.metrics[0].change1w = -12;
+  assert.match(context.renderIssueFocus(item), /-12\.0bp · 부담 완화/);
+  item.analysis.selection = {articleIds: [], metricIds: [], checkpointIndex: null};
+  assert.equal(context.issueArticles(item).length, 0);
+  assert.equal(context.renderIssueFocus(item), "");
+  item.analysis = {status: "fallback", reason: "unavailable"};
+  assert.equal(context.issueArticles(item).length, 2);
+  assert.match(context.renderIssueSelectionStatus(item), /키워드 선별/);
+});
+
 test("유럽 10년 국채는 국가 간 금리차로 구분하고 bp 및 EOD 출처 표시", () => {
   const { context } = harness();
   const group = vm.runInContext('marketTrendGroups.find(group => group.id === "europe_rates")', context);

@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20261022-issue-radar";
+const ASSET_VERSION = "20261022-issue-llm";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -6455,6 +6455,45 @@ function renderIssueMetric(metric) {
   </div>`;
 }
 
+function issueSelection(item) {
+  const analysis = item.analysis;
+  if (!["generated", "cached"].includes(analysis?.status) || !analysis.selection) return null;
+  const ids = analysis.selection.articleIds;
+  if (!Array.isArray(ids) || !ids.every((id) => item.news?.articles?.some((row) => row.id === id))) return null;
+  return analysis.selection;
+}
+
+function issueArticles(item) {
+  const selection = issueSelection(item);
+  if (selection) return selection.articleIds.map((id) => item.news.articles.find((row) => row.id === id));
+  const terms = /국채|채권|금리|스프레드|유가|원유|운임|외국인|순매|신용잔고|예탁금|레포|반도체|메모리|SOFR|bond|yield|spread|Brent/i;
+  return [...(item.news?.articles ?? [])].sort((a, b) => Number(terms.test(b.title)) - Number(terms.test(a.title)) || String(b.publishedAt ?? "").localeCompare(String(a.publishedAt ?? ""))).slice(0, 3);
+}
+
+function renderIssueFocus(item) {
+  const selection = issueSelection(item);
+  if (!selection?.articleIds.length) return "";
+  const metrics = (selection.metricIds ?? []).map((id) => item.metrics?.find((row) => row.id === id))
+    .filter((row) => row?.status === "ok" && row.change1w != null && row.riskSign);
+  const checkpoint = item.checkpoints?.[selection.checkpointIndex];
+  return `<div class="issue-ai-focus"><h4>우선 점검</h4>${checkpoint ? `<p>${radarEscape(checkpoint)}</p>` : ""}
+    <ul>${metrics.map((row) => {
+      const change = row.change1w * row.riskSign;
+      const reading = change >= row.threshold ? "부담 확대" : change <= -row.threshold ? "부담 완화" : "기준폭 이내";
+      return `<li><span>${radarEscape(row.label)}</span><strong>1W ${radarDelta(row.change1w, row.deltaUnit)} · ${reading}</strong></li>`;
+    }).join("")}</ul><small>LLM이 고른 근거 · 수치·방향은 원자료 계산</small></div>`;
+}
+
+function renderIssueSelectionStatus(item) {
+  const analysis = item.analysis;
+  if (!analysis) return "";
+  const selected = issueSelection(item);
+  if (selected) return `<small class="issue-selection-status" title="${radarEscape(analysis.model)}">
+    로컬 AI 제목 선별 ${selected.articleIds.length}/${analysis.candidateCount ?? 0}건 · ${radarEscape(analysis.generatedAt?.slice(0, 16).replace("T", " "))} KST${analysis.status === "cached" ? " · 보관 선별" : ""}</small>`;
+  const reason = {"disabled": "로컬 AI 미사용", "no-news": "최근 검토 기사 없음", "cooldown": "로컬 AI 재시도 대기", "invalid-response": "AI 응답 미채택", "unavailable": "로컬 AI 연결·응답 확인 필요"}[analysis.reason] ?? "로컬 AI 미확인";
+  return `<small class="issue-selection-status">키워드 선별 · ${reason}</small>`;
+}
+
 function renderIssueRadar(radar, compact = false) {
   if (!radar?.issues?.length) return "";
   const issues = radar.issues.filter((item) => /^[a-z-]+$/.test(item.id));
@@ -6469,8 +6508,9 @@ function renderIssueRadar(radar, compact = false) {
     <div class="issue-radar__columns" aria-hidden="true"><span>이슈</span><span>뉴스 동향</span><span>위험 수준</span><span>최근 방향</span><span>대표 지표 · EOD</span></div>
     <div data-issue-list>${issues.map((item, index) => {
       const news = item.news ?? {}, reading = item.reading ?? {}, metric = item.metrics?.[0] ?? {};
-      const marketTerms = /국채|채권|금리|스프레드|유가|원유|운임|외국인|순매|신용잔고|예탁금|레포|반도체|메모리|SOFR|bond|yield|spread|Brent/i;
-      const rows = [...(news.articles ?? [])].sort((a, b) => Number(marketTerms.test(b.title)) - Number(marketTerms.test(a.title)) || String(b.publishedAt ?? "").localeCompare(String(a.publishedAt ?? ""))).slice(0, 3);
+      const rows = issueArticles(item);
+      const selection = issueSelection(item);
+      const checkpoints = (item.checkpoints ?? []).filter((_, index) => !selection?.articleIds.length || index !== selection.checkpointIndex);
       const newsTime = news.retrievedAt?.slice(0, 16).replace("T", " ") ?? "성공 이력 없음";
       const tone = radarLevelTone(reading.level);
       return `<details class="issue-row" id="issue-${item.id}" data-issue-row="${item.id}" data-risk-order="${index}" data-news-date="${radarEscape(news.articles?.[0]?.publishedAt ?? "")}" data-direction="${radarEscape(reading.direction)}" data-level="${radarEscape(reading.level)}">
@@ -6482,9 +6522,12 @@ function renderIssueRadar(radar, compact = false) {
         </summary>
         <div class="issue-detail">
           <div class="issue-detail__news"><h4>시장 연결 보도</h4><small>마지막 성공 조회 ${radarEscape(newsTime)} KST${news.status === "failed" ? " · 최신 조회 실패, 보관 기사" : news.status === "unavailable" ? " · 미수집" : ""}</small>
-            ${rows.length ? `<ul>${rows.map((article) => { const url = radarSafeUrl(article.url); return `<li>${url ? `<a href="${radarEscape(url)}" target="_blank" rel="noopener noreferrer">${radarEscape(article.title)}</a>` : radarEscape(article.title)}<small>${radarEscape(article.source)} · ${radarEscape(article.publishedAt?.slice(0, 16).replace("T", " "))} KST</small></li>`; }).join("")}</ul>` : `<p>최근 수집된 관련 기사 없음</p>`}
+            ${renderIssueSelectionStatus(item)}
+            ${rows.length ? `<ul>${rows.map((article) => { const url = radarSafeUrl(article.url); return `<li>${url ? `<a href="${radarEscape(url)}" target="_blank" rel="noopener noreferrer">${radarEscape(article.title)}</a>` : radarEscape(article.title)}<small>${radarEscape(article.source)} · ${radarEscape(article.publishedAt?.slice(0, 16).replace("T", " "))} KST</small></li>`; }).join("")}</ul>` : `<p>${issueSelection(item) ? "제목 기준으로 직접 연결되는 기사 없음" : "최근 수집된 관련 기사 없음"}</p>`}
           </div>
-          <div class="issue-detail__route"><h4>점검 경로</h4><p>${radarEscape(item.route)}</p><h4>후속 확인</h4><ul>${(item.checkpoints ?? []).map((text) => `<li>${radarEscape(text)}</li>`).join("")}</ul>
+          <div class="issue-detail__route"><h4>점검 경로</h4><p>${radarEscape(item.route)}</p>
+            ${renderIssueFocus(item)}
+            ${checkpoints.length ? `<h4>후속 확인</h4><ul>${checkpoints.map((text) => `<li>${radarEscape(text)}</li>`).join("")}</ul>` : ""}
             ${(item.events ?? []).map((event) => `<p>${radarEscape(event.date)} · ${radarEscape(event.label)}</p>`).join("")}</div>
           <div class="issue-detail__metrics">${(item.metrics ?? []).map((entry) => renderIssueMetric(entry)).join("")}</div>
           <div class="issue-detail__charts"><div class="issue-detail__chart-heading"><h4>시장 반응</h4><small>${item.anchorDate ? `점선 ${radarEscape(item.anchorDate)} · 보관 기사 첫 보도` : "보도 기준일 없음"}</small></div>
