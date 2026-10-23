@@ -137,17 +137,7 @@ class OllamaIssueSelector:
                             "metrics": [{"id": short, "label": row["label"], "riskDirection": row["riskDirection"]}
                                         for short, row in zip(metrics, packet["metrics"])]}
         schema = response_schema(compact)
-        payload = {"model": self.model, "stream": False, "think": False, "keep_alive": "20m", "format": schema,
-                   "messages": [{"role": "system", "content": SYSTEM_PROMPT},
-                                {"role": "user", "content": json.dumps({"issues": compact}, ensure_ascii=False)}],
-                   "options": {"temperature": 0, "seed": 42, "num_ctx": 8192, "num_predict": 700}}
-        request = urllib.request.Request(self.base_url + "/api/chat", data=json.dumps(payload).encode(),
-                                         headers={"Content-Type": "application/json"}, method="POST")
-        with self.opener.open(request, timeout=self.timeout) as response:
-            answer = json.loads(response.read(1_000_000))
-        if answer.get("done") is not True or answer.get("done_reason") == "length":
-            raise ValueError("응답 미완료")
-        result = json.loads(answer["message"]["content"])
+        result = self.chat_json(SYSTEM_PROMPT, {"issues": compact}, schema)
         if not isinstance(result, dict) or set(result) != set(packets):
             raise ValueError("응답 이슈 누락 또는 추가")
         for key, packet in compact.items():
@@ -158,6 +148,20 @@ class OllamaIssueSelector:
             except ValueError:
                 result[key] = None
         return result
+
+    def chat_json(self, system: str, content: dict, schema: dict, max_tokens: int = 700) -> dict:
+        """로컬 구조화 요청의 연결 제한·응답 크기·완료 검증을 공통 적용합니다."""
+        payload = {"model": self.model, "stream": False, "think": False, "keep_alive": "20m", "format": schema,
+                   "messages": [{"role": "system", "content": system},
+                                {"role": "user", "content": json.dumps(content, ensure_ascii=False)}],
+                   "options": {"temperature": 0, "seed": 42, "num_ctx": 8192, "num_predict": max_tokens}}
+        request = urllib.request.Request(self.base_url + "/api/chat", data=json.dumps(payload).encode(),
+                                         headers={"Content-Type": "application/json"}, method="POST")
+        with self.opener.open(request, timeout=self.timeout) as response:
+            answer = json.loads(response.read(1_000_000))
+        if answer.get("done") is not True or answer.get("done_reason") == "length":
+            raise ValueError("응답 미완료")
+        return json.loads(answer["message"]["content"])
 
 
 def enrich_radar(radar: dict, previous: dict | None, now: datetime, *, offline: bool = False,

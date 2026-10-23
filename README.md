@@ -43,6 +43,7 @@ Node.js 18 이상에서 실행하는 화면 회귀검사는 누락값 정렬, �
 - 공통 차트 기간·커서, 상단 고정·필터·정렬, 오프라인 HTML 지원
 - 기존 점수·가중치 변경 없음. 사내 뉴스 전문 미게시, 공개 RSS 제목·링크만 사용
 - 로컬 Qwen 모델로 기사 관련성·우선 점검 근거 선별. 수치·판독 방향은 코드가 계산하고, 모델 장애 시 키워드 방식 유지
+- 별도 `시장 이슈` 탭에서 활성·관찰·보관 관리. 신규·전환 후보는 개인 Telegram 승인 후 게시. [인증·상태 기준·설치](docs/issue-review-workflow.md)
 - 정기 배치에 포함. 수동 갱신 `make update-issue-radar`, 보관 기사만 사용 `python3 scripts/update_issue_radar.py --offline`
 - 설정: `config/market_issues.json` / [데이터·판독·제약 상세](docs/market-issue-radar.md)
 

@@ -9,6 +9,7 @@ from email.utils import parsedate_to_datetime
 import html
 import json
 import math
+import os
 from pathlib import Path
 import re
 import urllib.parse
@@ -17,8 +18,10 @@ import xml.etree.ElementTree as ET
 
 if __package__:
     from .issue_radar_llm import enrich_radar
+    from .issue_review_store import ReviewStore
 else:
     from issue_radar_llm import enrich_radar
+    from issue_review_store import ReviewStore
 
 ROOT = Path(__file__).resolve().parents[1]
 KST = timezone(timedelta(hours=9))
@@ -288,8 +291,48 @@ def refresh(root: Path = ROOT, offline=False) -> dict:
     market = next(section for section in data["dashboard"]["sections"] if section["id"] == "market")
     now = datetime.now(KST)
     previous = market.get("issueRadar")
+    registry = (previous or {}).get("registry", [])
+    registry_revision = (previous or {}).get("registryRevision", 0)
+    store = None
+    state_directory = os.getenv("ISSUE_REVIEW_STATE_DIR")
+    if state_directory and os.getenv("CI", "").lower() != "true" and not offline:
+        try:
+            store = ReviewStore(Path(state_directory))
+            store.seed(definitions, previous, now)
+            registry, registry_revision = store.public_snapshot()
+        except Exception:
+            print("이슈 검토함 읽기 실패: 기존 공개 승인 등록부 유지")
+            store = None
+    if registry:
+        registered = {row["definition"]["id"]: row["definition"] for row in registry}
+        for definition in definitions:
+            registered.setdefault(definition["id"], definition)
+        definitions = list(registered.values())
     radar = build_radar(data, definitions, now, previous=previous, offline=offline)
     enrich_radar(radar, previous, now, offline=offline)
+    lookup = {row["definition"]["id"]: row for row in registry}
+    for issue in radar["issues"]:
+        record = lookup.get(issue["id"], {})
+        issue["lifecycle"] = record.get("lifecycle", {"state": "active", "history": []})
+        definition = next(d for d in definitions if d["id"] == issue["id"])
+        issue["themeId"] = definition.get("themeId")
+        issue["rationale"] = definition.get("rationale")
+        issue["firstDetectedAt"] = definition.get("firstDetectedAt")
+        issue["registrationEvidence"] = definition.get("initialEvidence", [])
+    if store:
+        try:
+            store.observe(radar, now)
+        except Exception:
+            print("이슈 검토함 관측 기록 실패: 공개 시장자료는 유지")
+    radar["issues"] = [{**lookup[i["id"]]["archivedSnapshot"], "lifecycle": i["lifecycle"]}
+                       if lookup.get(i["id"], {}).get("archivedSnapshot") and i["lifecycle"]["state"] == "archived" else i
+                       for i in radar["issues"]]
+    radar["registry"] = registry
+    radar["registryRevision"] = registry_revision
+    radar["methodology"].extend([
+        "신규 사건은 공개 제목 근거·기존 지표 확인 후 개인 승인으로 등록. 미승인 후보는 미게시",
+        "관찰·보관 전환은 실제 관측일 기준 완화 조건과 개인 승인 필요. 보관은 위험 해소 확정이 아니라 추적 상태 변경",
+        "신규 사건의 수준은 연결 주제의 기존 카드 판독이며 독립적인 사건 위험점수가 아님. 보관 화면은 승인 시점 자료로 고정"])
     market["issueRadar"] = radar
     path = root / "data/risk-dashboard.json"
     temporary = path.with_suffix(".json.tmp")

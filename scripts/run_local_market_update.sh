@@ -613,6 +613,7 @@ if [[ "$UPDATE_MODE" != "krx" ]]; then
 fi
 
 CURRENT_STAGE="시장 이슈 레이더"
+export ISSUE_REVIEW_STATE_DIR="${ISSUE_REVIEW_STATE_DIR:-$ROOT/logs/issue-review}"
 "$PYTHON_BIN" scripts/update_issue_radar.py
 
 CURRENT_STAGE="품질 검증"

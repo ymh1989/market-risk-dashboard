@@ -96,6 +96,24 @@ test("로컬 AI 선택은 제공 기사만 표시하고 해설 숫자는 현재 
   assert.match(context.renderIssueSelectionStatus(item), /키워드 선별/);
 });
 
+test("시장 이슈 탭은 상태를 분리하고 보관 자료·승인 이력을 표시", () => {
+  const {context} = harness();
+  const tabs = context.dashboardTabsWithIssues([{id: "summary"}, {id: "market"}]);
+  assert.equal(tabs.at(-1).id, "market-issues");
+  assert.equal(context.dashboardTabsWithIssues(tabs).length, 3);
+  const item = {id: "event-ab12", title: "승인된 사건", themeId: "europe", rationale: "등록 근거",
+    firstDetectedAt: "2026-10-21T10:00:00+09:00", registrationEvidence: [],
+    news: {articles: []}, reading: {level: "보통", direction: "완화"}, metrics: [], checkpoints: [],
+    lifecycle: {state: "archived", createdAt: "2026-10-21T10:00:00+09:00", updatedAt: "2026-10-23T10:00:00+09:00",
+      history: [{at: "2026-10-23T10:00:00+09:00", state: "archived", reason: "<검토> 완료"}]}};
+  const radar = {issues: [item], methodology: []};
+  const html = context.renderIssueRadar(radar);
+  for (const value of ['data-issue-state="active"', 'data-issue-state="watch"', 'data-issue-state="archived"',
+    'data-issue-row="event-ab12"', 'data-issue-lifecycle="archived"', '보관 시점 자료', '&lt;검토&gt;', '등록 근거']) assert.ok(html.includes(value), value);
+  assert.doesNotMatch(context.renderIssueRadar(radar, true), /data-issue-open/);
+  assert.doesNotMatch(html, /ownerId|nonce|callback_data/);
+});
+
 test("유럽 10년 국채는 국가 간 금리차로 구분하고 bp 및 EOD 출처 표시", () => {
   const { context } = harness();
   const group = vm.runInContext('marketTrendGroups.find(group => group.id === "europe_rates")', context);
