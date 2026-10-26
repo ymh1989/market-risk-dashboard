@@ -1,4 +1,5 @@
 import json
+import math
 import pathlib
 import re
 from datetime import date, timedelta
@@ -57,6 +58,48 @@ def pick_level(score, thresholds):
         if safe_score >= threshold["min"] and safe_score < threshold["max"]:
             return threshold
     return thresholds[-1]
+
+
+def assert_observation_journal_scores(item, indicators_by_id):
+    """표시 기여도의 반올림 오차와 실제 점수 계산 오류를 구분합니다."""
+    context = f"관찰일지 {item['id']}"
+    components = item["components"]
+    assert components, f"{context}: 구성항목이 없습니다"
+    ids = [component["id"] for component in components]
+    assert len(ids) == len(set(ids)), f"{context}: 구성항목이 중복됩니다"
+    weighted_values = []
+    weights = []
+    for component in components:
+        component_id = component["id"]
+        detail = f"{context} / {component_id}"
+        assert component_id in indicators_by_id, f"{detail}: 원천 지표가 없습니다"
+        value = float(indicators_by_id[component_id]["value"])
+        weight = float(component["weight"])
+        assert math.isfinite(value) and 0 <= value <= 100, f"{detail}: 원점수 범위 오류"
+        assert math.isfinite(weight) and 0 < weight <= 1, f"{detail}: 가중치 범위 오류"
+        expected_value = round(value, 1)
+        assert math.isclose(float(component["value"]), expected_value, rel_tol=0, abs_tol=1e-9), (
+            f"{detail}: 원점수 불일치 · 표시 {component['value']} · 기대 {expected_value}"
+        )
+        expected_contribution = round(value * weight, 2)
+        assert math.isclose(
+            float(component["contribution"]), expected_contribution, rel_tol=0, abs_tol=1e-9
+        ), f"{detail}: 기여도 불일치 · 표시 {component['contribution']} · 기대 {expected_contribution}"
+        weights.append(weight)
+        weighted_values.append(value * weight)
+    assert math.isclose(math.fsum(weights), 1.0, rel_tol=0, abs_tol=1e-9), (
+        f"{context}: 가중치 합계 오류 · {math.fsum(weights)}"
+    )
+    score = float(item["score"])
+    assert math.isfinite(score) and 0 <= score <= 100, f"{context}: 합계 점수 범위 오류"
+    assert math.isclose(score, round(score, 1), rel_tol=0, abs_tol=1e-9), (
+        f"{context}: 합계 점수는 소수 첫째 자리까지 표시해야 합니다"
+    )
+    # 기여도 표시값을 재합산하지 않습니다. 합계의 0.1점 반올림과 부동소수점 오차만 허용합니다.
+    expected_total = math.fsum(weighted_values)
+    assert abs(expected_total - score) <= 0.05 + 1e-9, (
+        f"{context}: 합계 점수 불일치 · 표시 {score} · 원점수 가중합 {expected_total:.10f}"
+    )
 
 
 def test_dashboard_contract():
@@ -140,13 +183,9 @@ def test_dashboard_contract():
     scored_journal_items = [
         item for item in market["observationJournal"] if item["score"] is not None
     ]
+    indicators_by_id = {indicator["id"]: indicator for indicator in market["indicators"]}
     for item in scored_journal_items:
-        assert item["components"]
-        assert abs(sum(float(component["weight"]) for component in item["components"]) - 1.0) < 0.001
-        assert abs(
-            sum(float(component["contribution"]) for component in item["components"])
-            - float(item["score"])
-        ) < 0.06
+        assert_observation_journal_scores(item, indicators_by_id)
         assert all(component["id"] in timeseries_ids for component in item["components"])
         assert all(
             len(timeseries["series"][component["id"]])
