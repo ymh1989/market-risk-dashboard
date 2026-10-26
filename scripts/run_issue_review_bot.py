@@ -18,6 +18,7 @@ import urllib.request
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.issue_review_store import ReviewStore, utc_now
 from scripts.issue_discovery import discover
+from scripts.issue_evidence import require_corroboration
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_URL = "https://ymh1989.github.io/market-risk-dashboard/data/risk-dashboard.json"
@@ -25,6 +26,7 @@ STATUS_TEXT = {"approved": "승인 완료 · 홈페이지 반영 대기", "rejec
                "already-decided": "이미 처리한 후보입니다", "expired": "검토 기한이 지난 후보입니다",
                "condition-changed": "시장 조건이 바뀌어 다시 검토해야 합니다", "stale-data": "최신 시장자료를 확인한 뒤 다시 승인해 주세요",
                "stale-evidence": "기사 근거가 오래되어 재검토가 필요합니다", "conflict": "이슈 버전이 바뀌었습니다",
+               "insufficient-evidence": "동시 보도·원출처 검증 기준 미충족으로 승인할 수 없습니다",
                "unauthorized": "등록된 개인 승인 계정에서만 처리할 수 있습니다", "invalid": "유효하지 않은 승인 버튼입니다"}
 STATE_LABEL = {"active": "활성", "watch": "관찰", "archived": "보관"}
 
@@ -75,8 +77,16 @@ def proposal_message(proposal: dict, metric_labels: dict | None = None) -> tuple
         definition = payload["definition"]
         labels = metric_labels or {}
         lines += ["", "점검 경로: " + definition["route"], "지표: " + ", ".join(labels.get(key, key) for key in definition["metricIds"]), "수준은 연결 주제의 기존 카드 판독 · 종합점수 변경 없음"]
-    lines += ["", *[f"{n+1}. {a['title']} ({a['source']}, {a['publishedAt'][:10]})" for n, a in enumerate(payload["evidence"])],
-              "", "매체 간 독립 취재 여부·기사 본문은 승인 전 확인 필요", f"검토 기한: {proposal['expires_at'][:16].replace('T', ' ')} KST"]
+    check = payload.get("corroboration", {})
+    lines += [f"동시 보도: {check.get('articleCount', 0)}건 · 중복 제거 {check.get('sourceGroups', 0)}개 출처군 · {check.get('spanHours', 0):g}시간 내"]
+    for n, article in enumerate(payload["evidence"]):
+        origins = article.get("sourceCheck", {}).get("origins", [])
+        lines += ["", f"{n+1}. {article['title']}",
+                  f"{article['source']} · {article['publishedAt'][:16].replace('T', ' ')} KST"]
+        if origins:
+            lines.append("인용 원출처: " + ", ".join(origins))
+    lines += ["", "전재·유사 보도 자동 점검 · 독립 취재 여부와 사실관계는 승인 전 최종 확인",
+              f"검토 기한: {proposal['expires_at'][:16].replace('T', ' ')} KST"]
     links = [[{"text": f"근거 {n+1} · {a['source'][:25]}", "url": a["url"]}] for n, a in enumerate(payload["evidence"])]
     buttons = [{"text": text, "callback_data": f"ir:{proposal['id']}:{action}:{proposal['nonce']}"} for action, text in (("a", "승인"), ("r", "반려"))]
     return "\n".join(lines), {"inline_keyboard": links + [buttons]}
@@ -89,6 +99,10 @@ def send_pending(store: ReviewStore, bot, now, resend=False):
     sent = 0
     labels = {m["id"]: m["label"] for issue in store.get("latestRadar", {}).get("issues", []) for m in issue["metrics"]}
     for proposal in store.pending(now):
+        try:
+            require_corroboration(proposal["payload"]["evidence"], now)
+        except ValueError:
+            continue
         if proposal["message_id"] is not None and not resend:
             continue
         text, markup = proposal_message(proposal, labels)

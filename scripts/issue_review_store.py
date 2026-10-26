@@ -13,8 +13,10 @@ import sqlite3
 
 if __package__:
     from .issue_radar_llm import KST, parsed_time, fingerprint
+    from .issue_evidence import duplicate_event, require_corroboration
 else:
     from issue_radar_llm import KST, parsed_time, fingerprint
+    from issue_evidence import duplicate_event, require_corroboration
 
 STATES = {"active", "watch", "archived"}
 
@@ -118,8 +120,42 @@ class ReviewStore:
                 "state": row["state"], "version": row["version"], "createdAt": row["created_at"],
                 "updatedAt": row["updated_at"], "history": json.loads(row["history"])},
                 **({"archivedSnapshot": json.loads(row["archived_snapshot"])} if row["archived_snapshot"] else {})}
-                for row in db.execute("SELECT * FROM issues ORDER BY created_at,id")]
+                for row in db.execute("SELECT * FROM issues ORDER BY created_at,id")
+                if not json.loads(row["definition"]).get("supersededBy")]
             return rows, self._get(db, "revision", 0)
+
+    def merged_events(self) -> list[dict]:
+        """통합 사건은 비공개 재등록 방지용으로만 읽습니다."""
+        with self.transaction() as db:
+            return [definition for row in db.execute("SELECT definition FROM issues")
+                    if (definition := json.loads(row[0])).get("supersededBy")]
+
+    def merge_duplicate(self, issue_id: str, target_id: str, reason: str, now: datetime) -> bool:
+        """사용자가 명시적으로 요청한 중복만 통합하며 원본·감사 이력은 보존합니다."""
+        with self.transaction() as db:
+            row = db.execute("SELECT * FROM issues WHERE id=?", (issue_id,)).fetchone()
+            target = db.execute("SELECT definition FROM issues WHERE id=?", (target_id,)).fetchone()
+            if not row or not target or issue_id == target_id or not reason.strip():
+                raise ValueError("통합 대상·사유 확인 필요")
+            definition = json.loads(row["definition"])
+            if definition.get("supersededBy") == target_id:
+                return False
+            if definition.get("themeId") != target_id or json.loads(target[0]).get("supersededBy"):
+                raise ValueError("같은 상위 주제로만 중복 통합 가능")
+            definition["supersededBy"] = target_id
+            history = json.loads(row["history"]) + [{"at": now.isoformat(), "state": row["state"],
+                                                    "reason": reason, "supersededBy": target_id}]
+            db.execute("UPDATE issues SET definition=?,version=version+1,updated_at=?,history=? WHERE id=?",
+                       (encode(definition), now.isoformat(), encode(history), issue_id))
+            for proposal in db.execute("SELECT id,payload FROM proposals WHERE status='pending'").fetchall():
+                payload = json.loads(proposal["payload"])
+                if payload.get("issueId") == issue_id or duplicate_event(payload.get("definition", {}), definition):
+                    db.execute("UPDATE proposals SET status='superseded' WHERE id=?", (proposal["id"],))
+            db.execute("INSERT INTO audit(at,action,actor,payload) VALUES (?,?,?,?)",
+                       (now.isoformat(), "merged", "local-user-request", encode({"issueId": issue_id, "targetId": target_id, "reason": reason})))
+            self._put(db, "revision", self._get(db, "revision", 0) + 1)
+            self._put(db, "needsPublication", True)
+            return True
 
     def observe(self, radar: dict, now: datetime):
         """반복 배치를 영업일 수로 세지 않고 실제 원자료 관측일별로 한 번만 기록합니다."""
@@ -141,7 +177,7 @@ class ReviewStore:
         row = db.execute("SELECT * FROM issues WHERE id=?", (issue_id,)).fetchone()
         radar = self._get(db, "latestRadar", {})
         generated = parsed_time(radar.get("generatedAt"))
-        if not row or not generated or not timedelta(0) <= now - generated <= timedelta(hours=26):
+        if not row or json.loads(row["definition"]).get("supersededBy") or not generated or not timedelta(0) <= now - generated <= timedelta(hours=26):
             return False
         latest = next((i for i in radar.get("issues", []) if i["id"] == issue_id), None)
         if not latest or latest["news"].get("status") in {"failed", "unavailable"} or latest["reading"].get("partial"):
@@ -173,6 +209,7 @@ class ReviewStore:
 
     def add_proposal(self, payload: dict, now: datetime) -> str | None:
         """동일 후보의 반복 알림과 승인 전 내용 변경을 막습니다."""
+        require_corroboration(payload["evidence"], now)
         key = fingerprint({k: payload.get(k) for k in ("action", "issueId", "expectedVersion", "title", "targetState")})
         with self.transaction() as db:
             old = db.execute("SELECT status,created_at,expires_at,payload FROM proposals WHERE dedup_key=? ORDER BY created_at DESC LIMIT 1", (key,)).fetchone()
@@ -182,14 +219,26 @@ class ReviewStore:
             if db.execute("SELECT count(*) FROM proposals WHERE status='pending' AND expires_at>?", (now.isoformat(),)).fetchone()[0] >= 10:
                 return None
             if payload["action"] == "new":
+                for existing in db.execute("SELECT definition FROM issues"):
+                    if duplicate_event(payload["definition"], json.loads(existing[0])):
+                        return None
                 urls = {a["url"] for a in payload["evidence"]}
-                for row in db.execute("SELECT payload FROM proposals WHERE status IN ('pending','approved')"):
-                    prior = json.loads(row[0])
-                    if prior["action"] == "new" and urls & {a["url"] for a in prior["evidence"]}:
+                for row in db.execute("SELECT payload,status,created_at,expires_at FROM proposals WHERE status IN ('pending','approved','rejected')"):
+                    if row["status"] == "rejected" and now - parsed_time(row["created_at"]) >= timedelta(days=7):
+                        continue
+                    if row["status"] == "pending" and parsed_time(row["expires_at"]) <= now:
+                        continue
+                    prior = json.loads(row["payload"])
+                    if prior["action"] == "new" and (urls & {a["url"] for a in prior["evidence"]}
+                                                     or duplicate_event(payload["definition"], prior["definition"])):
                         return None
             identifier = secrets.token_hex(8)
+            # 기사 신선도보다 긴 승인 기한을 표시하지 않습니다.
+            expiry = min(now + timedelta(hours=48),
+                         max(parsed_time(a["publishedAt"]) for a in payload["evidence"]) + timedelta(hours=24),
+                         min(parsed_time(a["publishedAt"]) for a in payload["evidence"]) + timedelta(hours=48))
             db.execute("INSERT INTO proposals VALUES (?,?,?,?,?,?,?,NULL)", (
-                identifier, encode(payload), key, "pending", now.isoformat(), (now + timedelta(hours=48)).isoformat(), secrets.token_hex(8)))
+                identifier, encode(payload), key, "pending", now.isoformat(), expiry.isoformat(), secrets.token_hex(8)))
             return identifier
 
     def pending(self, now: datetime) -> list[dict]:
@@ -249,12 +298,18 @@ class ReviewStore:
                 evidence = proposal.get("evidence", [])
                 if not evidence or any(not parsed_time(a.get("publishedAt")) or not timedelta(0) <= now - parsed_time(a["publishedAt"]) <= timedelta(days=7) for a in evidence):
                     return "stale-evidence"
+                try:
+                    require_corroboration(evidence, now)
+                except ValueError:
+                    return "insufficient-evidence"
                 radar = self._get(db, "latestRadar", {})
                 generated = parsed_time(radar.get("generatedAt"))
                 if not generated or not timedelta(0) <= now - generated <= timedelta(hours=26):
                     return "stale-data"
                 if proposal["action"] == "new":
                     definition = proposal["definition"]
+                    if any(duplicate_event(definition, json.loads(r[0])) for r in db.execute("SELECT definition FROM issues")):
+                        return "conflict"
                     current_metrics = {m["id"]: m for i in radar.get("issues", []) for m in i["metrics"]}
                     if any(key not in current_metrics or current_metrics[key]["status"] != "ok" for key in definition["metricIds"]):
                         return "stale-data"

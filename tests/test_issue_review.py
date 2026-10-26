@@ -18,8 +18,14 @@ THEME = {"id": "europe", "approved": True, "title": "유럽 재정", "query": "�
 
 
 def news(now=NOW):
-    return [{"id": f"n{i}", "title": f"검증용 은행 유동성 경색 사건 {i}", "source": f"테스트 매체{i}",
-             "url": f"https://example.com/news{i}", "publishedAt": now.isoformat()} for i in range(2)]
+    titles = ["검증은행 채무 상환 중단, 당국 긴급 유동성 지원 검토",
+              "예금 유출 급증한 검증은행, 해외 거래상대방 담보 요구 늘어",
+              "검증은행 회사채 급락, 기업 대출 회수로 실물경제 경색 우려"]
+    return [{"id": f"n{i}", "title": title, "source": f"테스트 매체{i}",
+             "url": f"https://example.com/news{i}", "publishedAt": now.isoformat(),
+             "sourceCheck": {"version": 1, "status": "inspected", "checkedAt": now.isoformat(),
+                             "publisher": f"paper{i}.example", "origins": [], "contentHash": f"body-{i}"}}
+            for i, title in enumerate(titles)]
 
 
 def radar(now=NOW, **reading):
@@ -41,7 +47,7 @@ def store(tmp_path):
 
 def new_payload(store, now=NOW):
     return discovery.validate_proposal({"title": "검증용 은행 유동성", "rationale": "공개 기사에 따른 유동성 점검 후보",
-        "themeId": "europe", "articleIds": ["n0", "n1"], "metricIds": ["spread", "bank"], "keywords": ["검증은행", "유동성"]},
+        "themeId": "europe", "articleIds": ["n0", "n1", "n2"], "metricIds": ["spread", "bank"], "keywords": ["검증은행", "유동성"]},
         "new", themes=[THEME], articles=news(now), metrics=[{"id": "spread"}, {"id": "bank"}], registry=store.registry(), eligible={}, now=now)
 
 
@@ -121,6 +127,9 @@ def test_rejection_and_expiry_do_not_change_public_registry(store):
     assert store.add_proposal(new_payload(store), NOW + timedelta(days=1)) is None
     proposal = new_payload(store)
     proposal["title"] = "다른 검증 사건"
+    proposal["definition"]["title"] = proposal["title"]
+    proposal["definition"]["id"] = "event-other"
+    proposal["evidence"] = [{**a, "url": a["url"] + "-other"} for a in proposal["evidence"]]
     cb = callback(store, proposal)
     assert store.decide(cb, NOW + timedelta(hours=49)) == "expired"
     assert len(store.registry()) == 1 and store.get("revision") == 0
@@ -198,7 +207,7 @@ def test_changed_conditions_and_revision_invalidate_pending_transition(store):
 
 @pytest.mark.parametrize("change", ["one-source", "missing-article", "missing-metric", "extra-field", "search-command", "html", "generic-cooperation", "wrong-theme"])
 def test_model_output_requires_evidence_catalog_and_bounded_fields(store, change):
-    row = {"title": "검증용 사건", "rationale": "제공 기사 검토", "themeId": "europe", "articleIds": ["n0", "n1"], "metricIds": ["spread", "bank"], "keywords": ["검증은행", "유동성"]}
+    row = {"title": "검증용 사건", "rationale": "제공 기사 검토", "themeId": "europe", "articleIds": ["n0", "n1", "n2"], "metricIds": ["spread", "bank"], "keywords": ["검증은행", "유동성"]}
     articles = news()
     if change == "one-source": articles[1]["source"] = articles[0]["source"]
     if change == "missing-article": row["articleIds"] = ["n0", "invented"]
@@ -219,11 +228,13 @@ def test_discovery_runs_once_daily_and_never_changes_public_issues(store):
         calls = 0
         def chat_json(self, system, packet, schema, max_tokens):
             self.calls += 1
-            assert len(packet["articles"]) == 2
-            return {"new": [{"title": "새 검증 사건", "rationale": "공개 기사 검토", "themeId": "europe", "articleIds": ["n0", "n1"], "metricIds": ["spread", "bank"], "keywords": ["검증은행", "유동성"]}], "transitions": []}
+            assert len(packet["articles"]) == 3
+            assert all("publishedAt" in article for article in packet["articles"])
+            return {"new": [{"title": "새 검증 사건", "rationale": "공개 기사 검토", "themeId": "europe", "articleIds": ["n0", "n1", "n2"], "metricIds": ["spread", "bank"], "keywords": ["검증은행", "유동성"]}], "transitions": []}
     client = Selector()
     fetch = lambda *args: news()
-    assert discovery.discover(store, [THEME], NOW, fetcher=fetch, selector=client)["proposed"] == 1
+    assert discovery.discover(store, [THEME], NOW, fetcher=fetch, selector=client,
+                              inspector=lambda articles, now: news(now))["proposed"] == 1
     discovery.discover(store, [THEME], NOW + timedelta(minutes=30), fetcher=fetch, selector=client)
     assert client.calls == 1 and len(store.registry()) == 1
     assert len(store.pending(NOW)) == 1
@@ -309,6 +320,8 @@ def test_refresh_keeps_pending_private_and_preserves_published_registry(store, t
     later = NOW + timedelta(days=1)
     extra = copy.deepcopy(payload)
     extra["title"] = "비공개 검토 전용 제목"
+    extra["definition"]["title"] = extra["title"]
+    extra["definition"]["id"] = "event-private-only"
     extra["evidence"] = [{**a, "url": a["url"] + "-other"} for a in extra["evidence"]]
     assert store.add_proposal(extra, later)
     root = tmp_path / "dashboard"
@@ -334,3 +347,59 @@ def test_refresh_keeps_pending_private_and_preserves_published_registry(store, t
     for forbidden in ("비공개 검토 전용 제목", "ownerId", "message_id", "nonce", "pairing", "telegramOffset"):
         assert forbidden not in output
     assert json.loads(output)["sections"][0]["score"] == 73.5
+
+
+def test_merge_duplicate_hides_event_preserves_audit_and_blocks_reregistration(store):
+    enroll(store)
+    payload = new_payload(store)
+    assert store.decide(callback(store, payload), NOW) == "approved"
+    before = store.registry()[1]
+    assert store.merge_duplicate(payload["definition"]["id"], "europe", "사용자 요청: 기존 주제와 중복", NOW)
+    public, revision = store.public_snapshot()
+    assert len(public) == 1 and revision == 2
+    assert store.get("needsPublication") is True
+    assert store.merged_events()[0]["supersededBy"] == "europe"
+    assert store.eligible_transitions(NOW)[payload["definition"]["id"]] == []
+    with store.transaction() as db:
+        row = db.execute("SELECT history FROM issues WHERE id=?", (payload["definition"]["id"],)).fetchone()
+        assert json.loads(row[0])[:-1] == before["lifecycle"]["history"]
+        assert db.execute("SELECT count(*) FROM audit WHERE action='merged'").fetchone()[0] == 1
+    repeated = copy.deepcopy(payload)
+    repeated["definition"]["id"] = "event-renamed"
+    repeated["evidence"] = [{**a, "url": a["url"] + "-new"} for a in payload["evidence"]]
+    assert store.add_proposal(repeated, NOW) is None
+    assert not store.merge_duplicate(payload["definition"]["id"], "europe", "중복 요청", NOW)
+    assert store.get("revision") == 2
+    store.seed([THEME], {"registry": [before]}, NOW)
+    assert len(store.registry()) == 1
+
+
+def test_unverified_old_proposal_cannot_be_sent_or_approved(store):
+    enroll(store)
+    cb = callback(store, new_payload(store))
+    with store.transaction() as db:
+        row = db.execute("SELECT id,payload FROM proposals").fetchone()
+        payload = json.loads(row[1])
+        for article in payload["evidence"]:
+            article.pop("sourceCheck")
+        db.execute("UPDATE proposals SET payload=?,message_id=NULL WHERE id=?", (json.dumps(payload), row[0]))
+    bot = FakeBot()
+    assert bot_module.send_pending(store, bot, NOW, resend=True) == 0
+    assert not bot.calls
+    store.bind_message(row[0], 456)
+    assert store.decide(cb, NOW) == "insufficient-evidence"
+    assert len(store.registry()) == 1
+
+
+def test_telegram_candidate_shows_actual_sources_and_time_span(store):
+    proposal = {"payload": new_payload(store), "id": "test", "nonce": "nonce", "expires_at": NOW.isoformat()}
+    text, _ = bot_module.proposal_message(proposal)
+    assert "중복 제거 3개 출처군" in text
+    assert "2026-10-23 12:00 KST" in text
+
+
+def test_review_deadline_does_not_exceed_news_freshness(store):
+    identifier = store.add_proposal(new_payload(store), NOW)
+    proposal = next(p for p in store.pending(NOW) if p["id"] == identifier)
+    assert datetime.fromisoformat(proposal["expires_at"]) == NOW + timedelta(hours=24)
+    assert store.pending(NOW + timedelta(hours=24)) == []
