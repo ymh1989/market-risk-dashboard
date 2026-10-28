@@ -64,6 +64,71 @@ function fundingFixture() {
   return {series, latest: series.at(-1)};
 }
 
+test("거래일 축은 금·월과 평일 간격이 같고 미관측 거래일·실제 날짜를 보존", () => {
+  const {context} = harness();
+  const sessions = ["2026-10-08", "2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-19"];
+  const points = sessions.filter(date => date !== "2026-10-13").map(date => ({date, value: 1}));
+  const calendar = {status: "ready", startDate: sessions[0], endDate: sessions.at(-1), sessions};
+  const domain = context.fundingChartDomain(points, calendar, "1m");
+  const x = date => context.xFromDate(date, domain, 700);
+  assert.ok(Math.abs(x("2026-10-19") - x("2026-10-16") - 100) < 1e-8);
+  assert.ok(Math.abs(x("2026-10-16") - x("2026-10-15") - 100) < 1e-8);
+  assert.ok(Math.abs(x("2026-10-12") - x("2026-10-08") - 100) < 1e-8);
+  assert.ok(Math.abs(x("2026-10-14") - x("2026-10-12") - 200) < 1e-8);
+  for (const date of sessions) assert.equal(context.chartTimeFromRatio(domain, x(date) / 700), context.dateMs(date));
+  assert.equal(context.chartTimeFromRatio(domain, 0), context.dateMs(sessions[0]));
+  assert.equal(context.chartTimeFromRatio(domain, 1), context.dateMs(sessions.at(-1)));
+  const bars = context.fundingBarGeometry(points, "value", domain, 2, 700, 0, 100);
+  for (const bar of bars) assert.ok(Math.abs(bar.x + bar.width / 2 - x(bar.date)) < 1e-8);
+  assert.equal(bars.some(bar => bar.date === "2026-10-13"), false);
+  const path = context.datedValuePath(points, "value", domain, {min: 0, max: 2}, 700);
+  assert.equal((path.match(/M /g) ?? []).length, 2);
+  assert.equal((context.datedValuePath(points.map(point => point.date === "2026-10-16" ? {...point, value: null} : point), "value", domain, {min: 0, max: 2}).match(/M /g) ?? []).length, 3);
+});
+
+test("거래일 축은 원래 조회 기간·수치를 유지하고 달력이 없거나 짧으면 달력축 유지", () => {
+  const {context} = harness();
+  const payload = fundingFixture();
+  const points = context.marketFundingChartPoints(payload);
+  payload.tradingCalendar = {status: "ready", startDate: points[0].date, endDate: points.at(-1).date, sessions: points.map(point => point.date)};
+  const before = JSON.stringify(points);
+  context.renderFundingBalanceChart(payload);
+  const models = vm.runInContext("[...interactiveChartRegistry.values()]", context);
+  for (const range of ["1m", "3m", "ytd", "1y", "3y"]) {
+    const original = context.chartRangeDomain([points], range);
+    for (const model of models) {
+      const domain = model.domainForRange(range);
+      assert.equal(domain.start, original.start);
+      assert.equal(domain.end, original.end);
+      assert.ok(domain.sessionDates.length > 0);
+    }
+  }
+  for (const calendar of [null, {status: "unavailable"}, {...payload.tradingCalendar, startDate: "2026-10-20"}]) {
+    const domain = context.fundingChartDomain(points, calendar, "1m");
+    assert.equal(domain.sessionDates, undefined);
+    assert.equal(context.chartTimeFromRatio(domain, 0.5), domain.start + domain.span * 0.5);
+  }
+  const single = context.fundingChartDomain(points.slice(0, 1), payload.tradingCalendar);
+  assert.equal(context.xFromDate(points[0].date, single, 100), 50);
+  assert.equal(context.fundingChartDomain([], payload.tradingCalendar), null);
+  assert.equal(JSON.stringify(context.marketFundingChartPoints(payload)), before);
+});
+
+test("거래일 월 경계는 실제 슬롯과 일치하고 원장의 휴장일 관측도 임의 삭제하지 않음", () => {
+  const {context} = harness();
+  const dates = ["2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02"];
+  const points = dates.map(date => ({date, value: 10}));
+  const calendar = {status: "ready", startDate: dates[0], endDate: dates.at(-1), sessions: dates};
+  const domain = context.fundingChartDomain(points, calendar);
+  const segments = context.monthSegmentsFromDomain(domain, 400);
+  assert.equal(segments[0].startX, 0);
+  assert.equal(segments[0].endX, 200);
+  assert.equal(segments[1].startX, 200);
+  assert.equal(segments[1].endX, 400);
+  const observed = [...points, {date: "2026-10-03", value: 10}];
+  assert.ok(context.fundingChartDomain(observed, {...calendar, endDate: "2026-10-03"}).sessionDates.includes("2026-10-03"));
+});
+
 test("잔액 증감률은 직전·5거래 관측일 기준이며 휴일과 표시 기간에 독립적", () => {
   const {context} = harness();
   const payload = fundingFixture();

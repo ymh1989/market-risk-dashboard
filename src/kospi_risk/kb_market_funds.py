@@ -515,6 +515,30 @@ def _merge_source_rows(
     return list(rows_by_date.values()), reconciliation
 
 
+def market_funds_trading_calendar(
+    rows: list[dict[str, Any]], existing: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """표시용 KRX 거래일을 제공하며 원장 누락을 휴장으로 간주하지 않는다."""
+    dates = sorted({str(row["date"]) for row in rows if row.get("date")})
+    metadata = {"provider": "exchange_calendars", "exchange": "XKRX"}
+    if not dates:
+        return {**metadata, "status": "unavailable", "sessions": []}
+    metadata.update({"startDate": f"{dates[0][:4]}-01-01", "endDate": f"{dates[-1][:4]}-12-31"})
+    try:
+        import exchange_calendars
+
+        calendar = exchange_calendars.get_calendar(
+            "XKRX", start=metadata["startDate"], end=metadata["endDate"]
+        )
+        sessions = calendar.sessions.strftime("%Y-%m-%d").tolist()
+    except (ImportError, ValueError):
+        # 지원 환경이 없는 갱신에서도 이미 확인한 달력만 재사용하고 미래 휴장을 추측하지 않는다.
+        if existing and existing.get("status") == "ready" and existing.get("sessions"):
+            return deepcopy(existing)
+        return {**metadata, "status": "unavailable", "sessions": []}
+    return {**metadata, "status": "ready", "sessions": sessions}
+
+
 def build_market_funds_payload(
     existing: dict[str, Any] | None,
     *,
@@ -576,6 +600,7 @@ def build_market_funds_payload(
         "reconciliation": reconciliation,
         "latest": rows[-1],
         "series": rows,
+        "tradingCalendar": market_funds_trading_calendar(rows, (existing or {}).get("tradingCalendar")),
         "methodology": {
             "role": "observation",
             "aggregateWeight": 0,

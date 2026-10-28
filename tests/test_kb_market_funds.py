@@ -10,6 +10,7 @@ from kospi_risk.kb_market_funds import (
     KbOpenApiClient,
     KbOpenApiConfig,
     SCORE_SMOOTHING_ALPHA,
+    market_funds_trading_calendar,
     parse_market_funds_response,
     update_market_funds_payload,
 )
@@ -18,6 +19,36 @@ from scripts.update_market_risk import kb_market_funds_indicator
 
 
 KST = timezone(timedelta(hours=9))
+
+
+def test_display_calendar_preserves_missing_session_and_excludes_holidays():
+    pytest.importorskip("exchange_calendars")
+    rows = [{"date": day} for day in ["2026-10-08", "2026-10-14"]]
+    original = json.dumps(rows)
+    calendar = market_funds_trading_calendar(rows)
+    assert calendar["status"] == "ready"
+    # 한글날과 주말은 제외하되 원장에 빠진 월·화 거래일은 남긴다.
+    assert [day for day in calendar["sessions"] if "2026-10-08" <= day <= "2026-10-14"] == [
+        "2026-10-08", "2026-10-12", "2026-10-13", "2026-10-14"
+    ]
+    assert calendar["startDate"] == "2026-01-01"
+    assert calendar["endDate"] == "2026-12-31"
+    assert json.dumps(rows) == original
+
+
+def test_display_calendar_failure_does_not_guess_holidays(monkeypatch):
+    calendars = pytest.importorskip("exchange_calendars")
+
+    def unavailable(*args, **kwargs):
+        raise ValueError("달력 조회 실패")
+
+    monkeypatch.setattr(calendars, "get_calendar", unavailable)
+    result = market_funds_trading_calendar([{"date": "2026-10-08"}])
+    assert result["status"] == "unavailable"
+    assert result["sessions"] == []
+    assert market_funds_trading_calendar([])["status"] == "unavailable"
+    prior = {"status": "ready", "sessions": ["2026-10-08"], "startDate": "2026-10-08", "endDate": "2026-10-08"}
+    assert market_funds_trading_calendar([{"date": "2026-10-12"}], prior) == prior
 
 
 def api_payload(*, observed_date: str = "20260907", credit_balance: int = 33190) -> dict:

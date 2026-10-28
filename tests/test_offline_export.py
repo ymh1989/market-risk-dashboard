@@ -61,6 +61,8 @@ def test_offline_export_is_single_file_and_interactive(tmp_path):
     assert "function fundingBarLimit" in html
     assert "function renderChartDateAxis" in html
     assert "function renderChartValueAxis" in html
+    assert "function fundingChartDomain" in html
+    assert "function chartTimeFromRatio" in html
     assert "function initializeChartDateAxes" in html
     assert ".funding-series-name" in html
     assert ".chart-value-axis" in html

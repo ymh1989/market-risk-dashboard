@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20261028-chart-labels-unified";
+const ASSET_VERSION = "20261028-funding-trading-days";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -1343,7 +1343,18 @@ function timelineDomain(seriesList) {
 
 function xFromDate(date, domain, width = 100) {
   if (!domain) return 0;
+  if (domain.sessionDates) {
+    return ((domain.sessionIndex.get(date) + 0.5) / domain.sessionDates.length) * width;
+  }
   return ((dateMs(date) - domain.start) / domain.span) * width;
+}
+
+function chartTimeFromRatio(domain, ratio) {
+  if (domain.sessionDates) {
+    const index = Math.max(0, Math.min(domain.sessionDates.length - 1, Math.floor(ratio * domain.sessionDates.length)));
+    return dateMs(domain.sessionDates[index]);
+  }
+  return domain.start + ratio * domain.span;
 }
 
 function scorePathByDatePlot(points, valueKey = "score", width = 260, plotTop = 26, plotBottom = 80, domain = null) {
@@ -1427,6 +1438,20 @@ function renderMonthAxis(points, width = 760, plotTop = 18, plotBottom = 190, la
 
 function monthSegmentsFromDomain(domain, width = 100) {
   if (!domain) return [];
+  if (domain.sessionDates) {
+    const groups = [];
+    domain.sessionDates.forEach((date, index) => {
+      const [year, month] = date.split("-");
+      const key = `${year}-${month}`;
+      const endX = (index + 1) / domain.sessionDates.length * width;
+      if (groups.at(-1)?.key === key) groups.at(-1).endX = endX;
+      else groups.push({key, year, month, startX: index / domain.sessionDates.length * width, endX});
+    });
+    return groups.map((group, index) => ({
+      ...group, centerX: (group.startX + group.endX) / 2,
+      label: index === 0 || group.month === "01" ? `${group.year}.${group.month}` : `${Number(group.month)}월`
+    }));
+  }
   const startDate = new Date(domain.start);
   const endDate = new Date(domain.end);
   const cursor = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1));
@@ -1509,7 +1534,9 @@ function datedValuePath(
       const y =
         plotBottom -
         ((Number(point[valueKey]) - valueDomain.min) / span) * (plotBottom - plotTop);
-      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+      const gap = timeline.sessionDates && index > 0 &&
+        timeline.sessionIndex.get(point.date) !== timeline.sessionIndex.get(valid[index - 1].date) + 1;
+      return `${index === 0 || gap ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
     })
     .join(" ");
 }
@@ -1577,7 +1604,8 @@ function registerInteractiveChart({
   tooltipMode = "all",
   plotLeft = 0,
   plotRight = width,
-  fixedDomain = null
+  fixedDomain = null,
+  domainForRange = null
 }) {
   interactiveChartSequence += 1;
   const id = `timeline-chart-${interactiveChartSequence}`;
@@ -1587,6 +1615,7 @@ function registerInteractiveChart({
     plotLeft,
     plotRight,
     fixedDomain,
+    domainForRange,
     series: series.map((item) => ({
       ...item,
       points: [...(item.points ?? [])].sort((left, right) => dateMs(left.date) - dateMs(right.date))
@@ -5609,10 +5638,10 @@ function fundingBarGeometry(points, key, domain, limit, width, top, bottom) {
   const visible = pointsWithinDomain(points, domain);
   const gaps = visible.slice(1).map((point, index) => dateMs(point.date) - dateMs(visible[index].date));
   const step = gaps.length ? Math.min(...gaps) : 24 * 60 * 60 * 1000;
-  const barWidth = Math.min(16, (step / domain.span) * width * 0.9);
+  const barWidth = Math.min(16, (domain.sessionDates ? 1 / domain.sessionDates.length : step / domain.span) * width * 0.9);
   const zeroY = (top + bottom) / 2;
   return visible.filter((point) => Number.isFinite(point[key])).map((point) => {
-    const center = ((dateMs(point.date) - domain.start) / domain.span) * width;
+    const center = xFromDate(point.date, domain, width);
     const x = Math.max(0, Math.min(width - barWidth, center - barWidth / 2));
     const displayed = Math.max(-limit, Math.min(limit, point[key]));
     const y = zeroY - (displayed / limit) * ((bottom - top) / 2);
@@ -5648,7 +5677,18 @@ function renderBreadthAxisFrame({rangeId, domain, left, right, plotTop, plotBott
   </div>`;
 }
 
-function renderFundingChangeChart(points, period) {
+function fundingChartDomain(points, calendar, rangeId = activeChartRange) {
+  const domain = chartRangeDomain([points], rangeId);
+  // 관측일만 압축하면 조회 실패도 휴장처럼 숨겨지므로 검증된 달력 범위에서만 압축한다.
+  if (!domain || calendar?.status !== "ready" || !calendar.sessions?.length ||
+      !(dateMs(calendar.startDate) <= domain.start && dateMs(calendar.endDate) >= domain.end)) return domain;
+  const sessionDates = [...new Set([...calendar.sessions, ...points.map(point => point.date)])]
+    .filter(date => dateMs(date) >= domain.start && dateMs(date) <= domain.end).sort();
+  if (!sessionDates.length) return domain;
+  return {...domain, sessionDates, sessionIndex: new Map(sessionDates.map((date, index) => [date, index]))};
+}
+
+function renderFundingChangeChart(points, period, calendar) {
   const definitions = [
     { key: "customerDepositsTrillion", label: "고객예탁금", color: "var(--green)" },
     { key: "creditBalanceTrillion", label: "신용잔고", color: "var(--red)" }
@@ -5666,6 +5706,7 @@ function renderFundingChangeChart(points, period) {
   const height = 160;
   const chartId = registerInteractiveChart({
     width: 760, plotLeft, plotRight,
+    domainForRange: rangeId => fundingChartDomain(points, calendar, rangeId),
     series: definitions.map(({key, label, color}) => ({
       label, color, points: changes, valueKey: `${key}Change`,
       format: (value) => formatSignedPct(value),
@@ -5673,7 +5714,7 @@ function renderFundingChangeChart(points, period) {
     }))
   });
   const layers = chartRangeOptions.map((range) => {
-    const domain = chartRangeDomain([changes], range.id);
+    const domain = fundingChartDomain(points, calendar, range.id);
     const visible = pointsWithinDomain(changes, domain);
     const values = visible.flatMap((point) => definitions.map(({key}) => point[`${key}Change`])).filter(Number.isFinite);
     const commonLimit = fundingBarLimit(values);
@@ -5734,6 +5775,7 @@ function renderFundingChangeChart(points, period) {
 
 function renderFundingBalanceChart(marketFunds) {
   const points = marketFundingChartPoints(marketFunds);
+  const calendar = marketFunds.tradingCalendar;
   if (points.length < 2) return "";
   const chartWidth = 760;
   const plotLeft = 0;
@@ -5745,6 +5787,7 @@ function renderFundingBalanceChart(marketFunds) {
     width: chartWidth,
     plotLeft,
     plotRight,
+    domainForRange: rangeId => fundingChartDomain(points, calendar, rangeId),
     series: [
       {
         label: "고객예탁금",
@@ -5774,7 +5817,7 @@ function renderFundingBalanceChart(marketFunds) {
   });
   const layers = chartRangeOptions
     .map((range) => {
-      const domain = chartRangeDomain([points], range.id);
+      const domain = fundingChartDomain(points, calendar, range.id);
       const visible = pointsWithinDomain(points, domain);
       const firstDeposits = visible.find((point) => Number.isFinite(point.customerDepositsTrillion))?.customerDepositsTrillion;
       const firstCredit = visible.find((point) => Number.isFinite(point.creditBalanceTrillion))?.creditBalanceTrillion;
@@ -5830,7 +5873,7 @@ function renderFundingBalanceChart(marketFunds) {
         ${[["week", "1주 증감"], ["day", "전일 증감"], ["balance", "잔액"]].map(([view, label]) => `<button type="button" data-funding-view="${view}" aria-controls="${chartId}-funding-${view}" aria-pressed="${view === activeFundingView}" class="${view === activeFundingView ? "is-active" : ""}">${label}</button>`).join("")}
       </div>
       <label class="funding-scale-toggle" title="선택 기간의 지표별 절대 증감률 90% 분위로 축 확대. 해제 시 두 지표 동일 축으로 전체 변동 표시."><input type="checkbox" data-funding-scale-toggle ${activeFundingScale === "focus" ? "checked" : ""}>변동 확대</label>
-      ${["week", "day"].map((period) => `<div id="${chartId}-funding-${period}" class="funding-view-panel" data-funding-panel="${period}" ${period === activeFundingView ? "" : "hidden"}>${renderFundingChangeChart(points, period)}</div>`).join("")}
+      ${["week", "day"].map((period) => `<div id="${chartId}-funding-${period}" class="funding-view-panel" data-funding-panel="${period}" ${period === activeFundingView ? "" : "hidden"}>${renderFundingChangeChart(points, period, calendar)}</div>`).join("")}
       <div id="${chartId}-funding-balance" class="funding-view-panel" data-funding-panel="balance" ${activeFundingView === "balance" ? "" : "hidden"}>
       <div class="breadth-chart" data-timeseries-chart="${chartId}">
         ${renderChartRangeControls(chartId)}
@@ -6925,6 +6968,7 @@ function updateChartCursor(chart, svg, event) {
   const domain =
     svgDomain ??
     model.fixedDomain ??
+    model.domainForRange?.(activeChartRange) ??
     chartRangeDomain(
       model.series.map((item) => item.points),
       activeChartRange
@@ -6938,11 +6982,11 @@ function updateChartCursor(chart, svg, event) {
   if (!Number.isFinite(pointerX)) return;
   const plotSpan = Math.max(model.plotRight - model.plotLeft, 1);
   const ratio = Math.max(0, Math.min(1, (pointerX - model.plotLeft) / plotSpan));
-  const requestedTime = domain.start + ratio * domain.span;
+  const requestedTime = chartTimeFromRatio(domain, ratio);
   const hoveredIndex = Number(svg.dataset.chartSeriesIndex);
   const hasHoveredSeries = Number.isInteger(hoveredIndex) && model.series[hoveredIndex];
   const anchorSeries = hasHoveredSeries ? model.series[hoveredIndex] : model.series[0];
-  const anchorPoint = nearestChartPoint(
+  const anchorPoint = domain.sessionDates ? {date: new Date(requestedTime).toISOString().slice(0, 10)} : nearestChartPoint(
     anchorSeries.points,
     requestedTime,
     domain,
@@ -6951,7 +6995,7 @@ function updateChartCursor(chart, svg, event) {
   if (!anchorPoint) return;
 
   const cursorTime = dateMs(anchorPoint.date);
-  const cursorRatio = Math.max(0, Math.min(1, (cursorTime - domain.start) / domain.span));
+  const cursorRatio = Math.max(0, Math.min(1, xFromDate(anchorPoint.date, domain, 1)));
   const cursorLines = svgDomain || model.fixedDomain
     ? svg.querySelectorAll("[data-chart-cursor-line]")
     : chart.querySelectorAll(
@@ -6971,14 +7015,17 @@ function updateChartCursor(chart, svg, event) {
       : model.series;
   const rows = tooltipSeries
     .map((item) => {
-      const point = nearestChartPoint(item.points, cursorTime, domain, item.valueKey);
-      if (!point) return "";
-      const value = item.format
+      const point = domain.sessionDates
+        ? item.points.find(point => point.date === anchorPoint.date)
+        : nearestChartPoint(item.points, cursorTime, domain, item.valueKey);
+      if (!point && !domain.sessionDates) return "";
+      const missing = !point || finiteNumberOrNull(point[item.valueKey]) === null;
+      const value = missing ? "미관측" : item.format
         ? item.format(point[item.valueKey], point)
         : formatNumber(point[item.valueKey], 2);
-      const detail = item.detail?.(point);
-      const status = item.status?.(point) ?? "EOD";
-      const alternateDate = point.date === anchorPoint.date ? "" : formatShortDate(point.date);
+      const detail = missing ? "해당 거래일 자료 없음" : item.detail?.(point);
+      const status = missing ? "결측" : item.status?.(point) ?? "EOD";
+      const alternateDate = !point || point.date === anchorPoint.date ? "" : formatShortDate(point.date);
       const secondary = [detail, alternateDate].filter(Boolean).join(" · ");
       return `
         <div class="chart-cursor-tooltip__row">
