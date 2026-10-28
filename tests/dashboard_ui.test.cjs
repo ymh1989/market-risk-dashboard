@@ -51,6 +51,197 @@ function completeFlowPoint(date = "2026-10-14", pressure = 70.9) {
   };
 }
 
+function fundingFixture() {
+  const dates = ["2026-10-16", "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-26"];
+  const series = dates.map((date, index) => ({
+    date, score: 40, rawScore: 42,
+    amountsKrwMillion: {
+      customerDeposits: (100 + index * 2) * 1e6,
+      creditBalance: (40 - index) * 1e6, receivables: 1e6
+    },
+    derived: {creditToDepositsPct: 40}
+  }));
+  return {series, latest: series.at(-1)};
+}
+
+test("잔액 증감률은 직전·5거래 관측일 기준이며 휴일과 표시 기간에 독립적", () => {
+  const {context} = harness();
+  const payload = fundingFixture();
+  const original = JSON.stringify(payload);
+  const points = context.marketFundingChartPoints(payload);
+  const change = points.at(-1).changes.customerDepositsTrillion;
+  assert.equal(change.day.baseDate, "2026-10-23");
+  assert.equal(change.week.baseDate, "2026-10-19");
+  assert.ok(Math.abs(change.day.pct - (112 / 110 - 1) * 100) < 1e-10);
+  assert.ok(Math.abs(change.week.pct - (112 / 102 - 1) * 100) < 1e-10);
+  assert.ok(points.at(-1).changes.creditBalanceTrillion.week.pct < 0);
+  assert.equal(points[0].changes.customerDepositsTrillion.day.pct, null);
+  assert.equal(points[4].changes.customerDepositsTrillion.week.pct, null);
+  assert.equal(points.at(-1).changes.receivablesTrillion.week.pct, 0);
+  for (const range of ["1m", "3m", "ytd", "1y", "3y"]) {
+    vm.runInContext(`activeChartRange = "${range}"`, context);
+    context.renderFundingBalanceChart(payload);
+    const model = vm.runInContext('[...interactiveChartRegistry.values()].findLast(model => model.series[0].valueKey === "customerDepositsTrillion")', context);
+    assert.equal(model.series[0].points.at(-1).changes.customerDepositsTrillion.week.pct, change.week.pct);
+    assert.match(model.series[0].detail(model.series[0].points.at(-1)), /전일 \+1\.82%.*10\.23.*1주 \+9\.80%.*10\.19/);
+  }
+  assert.equal(JSON.stringify(payload), original);
+});
+
+test("잔액 결측·0 기준값·이력 부족은 0%로 만들지 않고 비교 불가 처리", () => {
+  const {context} = harness();
+  for (const value of [null, undefined, "", NaN, Infinity, 0, -1]) {
+    const payload = fundingFixture();
+    payload.series[1].amountsKrwMillion.customerDeposits = value;
+    const points = context.marketFundingChartPoints(payload);
+    const change = points.at(-1).changes.customerDepositsTrillion.week;
+    assert.equal(change.pct, null);
+    assert.equal(change.baseDate, "2026-10-19");
+    assert.match(context.fundingChangeDetail(points.at(-1), "customerDepositsTrillion"), /1주 비교 불가/);
+  }
+  const payload = fundingFixture();
+  payload.latest.amountsKrwMillion.customerDeposits = null;
+  payload.latest.score = null;
+  payload.latest.derived.creditToDepositsPct = null;
+  const point = context.marketFundingChartPoints(payload).at(-1);
+  assert.equal(point.customerDepositsTrillion, null);
+  assert.equal(point.score, null);
+  assert.equal(point.creditToDepositsPct, null);
+  assert.equal(point.changes.customerDepositsTrillion.day.pct, null);
+  assert.doesNotMatch(context.renderDomesticFundingPanel(payload), /NaN|Infinity|undefined/);
+});
+
+test("잔액 이력은 날짜 정렬·중복 제거 후 비교하며 과거 증감률에 미래값 미사용", () => {
+  const {context} = harness();
+  const payload = fundingFixture();
+  const expected = context.marketFundingChartPoints(payload);
+  const shuffled = {series: [...payload.series].reverse().concat(payload.series[0])};
+  assert.equal(JSON.stringify(context.marketFundingChartPoints(shuffled)), JSON.stringify(expected));
+  const prefix = context.marketFundingChartPoints({series: payload.series.slice(0, 6)});
+  assert.equal(JSON.stringify(prefix), JSON.stringify(expected.slice(0, 6)));
+  payload.latest = payload.series[5];
+  const html = context.renderDomesticFundingPanel(payload);
+  assert.match(html, /전일 <b>\+1\.85%<\/b>/);
+  assert.match(html, /1주 <b>\+10\.00%<\/b>/);
+  assert.doesNotMatch(html, /전일 <b>\+1\.82%<\/b>/);
+});
+
+test("실제 잔액의 일간 증감률은 원장의 산출값과 일치하며 화면은 최신 1주 표시", () => {
+  const {context} = harness();
+  const payload = JSON.parse(readFileSync(join(root, "data/kb-market-funds.json"), "utf8"));
+  const points = context.marketFundingChartPoints(payload);
+  for (const [key, derivedKey] of [["customerDepositsTrillion", "customerDepositsChangePct"], ["creditBalanceTrillion", "creditBalanceChangePct"]]) {
+    for (let i = Math.max(1, points.length - 10); i < points.length; i++) {
+      const source = payload.series.find(row => row.date === points[i].date);
+      assert.ok(Math.abs(points[i].changes[key].day.pct - source.derived[derivedKey]) < 1e-8);
+    }
+  }
+  const html = context.renderDomesticFundingPanel(payload);
+  assert.equal((html.match(/class="funding-balance-changes"/g) ?? []).length, 2);
+  assert.match(html, /1주\(5거래 관측일\)/);
+  assert.doesNotMatch(html, /NaN|Infinity|undefined/);
+});
+
+test("잔액 차트는 1주 증감 막대를 먼저 보여주고 전일·잔액 전환과 공통 기간 유지", () => {
+  const {context} = harness();
+  const html = context.renderFundingBalanceChart(fundingFixture());
+  assert.match(html, /data-funding-active="week"/);
+  assert.match(html, /data-funding-scale="focus"/);
+  assert.match(html, /data-funding-scale-toggle checked/);
+  assert.match(html, /data-funding-view="week"[^>]*aria-pressed="true"/);
+  for (const view of ["day", "balance"]) assert.match(html, new RegExp(`data-funding-panel="${view}" hidden`));
+  for (const range of ["1m", "3m", "ytd", "1y", "3y"]) assert.match(html, new RegExp(`data-chart-range-layer="${range}"`));
+  assert.match(html, /data-funding-bars="week"/);
+  assert.match(html, /data-funding-bars="day"/);
+  assert.match(html, /고객예탁금 1주 대비 증감률 막대/);
+  assert.match(html, /신용잔고 전일 대비 증감률 막대/);
+  assert.match(html, /조회 기간 첫날을 100으로 환산/);
+  assert.match(html, /두 잔액 동일 축/);
+  assert.doesNotMatch(html, /NaN|Infinity|undefined/);
+});
+
+test("증감 막대는 0 기준에서 실제 비율에 비례하며 결측과 0을 구분", () => {
+  const {context} = harness();
+  const points = [
+    {date: "2026-10-19", value: 10}, {date: "2026-10-20", value: -5},
+    {date: "2026-10-21", value: 0}, {date: "2026-10-22", value: null},
+    {date: "2026-10-23", value: 2}
+  ];
+  const domain = context.chartRangeDomain([points], "1m");
+  const bars = context.fundingBarGeometry(points, "value", domain, 10, 690, 28, 128);
+  assert.equal(bars.length, 4);
+  assert.equal(bars[0].zeroY, 78);
+  assert.equal(bars[0].y, 28);
+  assert.equal(bars[0].height, 50);
+  assert.equal(bars[1].y, 78);
+  assert.equal(bars[1].height, 25);
+  assert.equal(bars[2].height, 0);
+  for (const bar of bars) assert.ok(bar.x >= 0 && bar.x + bar.width <= 690 && bar.y + bar.height <= 128);
+  const empty = fundingFixture();
+  empty.series.forEach(point => {point.amountsKrwMillion.customerDeposits = null;});
+  const html = context.renderFundingChangeChart(context.marketFundingChartPoints(empty), "week");
+  assert.match(html, /비교 가능한 잔액 부족/);
+  assert.doesNotMatch(html, /NaN|Infinity|undefined/);
+});
+
+test("전체 보기만 공통 축을 쓰며 확대 여부와 무관하게 조회값은 원자료와 일치", () => {
+  const {context} = harness();
+  const payload = fundingFixture();
+  const points = context.marketFundingChartPoints(payload);
+  const html = context.renderFundingChangeChart(points, "week");
+  const limits = [...html.matchAll(/data-funding-scale-layer="full" data-funding-limit="([^"]+)"/g)].map(match => Number(match[1]));
+  for (let i = 0; i < limits.length; i += 2) assert.equal(limits[i], limits[i + 1]);
+  const model = vm.runInContext("[...interactiveChartRegistry.values()].at(-1)", context);
+  const point = model.series[0].points.at(-1);
+  assert.equal(point[model.series[0].valueKey], points.at(-1).changes.customerDepositsTrillion.week.pct);
+  assert.match(model.series[0].format(point[model.series[0].valueKey]), /\+9\.80%/);
+  assert.match(model.series[0].detail(point), /112\.00조원.*1주 대비 2026-10-19/);
+});
+
+test("확대 축은 극단값에 덜 민감하고 범위 밖 값·부호·결측을 보존", () => {
+  const {context} = harness();
+  const values = [...Array(100).fill(1), -30, null, NaN];
+  const limit = context.fundingBarLimit(values, true);
+  assert.ok(limit >= 1 && limit < 2);
+  assert.ok(context.fundingBarLimit(values) >= 30);
+  for (const values of [[], [0], [null, NaN], [0.00001], [200]]) {
+    assert.ok(Number.isFinite(context.fundingBarLimit(values, true)));
+    assert.ok(context.fundingBarLimit(values, true) > 0);
+  }
+  const points = [
+    {date: "2026-10-19", value: 30}, {date: "2026-10-20", value: -20},
+    {date: "2026-10-21", value: 0.5}, {date: "2026-10-22", value: null}
+  ];
+  const domain = context.chartRangeDomain([points], "1m");
+  const bars = context.fundingBarGeometry(points, "value", domain, 1, 690, 28, 168);
+  assert.equal(bars.length, 3);
+  assert.equal(bars[0].value, 30);
+  assert.equal(bars[1].value, -20);
+  assert.ok(bars[0].clipped && bars[1].clipped);
+  assert.equal(bars[0].y, 28);
+  assert.equal(bars[1].y + bars[1].height, 168);
+  assert.equal(bars[2].clipped, false);
+  assert.equal(bars[2].height, 35);
+});
+
+test("실제 YTD 확대 축은 두 잔액의 평소 변화를 키우고 초과일을 표시", () => {
+  const {context} = harness();
+  const payload = JSON.parse(readFileSync(join(root, "data/kb-market-funds.json"), "utf8"));
+  const points = context.marketFundingChartPoints(payload);
+  const visible = context.pointsWithinDomain(points, context.chartRangeDomain([points], "ytd"));
+  for (const period of ["day", "week"]) {
+    const values = visible.flatMap(point => ["customerDepositsTrillion", "creditBalanceTrillion"].map(key => point.changes[key][period].pct));
+    const full = context.fundingBarLimit(values);
+    for (const key of ["customerDepositsTrillion", "creditBalanceTrillion"]) {
+      const focus = context.fundingBarLimit(visible.map(point => point.changes[key][period].pct), true);
+      assert.ok(focus < full);
+    }
+    const html = context.renderFundingChangeChart(points, period);
+    assert.match(html, /data-funding-overflow=/);
+    assert.match(html, /지표별 축 · 절대 증감률 90% 분위 기준/);
+  }
+});
+
 test("이슈 레이더는 외부 제목을 이스케이프하고 조회실패·기준일·범위를 표시", () => {
   const { context } = harness();
   const radar = { generatedAt: "2026-10-22T16:00:00+09:00", methodology: [], issues: [{

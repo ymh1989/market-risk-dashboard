@@ -56,6 +56,14 @@ def test_offline_export_is_single_file_and_interactive(tmp_path):
     assert '"data/data-quality.json"' in html
     assert '"data/kb-market-funds.json":' in html
     assert "국내 레버리지·대기자금" in html
+    assert "function fundingChangeDetail" in html
+    assert "function renderFundingChangeChart" in html
+    assert "function fundingBarLimit" in html
+    assert "data-funding-scale-toggle" in html
+    assert "data-funding-overflow" in html
+    assert 'data-funding-view="${view}"' in html
+    assert 'class="funding-balance-changes"' in html
+    assert "5거래 관측일" in html
     assert '"data/dram-spot-prices.json":' in html
     assert "data-pending-dram" in html
     assert "공식 이력 축적 중" in html

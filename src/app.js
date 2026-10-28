@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20261023-issue-review";
+const ASSET_VERSION = "20261028-funding-bars-focus";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -22,6 +22,8 @@ const elsPerformanceRangeOptions = [
   { id: "ytd", label: "YTD" }
 ];
 let activeChartRange = "ytd";
+let activeFundingView = "week";
+let activeFundingScale = "focus";
 let activeElsPerformanceRange = "3m";
 let interactiveChartSequence = 0;
 const interactiveChartRegistry = new Map();
@@ -5551,31 +5553,169 @@ function renderBreadthFlowChart(breadthData) {
 }
 
 function marketFundingChartPoints(marketFunds) {
-  return (marketFunds?.series ?? [])
+  const rows = [...new Map((marketFunds?.series ?? [])
+    .filter((point) => /^\d{4}-\d{2}-\d{2}$/.test(point.date) && Number.isFinite(dateMs(point.date)))
+    .map((point) => [point.date, point])).values()]
+    .sort((left, right) => left.date.localeCompare(right.date));
+  const points = rows
     .map((point) => {
       const amounts = point.amountsKrwMillion ?? {};
       const derived = point.derived ?? {};
       const toTrillion = (value) => {
-        const number = Number(value);
-        return Number.isFinite(number) ? number / 1_000_000 : null;
+        const number = finiteNumberOrNull(value);
+        return number === null ? null : number / 1_000_000;
       };
       return {
         date: point.date,
-        score: Number.isFinite(Number(point.score)) ? Number(point.score) : null,
-        rawScore: Number.isFinite(Number(point.rawScore))
-          ? Number(point.rawScore)
-          : Number.isFinite(Number(point.score))
-            ? Number(point.score)
-            : null,
+        score: finiteNumberOrNull(point.score),
+        rawScore: finiteNumberOrNull(point.rawScore) ?? finiteNumberOrNull(point.score),
         customerDepositsTrillion: toTrillion(amounts.customerDeposits),
         creditBalanceTrillion: toTrillion(amounts.creditBalance),
         receivablesTrillion: toTrillion(amounts.receivables),
-        creditToDepositsPct: Number.isFinite(Number(derived.creditToDepositsPct))
-          ? Number(derived.creditToDepositsPct)
-          : null
+        creditToDepositsPct: finiteNumberOrNull(derived.creditToDepositsPct)
       };
-    })
-    .filter((point) => point.date);
+    });
+  // 표시 기간을 자르기 전에 계산한다. 결측일을 건너뛰어 비교 기간을 늘리지 않는다.
+  return points.map((point, index) => ({
+    ...point,
+    changes: Object.fromEntries(
+      ["customerDepositsTrillion", "creditBalanceTrillion", "receivablesTrillion"].map((key) => [key, {
+        day: fundingBalanceChange(point, points[index - 1], key),
+        week: fundingBalanceChange(point, points[index - 5], key)
+      }])
+    )
+  }));
+}
+
+function fundingBalanceChange(point, baseline, key) {
+  const current = finiteNumberOrNull(point?.[key]);
+  const previous = finiteNumberOrNull(baseline?.[key]);
+  const pct = current !== null && current >= 0 && previous !== null && previous > 0
+    ? (current / previous - 1) * 100 : null;
+  return { pct: Number.isFinite(pct) ? pct : null, baseDate: baseline?.date ?? null };
+}
+
+function fundingChangeDetail(point, key) {
+  const changes = point.changes?.[key];
+  return [["day", "전일"], ["week", "1주"]].map(([period, label]) => {
+    const change = changes?.[period];
+    const value = change?.pct === null || change?.pct === undefined
+      ? "비교 불가" : formatSignedPct(change.pct);
+    return `${label} ${value}${change?.baseDate ? ` (${formatShortDate(change.baseDate)} 대비)` : ""}`;
+  }).join("<br>");
+}
+
+function renderFundingChangeSummary(point, key) {
+  return `<small class="funding-balance-changes">${[["day", "전일"], ["week", "1주"]].map(([period, label]) => {
+    const change = point?.changes?.[key]?.[period];
+    const available = change?.pct !== null && change?.pct !== undefined;
+    const basis = period === "week" ? "5거래 관측일 전" : "직전 관측일";
+    const title = available
+      ? `${point.date} / ${change.baseDate} 대비 · ${basis}`
+      : `${basis} 잔액 부족 또는 기준 잔액 0 · 비교 불가`;
+    return `<span title="${title}">${label} <b>${available ? formatSignedPct(change.pct) : "-"}</b></span>`;
+  }).join("")}</small>`;
+}
+
+function fundingBarLimit(values, focus = false) {
+  const sorted = values.filter(Number.isFinite).map(Math.abs).sort((a, b) => a - b);
+  // 확대 축은 절대 증감률의 90% 분위로 정하고 초과값은 별도 표시한다.
+  const rank = (sorted.length - 1) * 0.9;
+  const lower = Math.max(0, Math.floor(rank));
+  const typical = sorted.length
+    ? sorted[lower] + (sorted[Math.ceil(rank)] - sorted[lower]) * (rank - lower) : 0;
+  const magnitude = Math.max(0.1, focus ? typical : (sorted.at(-1) ?? 0)) * 1.05;
+  const unit = 10 ** Math.floor(Math.log10(magnitude)) / 5;
+  return Number((Math.ceil(magnitude / unit) * unit).toPrecision(8));
+}
+
+function fundingBarGeometry(points, key, domain, limit, width, top, bottom) {
+  const visible = pointsWithinDomain(points, domain);
+  const gaps = visible.slice(1).map((point, index) => dateMs(point.date) - dateMs(visible[index].date));
+  const step = gaps.length ? Math.min(...gaps) : 24 * 60 * 60 * 1000;
+  const barWidth = Math.min(16, (step / domain.span) * width * 0.9);
+  const zeroY = (top + bottom) / 2;
+  return visible.filter((point) => Number.isFinite(point[key])).map((point) => {
+    const center = ((dateMs(point.date) - domain.start) / domain.span) * width;
+    const x = Math.max(0, Math.min(width - barWidth, center - barWidth / 2));
+    const displayed = Math.max(-limit, Math.min(limit, point[key]));
+    const y = zeroY - (displayed / limit) * ((bottom - top) / 2);
+    return { date: point.date, value: point[key], x, width: barWidth, y: Math.min(y, zeroY), height: Math.abs(y - zeroY), zeroY, clipped: Math.abs(point[key]) > limit };
+  });
+}
+
+function renderFundingChangeChart(points, period) {
+  const definitions = [
+    { key: "customerDepositsTrillion", label: "고객예탁금", color: "var(--green)" },
+    { key: "creditBalanceTrillion", label: "신용잔고", color: "var(--red)" }
+  ];
+  const changes = points.map((point) => ({
+    ...point,
+    ...Object.fromEntries(definitions.map(({key}) => [`${key}Change`, point.changes[key][period].pct]))
+  }));
+  const periodLabel = period === "week" ? "1주" : "전일";
+  const plotLeft = 58;
+  const plotRight = 748;
+  const plotWidth = plotRight - plotLeft;
+  const top = 28;
+  const bottom = 168;
+  const chartId = registerInteractiveChart({
+    width: 760, plotLeft, plotRight,
+    series: definitions.map(({key, label, color}) => ({
+      label, color, points: changes, valueKey: `${key}Change`,
+      format: (value) => formatSignedPct(value),
+      detail: (point) => `잔액 ${formatKrwTrillion(point[key])}<br>${periodLabel} 대비 ${point.changes[key][period].baseDate}`
+    }))
+  });
+  const layers = chartRangeOptions.map((range) => {
+    const domain = chartRangeDomain([changes], range.id);
+    const visible = pointsWithinDomain(changes, domain);
+    const values = visible.flatMap((point) => definitions.map(({key}) => point[`${key}Change`])).filter(Number.isFinite);
+    const commonLimit = fundingBarLimit(values);
+    const zeroY = (top + bottom) / 2;
+    const axis = renderMonthAxisFromDomain(domain, plotWidth, top, bottom, 190);
+    return definitions.map(({key, label, color}, index) => {
+      const scales = [
+        ["focus", fundingBarLimit(visible.map(point => point[`${key}Change`]), true)],
+        ["full", commonLimit]
+      ];
+      return `<svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg data-chart-series-index="${index}" data-funding-bars="${period}" viewBox="0 0 760 200" role="img" aria-label="${label} ${periodLabel} 대비 증감률 막대, 0 위 증가·아래 감소">
+        <text class="funding-bar-label" x="${plotLeft}" y="16" fill="${color}">${label}</text>
+        <g transform="translate(${plotLeft} 0)">
+          ${axis.grid}
+          <path class="breadth-chart__grid" d="M 0 ${top} H ${plotWidth} M 0 ${bottom} H ${plotWidth}"></path>
+          <path class="breadth-chart__zero-line" d="M 0 ${zeroY} H ${plotWidth}"></path>
+          ${index === 1 ? axis.labels : ""}
+        </g>
+        ${scales.map(([scale, limit]) => {
+          const bars = fundingBarGeometry(changes, `${key}Change`, domain, limit, plotWidth, top, bottom);
+          const clipped = bars.filter(bar => bar.clipped).length;
+          const digits = Math.max(0, Math.min(3, -Math.floor(Math.log10(limit / 10))));
+          return `<g data-funding-scale-layer="${scale}" data-funding-limit="${limit}">
+            <g transform="translate(${plotLeft} 0)">
+              ${bars.map((bar) => {
+                if (bar.value === 0) return `<line class="funding-bar-zero" data-funding-zero="${bar.date}" x1="${bar.x}" x2="${bar.x + bar.width}" y1="${zeroY}" y2="${zeroY}"></line>`;
+                const x = bar.x + bar.width / 2;
+                const y = bar.value > 0 ? top : bottom;
+                const inward = bar.value > 0 ? 6 : -6;
+                const half = Math.min(3, bar.width / 2);
+                return `<rect class="funding-change-bar" data-funding-bar="${bar.date}" data-value="${bar.value}" x="${bar.x.toFixed(3)}" y="${bar.y.toFixed(3)}" width="${bar.width.toFixed(3)}" height="${bar.height.toFixed(3)}" fill="${color}"></rect>
+                  ${bar.clipped ? `<path class="funding-bar-overflow" data-funding-overflow="${bar.date}" d="M ${x - half} ${y + inward} L ${x} ${y} L ${x + half} ${y + inward}" stroke="var(--ink)" fill="none"><title>${formatSignedPct(bar.value)} · 표시 축 초과</title></path>` : ""}`;
+              }).join("")}
+              ${bars.length ? "" : `<text class="funding-bar-empty" x="${plotWidth / 2}" y="${zeroY - 8}" text-anchor="middle">비교 가능한 잔액 부족</text>`}
+            </g>
+            ${clipped ? `<text class="funding-bar-overflow-label" x="${plotRight}" y="16" text-anchor="end">축 초과 ${clipped}일</text>` : ""}
+            ${[limit, 0, -limit].map((value, tick) => `<text class="breadth-chart__axis-value" x="4" y="${[top, zeroY, bottom][tick] + 4}">${value > 0 ? "+" : ""}${formatNumber(value, value === 0 || Number.isInteger(value) ? 0 : digits)}%</text>`).join("")}
+          </g>`;
+        }).join("")}
+        ${renderChartCursorLine(top, bottom)}
+      </svg>`;
+    }).join("");
+  }).join("");
+  return `<div class="breadth-chart funding-change-chart" data-timeseries-chart="${chartId}">
+    ${renderChartRangeControls(chartId)}${layers}${renderChartTooltip()}
+  </div>
+  <p class="breadth-chart-card__note"><span data-funding-scale-layer="focus">지표별 축 · 절대 증감률 90% 분위 기준 · ▲▼ 축 초과</span><span data-funding-scale-layer="full">두 잔액 동일 축 · 전체 변동</span> · ${period === "week" ? "1주 = 5거래 관측일 대비" : "전일 = 직전 관측일 대비"}</p>`;
 }
 
 function renderFundingBalanceChart(marketFunds) {
@@ -5586,7 +5726,7 @@ function renderFundingBalanceChart(marketFunds) {
   const plotRight = 748;
   const plotWidth = plotRight - plotLeft;
   const plotTop = 18;
-  const plotBottom = 190;
+  const plotBottom = 294;
   const chartId = registerInteractiveChart({
     width: chartWidth,
     plotLeft,
@@ -5597,21 +5737,24 @@ function renderFundingBalanceChart(marketFunds) {
         points,
         valueKey: "customerDepositsTrillion",
         color: "var(--green)",
-        format: (value) => formatKrwTrillion(value)
+        format: (value) => formatKrwTrillion(value),
+        detail: (point) => fundingChangeDetail(point, "customerDepositsTrillion")
       },
       {
         label: "신용잔고",
         points,
         valueKey: "creditBalanceTrillion",
         color: "var(--red)",
-        format: (value) => formatKrwTrillion(value)
+        format: (value) => formatKrwTrillion(value),
+        detail: (point) => fundingChangeDetail(point, "creditBalanceTrillion")
       },
       {
         label: "미수금",
         points,
         valueKey: "receivablesTrillion",
         color: "var(--amber)",
-        format: (value) => formatKrwTrillion(value, 3)
+        format: (value) => formatKrwTrillion(value, 3),
+        detail: (point) => fundingChangeDetail(point, "receivablesTrillion")
       }
     ]
   });
@@ -5639,9 +5782,9 @@ function renderFundingBalanceChart(marketFunds) {
       );
       const valueDomain = numericChartDomain(combined, "value", 0.12);
       const ticks = [valueDomain.max, (valueDomain.max + valueDomain.min) / 2, valueDomain.min];
-      const axis = renderMonthAxisFromDomain(domain, plotWidth, plotTop, plotBottom, 207);
+      const axis = renderMonthAxisFromDomain(domain, plotWidth, plotTop, plotBottom, 312);
       return `
-        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 ${chartWidth} 210" role="img" aria-label="조회 기간 첫날을 100으로 환산한 고객예탁금과 신용잔고 흐름">
+        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 ${chartWidth} 320" role="img" aria-label="조회 기간 첫날을 100으로 환산한 고객예탁금과 신용잔고 흐름">
           <g transform="translate(${plotLeft} 0)">
             ${axis.grid}
             <path class="breadth-chart__grid" d="M 0 ${plotTop} L ${plotWidth} ${plotTop} M 0 ${(plotTop + plotBottom) / 2} L ${plotWidth} ${(plotTop + plotBottom) / 2} M 0 ${plotBottom} L ${plotWidth} ${plotBottom}"></path>
@@ -5650,6 +5793,8 @@ function renderFundingBalanceChart(marketFunds) {
             ${axis.labels}
           </g>
           <text class="breadth-chart__axis-title is-funding" x="4" y="13">기간 첫날=100</text>
+          <text class="funding-bar-label" x="260" y="13" fill="var(--green)">고객예탁금</text>
+          <text class="funding-bar-label" x="510" y="13" fill="var(--red)">신용잔고</text>
           ${ticks.map((value, index) => `<text class="breadth-chart__axis-value" x="4" y="${[plotTop, (plotTop + plotBottom) / 2, plotBottom][index] + 4}">${formatNumber(value, 1)}</text>`).join("")}
           ${renderChartCursorLine(plotTop, plotBottom)}
         </svg>
@@ -5658,17 +5803,23 @@ function renderFundingBalanceChart(marketFunds) {
     .join("");
 
   return `
-    <article class="breadth-chart-card breadth-chart-card--funding">
+    <article class="breadth-chart-card breadth-chart-card--funding funding-balance-card" data-funding-active="${activeFundingView}" data-funding-scale="${activeFundingScale}">
       <header>
         <div><span class="eyebrow">Funding Balance</span><h3>신용잔고와 고객예탁금</h3></div>
-        <div class="breadth-chart-legend"><span><i class="is-funding-deposits"></i>고객예탁금</span><span><i class="is-funding-credit"></i>신용잔고</span></div>
       </header>
+      <div class="funding-view-toggle" role="group" aria-label="잔액·증감률 보기">
+        ${[["week", "1주 증감"], ["day", "전일 증감"], ["balance", "잔액"]].map(([view, label]) => `<button type="button" data-funding-view="${view}" aria-controls="${chartId}-funding-${view}" aria-pressed="${view === activeFundingView}" class="${view === activeFundingView ? "is-active" : ""}">${label}</button>`).join("")}
+      </div>
+      <label class="funding-scale-toggle" title="선택 기간의 지표별 절대 증감률 90% 분위로 축 확대. 해제 시 두 지표 동일 축으로 전체 변동 표시."><input type="checkbox" data-funding-scale-toggle ${activeFundingScale === "focus" ? "checked" : ""}>변동 확대</label>
+      ${["week", "day"].map((period) => `<div id="${chartId}-funding-${period}" class="funding-view-panel" data-funding-panel="${period}" ${period === activeFundingView ? "" : "hidden"}>${renderFundingChangeChart(points, period)}</div>`).join("")}
+      <div id="${chartId}-funding-balance" class="funding-view-panel" data-funding-panel="balance" ${activeFundingView === "balance" ? "" : "hidden"}>
       <div class="breadth-chart" data-timeseries-chart="${chartId}">
         ${renderChartRangeControls(chartId)}
         ${layers}
         ${renderChartTooltip()}
       </div>
-      <p class="breadth-chart-card__note">선의 방향 비교를 위해 선택 기간 첫날=100으로 환산 · 마우스 조회값은 실제 조원 잔액</p>
+      <p class="breadth-chart-card__note">선: 기간 첫날=100 · 잔액: 조원 · 증감률: 각 관측일 기준 전일 / 1주(5거래 관측일) 대비</p>
+      </div>
     </article>
   `;
 }
@@ -5764,6 +5915,7 @@ function renderDomesticFundingPanel(marketFunds) {
   const rawGap = rawScore - score;
   const scoreLevel = diagnosticLevel(score);
   const observations = marketFunds.series.length;
+  const latestPoint = marketFundingChartPoints(marketFunds).find((point) => point.date === latest.date);
   return `
     <section class="breadth-funding-panel" aria-labelledby="breadth-funding-title">
       <header class="breadth-funding-panel__header">
@@ -5776,8 +5928,8 @@ function renderDomesticFundingPanel(marketFunds) {
       </header>
       <div class="breadth-funding-metrics">
         <article><span>5D 확인점수</span><strong>${formatNumber(score, 1)} / 100</strong><small>당일 ${formatNumber(rawScore, 1)} · 괴리 ${rawGap > 0 ? "+" : ""}${formatNumber(rawGap, 1)}점</small></article>
-        <article><span>고객예탁금</span><strong>${formatKrwTrillion(Number(amounts.customerDeposits) / 1_000_000)}</strong><small>전일 ${formatSignedPct(derived.customerDepositsChangePct)}</small></article>
-        <article><span>신용잔고</span><strong>${formatKrwTrillion(Number(amounts.creditBalance) / 1_000_000)}</strong><small>전일 ${formatSignedPct(derived.creditBalanceChangePct)}</small></article>
+        <article><span>고객예탁금</span><strong>${finiteNumberOrNull(amounts.customerDeposits) === null ? "-" : formatKrwTrillion(Number(amounts.customerDeposits) / 1_000_000)}</strong>${renderFundingChangeSummary(latestPoint, "customerDepositsTrillion")}</article>
+        <article><span>신용잔고</span><strong>${finiteNumberOrNull(amounts.creditBalance) === null ? "-" : formatKrwTrillion(Number(amounts.creditBalance) / 1_000_000)}</strong>${renderFundingChangeSummary(latestPoint, "creditBalanceTrillion")}</article>
         <article><span>신용 / 예탁금</span><strong>${formatNumber(derived.creditToDepositsPct, 1)}%</strong><small>미수금 ${formatKrwTrillion(Number(amounts.receivables) / 1_000_000, 3)}</small></article>
       </div>
       <div class="breadth-chart-grid breadth-funding-charts">
@@ -6902,6 +7054,35 @@ function initializeElsPerformanceRangeControls(scope = app) {
 }
 
 function initializeInteractiveCharts(scope = app) {
+  scope.querySelectorAll("[data-funding-scale-toggle]:not([data-funding-scale-bound])").forEach((input) => {
+    input.dataset.fundingScaleBound = "true";
+    input.addEventListener("change", () => {
+      const card = input.closest(".funding-balance-card");
+      if (!card) return;
+      activeFundingScale = input.checked ? "focus" : "full";
+      card.dataset.fundingScale = activeFundingScale;
+      card.querySelectorAll("[data-timeseries-chart]").forEach(hideChartCursor);
+    });
+  });
+  scope.querySelectorAll("[data-funding-view]:not([data-funding-view-bound])").forEach((button) => {
+    button.dataset.fundingViewBound = "true";
+    button.addEventListener("click", () => {
+      const card = button.closest(".funding-balance-card");
+      const view = button.dataset.fundingView;
+      if (!card || !["week", "day", "balance"].includes(view)) return;
+      activeFundingView = view;
+      card.dataset.fundingActive = view;
+      card.querySelectorAll("[data-funding-view]").forEach((option) => {
+        const active = option.dataset.fundingView === view;
+        option.classList.toggle("is-active", active);
+        option.setAttribute("aria-pressed", String(active));
+      });
+      card.querySelectorAll("[data-funding-panel]").forEach((panel) => {
+        panel.hidden = panel.dataset.fundingPanel !== view;
+      });
+      card.querySelectorAll("[data-timeseries-chart]").forEach(hideChartCursor);
+    });
+  });
   scope.querySelectorAll("[data-chart-range]:not([data-chart-range-bound])").forEach((button) => {
     button.dataset.chartRangeBound = "true";
     button.addEventListener("click", () => activateChartRange(button.dataset.chartRange));

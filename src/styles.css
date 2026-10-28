@@ -7699,6 +7699,71 @@ a {
   font-size: 1rem;
 }
 
+.funding-balance-changes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.funding-balance-changes span {
+  white-space: nowrap;
+}
+
+.funding-balance-changes b {
+  color: var(--ink);
+  font-size: 0.74rem;
+}
+
+.funding-view-toggle {
+  display: inline-grid;
+  grid-template-columns: repeat(3, minmax(70px, 1fr));
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.funding-view-toggle button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 8px 12px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.funding-view-toggle button.is-active {
+  border-bottom-color: var(--ink);
+  color: var(--ink);
+}
+
+.funding-view-toggle button:hover { background: var(--surface-soft); }
+.funding-view-toggle button:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+.funding-view-panel[hidden] { display: none; }
+.funding-change-bar { opacity: 0.88; }
+.funding-change-chart .chart-cursor-tooltip__row > strong { white-space: nowrap; }
+.funding-bar-zero { stroke: var(--muted); stroke-width: 1; }
+.funding-bar-label { font-size: 16px; font-weight: 700; }
+.funding-bar-empty { fill: var(--muted); font-size: 15px; }
+.funding-scale-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.funding-scale-toggle input { margin: 0; accent-color: var(--blue); }
+.funding-balance-card[data-funding-active="balance"] .funding-scale-toggle,
+.funding-balance-card[data-funding-scale="focus"] [data-funding-scale-layer="full"],
+.funding-balance-card[data-funding-scale="full"] [data-funding-scale-layer="focus"] { display: none; }
+.funding-bar-overflow { stroke-width: 1.25; }
+.funding-bar-overflow-label { fill: var(--muted); font-size: 14px; }
+
 .breadth-funding-panel__footer {
   display: flex;
   flex-wrap: wrap;
