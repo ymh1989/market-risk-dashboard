@@ -160,6 +160,67 @@ test("잔액 차트는 1주 증감 막대를 먼저 보여주고 전일·잔액 
   assert.doesNotMatch(html, /NaN|Infinity|undefined/);
 });
 
+test("잔액 차트 이름·숫자·날짜는 SVG 축소와 분리하고 날짜에 연도 표시", () => {
+  const {context} = harness();
+  const html = context.renderFundingBalanceChart(fundingFixture());
+  assert.match(html, /class="funding-series-name"><i[^>]*><\/i>고객예탁금/);
+  assert.match(html, /class="funding-series-name"><i[^>]*><\/i>신용잔고/);
+  assert.match(html, /class="chart-value-axis"/);
+  assert.match(html, /class="chart-date-axis"/);
+  for (const svg of html.matchAll(/<svg\b[^>]*>[\s\S]*?<\/svg>/g)) {
+    assert.doesNotMatch(svg[0], /<text[^>]*>고객예탁금|<text[^>]*>신용잔고|breadth-chart__axis-value|chart-month-label/);
+    assert.match(svg[0], /preserveAspectRatio="none"/);
+  }
+  const domain = context.chartRangeDomain([[{date: "2023-10-27"}, {date: "2026-10-27"}]], "3y");
+  const axis = context.renderChartDateAxis(domain);
+  assert.equal((axis.match(/<span /g) ?? []).length, 3);
+  assert.match(axis, /2023\.10/);
+  assert.match(axis, /2026\.10/);
+  assert.doesNotMatch(context.renderChartDateAxis(null), /<span|NaN/);
+  const charts = vm.runInContext("[...interactiveChartRegistry.values()]", context);
+  for (const chart of charts) {
+    assert.equal(chart.plotLeft, 0);
+    assert.equal(chart.plotRight, chart.width);
+  }
+});
+
+test("공통 날짜 축은 양 끝 날짜를 유지하고 실제 글씨 폭으로 겹침 방지", () => {
+  const {context} = harness();
+  for (const width of [180, 260, 500, 1000]) {
+    const ticks = Array.from({length: 10}, (_, index) => ({x: width * index / 9, width: index === 0 || index === 9 ? 56 : 24}));
+    const visible = context.layoutChartDateLabels(ticks, width);
+    assert.equal(visible[0].index, 0);
+    assert.equal(visible.at(-1).index, 9);
+    visible.forEach((tick, index) => {
+      assert.ok(tick.left >= 0 && tick.left + tick.width <= width);
+      if (index) assert.ok(tick.left >= visible[index - 1].left + visible[index - 1].width + 12);
+    });
+  }
+  assert.equal(context.layoutChartDateLabels([], 300).length, 0);
+  assert.equal(context.layoutChartDateLabels([{x: 0, width: 50}], 300).length, 1);
+});
+
+test("내부강도 좌우 축은 공통 HTML 글씨를 쓰고 포인터 좌표는 그래프 전체 폭과 일치", () => {
+  const {context} = harness();
+  const breadth = JSON.parse(readFileSync(join(root, "data/kospi-breadth.json"), "utf8"));
+  for (const html of [context.renderBreadthPriceChart(breadth), context.renderBreadthVkospiChart(breadth), context.renderFundingPressureChart(fundingFixture())]) {
+    assert.match(html, /class="chart-axis-headings"/);
+    assert.match(html, /class="chart-value-rail chart-value-rail--right"/);
+    assert.match(html, /class="chart-date-axis"/);
+    assert.doesNotMatch(html, /<text|NaN|Infinity|undefined/);
+  }
+  for (const chart of vm.runInContext("[...interactiveChartRegistry.values()]", context)) {
+    assert.equal(chart.plotLeft, 0);
+    assert.equal(chart.plotRight, 760);
+  }
+  const axis = context.renderChartValueAxis([100, 0, -100], value => `${value}%`, 20, 184, 210);
+  assert.match(axis, /100%/);
+  assert.match(axis, /-100%/);
+  const positions = [...axis.matchAll(/top:([\d.]+)%/g)].map(match => Number(match[1]));
+  assert.ok(Math.abs(positions[0] - 20 / 210 * 100) < 1e-9);
+  assert.ok(Math.abs(positions[2] - 184 / 210 * 100) < 1e-9);
+});
+
 test("증감 막대는 0 기준에서 실제 비율에 비례하며 결측과 0을 구분", () => {
   const {context} = harness();
   const points = [

@@ -59,6 +59,11 @@ def test_offline_export_is_single_file_and_interactive(tmp_path):
     assert "function fundingChangeDetail" in html
     assert "function renderFundingChangeChart" in html
     assert "function fundingBarLimit" in html
+    assert "function renderChartDateAxis" in html
+    assert "function renderChartValueAxis" in html
+    assert "function initializeChartDateAxes" in html
+    assert ".funding-series-name" in html
+    assert ".chart-value-axis" in html
     assert "data-funding-scale-toggle" in html
     assert "data-funding-overflow" in html
     assert 'data-funding-view="${view}"' in html

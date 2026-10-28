@@ -937,11 +937,12 @@ def test_market_breadth_dashboard_contract():
     assert "일간 확산 · 오른쪽 · 옅은 선" in app_source
     assert ".breadth-chart__kospi-halo" in styles
     assert "opacity: 0.32;" in styles
-    assert "const plotLeft = 64" in app_source
-    assert "const plotRight = 696" in app_source
-    assert "font-size: 11.5px;" in styles
-    assert "font-size: 10.5px;" in styles
-    assert "min-width: 620px;" in styles
+    assert "function renderBreadthAxisFrame" in app_source
+    assert "function renderChartValueAxis" in app_source
+    assert "function initializeChartDateAxes" in app_source
+    assert "--chart-label-size: 13px;" in styles
+    assert ".chart-axis-plot" in styles
+    assert "min-width: 620px;" not in styles
     assert "valueKey: \"breadthMa5Pct\"" in app_source
     assert "breadth-chart__ma5" in app_source
     assert "5일은 단기 방향" in app_source

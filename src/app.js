@@ -2,7 +2,7 @@ import { clampScore, evaluateDashboard, isScoredIndicator } from "./risk-model.j
 
 const app = document.querySelector("#app");
 const THEME_STORAGE_KEY = "risk-dashboard-theme";
-const ASSET_VERSION = "20261028-funding-bars-focus";
+const ASSET_VERSION = "20261028-chart-labels-unified";
 const DATA_REQUEST_VERSION = Date.now().toString(36);
 const IS_OFFLINE_SNAPSHOT =
   document.querySelector('meta[name="offline-snapshot"]')?.content === "true";
@@ -1419,7 +1419,7 @@ function renderMonthAxis(points, width = 760, plotTop = 18, plotBottom = 190, la
     labels: segments
       .map(
         (segment) =>
-          `<text class="chart-month-label" x="${segment.centerX.toFixed(2)}" y="${labelY}" text-anchor="middle">${segment.label}</text>`
+          `<text class="chart-month-label" data-chart-month="${segment.year}.${segment.month}" data-chart-plot-bottom="${plotBottom}" x="${segment.centerX.toFixed(2)}" y="${labelY}" text-anchor="middle">${segment.label}</text>`
       )
       .join("")
   };
@@ -1564,7 +1564,7 @@ function renderMonthAxisFromDomain(
             edgePadding + estimatedHalfWidth,
             Math.min(width - edgePadding - estimatedHalfWidth, segment.centerX)
           );
-          return `<text class="chart-month-label" x="${labelX.toFixed(2)}" y="${labelY}" text-anchor="middle">${segment.label}</text>`;
+          return `<text class="chart-month-label" data-chart-month="${segment.year}.${segment.month}" data-chart-plot-bottom="${plotBottom}" x="${labelX.toFixed(2)}" y="${labelY}" text-anchor="middle">${segment.label}</text>`;
         }
       )
       .join("")
@@ -2531,20 +2531,9 @@ function renderElsIssuanceHedgePage(elsRisk, hmmRegime) {
 }
 
 function renderHmmMonthRail(domain, rangeId) {
-  const segments = monthSegmentsFromDomain(domain, 100);
-  if (!segments.length) return "";
-
   return `
     <div class="hmm-regime-month-rail ${chartRangeLayerClass(rangeId)}" data-chart-range-layer="${rangeId}" aria-hidden="true">
-      ${segments
-      .map(
-        (segment) => `
-          <span style="left:${segment.startX.toFixed(2)}%;width:${(segment.endX - segment.startX).toFixed(2)}%">
-            ${segment.label}
-          </span>
-        `
-      )
-      .join("")}
+      ${renderChartDateAxis(domain)}
     </div>
   `;
 }
@@ -5236,8 +5225,8 @@ function renderBreadthPriceChart(breadthData) {
   const points = breadthData?.series ?? [];
   if (points.length < 2) return "";
   const chartWidth = 760;
-  const plotLeft = 64;
-  const plotRight = 696;
+  const plotLeft = 0;
+  const plotRight = 760;
   const plotWidth = plotRight - plotLeft;
   const plotTop = 20;
   const plotBottom = 184;
@@ -5283,17 +5272,12 @@ function renderBreadthPriceChart(breadthData) {
       const kospiDomain = numericChartDomain(visible, "kospiClose", 0.1);
       const breadthDomain = { min: -100, max: 100 };
       const axis = renderMonthAxisFromDomain(domain, plotWidth, plotTop, plotBottom, 207);
-      const kospiTicks = [
-        { value: kospiDomain.max, y: plotTop },
-        { value: (kospiDomain.max + kospiDomain.min) / 2, y: (plotTop + plotBottom) / 2 },
-        { value: kospiDomain.min, y: plotBottom }
-      ];
-      const breadthTicks = [100, 50, 0, -50, -100].map((value) => ({
-        value,
-        y: plotBottom - ((value - breadthDomain.min) / (breadthDomain.max - breadthDomain.min)) * (plotBottom - plotTop)
-      }));
-      return `
-        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 ${chartWidth} 210" role="img" aria-label="왼쪽 KOSPI 축과 오른쪽 일간 확산도 축 비교">
+      const kospiTicks = [kospiDomain.max, (kospiDomain.max + kospiDomain.min) / 2, kospiDomain.min];
+      return renderBreadthAxisFrame({
+        rangeId: range.id, domain, plotTop, plotBottom,
+        left: {label: "KOSPI", color: "var(--blue)", ticks: kospiTicks, format: value => formatNumber(value)},
+        right: {label: "확산도 (%)", color: "var(--teal)", ticks: [100, 50, 0, -50, -100], format: value => `${value > 0 ? "+" : ""}${value}%`},
+        svg: `<svg data-chart-svg viewBox="0 0 ${chartWidth} 210" preserveAspectRatio="none" role="img" aria-label="왼쪽 KOSPI 축과 오른쪽 일간 확산도 축 비교">
           <g transform="translate(${plotLeft} 0)">
             ${axis.grid}
             <path class="breadth-chart__grid" d="M 0 ${plotTop} L ${plotWidth} ${plotTop} M 0 ${(plotTop + plotBottom) / 2} L ${plotWidth} ${(plotTop + plotBottom) / 2} M 0 ${plotBottom} L ${plotWidth} ${plotBottom}"></path>
@@ -5303,15 +5287,10 @@ function renderBreadthPriceChart(breadthData) {
             <path class="breadth-chart__ma" d="${datedValuePath(points, "breadthMa20Pct", domain, breadthDomain, plotWidth, plotTop, plotBottom)}"></path>
             <path class="breadth-chart__kospi-halo" d="${datedValuePath(points, "kospiClose", domain, kospiDomain, plotWidth, plotTop, plotBottom)}"></path>
             <path class="breadth-chart__kospi" d="${datedValuePath(points, "kospiClose", domain, kospiDomain, plotWidth, plotTop, plotBottom)}"></path>
-            ${axis.labels}
           </g>
-          <text class="breadth-chart__axis-title is-kospi" x="4" y="13">KOSPI</text>
-          ${kospiTicks.map((tick) => `<text class="breadth-chart__axis-value is-kospi" x="4" y="${tick.y + 4}">${formatNumber(tick.value)}</text>`).join("")}
-          <text class="breadth-chart__axis-title is-breadth" x="756" y="13" text-anchor="end">확산도</text>
-          ${breadthTicks.map((tick) => `<text class="breadth-chart__axis-value is-breadth" x="756" y="${tick.y + 4}" text-anchor="end">${tick.value > 0 ? "+" : ""}${tick.value}%</text>`).join("")}
           ${renderChartCursorLine(plotTop, plotBottom)}
-        </svg>
-      `;
+        </svg>`
+      });
     })
     .join("");
 
@@ -5336,8 +5315,8 @@ function renderBreadthVkospiChart(breadthData) {
   const hasVkospi = points.some((point) => Number.isFinite(Number(point.vkospi)));
   if (points.length < 2 || !hasVkospi) return "";
   const chartWidth = 760;
-  const plotLeft = 64;
-  const plotRight = 696;
+  const plotLeft = 0;
+  const plotRight = 760;
   const plotWidth = plotRight - plotLeft;
   const plotTop = 20;
   const plotBottom = 184;
@@ -5369,26 +5348,23 @@ function renderBreadthVkospiChart(breadthData) {
       const kospiDomain = numericChartDomain(visible, "kospiClose", 0.1);
       const vkospiDomain = numericChartDomain(visible, "vkospi", 0.14);
       const axis = renderMonthAxisFromDomain(domain, plotWidth, plotTop, plotBottom, 207);
-      const yPositions = [plotTop, (plotTop + plotBottom) / 2, plotBottom];
       const kospiTicks = [kospiDomain.max, (kospiDomain.max + kospiDomain.min) / 2, kospiDomain.min];
       const vkospiTicks = [vkospiDomain.max, (vkospiDomain.max + vkospiDomain.min) / 2, vkospiDomain.min];
-      return `
-        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 ${chartWidth} 210" role="img" aria-label="왼쪽 KOSPI 축과 오른쪽 VKOSPI 축 비교">
+      return renderBreadthAxisFrame({
+        rangeId: range.id, domain, plotTop, plotBottom,
+        left: {label: "KOSPI", color: "var(--blue)", ticks: kospiTicks, format: value => formatNumber(value)},
+        right: {label: "VKOSPI", color: "var(--red)", ticks: vkospiTicks, format: value => formatNumber(value, 1)},
+        svg: `<svg data-chart-svg viewBox="0 0 ${chartWidth} 210" preserveAspectRatio="none" role="img" aria-label="왼쪽 KOSPI 축과 오른쪽 VKOSPI 축 비교">
           <g transform="translate(${plotLeft} 0)">
             ${axis.grid}
             <path class="breadth-chart__grid" d="M 0 ${plotTop} L ${plotWidth} ${plotTop} M 0 ${(plotTop + plotBottom) / 2} L ${plotWidth} ${(plotTop + plotBottom) / 2} M 0 ${plotBottom} L ${plotWidth} ${plotBottom}"></path>
             <path class="breadth-chart__kospi-halo" d="${datedValuePath(points, "kospiClose", domain, kospiDomain, plotWidth, plotTop, plotBottom)}"></path>
             <path class="breadth-chart__kospi" d="${datedValuePath(points, "kospiClose", domain, kospiDomain, plotWidth, plotTop, plotBottom)}"></path>
             <path class="breadth-chart__vkospi" d="${datedValuePath(points, "vkospi", domain, vkospiDomain, plotWidth, plotTop, plotBottom)}"></path>
-            ${axis.labels}
           </g>
-          <text class="breadth-chart__axis-title is-kospi" x="4" y="13">KOSPI</text>
-          ${kospiTicks.map((value, index) => `<text class="breadth-chart__axis-value is-kospi" x="4" y="${yPositions[index] + 4}">${formatNumber(value)}</text>`).join("")}
-          <text class="breadth-chart__axis-title is-vkospi" x="756" y="13" text-anchor="end">VKOSPI</text>
-          ${vkospiTicks.map((value, index) => `<text class="breadth-chart__axis-value is-vkospi" x="756" y="${yPositions[index] + 4}" text-anchor="end">${formatNumber(value, 1)}</text>`).join("")}
           ${renderChartCursorLine(plotTop, plotBottom)}
-        </svg>
-      `;
+        </svg>`
+      });
     })
     .join("");
 
@@ -5644,6 +5620,34 @@ function fundingBarGeometry(points, key, domain, limit, width, top, bottom) {
   });
 }
 
+function renderChartDateAxis(domain) {
+  const months = monthSegmentsFromDomain(domain);
+  const indices = [...new Set([0, Math.floor((months.length - 1) / 2), months.length - 1])];
+  return `<div class="chart-date-axis">${indices.filter(index => months[index]).map(index => {
+    const month = months[index];
+    return `<span style="--tick-position:${month.centerX.toFixed(3)}%">${month.year}.${month.month}</span>`;
+  }).join("")}</div>`;
+}
+
+function renderChartValueAxis(ticks, format, top, bottom, height) {
+  return `<div class="chart-value-axis">${ticks.map((value, index) => {
+    const position = (top + index * (bottom - top) / (ticks.length - 1)) / height * 100;
+    return `<span style="top:${position}%">${format(value)}</span>`;
+  }).join("")}</div>`;
+}
+
+function renderBreadthAxisFrame({rangeId, domain, left, right, plotTop, plotBottom, svg}) {
+  return `<div class="chart-axis-frame ${chartRangeLayerClass(rangeId)}" data-chart-range-layer="${rangeId}">
+    <div class="chart-axis-headings"><span style="color:${left.color}">${left.label}</span><span style="color:${right.color}">${right.label}</span></div>
+    <div class="chart-axis-plot">
+      <div class="chart-value-rail">${renderChartValueAxis(left.ticks, left.format, plotTop, plotBottom, 210)}</div>
+      ${svg}
+      <div class="chart-value-rail chart-value-rail--right">${renderChartValueAxis(right.ticks, right.format, plotTop, plotBottom, 210)}</div>
+    </div>
+    ${renderChartDateAxis(domain)}
+  </div>`;
+}
+
 function renderFundingChangeChart(points, period) {
   const definitions = [
     { key: "customerDepositsTrillion", label: "고객예탁금", color: "var(--green)" },
@@ -5654,11 +5658,12 @@ function renderFundingChangeChart(points, period) {
     ...Object.fromEntries(definitions.map(({key}) => [`${key}Change`, point.changes[key][period].pct]))
   }));
   const periodLabel = period === "week" ? "1주" : "전일";
-  const plotLeft = 58;
-  const plotRight = 748;
+  const plotLeft = 0;
+  const plotRight = 760;
   const plotWidth = plotRight - plotLeft;
-  const top = 28;
-  const bottom = 168;
+  const top = 12;
+  const bottom = 148;
+  const height = 160;
   const chartId = registerInteractiveChart({
     width: 760, plotLeft, plotRight,
     series: definitions.map(({key, label, color}) => ({
@@ -5678,19 +5683,27 @@ function renderFundingChangeChart(points, period) {
       const scales = [
         ["focus", fundingBarLimit(visible.map(point => point[`${key}Change`]), true)],
         ["full", commonLimit]
-      ];
-      return `<svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg data-chart-series-index="${index}" data-funding-bars="${period}" viewBox="0 0 760 200" role="img" aria-label="${label} ${periodLabel} 대비 증감률 막대, 0 위 증가·아래 감소">
-        <text class="funding-bar-label" x="${plotLeft}" y="16" fill="${color}">${label}</text>
+      ].map(([scale, limit]) => {
+        const bars = fundingBarGeometry(changes, `${key}Change`, domain, limit, plotWidth, top, bottom);
+        return {scale, limit, bars, clipped: bars.filter(bar => bar.clipped).length};
+      });
+      return `<div class="funding-series ${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}">
+        <div class="funding-series-heading">
+          <span class="funding-series-name"><i style="background:${color}"></i>${label}</span>
+          ${scales.map(({scale, clipped}) => `<span class="funding-overflow-count" data-funding-scale-layer="${scale}">${clipped ? `축 초과 ${clipped}일` : ""}</span>`).join("")}
+        </div>
+        <div class="funding-plot-frame">
+          <div class="funding-value-rail">${scales.map(({scale, limit}) => {
+            const digits = Math.max(0, Math.min(3, -Math.floor(Math.log10(limit / 10))));
+            return `<div data-funding-scale-layer="${scale}">${renderChartValueAxis([limit, 0, -limit], value => `${value > 0 ? "+" : ""}${formatNumber(value, value === 0 || Number.isInteger(value) ? 0 : digits)}%`, top, bottom, height)}</div>`;
+          }).join("")}</div>
+          <svg data-chart-svg data-chart-series-index="${index}" data-funding-bars="${period}" viewBox="0 0 760 ${height}" preserveAspectRatio="none" role="img" aria-label="${label} ${periodLabel} 대비 증감률 막대, 0 위 증가·아래 감소">
         <g transform="translate(${plotLeft} 0)">
           ${axis.grid}
           <path class="breadth-chart__grid" d="M 0 ${top} H ${plotWidth} M 0 ${bottom} H ${plotWidth}"></path>
           <path class="breadth-chart__zero-line" d="M 0 ${zeroY} H ${plotWidth}"></path>
-          ${index === 1 ? axis.labels : ""}
         </g>
-        ${scales.map(([scale, limit]) => {
-          const bars = fundingBarGeometry(changes, `${key}Change`, domain, limit, plotWidth, top, bottom);
-          const clipped = bars.filter(bar => bar.clipped).length;
-          const digits = Math.max(0, Math.min(3, -Math.floor(Math.log10(limit / 10))));
+        ${scales.map(({scale, limit, bars}) => {
           return `<g data-funding-scale-layer="${scale}" data-funding-limit="${limit}">
             <g transform="translate(${plotLeft} 0)">
               ${bars.map((bar) => {
@@ -5704,12 +5717,13 @@ function renderFundingChangeChart(points, period) {
               }).join("")}
               ${bars.length ? "" : `<text class="funding-bar-empty" x="${plotWidth / 2}" y="${zeroY - 8}" text-anchor="middle">비교 가능한 잔액 부족</text>`}
             </g>
-            ${clipped ? `<text class="funding-bar-overflow-label" x="${plotRight}" y="16" text-anchor="end">축 초과 ${clipped}일</text>` : ""}
-            ${[limit, 0, -limit].map((value, tick) => `<text class="breadth-chart__axis-value" x="4" y="${[top, zeroY, bottom][tick] + 4}">${value > 0 ? "+" : ""}${formatNumber(value, value === 0 || Number.isInteger(value) ? 0 : digits)}%</text>`).join("")}
           </g>`;
         }).join("")}
         ${renderChartCursorLine(top, bottom)}
-      </svg>`;
+          </svg>
+        </div>
+        ${index === 1 ? renderChartDateAxis(domain) : ""}
+      </div>`;
     }).join("");
   }).join("");
   return `<div class="breadth-chart funding-change-chart" data-timeseries-chart="${chartId}">
@@ -5722,11 +5736,11 @@ function renderFundingBalanceChart(marketFunds) {
   const points = marketFundingChartPoints(marketFunds);
   if (points.length < 2) return "";
   const chartWidth = 760;
-  const plotLeft = 58;
-  const plotRight = 748;
+  const plotLeft = 0;
+  const plotRight = 760;
   const plotWidth = plotRight - plotLeft;
-  const plotTop = 18;
-  const plotBottom = 294;
+  const plotTop = 12;
+  const plotBottom = 308;
   const chartId = registerInteractiveChart({
     width: chartWidth,
     plotLeft,
@@ -5784,20 +5798,25 @@ function renderFundingBalanceChart(marketFunds) {
       const ticks = [valueDomain.max, (valueDomain.max + valueDomain.min) / 2, valueDomain.min];
       const axis = renderMonthAxisFromDomain(domain, plotWidth, plotTop, plotBottom, 312);
       return `
-        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 ${chartWidth} 320" role="img" aria-label="조회 기간 첫날을 100으로 환산한 고객예탁금과 신용잔고 흐름">
+        <div class="funding-series funding-series--balance ${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}">
+          <div class="funding-series-heading">
+            <span class="funding-series-name"><i style="background:var(--green)"></i>고객예탁금</span>
+            <span class="funding-series-name"><i style="background:var(--red)"></i>신용잔고</span>
+          </div>
+          <div class="funding-plot-frame">
+            <div class="funding-value-rail">${renderChartValueAxis(ticks, value => formatNumber(value, 1), plotTop, plotBottom, 320)}</div>
+            <svg data-chart-svg viewBox="0 0 ${chartWidth} 320" preserveAspectRatio="none" role="img" aria-label="조회 기간 첫날을 100으로 환산한 고객예탁금과 신용잔고 흐름">
           <g transform="translate(${plotLeft} 0)">
             ${axis.grid}
             <path class="breadth-chart__grid" d="M 0 ${plotTop} L ${plotWidth} ${plotTop} M 0 ${(plotTop + plotBottom) / 2} L ${plotWidth} ${(plotTop + plotBottom) / 2} M 0 ${plotBottom} L ${plotWidth} ${plotBottom}"></path>
             <path class="breadth-chart__funding-deposits" d="${datedValuePath(indexed, "depositsIndex", domain, valueDomain, plotWidth, plotTop, plotBottom)}"></path>
             <path class="breadth-chart__funding-credit" d="${datedValuePath(indexed, "creditIndex", domain, valueDomain, plotWidth, plotTop, plotBottom)}"></path>
-            ${axis.labels}
           </g>
-          <text class="breadth-chart__axis-title is-funding" x="4" y="13">기간 첫날=100</text>
-          <text class="funding-bar-label" x="260" y="13" fill="var(--green)">고객예탁금</text>
-          <text class="funding-bar-label" x="510" y="13" fill="var(--red)">신용잔고</text>
-          ${ticks.map((value, index) => `<text class="breadth-chart__axis-value" x="4" y="${[plotTop, (plotTop + plotBottom) / 2, plotBottom][index] + 4}">${formatNumber(value, 1)}</text>`).join("")}
           ${renderChartCursorLine(plotTop, plotBottom)}
-        </svg>
+            </svg>
+          </div>
+          ${renderChartDateAxis(domain)}
+        </div>
       `;
     })
     .join("");
@@ -5828,8 +5847,8 @@ function renderFundingPressureChart(marketFunds) {
   const points = marketFundingChartPoints(marketFunds);
   if (points.length < 2) return "";
   const chartWidth = 760;
-  const plotLeft = 64;
-  const plotRight = 696;
+  const plotLeft = 0;
+  const plotRight = 760;
   const plotWidth = plotRight - plotLeft;
   const plotTop = 18;
   const plotBottom = 190;
@@ -5869,23 +5888,21 @@ function renderFundingPressureChart(marketFunds) {
       const ratioDomain = numericChartDomain(visible, "creditToDepositsPct", 0.15);
       const axis = renderMonthAxisFromDomain(domain, plotWidth, plotTop, plotBottom, 207);
       const ratioTicks = [ratioDomain.max, (ratioDomain.max + ratioDomain.min) / 2, ratioDomain.min];
-      return `
-        <svg class="${chartRangeLayerClass(range.id)}" data-chart-range-layer="${range.id}" data-chart-svg viewBox="0 0 ${chartWidth} 210" role="img" aria-label="레버리지 부담 점수와 신용잔고 대비 고객예탁금 비율">
+      return renderBreadthAxisFrame({
+        rangeId: range.id, domain, plotTop, plotBottom,
+        left: {label: "부담점수", color: "var(--red)", ticks: [100, 50, 0], format: value => formatNumber(value)},
+        right: {label: "신용/예탁금 (%)", color: "var(--amber)", ticks: ratioTicks, format: value => `${formatNumber(value, 1)}%`},
+        svg: `<svg data-chart-svg viewBox="0 0 ${chartWidth} 210" preserveAspectRatio="none" role="img" aria-label="레버리지 부담 점수와 신용잔고 대비 고객예탁금 비율">
           <g transform="translate(${plotLeft} 0)">
             ${axis.grid}
             <path class="breadth-chart__grid" d="M 0 ${plotTop} L ${plotWidth} ${plotTop} M 0 ${(plotTop + plotBottom) / 2} L ${plotWidth} ${(plotTop + plotBottom) / 2} M 0 ${plotBottom} L ${plotWidth} ${plotBottom}"></path>
             <path class="breadth-chart__funding-raw-score" d="${datedValuePath(points, "rawScore", domain, scoreDomain, plotWidth, plotTop, plotBottom)}"></path>
             <path class="breadth-chart__funding-score" d="${datedValuePath(points, "score", domain, scoreDomain, plotWidth, plotTop, plotBottom)}"></path>
             <path class="breadth-chart__funding-ratio" d="${datedValuePath(points, "creditToDepositsPct", domain, ratioDomain, plotWidth, plotTop, plotBottom)}"></path>
-            ${axis.labels}
           </g>
-          <text class="breadth-chart__axis-title is-score" x="4" y="13">부담점수</text>
-          ${[100, 50, 0].map((value, index) => `<text class="breadth-chart__axis-value" x="4" y="${[plotTop, (plotTop + plotBottom) / 2, plotBottom][index] + 4}">${value}</text>`).join("")}
-          <text class="breadth-chart__axis-title is-ratio" x="756" y="13" text-anchor="end">신용/예탁금</text>
-          ${ratioTicks.map((value, index) => `<text class="breadth-chart__axis-value" x="756" y="${[plotTop, (plotTop + plotBottom) / 2, plotBottom][index] + 4}" text-anchor="end">${formatNumber(value, 1)}%</text>`).join("")}
           ${renderChartCursorLine(plotTop, plotBottom)}
-        </svg>
-      `;
+        </svg>`
+      });
     })
     .join("");
 
@@ -7053,6 +7070,93 @@ function initializeElsPerformanceRangeControls(scope = app) {
   activateElsPerformanceRange(activeElsPerformanceRange);
 }
 
+function layoutChartDateLabels(ticks, width, gap = 12) {
+  const boxes = ticks.map((tick, index) => ({
+    index,
+    width: tick.width,
+    left: Math.max(0, Math.min(width - tick.width, tick.x - tick.width / 2))
+  }));
+  if (boxes.length < 2) return boxes;
+  const last = boxes.at(-1);
+  const visible = [boxes[0]];
+  for (const box of boxes.slice(1, -1)) {
+    const previous = visible.at(-1);
+    if (box.left >= previous.left + previous.width + gap && box.left + box.width + gap <= last.left) visible.push(box);
+  }
+  if (last.left < visible[0].left + visible[0].width + gap) return [last];
+  return [...visible, last];
+}
+
+const chartDateAxisStates = new Map();
+let chartDateAxisObserver = null;
+
+function initializeChartDateAxes(scope) {
+  if (typeof ResizeObserver !== "function") return;
+  if (!chartDateAxisObserver) {
+    chartDateAxisObserver = new ResizeObserver(entries => {
+      entries.forEach(({target}) => chartDateAxisStates.get(target)?.refresh());
+    });
+  }
+  for (const frame of chartDateAxisStates.keys()) {
+    if (!frame.isConnected) {
+      chartDateAxisObserver.unobserve(frame);
+      chartDateAxisStates.delete(frame);
+    }
+  }
+  const svgs = new Set([...scope.querySelectorAll(".chart-month-label")].map(label => label.ownerSVGElement));
+  for (const svg of svgs) {
+    if (svg.dataset.readableAxis) continue;
+    const labels = [...svg.querySelectorAll(".chart-month-label")];
+    const frame = document.createElement("div");
+    frame.className = "chart-readable-frame";
+    if (svg.dataset.chartRangeLayer) {
+      frame.dataset.chartRangeLayer = svg.dataset.chartRangeLayer;
+      frame.classList.add("chart-range-layer");
+      frame.classList.toggle("is-active", svg.classList.contains("is-active"));
+    }
+    const axis = document.createElement("div");
+    axis.className = "chart-date-axis chart-date-axis--measured";
+    const spans = labels.map((label, index) => {
+      const span = document.createElement("span");
+      span.textContent = (index === 0 || index === labels.length - 1) && label.dataset.chartMonth
+        ? label.dataset.chartMonth : label.textContent;
+      axis.append(span);
+      label.setAttribute("aria-hidden", "true");
+      return span;
+    });
+    svg.before(frame);
+    frame.append(svg, axis);
+    svg.dataset.readableAxis = "true";
+    const refresh = () => {
+      const rect = svg.getBoundingClientRect();
+      if (!rect.width || !axis.clientWidth) return;
+      const width = axis.clientWidth;
+      const zoom = rect.width / width;
+      // SVG 좌표는 유지하고 글씨만 HTML로 표시하여 줌·화면 폭과 무관하게 정렬합니다.
+      const ticks = labels.map((label, index) => {
+        spans[index].hidden = false;
+        const point = svg.createSVGPoint();
+        point.x = Number(label.getAttribute("x"));
+        point.y = Number(label.dataset.chartPlotBottom);
+        const position = point.matrixTransform(label.getScreenCTM());
+        return {x: (position.x - rect.left) / zoom, width: spans[index].offsetWidth, bottom: position.y};
+      });
+      const visible = new Map(layoutChartDateLabels(ticks, width).map(tick => [tick.index, tick]));
+      spans.forEach((span, index) => {
+        span.hidden = !visible.has(index);
+        if (visible.has(index)) span.style.left = `${visible.get(index).left}px`;
+      });
+      axis.style.top = `${((ticks[0].bottom - rect.top) / zoom + 6).toFixed(2)}px`;
+      const padding = Math.max(0, 28 - (rect.bottom - ticks[0].bottom) / zoom);
+      const value = `${padding.toFixed(2)}px`;
+      if (frame.style.paddingBottom !== value) frame.style.paddingBottom = value;
+    };
+    chartDateAxisStates.set(frame, {refresh});
+    chartDateAxisObserver.observe(frame);
+    refresh();
+  }
+}
+
 function initializeInteractiveCharts(scope = app) {
   scope.querySelectorAll("[data-funding-scale-toggle]:not([data-funding-scale-bound])").forEach((input) => {
     input.dataset.fundingScaleBound = "true";
@@ -7102,6 +7206,7 @@ function initializeInteractiveCharts(scope = app) {
       chart.addEventListener("pointerleave", () => hideChartCursor(chart));
     });
   activateChartRange(activeChartRange);
+  initializeChartDateAxes(scope);
 }
 
 const monitoringTaskView = {

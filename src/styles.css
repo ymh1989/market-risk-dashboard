@@ -32,6 +32,8 @@
   --focus-ring: #2f6fbb;
   --shadow: 0 12px 32px rgba(23, 32, 38, 0.08);
   --desktop-ui-scale: 0.85;
+  --chart-label-size: 13px;
+  --chart-label-weight: 600;
 }
 
 /* 이슈별 뉴스와 시장 판독은 구분하고, 작은 업무용 화면에서도 숫자를 유지합니다. */
@@ -1128,8 +1130,8 @@ a {
   flex-wrap: wrap;
   gap: 10px;
   color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: var(--chart-label-size);
+  font-weight: var(--chart-label-weight);
 }
 
 .ml-risk-chart__legend span {
@@ -1650,8 +1652,8 @@ a {
   flex-wrap: wrap;
   gap: 10px;
   color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: var(--chart-label-size);
+  font-weight: var(--chart-label-weight);
 }
 
 .els-index-legend span {
@@ -3272,21 +3274,10 @@ a {
 
 .hmm-regime-month-rail {
   position: relative;
-  height: 18px;
+  height: 22px;
   margin-left: 168px;
   margin-right: 208px;
   color: var(--muted);
-  font-size: 0.68rem;
-  font-weight: 700;
-}
-
-.hmm-regime-month-rail span {
-  position: absolute;
-  top: 0;
-  overflow: hidden;
-  padding-left: 2px;
-  border-left: 1px solid rgba(148, 163, 184, 0.22);
-  white-space: nowrap;
 }
 
 .hmm-regime-rows {
@@ -7746,7 +7737,6 @@ a {
 .funding-change-bar { opacity: 0.88; }
 .funding-change-chart .chart-cursor-tooltip__row > strong { white-space: nowrap; }
 .funding-bar-zero { stroke: var(--muted); stroke-width: 1; }
-.funding-bar-label { font-size: 16px; font-weight: 700; }
 .funding-bar-empty { fill: var(--muted); font-size: 15px; }
 .funding-scale-toggle {
   display: inline-flex;
@@ -7762,7 +7752,121 @@ a {
 .funding-balance-card[data-funding-scale="focus"] [data-funding-scale-layer="full"],
 .funding-balance-card[data-funding-scale="full"] [data-funding-scale-layer="focus"] { display: none; }
 .funding-bar-overflow { stroke-width: 1.25; }
-.funding-bar-overflow-label { fill: var(--muted); font-size: 14px; }
+.funding-balance-card {
+  --funding-axis-width: 58px;
+  --funding-axis-gap: 8px;
+  --chart-axis-left: calc(var(--funding-axis-width) + var(--funding-axis-gap));
+}
+
+/* 축과 범례는 SVG 밖에 두어 좁은 카드에서도 글씨 크기를 유지합니다. */
+.funding-series { margin-top: 14px; }
+.funding-series-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  margin-left: calc(var(--funding-axis-width) + var(--funding-axis-gap));
+  margin-bottom: 2px;
+  min-height: 24px;
+}
+.funding-series-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink);
+  font-size: var(--chart-label-size);
+  font-weight: var(--chart-label-weight);
+  white-space: nowrap;
+}
+.funding-series-name i {
+  width: 12px;
+  height: 4px;
+  flex: 0 0 auto;
+}
+.funding-overflow-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.funding-plot-frame {
+  display: grid;
+  grid-template-columns: var(--funding-axis-width) minmax(0, 1fr);
+  gap: var(--funding-axis-gap);
+}
+.funding-value-rail,
+.chart-value-rail { position: relative; min-width: 0; }
+.chart-value-axis {
+  position: absolute;
+  inset: 0;
+  color: var(--muted);
+  font-size: var(--chart-label-size);
+  font-weight: var(--chart-label-weight);
+  font-variant-numeric: tabular-nums;
+}
+.chart-value-axis span {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+.breadth-chart .funding-plot-frame svg {
+  height: 148px;
+  min-width: 0;
+}
+.breadth-chart .funding-series--balance svg { height: 280px; }
+.chart-date-axis {
+  position: relative;
+  container-type: inline-size;
+  height: 22px;
+  margin-left: var(--chart-axis-left, 0px);
+  margin-right: var(--chart-axis-right, 0px);
+  color: var(--muted);
+  font-size: var(--chart-label-size);
+  font-weight: var(--chart-label-weight);
+  font-variant-numeric: tabular-nums;
+}
+.chart-date-axis span {
+  position: absolute;
+  left: clamp(0px, calc(var(--tick-position) - 2.3em), calc(100% - 4.6em));
+  width: 4.6em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+@container (max-width: 205px) {
+  .chart-date-axis:not(.chart-date-axis--measured) span:not(:first-child):not(:last-child) { display: none; }
+}
+
+.chart-axis-frame {
+  --chart-axis-left: 62px;
+  --chart-axis-right: 62px;
+}
+.chart-axis-headings {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  margin-bottom: 2px;
+  font-size: var(--chart-label-size);
+  font-weight: var(--chart-label-weight);
+}
+.chart-axis-plot {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) 54px;
+  gap: 8px;
+}
+.chart-value-rail--right .chart-value-axis span { right: auto; left: 0; }
+.breadth-chart .chart-axis-plot svg { height: 200px; min-width: 0; }
+.chart-readable-frame { position: relative; min-width: 0; }
+svg[data-readable-axis] .chart-month-label { visibility: hidden; }
+.chart-date-axis--measured {
+  position: absolute;
+  inset: auto 0 auto;
+  margin: 0;
+  pointer-events: none;
+}
+.chart-date-axis--measured span { width: auto; text-align: left; }
 
 .breadth-funding-panel__footer {
   display: flex;
@@ -7883,9 +7987,10 @@ a {
 
 .breadth-chart-card > header {
   display: flex;
-  align-items: end;
+  flex-direction: column;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 8px;
   margin-bottom: 12px;
 }
 
@@ -8094,7 +8199,7 @@ a {
 .breadth-chart-legend {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 7px 11px;
 }
 
@@ -8103,8 +8208,8 @@ a {
   align-items: center;
   gap: 5px;
   color: var(--muted);
-  font-size: 0.66rem;
-  font-weight: 700;
+  font-size: var(--chart-label-size);
+  font-weight: var(--chart-label-weight);
 }
 
 .breadth-chart-legend i {
@@ -8357,17 +8462,6 @@ a {
   }
 }
 
-
-@media (max-width: 640px) {
-  .breadth-chart-card--dual-axis .breadth-chart {
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-  }
-
-  .breadth-chart-card--dual-axis .breadth-chart svg {
-    min-width: 620px;
-  }
-}
 
 .shock-decomposition {
   display: grid;
