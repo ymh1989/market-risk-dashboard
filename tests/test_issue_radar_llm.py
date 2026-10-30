@@ -17,7 +17,7 @@ def issue(key="europe"):
             "checkpoints": ["국채차 확대 여부", "은행 상대약세 여부"],
             "reading": {"level": "경계", "direction": "악화", "levelScore": 92.9},
             "news": {"articles": [
-                {"title": "프랑스 국채 부담", "url": "https://example.com/a", "source": "공개 언론사", "publishedAt": "2026-10-22T12:00:00+09:00"},
+                {"title": "미국 국채 금리 부담" if key == "rates" else "프랑스 국채 부담", "url": "https://example.com/a", "source": "공개 언론사", "publishedAt": "2026-10-22T12:00:00+09:00"},
                 {"title": "프랑스 축구 경기", "url": "https://example.com/b", "source": "공개 언론사", "publishedAt": "2026-10-22T15:00:00+09:00"}]},
             "metrics": [{"id": "fr_spread", "label": "국채차", "status": "ok", "riskSign": 1, "threshold": 5,
                          "change1w": 16.3, "value": 157.8, "asOf": "2026-10-21"}]}
@@ -206,9 +206,8 @@ def test_compact_request_ids_round_trip_and_unknown_ids_fail_independently():
         def open(self, request, timeout):
             payload = json.loads(request.data)
             packet = json.loads(payload["messages"][1]["content"])["issues"]["europe"]
-            assert packet["articles"][0] == {"id": "a0", "title": "프랑스 국채 부담"}
+            assert packet["articles"][0] == {"id": "a0", "title": "프랑스 국채 부담", "source": "공개 언론사", "publishedAt": "2026-10-22T12:00:00+09:00"}
             assert packets["europe"]["articles"][0]["id"] not in str(payload)
-            assert "source" not in packet["articles"][0]
             return Response()
 
     client.opener = Opener()
@@ -226,3 +225,68 @@ def test_selection_cache_expires_and_future_generated_time_is_not_reused():
     first["issues"][0]["analysis"]["generatedAt"] = (NOW + timedelta(hours=1)).isoformat()
     llm.enrich_radar({"issues": [issue()]}, first, NOW, selector=client, environ={})
     assert len(client.calls) == 3
+
+
+@pytest.mark.parametrize("theme,title,excluded", [
+    ("dollar", "마이크로소프트 미국 채권 발행으로 250억 달러 조달", True),
+    ("dollar", "홍콩법인 달러 디지털 채권 발행 성공", True),
+    ("dollar", "마이크로소프트, 미국 채권 발행: AAA 신용등급으로 AI 자금 조달 우려 완화", True),
+    ("dollar", "미국 기업 신용등급 하향 조정에 채권 가격 하락", False),
+    ("dollar", "미국 기업 차환 부담 확대, 하이일드 스프레드 급등", False),
+    ("dollar", "미국 단기 자금시장 안정, SOFR 금리차 축소", False),
+    ("energy", "미국과 이란 협상 기대에 유가 하락", False),
+    ("semiconductors", "AI 데이터센터 건설 지연, 메모리 수요 우려", False),
+    ("rates", "프랑스 국채 금리 하락에 유로 강세", True),
+    ("rates", "프랑스 국채 불안에 미국 국채 금리 하락", False),
+    ("rates", "미국 국채 금리가 6% 돌파하면", True),
+])
+def test_topic_guards_keep_easing_evidence_and_exclude_routine_funding(theme, title, excluded):
+    from scripts.issue_relevance import exclusion_reason
+    assert bool(exclusion_reason(theme, title)) is excluded
+
+
+def test_candidates_expand_to_twelve_and_keep_topic_specific_titles():
+    current = issue("semiconductors")
+    current["news"]["articles"] = [{**current["news"]["articles"][0], "title": f"반도체 {n} 실적 수요 점검", "url": f"https://example.com/{n}"} for n in range(20)]
+    assert len(llm.candidates(current, NOW)) == 12
+
+
+def test_batched_selector_rechecks_empty_topics_once_without_forcing_selection(monkeypatch):
+    client = llm.OllamaIssueSelector()
+    packets = {f"topic{i}": llm.packet_for(issue(), NOW) for i in range(6)}
+    calls = []
+    def chat(system, content, schema, max_tokens=700):
+        calls.append(content)
+        return {key: {"articleIds": [], "metricIds": [], "checkpointIndex": None} for key in content["issues"]}
+    monkeypatch.setattr(client, "chat_json", chat)
+    result = client.generate(packets)
+    assert [len(c["issues"]) for c in calls] == [3, 3, 2]
+    assert all(not row["articleIds"] for row in result.values())
+
+
+def test_empty_topic_recheck_can_recover_related_article(monkeypatch):
+    client = llm.OllamaIssueSelector()
+    calls = []
+    def chat(system, content, schema, max_tokens=700):
+        calls.append(system)
+        return {"europe": {"articleIds": ["a0"] if len(calls) == 2 else [],
+                           "metricIds": ["m0"] if len(calls) == 2 else [],
+                           "checkpointIndex": 0 if len(calls) == 2 else None}}
+    monkeypatch.setattr(client, "chat_json", chat)
+    packet = llm.packet_for(issue(), NOW)
+    result = client.generate({"europe": packet})
+    assert len(calls) == 2
+    assert result["europe"]["articleIds"] == [packet["articles"][0]["id"]]
+
+
+def test_batch_failure_keeps_other_successful_topics(monkeypatch):
+    client = llm.OllamaIssueSelector()
+    packets = {f"topic{i}": llm.packet_for(issue(), NOW) for i in range(4)}
+    def chat(system, content, schema, max_tokens=700):
+        if "topic3" in content["issues"]:
+            raise TimeoutError()
+        return {key: {"articleIds": ["a0"], "metricIds": ["m0"], "checkpointIndex": 0} for key in content["issues"]}
+    monkeypatch.setattr(client, "chat_json", chat)
+    result = client.generate(packets)
+    assert result["topic3"] is None
+    assert all(result[f"topic{i}"]["articleIds"] for i in range(3))

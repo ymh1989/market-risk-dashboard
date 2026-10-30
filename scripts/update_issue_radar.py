@@ -51,7 +51,7 @@ def plain_text(value: str) -> str:
     return " ".join(re.sub(r"<[^>]*>", "", html.unescape(value)).split())[:280]
 
 
-def clean_articles(articles: list[dict], now: datetime) -> list[dict]:
+def clean_articles(articles: list[dict], now: datetime, *, limit: int = 60) -> list[dict]:
     """최근 공개 기사만 남기고 동일 제목·URL을 중복 제거합니다."""
     seen_titles, seen_urls, output = set(), set(), []
     for item in sorted(articles, key=lambda row: timestamp(row.get("publishedAt")) or datetime.min.replace(tzinfo=KST), reverse=True):
@@ -66,7 +66,7 @@ def clean_articles(articles: list[dict], now: datetime) -> list[dict]:
         seen_urls.add(url)
         output.append({"title": title, "url": url, "source": plain_text(str(item.get("source") or "뉴스")),
                        "publishedAt": published.isoformat()})
-    return output[:60]
+    return output[:limit]
 
 
 def fetch_articles(definition: dict, now: datetime) -> list[dict]:
@@ -307,6 +307,9 @@ def refresh(root: Path = ROOT, offline=False) -> dict:
         registered = {row["definition"]["id"]: row["definition"] for row in registry}
         for definition in definitions:
             registered.setdefault(definition["id"], definition)
+            # 상시 주제의 검색어만 코드 설정을 따릅니다. 승인 사건·상태·지표는 덮어쓰지 않습니다.
+            if definition.get("approved") is True and not registered[definition["id"]].get("themeId"):
+                registered[definition["id"]] = {**registered[definition["id"]], "query": definition["query"]}
         definitions = list(registered.values())
     radar = build_radar(data, definitions, now, previous=previous, offline=offline)
     enrich_radar(radar, previous, now, offline=offline)

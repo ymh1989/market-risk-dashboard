@@ -55,6 +55,9 @@ class ReviewStore:
                 CREATE TABLE IF NOT EXISTS audit (
                     seq INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL,
                     action TEXT NOT NULL, actor TEXT, payload TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS discovery_runs (
+                    attempted_at TEXT PRIMARY KEY, slot TEXT NOT NULL, status TEXT NOT NULL,
+                    summary TEXT NOT NULL, articles TEXT NOT NULL, decisions TEXT NOT NULL);
             """)
         self.path.chmod(0o600)
 
@@ -88,6 +91,23 @@ class ReviewStore:
     def put(self, key, value):
         with self.transaction() as db:
             self._put(db, key, value)
+
+    def record_discovery(self, summary: dict, articles: list[dict], decisions: list[dict], now: datetime):
+        """탐색 입력·판정을 비공개 DB에 90일 보관하며 본문·인증정보는 저장하지 않습니다."""
+        safe_articles = [{key: row[key] for key in ("id", "title", "url", "source", "publishedAt") if key in row}
+                         for row in articles]
+        with self.transaction() as db:
+            self._put(db, "discovery", summary)
+            db.execute("INSERT OR REPLACE INTO discovery_runs VALUES (?,?,?,?,?,?)", (
+                summary["attemptedAt"], summary["slot"], summary["status"], encode(summary),
+                encode(safe_articles), encode(decisions)))
+            db.execute("DELETE FROM discovery_runs WHERE attempted_at < ?", ((now - timedelta(days=90)).isoformat(),))
+
+    def discovery_history(self, limit: int = 10) -> list[dict]:
+        """최근 탐색의 집계만 반환합니다. 공개 등록부에는 포함하지 않습니다."""
+        with self.transaction() as db:
+            return [json.loads(row[0]) for row in db.execute(
+                "SELECT summary FROM discovery_runs ORDER BY attempted_at DESC LIMIT ?", (max(1, min(limit, 100)),))]
 
     def seed(self, definitions: list[dict], previous: dict | None, now: datetime):
         """기존 승인 주제와 이미 게시된 등록부만 초기 이관합니다."""

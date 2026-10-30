@@ -4,13 +4,61 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from itertools import zip_longest
 import json
 import os
 import re
 
-from scripts.issue_radar_llm import OllamaIssueSelector, MODEL, fingerprint, parsed_time
+from scripts.issue_radar_llm import OllamaIssueSelector, MODEL, KST, fingerprint, parsed_time
 from scripts.update_issue_radar import fetch_articles, clean_articles
-from scripts.issue_evidence import inspect_articles, require_corroboration, require_same_event
+from scripts.issue_evidence import inspect_articles, require_corroboration, require_same_event, similar_headline
+
+DISCOVERY_VERSION = "discovery-v3"
+SCHEDULE = ((7, 45), (12, 45), (16, 20))
+MAX_ARTICLES = 96
+BATCH_SIZE = 24
+
+
+def scheduled_slot(now: datetime) -> str | None:
+    """한국시간의 가장 최근 회차만 선택하며 밀린 회차를 연속 실행하지 않습니다."""
+    local = now.astimezone(KST)
+    due = [(h, m) for h, m in SCHEDULE if (local.hour, local.minute) >= (h, m)]
+    return f"{local.date().isoformat()}T{due[-1][0]:02}:{due[-1][1]:02}" if due else None
+
+
+def discovery_due(last: dict, now: datetime) -> bool:
+    """회차별 정상 완료는 재실행하지 않고 실패·부분 실패는 한 시간 뒤 재시도합니다."""
+    slot = scheduled_slot(now)
+    stamp = parsed_time(last.get("attemptedAt"))
+    if slot is None:
+        return False
+    previous = last.get("slot") or (scheduled_slot(stamp) if stamp else None)
+    if previous == slot and last.get("status") == "ok":
+        return False
+    return not stamp or now - stamp >= timedelta(hours=1)
+
+
+def article_batches(articles: list[dict]) -> list[list[dict]]:
+    """유사 제목을 같은 입력 묶음에 둡니다. 독립 보도 인정은 별도 원문 검증으로만 합니다."""
+    groups = []
+    for article in articles:
+        group = next((g for g in groups if similar_headline(g[0], article)), None)
+        if group is None:
+            groups.append([article])
+        else:
+            group.append(article)
+    batches, current = [], []
+    for group in groups:
+        if current and len(current) + len(group) > BATCH_SIZE:
+            batches.append(current)
+            current = []
+        while len(group) > BATCH_SIZE:
+            batches.append(group[:BATCH_SIZE])
+            group = group[BATCH_SIZE:]
+        current.extend(group)
+    if current:
+        batches.append(current)
+    return batches
 
 QUERIES = [
     "(금융시장 OR 세계경제) (위험 OR 부채 OR 위기 OR 신용)",
@@ -85,13 +133,13 @@ def evidence_for(ids, articles, now, minimum=1):
     return evidence
 
 
-def validate_proposal(row, action, *, themes, articles, metrics, registry, eligible, now):
+def proposal_fields(row, action, *, themes, articles, metrics, registry, eligible, now):
+    """원문 조회 전에 형식·지표·사건 일치를 검증합니다. 이것만으로 상정할 수 없습니다."""
     expected = {"title", "rationale", "themeId", "articleIds", "metricIds", "keywords"} if action == "new" else {"issueId", "targetState", "rationale", "articleIds"}
     if not isinstance(row, dict) or set(row) != expected:
         raise ValueError("후보 구조 오류")
     rationale = bounded_text(row["rationale"], 120)
     evidence = evidence_for(row["articleIds"], articles, now, 3)
-    corroboration = require_corroboration(evidence, now)
     if action != "new":
         issue_id = row["issueId"]
         if not isinstance(issue_id, str) or row["targetState"] not in eligible.get(issue_id, []):
@@ -99,7 +147,7 @@ def validate_proposal(row, action, *, themes, articles, metrics, registry, eligi
         item = next(r for r in registry if r["definition"]["id"] == issue_id)
         return {"action": "transition", "issueId": issue_id, "title": item["definition"]["title"],
                 "expectedVersion": item["lifecycle"]["version"], "targetState": row["targetState"],
-                "rationale": rationale, "evidence": evidence, "corroboration": corroboration}
+                "rationale": rationale, "evidence": evidence}
     theme = next((t for t in themes if t["id"] == row["themeId"]), None)
     title = bounded_text(row["title"], 50)
     metric_ids = row["metricIds"]
@@ -121,73 +169,130 @@ def validate_proposal(row, action, *, themes, articles, metrics, registry, eligi
                   "route": theme["route"], "checkpoints": theme["checkpoints"], "metricIds": metric_ids,
                   "scoreIds": theme["scoreIds"], "rationale": rationale, "firstDetectedAt": now.isoformat(), "initialEvidence": evidence}
     return {"action": "new", "title": title, "themeId": theme["id"], "definition": definition,
-            "rationale": rationale, "evidence": evidence, "corroboration": corroboration}
+            "rationale": rationale, "evidence": evidence}
+
+
+def validate_proposal(row, action, *, themes, articles, metrics, registry, eligible, now):
+    """상정 전 원출처·동시 보도 검증을 반드시 완료합니다."""
+    proposal = proposal_fields(row, action, themes=themes, articles=articles, metrics=metrics,
+                               registry=registry, eligible=eligible, now=now)
+    proposal["corroboration"] = require_corroboration(proposal["evidence"], now)
+    return proposal
 
 
 def discover(store, themes: list[dict], now: datetime, *, fetcher=fetch_articles, selector=None,
              inspector=inspect_articles, force=False) -> dict:
-    """하루 한 번 탐색합니다. 실패는 한 시간 뒤 재시도하며 공개 배치를 막지 않습니다."""
+    """하루 세 회차 탐색하며 후보는 원출처 검증·개인 승인 전에 공개하지 않습니다."""
     last = store.get("discovery", {})
-    stamp = parsed_time(last.get("attemptedAt"))
-    if not force and stamp and ((last.get("status") == "ok" and stamp.date() == now.date()) or now - stamp < timedelta(hours=1)):
+    if not force and not discovery_due(last, now):
         return last
     radar = store.get("latestRadar", {})
     generated = parsed_time(radar.get("generatedAt"))
+    model = os.getenv("ISSUE_RADAR_LLM_MODEL") or os.getenv("OLLAMA_MODEL") or MODEL
+    state = {"attemptedAt": now.isoformat(), "slot": scheduled_slot(now) or now.isoformat()[:16],
+             "status": "running", "proposed": 0, "reviewedArticles": 0, "rejected": 0,
+             "rejectionReasons": {}, "model": model, "promptVersion": DISCOVERY_VERSION}
+    articles, decisions = [], []
     if not generated or not timedelta(0) <= now - generated <= timedelta(hours=26):
-        return {"status": "waiting-data"}
-    state = {"attemptedAt": now.isoformat(), "status": "running", "proposed": 0}
+        state.update(status="waiting-data", noCandidateReason="최신 시장자료 대기")
+        store.record_discovery(state, [], [], now)
+        return state
     store.put("discovery", state)
     try:
         def fetch(query):
             try:
-                return fetcher({"query": query}, now)[:6]
+                return fetcher({"query": query}, now)[:24], False
             except Exception:
-                return []
+                return [], True
         with ThreadPoolExecutor(max_workers=2) as pool:
-            batches = list(pool.map(fetch, QUERIES))
-        articles = clean_articles([a for group in batches for a in group], now)[:24]
+            fetched = list(pool.map(fetch, QUERIES))
+        state["fetchFailures"] = sum(failed for _, failed in fetched)
+        groups = [group for group, _ in fetched]
+        groups += [issue.get("news", {}).get("articles", [])[:12] for issue in radar["issues"]
+                   if issue.get("news", {}).get("status") not in {"failed", "unavailable"}]
+        # 한 검색어나 대량 전재가 입력을 독점하지 않도록 검색·기존 주제를 번갈아 채웁니다.
+        ordered = [row for group in zip_longest(*groups) for row in group if row is not None]
+        cleaned = clean_articles(ordered, now, limit=len(ordered))
+        fresh = {a["url"]: a for a in cleaned
+                 if timedelta(0) <= now - parsed_time(a["publishedAt"]) <= timedelta(hours=48)}
+        used = set()
+        for row in ordered:
+            url = row.get("url")
+            if url in fresh and url not in used:
+                articles.append(fresh[url])
+                used.add(url)
+                if len(articles) == MAX_ARTICLES:
+                    break
+        state.update(collectedArticles=len(fresh), inputArticles=len(articles))
         for index, article in enumerate(articles):
             article["id"] = f"n{index}"
-        if len(articles) < 2:
+        if len(articles) < 3:
             raise ValueError("최신 공개 기사 부족")
         registry = store.registry()
         eligible = {k: v for k, v in store.eligible_transitions(now).items() if v}
         available = {m["id"]: {"id": m["id"], "label": m["label"]} for i in radar["issues"] for m in i["metrics"]
                      if m["status"] == "ok" and m["riskSign"] and m["change1w"] is not None}
         metrics = list(available.values())
-        packet = {"themes": [{k: t[k] for k in ("id", "title", "route", "metricIds")} for t in themes],
+        common = {"themes": [{k: t[k] for k in ("id", "title", "route", "metricIds")} for t in themes],
                   "existingEvents": [{"id": r["definition"]["id"], "title": r["definition"]["title"], "state": r["lifecycle"]["state"]}
                                      for r in registry if r["definition"].get("themeId")],
                   "pending": [r["payload"]["title"] for r in store.pending(now)],
                   "mergedEvents": [{k: row[k] for k in ("id", "title", "query", "supersededBy")}
                                    for row in store.merged_events()],
-                  "articles": [{k: a[k] for k in ("id", "title", "source", "publishedAt")} for a in articles],
                   "metrics": metrics, "eligible": eligible}
-        client = selector or OllamaIssueSelector(os.getenv("ISSUE_RADAR_LLM_MODEL") or os.getenv("OLLAMA_MODEL") or MODEL,
+        client = selector or OllamaIssueSelector(model,
                                                 os.getenv("ISSUE_RADAR_OLLAMA_URL") or os.getenv("OLLAMA_URL") or "http://127.0.0.1:11434", 60)
-        result = client.chat_json(SYSTEM, packet, discovery_schema(themes, articles, metrics, eligible), max_tokens=900)
-        if not isinstance(result, dict) or set(result) != {"new", "transitions"} or any(not isinstance(result[k], list) or len(result[k]) > 2 for k in result):
-            raise ValueError("후보 응답 형식 오류")
-        selected = {key for row in result["new"] + result["transitions"] if isinstance(row, dict) and isinstance(row.get("articleIds"), list)
-                    for key in row["articleIds"] if isinstance(key, str)}
-        # 모델이 요청한 원문 12개까지만 조회합니다. 미확인 원문은 상정 검증에서 제외됩니다.
-        inspected = {a["id"]: a for a in inspector([a for a in articles if a["id"] in selected][:12], now)}
-        articles = [inspected.get(a["id"], a) for a in articles]
-        rejected = 0
-        reasons = {}
-        for action, rows in (("new", result["new"]), ("transition", result["transitions"])):
-            for row in rows:
-                try:
-                    proposal = validate_proposal(row, action, themes=themes, articles=articles, metrics=metrics, registry=registry, eligible=eligible, now=now)
-                    if store.add_proposal(proposal, now):
-                        state["proposed"] += 1
-                except (ValueError, TypeError, StopIteration) as error:
-                    rejected += 1
-                    # 입력 문구·URL·본문은 로그에 넣지 않고 검증 실패 유형만 집계합니다.
-                    reason = str(error) if isinstance(error, ValueError) else "후보 구조 오류"
-                    reasons[reason] = reasons.get(reason, 0) + 1
-        state.update(status="ok", reviewedArticles=len(articles), rejected=rejected, rejectionReasons=reasons)
-    except Exception:
+        results, failures = [], 0
+        for batch in article_batches(articles):
+            packet = {**common, "articles": [{k: a[k] for k in ("id", "title", "source", "publishedAt")} for a in batch]}
+            try:
+                result = client.chat_json(SYSTEM, packet, discovery_schema(themes, batch, metrics, eligible), max_tokens=900)
+                if not isinstance(result, dict) or set(result) != {"new", "transitions"} or any(not isinstance(result[k], list) or len(result[k]) > 2 for k in result):
+                    raise ValueError("후보 응답 형식 오류")
+                state["reviewedArticles"] += len(batch)
+                results.extend((action, row, batch) for action, name in (("new", "new"), ("transition", "transitions")) for row in result[name])
+            except Exception as error:
+                failures += 1
+                decisions.append({"status": "batch-failed", "reason": type(error).__name__, "articleIds": [a["id"] for a in batch]})
+        accepted, inspected = {"new": 0, "transition": 0}, {}
+        for action, row, batch in results:
+            decision = {"action": action, "status": "rejected"}
+            if isinstance(row, dict):
+                decision["candidate"] = {key: row[key] for key in ("title", "rationale", "themeId", "issueId", "targetState", "articleIds", "metricIds", "keywords") if key in row}
+            try:
+                if accepted[action] >= 2:
+                    raise ValueError("회차별 후보 한도 도달")
+                if not isinstance(row, dict):
+                    raise ValueError("후보 구조 오류")
+                evidence = evidence_for(row.get("articleIds"), batch, now, 3)
+                proposal_fields(row, action, themes=themes, articles=batch, metrics=metrics,
+                                registry=registry, eligible=eligible, now=now)
+                needed = [a for a in evidence if a["id"] not in inspected]
+                if len(inspected) + len(needed) > 24:
+                    raise ValueError("회차별 원문 확인 한도 도달")
+                inspected.update({a["id"]: a for a in inspector(needed, now)})
+                checked = [inspected.get(a["id"], a) for a in batch]
+                proposal = validate_proposal(row, action, themes=themes, articles=checked, metrics=metrics, registry=registry, eligible=eligible, now=now)
+                identifier = store.add_proposal(proposal, now)
+                if identifier:
+                    state["proposed"] += 1
+                    accepted[action] += 1
+                    decision.update(status="proposed", proposalId=identifier)
+                else:
+                    decision.update(status="suppressed", reason="중복·기존 등록·반려 유예·검토함 한도")
+            except (ValueError, TypeError, StopIteration) as error:
+                reason = str(error) if isinstance(error, ValueError) else "후보 구조 오류"
+                state["rejected"] += 1
+                state["rejectionReasons"][reason] = state["rejectionReasons"].get(reason, 0) + 1
+                decision["reason"] = reason
+            decisions.append(decision)
+        state.update(status="partial" if failures or state["fetchFailures"] else "ok",
+                     modelCandidates=len(results), batchFailures=failures, batches=len(article_batches(articles)),
+                     noCandidateReason=("모델 검토 미완료" if failures else "모델 신규·전환 제안 없음") if not results else None)
+        if failures == state["batches"]:
+            state["status"] = "failed"
+    except Exception as error:
         state["status"] = "failed"
-    store.put("discovery", state)
+        state["failureType"] = type(error).__name__
+    store.record_discovery(state, articles, decisions, now)
     return state

@@ -11,7 +11,7 @@
     },
     {
       "id": "rates", "approved": true, "title": "글로벌 금리·할인율 부담",
-      "query": "(국채금리 OR 실질금리 OR bond yields) (상승 OR 인플레이션 OR 금리 OR inflation)",
+      "query": "(미국 OR 연준 OR 한국 OR 국고채 OR Fed) (국채금리 OR 실질금리 OR 기대인플레이션 OR 금리)",
       "route": "명목·실질금리 변화 → 할인율·조달비용 → 주식·채권",
       "checkpoints": ["실질금리와 기대인플레이션의 동반 상승 여부", "국내 장기금리로 부담 확산 여부"],
       "scoreIds": ["rates_pressure", "us_real_yield_watch"],
@@ -27,7 +27,7 @@
     },
     {
       "id": "dollar", "approved": true, "title": "달러 조달·신용 경색",
-      "query": "(달러 OR 미국) (자금시장 OR 조달 OR 신용스프레드 OR 레포 OR SOFR)",
+      "query": "(달러 OR 미국 OR SOFR) (자금시장 OR 신용스프레드 OR 레포 OR 차환 OR 유동성 OR 하이일드 OR 신용경색)",
       "route": "단기 달러 조달 → 기업 신용 프리미엄 → 위험자산",
       "checkpoints": ["단기 조달금리차 확대의 지속 여부", "하이일드 스프레드 동반 확대 여부"],
       "scoreIds": ["usd_short_funding_watch", "us_credit_spread_stress"],

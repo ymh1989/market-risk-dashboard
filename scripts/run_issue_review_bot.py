@@ -17,7 +17,7 @@ import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.issue_review_store import ReviewStore, utc_now
-from scripts.issue_discovery import discover
+from scripts.issue_discovery import discover, discovery_due
 from scripts.issue_evidence import require_corroboration
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,6 +29,7 @@ STATUS_TEXT = {"approved": "승인 완료 · 홈페이지 반영 대기", "rejec
                "insufficient-evidence": "동시 보도·원출처 검증 기준 미충족으로 승인할 수 없습니다",
                "unauthorized": "등록된 개인 승인 계정에서만 처리할 수 있습니다", "invalid": "유효하지 않은 승인 버튼입니다"}
 STATE_LABEL = {"active": "활성", "watch": "관찰", "archived": "보관"}
+DISCOVERY_LABEL = {"ok": "완료", "partial": "일부 미완료", "failed": "실패", "running": "탐색 중", "waiting-data": "시장자료 대기"}
 
 
 def best_effort(bot, method, **params):
@@ -141,9 +142,22 @@ def handle_update(store: ReviewStore, bot, update: dict, now):
         count = send_pending(store, bot, now, resend=True)
         if not count:
             bot.call("sendMessage", chat_id=chat["id"], text="현재 검토 대기 후보 없음")
+    elif text == "/history":
+        rows = store.discovery_history(6)
+        lines = ["최근 이슈 탐색 기록 · 한국시간"]
+        for row in rows:
+            lines.append(f"{row['slot'].replace('T', ' ')} · {DISCOVERY_LABEL.get(row['status'], row['status'])} · 기사 {row.get('reviewedArticles', 0)}건 · 제안 {row.get('modelCandidates', 0)}건 · 상정 {row.get('proposed', 0)}건")
+            if row.get("noCandidateReason"):
+                lines.append(row["noCandidateReason"])
+            for reason, count in row.get("rejectionReasons", {}).items():
+                lines.append(f"제외: {reason} {count}건")
+        bot.call("sendMessage", chat_id=chat["id"], text="\n".join(lines) if rows else "아직 저장된 탐색 기록 없음")
     elif text in {"/status", "/start", "/help"}:
         last = store.get("discovery", {})
-        text = f"시장 이슈 개인 승인함\n검토 대기 {len(store.pending(now))}건\n후보 탐색: {last.get('status', '대기')} · {str(last.get('attemptedAt', '-'))[:16]}\n홈페이지: {'반영 대기' if store.get('needsPublication') else '승인 변경 대기 없음'}\n/issues 검토함 · /status 상태"
+        text = (f"시장 이슈 개인 승인함\n탐색: 매일 07:45 · 12:45 · 16:20 KST\n검토 대기 {len(store.pending(now))}건\n"
+                f"후보 탐색: {DISCOVERY_LABEL.get(last.get('status'), '대기')} · {str(last.get('attemptedAt', '-'))[:16]}\n"
+                f"기사 {last.get('reviewedArticles', 0)}건 · 모델 제안 {last.get('modelCandidates', 0)}건 · 상정 {last.get('proposed', 0)}건\n"
+                f"홈페이지: {'반영 대기' if store.get('needsPublication') else '승인 변경 대기 없음'}\n/issues 검토함 · /history 탐색 기록 · /status 상태")
         bot.call("sendMessage", chat_id=chat["id"], text=text)
 
 
@@ -232,23 +246,31 @@ def main():
     pool, future = ThreadPoolExecutor(max_workers=1), None
     print("시장 이슈 승인함 시작 · 개인 계정 인증 필수", flush=True)
     while True:
+        # Telegram 조회 장애가 뉴스 탐색까지 중단시키지 않도록 먼저 회차를 점검합니다.
+        now = utc_now()
+        if future is not None and future.done():
+            try:
+                last = future.result()
+                print(f"{now.isoformat()} 이슈 탐색 완료: {last.get('status')} · 기사 {last.get('reviewedArticles', 0)} · 상정 {last.get('proposed', 0)}", flush=True)
+                if last.get("status") in {"failed", "partial"} and last.get("attemptedAt") != store.get("lastFailureNotice") and store.get("ownerId"):
+                    result = best_effort(bot, "sendMessage", chat_id=store.get("ownerId"), text="시장 이슈 후보 탐색 일부 또는 전체 미완료. 뉴스 수집·로컬 모델 응답 확인 필요. 기존 승인 이슈는 유지하며 1시간 뒤 재시도. /history에서 탐색 기록 확인")
+                    if result is not None:
+                        store.put("lastFailureNotice", last.get("attemptedAt"))
+            except Exception as error:
+                print(f"{now.isoformat()} 이슈 탐색 작업 오류: {type(error).__name__}", flush=True)
+            future = None
+        if future is None and discovery_due(store.get("discovery", {}), now):
+            future = pool.submit(discover, store, themes, now)
         try:
             updates = bot.call("getUpdates", offset=store.get("telegramOffset"), timeout=20, allowed_updates=["message", "callback_query"])
             for update in updates:
                 handle_update(store, bot, update, utc_now())
                 store.put("telegramOffset", update["update_id"] + 1)
             now = utc_now()
-            if future is not None and future.done():
-                last = future.result()
-                if last.get("status") == "failed" and last.get("attemptedAt") != store.get("lastFailureNotice") and store.get("ownerId"):
-                    bot.call("sendMessage", chat_id=store.get("ownerId"), text="시장 이슈 후보 탐색 미완료. 뉴스 수집 또는 로컬 모델 응답을 확인해야 합니다. 기존 승인 이슈는 유지하며 1시간 뒤 재시도합니다.")
-                    store.put("lastFailureNotice", last.get("attemptedAt"))
-            if (future is None or future.done()) and now.hour >= 7 and (now.hour > 7 or now.minute >= 45):
-                future = pool.submit(discover, store, themes, now)
             send_pending(store, bot, now)
             publisher.tick(bot)
         except Exception as error:
-            print(f"승인함 일시 오류: {type(error).__name__} · 10초 뒤 재시도", flush=True)
+            print(f"{utc_now().isoformat()} 승인함 수신·발송·게시 일시 오류: {type(error).__name__} · 10초 뒤 재시도", flush=True)
             time.sleep(10)
 
 

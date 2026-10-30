@@ -1,7 +1,7 @@
 """개인 승인 권한, 후보 격리, 실제 관측일 기반 상태 전환 검증."""
 
 import copy
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 
 import pytest
@@ -223,7 +223,7 @@ def test_model_output_requires_evidence_catalog_and_bounded_fields(store, change
         discovery.validate_proposal(row, "new", themes=[THEME], articles=articles, metrics=[{"id": "spread"}, {"id": "bank"}, {"id": "kr_yield"}], registry=store.registry(), eligible={}, now=NOW)
 
 
-def test_discovery_runs_once_daily_and_never_changes_public_issues(store):
+def test_discovery_runs_once_per_slot_and_never_changes_public_issues(store):
     class Selector:
         calls = 0
         def chat_json(self, system, packet, schema, max_tokens):
@@ -337,6 +337,7 @@ def test_refresh_keeps_pending_private_and_preserves_published_registry(store, t
     monkeypatch.setenv("CI", "true" if ci else "false")
 
     def build(data, definitions, now, **kwargs):
+        assert next(d for d in definitions if d["id"] == THEME["id"])["query"] == THEME["query"]
         return {**radar(now), "methodology": [], "issues": [
             {**radar(now)["issues"][0], "id": d["id"]} for d in definitions]}
     monkeypatch.setattr(radar_module, "build_radar", build)
@@ -347,6 +348,37 @@ def test_refresh_keeps_pending_private_and_preserves_published_registry(store, t
     for forbidden in ("비공개 검토 전용 제목", "ownerId", "message_id", "nonce", "pairing", "telegramOffset"):
         assert forbidden not in output
     assert json.loads(output)["sections"][0]["score"] == 73.5
+
+
+def test_discovery_history_retains_only_90_days(store):
+    old = NOW - timedelta(days=91)
+    for stamp in (old, NOW):
+        row = {"attemptedAt": stamp.isoformat(), "slot": stamp.isoformat()[:16], "status": "ok"}
+        store.record_discovery(row, [], [], stamp)
+    assert len(store.discovery_history()) == 1
+    assert store.discovery_history()[0]["attemptedAt"] == NOW.isoformat()
+
+
+def test_waiting_for_market_data_is_recorded_and_throttled(store):
+    store.put("latestRadar", radar(NOW - timedelta(days=3)))
+    client = EmptyDiscovery()
+    result = discovery.discover(store, [THEME], NOW, selector=client)
+    assert result["status"] == "waiting-data" and not client.packets
+    assert len(store.discovery_history()) == 1
+    assert not discovery.discovery_due(result, NOW + timedelta(minutes=5))
+
+
+def test_bad_metric_is_rejected_before_spending_source_inspection_budget(store):
+    class WrongMetric:
+        def chat_json(self, *args, **kwargs):
+            return {"new": [{"title": "검증은행 유동성 위기", "rationale": "공개 근거 점검", "themeId": "europe",
+                "articleIds": ["n0", "n1", "n2"], "metricIds": ["spread", "foreign_flow"],
+                "keywords": ["검증은행", "유동성"]}], "transitions": []}
+    def inspector(*args):
+        pytest.fail("관련 없는 지표를 쓴 후보는 원문을 조회하면 안 됩니다")
+    result = discovery.discover(store, [THEME], NOW, fetcher=lambda *args: news(), selector=WrongMetric(), inspector=inspector)
+    assert result["proposed"] == 0 and result["rejected"] == 1
+    assert "추적 지표 부족 또는 허용되지 않은 지표" in result["rejectionReasons"]
 
 
 def test_merge_duplicate_hides_event_preserves_audit_and_blocks_reregistration(store):
@@ -403,3 +435,111 @@ def test_review_deadline_does_not_exceed_news_freshness(store):
     proposal = next(p for p in store.pending(NOW) if p["id"] == identifier)
     assert datetime.fromisoformat(proposal["expires_at"]) == NOW + timedelta(hours=24)
     assert store.pending(NOW + timedelta(hours=24)) == []
+
+
+@pytest.mark.parametrize("hour,minute,slot", [(7, 44, None), (7, 45, "07:45"),
+    (12, 44, "07:45"), (12, 45, "12:45"), (16, 19, "12:45"), (16, 20, "16:20"), (23, 59, "16:20")])
+def test_discovery_schedule_has_three_korean_time_slots(hour, minute, slot):
+    now = NOW.replace(hour=hour, minute=minute)
+    assert discovery.scheduled_slot(now) == (f"2026-10-23T{slot}" if slot else None)
+    assert discovery.scheduled_slot(now.astimezone(timezone.utc)) == discovery.scheduled_slot(now)
+
+
+def test_discovery_schedule_migrates_legacy_and_retries_failures_hourly():
+    morning = NOW.replace(hour=7, minute=46)
+    last = {"attemptedAt": morning.isoformat(), "status": "ok"}
+    assert not discovery.discovery_due(last, NOW)
+    assert discovery.discovery_due(last, NOW.replace(hour=12, minute=45))
+    assert discovery.discovery_due(last, NOW.replace(hour=18))
+    assert not discovery.discovery_due({}, NOW.replace(hour=6))
+    failed = {"attemptedAt": NOW.isoformat(), "status": "failed"}
+    assert not discovery.discovery_due(failed, NOW + timedelta(minutes=59))
+    assert discovery.discovery_due(failed, NOW + timedelta(hours=1))
+
+
+class EmptyDiscovery:
+    def __init__(self): self.packets = []
+    def chat_json(self, system, packet, schema, max_tokens):
+        self.packets.append(copy.deepcopy(packet))
+        return {"new": [], "transitions": []}
+
+
+def test_three_slots_persist_separate_private_history_without_public_changes(store):
+    client = EmptyDiscovery()
+    original = store.public_snapshot()
+    for hour, minute in discovery.SCHEDULE:
+        now = NOW.replace(hour=hour, minute=minute)
+        store.observe(radar(now), now)
+        result = discovery.discover(store, [THEME], now, fetcher=lambda *args: news(now), selector=client)
+        assert result["status"] == "ok" and result["proposed"] == 0
+        assert result["noCandidateReason"] == "모델 신규·전환 제안 없음"
+        discovery.discover(store, [THEME], now + timedelta(minutes=5), selector=client)
+    assert len(client.packets) == 3 and len(store.discovery_history()) == 3
+    assert store.public_snapshot() == original
+    with store.transaction() as db:
+        row = db.execute("SELECT articles FROM discovery_runs LIMIT 1").fetchone()
+        articles = json.loads(row[0])
+        assert len(articles) == 3
+        assert set(articles[0]) == {"id", "title", "url", "source", "publishedAt"}
+    assert "discovery_runs" not in json.dumps(store.public_snapshot())
+
+
+def test_expanded_discovery_pool_exceeds_old_60_article_cleaner_cap(store):
+    store.observe({**radar(), "issues": [{**radar()["issues"][0], "news": {"status": "direct", "articles": []}}]}, NOW)
+    def fetch(definition, now):
+        q = discovery.QUERIES.index(definition["query"])
+        return [{**news(now)[0], "title": f"분야{q} 독립기사{i} 신용 위험 점검", "url": f"https://example.com/{q}/{i}"} for i in range(24)]
+    client = EmptyDiscovery()
+    result = discovery.discover(store, [THEME], NOW, fetcher=fetch, selector=client)
+    assert result["reviewedArticles"] == 96
+    assert all(len(p["articles"]) <= 24 for p in client.packets)
+    assert len({a["id"] for p in client.packets for a in p["articles"]}) == 96
+
+
+def test_failed_query_is_partial_not_empty_success(store):
+    def fetch(definition, now):
+        if definition["query"] == discovery.QUERIES[0]:
+            raise RuntimeError("TOKEN_SECRET")
+        return news(now)
+    result = discovery.discover(store, [THEME], NOW, fetcher=fetch, selector=EmptyDiscovery())
+    assert result["status"] == "partial" and result["fetchFailures"] == 1
+    assert "TOKEN_SECRET" not in json.dumps(store.discovery_history())
+
+
+def test_rejected_candidate_records_actual_reason_not_model_silence(store):
+    class Bad:
+        def chat_json(self, *args, **kwargs):
+            return {"new": [{"title": "검증 사건", "articleIds": ["not-provided"]}], "transitions": []}
+    result = discovery.discover(store, [THEME], NOW, fetcher=lambda *args: news(), selector=Bad())
+    assert result["status"] == "ok" and result["modelCandidates"] == 1
+    assert result["rejected"] == 1 and result["noCandidateReason"] is None
+    assert result["rejectionReasons"] == {"기사 근거 수 오류": 1}
+    with store.transaction() as db:
+        decisions = json.loads(db.execute("SELECT decisions FROM discovery_runs").fetchone()[0])
+    assert decisions[0]["status"] == "rejected"
+    assert store.pending(NOW) == []
+
+
+def test_discovery_does_not_use_stale_article_history_to_make_candidates(store):
+    old = NOW - timedelta(days=3)
+    current = radar()
+    current["issues"][0]["news"]["articles"] = news(old)
+    store.observe(current, NOW)
+    client = EmptyDiscovery()
+    result = discovery.discover(store, [THEME], NOW, fetcher=lambda *args: news(old), selector=client)
+    assert result["status"] == "failed" and result["reviewedArticles"] == 0
+    assert client.packets == []
+
+
+def test_history_command_is_private_and_reports_no_candidate_reason(store):
+    enroll(store)
+    discovery.discover(store, [THEME], NOW, fetcher=lambda *args: news(), selector=EmptyDiscovery())
+    bot = FakeBot()
+    message = {"from": {"id": 123}, "chat": {"id": 123, "type": "private"}, "text": "/history"}
+    bot_module.handle_update(store, bot, {"message": message}, NOW)
+    assert "제안 0건" in bot.calls[-1][1]["text"]
+    assert "모델 신규·전환 제안 없음" in bot.calls[-1][1]["text"]
+    bot.calls.clear()
+    message["from"]["id"] = message["chat"]["id"] = 999
+    bot_module.handle_update(store, bot, {"message": message}, NOW)
+    assert not bot.calls
