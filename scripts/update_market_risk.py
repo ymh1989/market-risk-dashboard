@@ -1092,6 +1092,7 @@ def fetch_naver_market_index_series(config, page_size=60):
             date = traded_at[:10]
             observations[date] = {
                 "date": date,
+                "observedAt": traded_at,
                 "close": close,
                 "open": parse_naver_number(row.get("openPrice")),
                 "high": parse_naver_number(row.get("highPrice")),
@@ -1215,9 +1216,25 @@ def _is_recent_live_snapshot(snapshot, max_age_hours=36):
     except (KeyError, TypeError, ValueError):
         return False
     if observed_at.tzinfo is None:
-        observed_at = observed_at.replace(tzinfo=KST)
+        return False
     age = datetime.now(KST) - observed_at.astimezone(KST)
     return timedelta(0) <= age <= timedelta(hours=max_age_hours)
+
+
+def _snapshot_is_newer(snapshot, confirmed):
+    """동일 관측일은 양쪽의 시간대 포함 시각이 있을 때만 최신 여부를 판정합니다."""
+    snapshot_date = str(snapshot.get("date") or "")
+    confirmed_date = str(confirmed.get("date") or "")
+    if not snapshot_date or snapshot_date < confirmed_date:
+        return False
+    if snapshot_date > confirmed_date:
+        return True
+    try:
+        current = datetime.fromisoformat(str(snapshot.get("observedAt") or ""))
+        previous = datetime.fromisoformat(str(confirmed.get("observedAt") or ""))
+        return bool(current.tzinfo and previous.tzinfo and current > previous)
+    except ValueError:
+        return False
 
 
 def fetch_naver_market_index_latest_snapshots(
@@ -1251,12 +1268,12 @@ def fetch_naver_market_index_latest_snapshots(
                 statuses[key] = f"cache_fallback: {exc}"
 
             confirmed_rows = series_map.get(key) or []
-            confirmed_date = str(confirmed_rows[-1].get("date") or "") if confirmed_rows else ""
+            confirmed = confirmed_rows[-1] if confirmed_rows else {}
+            confirmed_date = str(confirmed.get("date") or "")
             snapshot["confirmedDate"] = confirmed_date or None
-            # 같은 날짜의 확정값은 잠정값보다 우선하며, 조회 성공과 시세 최신성은 구분합니다.
+            # 확정 이력은 보존하고, 같은 날에도 더 늦게 관측한 시세를 별도로 제공합니다.
             snapshot["isProvisional"] = bool(
-                snapshot.get("date")
-                and snapshot["date"] > confirmed_date
+                _snapshot_is_newer(snapshot, confirmed)
                 and _is_recent_live_snapshot(snapshot)
             )
             snapshot["fetchStatus"] = statuses[key]
@@ -1291,6 +1308,17 @@ def build_rate_spread_series(series_map):
         short_series = augmented.get(config["shortSeries"]) or []
         if long_series and short_series:
             augmented[key] = make_aligned_difference_series(long_series, short_series)
+            long_by_date = {row["date"]: row for row in long_series}
+            short_by_date = {row["date"]: row for row in short_series}
+            for row in augmented[key]:
+                # 동일 일자의 잠정 스프레드는 두 확정 금리보다 모두 늦어야 합니다.
+                values = [source[row["date"]].get("observedAt", "") for source in (long_by_date, short_by_date)]
+                try:
+                    times = [datetime.fromisoformat(value) for value in values]
+                    if all(value.tzinfo for value in times):
+                        row["observedAt"] = values[times.index(max(times))]
+                except ValueError:
+                    pass
     return augmented
 
 

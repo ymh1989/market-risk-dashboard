@@ -3351,6 +3351,10 @@ function usableMarketLiveSnapshot(definition, marketIndexes, confirmedLatest) {
   const reference = Number.isFinite(parsedReference) ? parsedReference : Date.now();
   const observed = Date.parse(snapshot?.observedAt ?? "");
   const ageHours = (reference - observed) / 3600000;
+  const confirmedTime = Date.parse(confirmedLatest.observedAt ?? "");
+  const sameDayLater = snapshot?.date === confirmedLatest.date &&
+    /[Zz]|[+-]\d{2}:\d{2}$/.test(confirmedLatest.observedAt ?? "") &&
+    Number.isFinite(confirmedTime) && observed > confirmedTime;
   if (
     !snapshot?.isProvisional ||
     snapshot.close === null || snapshot.close === "" ||
@@ -3360,7 +3364,8 @@ function usableMarketLiveSnapshot(definition, marketIndexes, confirmedLatest) {
     !/[Zz]|[+-]\d{2}:\d{2}$/.test(snapshot.observedAt) ||
     ageHours < 0 || ageHours > (definition.type === "crypto" ? 6 : 36) ||
     !["live", "naver-crypto", "derived: live + live"].includes(snapshot.fetchStatus) ||
-    snapshot.date <= confirmedLatest.date
+    snapshot.date < confirmedLatest.date ||
+    (snapshot.date === confirmedLatest.date && !sameDayLater)
   ) {
     return null;
   }
@@ -3370,6 +3375,17 @@ function usableMarketLiveSnapshot(definition, marketIndexes, confirmedLatest) {
     observedAt: snapshot.observedAt,
     isLive: true
   };
+}
+
+function marketTrendObservationLabel(item) {
+  if (!item.hasLive) return `확정 ${item.latest.date}`;
+  // 미국 현지 관측일에 한국 시각만 붙이면 날짜가 하루 어긋납니다.
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(new Date(item.liveSnapshot.observedAt));
+  const part = (type) => parts.find((value) => value.type === type).value;
+  const date = `${part("year")}-${part("month")}-${part("day")}`;
+  return `최신 ${date} ${formatMarketSnapshotTime(item.liveSnapshot.observedAt)} KST · 잠정`;
 }
 
 function analyzeMarketTrend(definition, marketIndexes) {
@@ -3505,8 +3521,9 @@ function renderMarketTrendRow(item, seriesIndex, timelineDomains) {
         <strong>${item.label}</strong>
         ${
           item.hasLive
-            ? `<span class="market-trend-row__asof market-trend-row__asof--live">${item.latest.date} · ${formatMarketSnapshotTime(item.liveSnapshot.observedAt)} KST · 잠정</span>`
-            : `<span class="market-trend-row__asof">${item.latest.date} · 확정</span>`
+            ? `<span class="market-trend-row__asof market-trend-row__asof--live">${marketTrendObservationLabel(item)}</span>
+               <span class="market-trend-row__confirmed">확정 ${item.confirmedLatest.date} · ${formatMarketTrendValue(item.confirmedLatest.close, item.type)}</span>`
+            : `<span class="market-trend-row__asof">${marketTrendObservationLabel(item)}</span>`
         }
       </div>
       <div class="market-trend-row__chart">
@@ -3514,7 +3531,7 @@ function renderMarketTrendRow(item, seriesIndex, timelineDomains) {
       </div>
       <dl class="market-trend-row__numbers">
         <div class="market-trend-row__current">
-          <dt>현재값</dt>
+          <dt>${item.hasLive ? "최신값 · 잠정" : "최근 확정값"}</dt>
           <dd>${formatMarketTrendValue(item.latest.close, item.type)}</dd>
         </div>
         <div><dt>${item.metadata.frequency === "weekly" ? "직전" : "전일"}</dt><dd>${formatMarketTrendChange(item.oneDayChange, item.type)}</dd></div>
@@ -3557,7 +3574,8 @@ function renderMarketIndexTrendPanel(marketIndexes) {
       color: item.direction === "up" ? "var(--red)" : item.direction === "down" ? "var(--green)" : "var(--blue)",
       format: (value) => formatMarketTrendValue(value, item.type),
       detail: (point) =>
-        formatMarketTrendCurrentComparison(point.close, item.latest.close, item.type),
+        formatMarketTrendCurrentComparison(point.close, item.latest.close, item.type) +
+        (point.isLive ? `<br>${marketTrendObservationLabel(item)}` : ""),
       status: (point) => (point.isLive ? "잠정" : "EOD")
     }))
   });

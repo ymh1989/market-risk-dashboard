@@ -553,6 +553,55 @@ test("잠정값은 확정값보다 최근 날짜·유효 시각·신선한 원�
   assert.equal(context.usableMarketLiveSnapshot(definition, payload({ fetchStatus: "derived: live + live" }), confirmed).close, 5.25);
 });
 
+test("금리 최신값은 동일 날짜의 더 늦은 시세를 표시하고 확정 이력은 보존", () => {
+  const { context } = harness();
+  const definition = {id: "us10y_naver", label: "미국 10년", type: "yield"};
+  const confirmed = {date: "2026-11-02", close: 4.894, observedAt: "2026-11-02T17:05:00-05:00"};
+  const snapshot = {...confirmed, close: 4.915, observedAt: "2026-11-02T18:30:00-05:00", isProvisional: true, fetchStatus: "live"};
+  const data = {
+    generatedAt: "2026-11-03 09:00:00 KST",
+    metadata: {us10y_naver: {frequency: "daily"}},
+    series: {us10y_naver: [{date: "2026-10-30", close: 4.929}, confirmed]},
+    liveSnapshots: {us10y_naver: snapshot}
+  };
+  const original = JSON.stringify(data);
+  const trend = context.analyzeMarketTrend(definition, data);
+  assert.equal(trend.latest.close, 4.915);
+  assert.equal(trend.confirmedLatest.close, 4.894);
+  assert.equal(trend.rows.length, 2);
+  assert.ok(Math.abs(trend.oneDayChange - (-1.4)) < 1e-9);
+  assert.equal(context.marketTrendObservationLabel(trend), "최신 2026-11-03 08:30 KST · 잠정");
+  const html = context.renderMarketIndexTrendPanel(data);
+  assert.match(html, /최신값 · 잠정/);
+  assert.match(html, /확정 2026-11-02 · 4.894%/);
+  assert.match(html, /market-trend-row__live-line/);
+  const model = vm.runInContext("[...interactiveChartRegistry.values()].at(-1)", context);
+  assert.equal(model.series[0].points.at(-1).close, 4.915);
+  assert.equal(model.series[0].status(model.series[0].points.at(-1)), "잠정");
+  assert.match(model.series[0].detail(model.series[0].points.at(-1)), /11-03 08:30 KST/);
+  assert.equal(JSON.stringify(data), original);
+  for (const time of [confirmed.observedAt, "2026-11-02T16:00:00-05:00"]) {
+    snapshot.observedAt = time;
+    assert.equal(context.analyzeMarketTrend(definition, data).latest.close, 4.894);
+  }
+});
+
+test("오래되거나 실패한 최신 시세는 확정값 유지·서머타임도 한국 날짜로 표시", () => {
+  const { context } = harness();
+  for (const [observedAt, expected] of [
+    ["2026-10-30T17:05:00-04:00", "2026-10-31 06:05"],
+    ["2026-11-02T17:05:00-05:00", "2026-11-03 07:05"]
+  ]) {
+    assert.equal(context.marketTrendObservationLabel({hasLive: true, liveSnapshot: {observedAt}}), `최신 ${expected} KST · 잠정`);
+  }
+  const definition = {id: "us10y_naver", type: "yield"};
+  const confirmed = {date: "2026-11-02", close: 4.894, observedAt: "2026-11-02T17:05:00-05:00"};
+  for (const patch of [{fetchStatus: "cache_fallback: timeout"}, {observedAt: "2026-11-02T18:30:00"}, {observedAt: "2026-11-03T18:30:00-05:00"}]) {
+    const payload = {generatedAt: "2026-11-03 09:00:00 KST", liveSnapshots: {us10y_naver: {...confirmed, observedAt: "2026-11-02T18:30:00-05:00", close: 4.915, isProvisional: true, fetchStatus: "live", ...patch}}};
+    assert.equal(context.usableMarketLiveSnapshot(definition, payload, confirmed), null);
+  }
+});
+
 test("ELS 수익률 월말 보정·전년말 기준·명시된 원천값 우선", () => {
   const { context } = harness();
   const item = { sixMonthPriceSeries: [

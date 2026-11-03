@@ -294,6 +294,7 @@ def test_naver_market_index_parser_sorts_dates_and_removes_commas(monkeypatch):
 
     assert [point["date"] for point in series] == ["2026-07-10", "2026-07-17"]
     assert series[-1]["close"] == 3080.31
+    assert series[0]["observedAt"] == "2026-07-10T15:00:00+08:00"
     assert series[0]["open"] is None
 
 
@@ -410,6 +411,39 @@ def test_latest_snapshot_is_appended_as_provisional_without_changing_eod(monkeyp
     assert statuses == {"kr3y": "live", "kr10y": "live"}
     assert all(snapshot["isProvisional"] for snapshot in snapshots.values())
     assert all(snapshot["confirmedDate"] == "2026-07-23" for snapshot in snapshots.values())
+
+
+def test_same_day_later_quote_is_available_without_rewriting_confirmed_history(monkeypatch):
+    from scripts import update_market_risk as risk
+
+    confirmed = {"date": "2026-11-02", "close": 4.894, "observedAt": "2026-11-02T17:05:00-05:00"}
+    series = {"us10y_naver": [confirmed]}
+    snapshot = {"date": "2026-11-02", "close": 4.915, "observedAt": "2026-11-02T18:30:00-05:00"}
+    monkeypatch.setattr(risk, "NAVER_LATEST_INDEX_IDS", ("us10y_naver",))
+    monkeypatch.setattr(risk, "fetch_naver_market_index_latest_snapshot", lambda config: dict(snapshot))
+    monkeypatch.setattr(risk, "_is_recent_live_snapshot", lambda value: True)
+    actual, _ = risk.fetch_naver_market_index_latest_snapshots(series)
+    assert actual["us10y_naver"]["isProvisional"]
+    assert confirmed["close"] == 4.894
+    assert len(series["us10y_naver"]) == 1
+
+    for observed in ("2026-11-02T17:05:00-05:00", "2026-11-02T16:00:00-05:00", "2026-11-02T18:30:00", "invalid"):
+        snapshot["observedAt"] = observed
+        actual, _ = risk.fetch_naver_market_index_latest_snapshots(series)
+        assert not actual["us10y_naver"]["isProvisional"]
+    snapshot["observedAt"] = "2026-11-02T18:30:00-05:00"
+    confirmed.pop("observedAt")
+    actual, _ = risk.fetch_naver_market_index_latest_snapshots(series)
+    assert not actual["us10y_naver"]["isProvisional"]
+
+
+def test_same_day_spread_carries_latest_confirmed_component_time():
+    series = build_rate_spread_series({
+        "us10y_naver": [{"date": "2026-11-02", "close": 4.894, "observedAt": "2026-11-02T17:05:00-05:00"}],
+        "us2y_naver": [{"date": "2026-11-02", "close": 4.583, "observedAt": "2026-11-02T17:06:00-05:00"}],
+    })
+    assert series["us_10y2y_spread"][-1]["observedAt"] == "2026-11-02T17:06:00-05:00"
+    assert series["us_10y2y_spread"][-1]["close"] == 0.311
 
 
 def test_shipping_cost_pressure_combines_weekly_and_daily_series_without_future_values():
