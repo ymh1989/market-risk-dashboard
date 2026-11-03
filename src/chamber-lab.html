@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#080b0c">
+  <title>UNTITLED / 07 · Field Lab</title>
+  <style>
+    :root{color-scheme:dark;font-family:Inter,Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#e8efeb;background:#080b0c;font-synthesis:none;letter-spacing:0}
+    *{box-sizing:border-box}body{margin:0;overflow:hidden}button,a,input,select{font:inherit}button,a{-webkit-tap-highlight-color:transparent}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #a3ddca;outline-offset:4px}
+    #scene{display:block;width:100%;height:100dvh;position:fixed;inset:0;touch-action:none;cursor:grab}#scene:active{cursor:grabbing}
+    header{position:fixed;z-index:2;top:max(26px,env(safe-area-inset-top));left:32px;right:32px;display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none}header a,header button{pointer-events:auto}
+    .identity{display:flex;gap:18px;align-items:center}.identity small{display:block;color:#a0b2ab;font-size:10px;line-height:1.5}.identity h1{font-size:17px;font-weight:500;margin:4px 0 0}.signature{font-size:11px;color:#a0b2ab;line-height:1.8;text-align:right}.signature span{display:block;color:#dce8e0}
+    .icon{display:inline-grid;place-items:center;flex-shrink:0;border:1px solid #52625b66;color:#dce8e0;background:#0b1314b3;border-radius:50%;width:42px;height:42px;text-decoration:none;transition:background .2s,border-color .2s}.icon:hover{background:#263d38;border-color:#b8d8ca}.icon svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}.icon[aria-pressed=true]{color:#b5f5df;border-color:#86bea9}.icon:disabled{opacity:.3;cursor:default}
+    .caption{position:fixed;left:34px;bottom:128px;pointer-events:none}.caption p{font-size:11px;color:#9db0a6;margin:0 0 10px}.caption h2{font-family:Georgia,"Times New Roman",serif;font-size:42px;font-weight:normal;margin:0;color:#e4eee8;line-height:1.15}.caption span{display:block;color:#91a299;font-size:12px;margin-top:10px}
+    .counter{position:fixed;right:34px;bottom:130px;writing-mode:vertical-rl;color:#879a91;font-size:10px;pointer-events:none}
+    footer{position:fixed;z-index:3;bottom:max(24px,env(safe-area-inset-bottom));left:28px;right:28px;display:flex;align-items:center;justify-content:space-between;gap:20px;pointer-events:none}.dock{display:flex;align-items:center;gap:16px;padding:12px 16px;border:1px solid #7b9b8b3b;border-radius:8px;background:#0c1214d9;backdrop-filter:blur(16px);pointer-events:auto}.tools{display:flex;gap:8px;pointer-events:auto}.divider{height:26px;width:1px;background:#a9c3b82b}.forms{display:flex;gap:4px}.forms button{border:0;background:transparent;color:#899f93;width:39px;height:34px;border-radius:4px;font-family:Georgia,serif;font-size:17px}.forms button[aria-pressed=true]{background:#dfebe2;color:#17211d}.forms button:hover{color:#64cead}.tempo{display:grid;gap:7px}.tempo label{font-size:10px;color:#a6b9af}.tempo input{width:88px;margin:0;accent-color:#9dd3be;height:4px}.auto{display:flex;gap:6px;align-items:center;font-size:11px;color:#c1d1c7;white-space:nowrap}.auto input{accent-color:#9dd3be}select{border:0;background:#101b19;color:#c1d1c7;font-size:11px;padding:7px;border-radius:4px}
+    #status{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);font-size:13px;color:#c0d6c9;text-align:center;line-height:1.9;max-width:85%;z-index:4}#status[hidden]{display:none}.error-action{margin-top:16px;border:1px solid #aac8ba;background:transparent;color:inherit;padding:8px 15px;border-radius:4px}
+    #notice{position:fixed;z-index:5;bottom:108px;left:50%;transform:translateX(-50%);background:#15211f;color:#dbe9e2;padding:9px 16px;border-radius:4px;font-size:12px;pointer-events:none}#notice:empty{display:none}noscript{position:fixed;top:45%;left:10%;right:10%;text-align:center}
+    @media(max-width:900px){footer{gap:12px;flex-wrap:wrap}.dock{gap:12px}.caption{bottom:158px}.counter{display:none}.tempo input{width:65px}}
+    @media(max-width:620px){header{top:20px;left:18px;right:18px}.identity{gap:10px}.identity h1{font-size:14px}.signature{font-size:9px}.caption{left:20px;bottom:164px}.caption h2{font-size:30px}.caption p,.caption span{font-size:10px}.dock{width:100%;justify-content:center;padding:9px;gap:10px}.tools{width:100%;justify-content:center;gap:12px}footer{left:12px;right:12px;bottom:max(14px,env(safe-area-inset-bottom));gap:10px}.icon{width:36px;height:36px}.forms button{width:29px}.tempo input{width:52px}.auto{font-size:10px}select{font-size:10px;max-width:65px}.divider{height:20px}#notice{bottom:145px}}
+    @media(max-width:360px){.dock{gap:7px;padding:8px 6px}.forms button{width:26px}.tempo input{width:43px}select{max-width:58px;padding:6px 3px}}
+    @media(max-height:760px) and (min-width:621px){.caption h2{font-size:30px}}
+    @media(max-height:520px) and (min-width:621px){header{top:14px}.caption{bottom:92px}.caption h2{font-size:28px}.caption span{display:none}footer{bottom:12px}.dock{padding:7px 12px}}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  </style>
+</head>
+<body>
+  <canvas id="scene" aria-label="마우스와 터치에 반응하는 입체 작품"></canvas>
+  <header>
+    <div class="identity"><a class="icon" href="./snow-lab.html" title="Field Lab으로 돌아가기" aria-label="Field Lab으로 돌아가기">{{ICON_ARROWLEFT}}</a><div><small>FIELD LAB / EDITION 07</small><h1>UNTITLED</h1></div></div>
+    <div class="signature">A STUDY IN MOTION<span>2026 / 007</span></div>
+  </header>
+  <div class="caption"><p id="chapter">I / CONTINUUM</p><h2 id="name">The space between.</h2><span id="subtitle">연속과 틈 사이</span></div>
+  <div class="counter">FORM / LIGHT / TIME</div>
+  <footer>
+    <div class="dock" aria-label="작품 설정">
+      <div class="forms" role="group" aria-label="형태 선택"><button data-form="0" aria-label="형태 1" aria-pressed="true">I</button><button data-form="1" aria-label="형태 2" aria-pressed="false">II</button><button data-form="2" aria-label="형태 3" aria-pressed="false">III</button></div>
+      <div class="divider"></div><div class="tempo"><label for="tempo">흐름</label><input id="tempo" type="range" min="0.2" max="1.6" step="0.1" value="0.6"></div>
+      <label class="auto"><input id="auto" type="checkbox" checked>자동 전개</label>
+      <select id="quality" aria-label="렌더링 품질" title="렌더링 품질"><option value="auto">자동</option><option value="high">선명</option><option value="eco">절전</option></select>
+    </div>
+    <div class="tools">
+      <button id="reset" class="icon" title="시점 초기화" aria-label="시점 초기화">{{ICON_ROTATECCW}}</button>
+      <button id="pause" class="icon" title="일시정지" aria-label="일시정지" aria-pressed="false">{{ICON_PAUSE}}</button>
+      <button id="sound" class="icon" title="소리 켜기" aria-label="소리 켜기" aria-pressed="false">{{ICON_VOLUMEX}}</button>
+      <button id="fullscreen" class="icon" title="전체 화면" aria-label="전체 화면">{{ICON_MAXIMIZE}}</button>
+      <button id="download" class="icon" title="단일 HTML 다운로드" aria-label="단일 HTML 다운로드">{{ICON_DOWNLOAD}}</button>
+    </div>
+  </footer>
+  <div id="status" role="status">잠시만요.</div><div id="notice" role="status"></div>
+  <noscript>이 작품을 열려면 브라우저에서 JavaScript를 허용해 주세요.</noscript>
+  <!-- {{LICENSES}} -->
+  <script id="engine" type="application/json">{{ENGINE}}</script>
+  <script id="icons" type="application/json">{{ICONS}}</script>
+  <script>{{BOOTSTRAP}}</script>
+</body>
+</html>

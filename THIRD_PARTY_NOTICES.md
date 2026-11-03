@@ -17,12 +17,21 @@
 
 ## Three.js 0.185.1
 
-- 용도: Ocean Lab의 3D 바다 메시, 카메라, 레이캐스팅과 WebGL 렌더링
+- 용도: Ocean Lab과 Field Lab 입체 작품의 메시, 카메라, 레이캐스팅과 WebGL 렌더링
 - 저작권자: Three.js Authors
 - 라이선스: MIT
 - 라이선스 전문: `src/vendor/three.LICENSE`
 
 배포 파일은 `src/vendor/three.module.min.js`, `src/vendor/three.core.min.js`에 같은 버전으로 고정해 보관합니다.
+
+`chamber-lab.html`은 같은 엔진과 라이선스를 파일 안에 포함하여 외부 접속 없이 실행합니다.
+
+## Lucide
+
+- 용도: Field Lab 숨겨진 방의 도구 버튼과 입구 아이콘
+- 저작권자: Lucide Icons and Contributors, 일부 아이콘 Cole Bemis
+- 라이선스: ISC 및 해당 Feather 파생 아이콘의 MIT
+- 라이선스 전문: `src/vendor/lucide.LICENSE`
 
 ## 해양 스펙트럼 참고 방법론
 
