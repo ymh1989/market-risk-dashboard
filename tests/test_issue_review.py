@@ -230,13 +230,15 @@ def test_discovery_runs_once_per_slot_and_never_changes_public_issues(store):
             self.calls += 1
             assert len(packet["articles"]) == 3
             assert all("publishedAt" in article for article in packet["articles"])
+            if packet.get("task") == "event-evidence-review":
+                return {"verdict": "supported", "evidence": [{"id": a["id"], "quote": a["title"]} for a in packet["articles"]]}
             return {"new": [{"title": "새 검증 사건", "rationale": "공개 기사 검토", "themeId": "europe", "articleIds": ["n0", "n1", "n2"], "metricIds": ["spread", "bank"], "keywords": ["검증은행", "유동성"]}], "transitions": []}
     client = Selector()
     fetch = lambda *args: news()
     assert discovery.discover(store, [THEME], NOW, fetcher=fetch, selector=client,
                               inspector=lambda articles, now: news(now))["proposed"] == 1
     discovery.discover(store, [THEME], NOW + timedelta(minutes=30), fetcher=fetch, selector=client)
-    assert client.calls == 1 and len(store.registry()) == 1
+    assert client.calls == 2 and len(store.registry()) == 1
     assert len(store.pending(NOW)) == 1
 
 
@@ -512,8 +514,8 @@ def test_rejected_candidate_records_actual_reason_not_model_silence(store):
             return {"new": [{"title": "검증 사건", "articleIds": ["not-provided"]}], "transitions": []}
     result = discovery.discover(store, [THEME], NOW, fetcher=lambda *args: news(), selector=Bad())
     assert result["status"] == "ok" and result["modelCandidates"] == 1
-    assert result["rejected"] == 1 and result["noCandidateReason"] is None
-    assert result["rejectionReasons"] == {"기사 근거 수 오류": 1}
+    assert result["rejected"] == 1 and result["noCandidateReason"] == "제안 후보 전부 검증 제외"
+    assert result["rejectionReasons"] == {"제공하지 않은 기사": 1}
     with store.transaction() as db:
         decisions = json.loads(db.execute("SELECT decisions FROM discovery_runs").fetchone()[0])
     assert decisions[0]["status"] == "rejected"

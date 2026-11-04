@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import socket
 import subprocess
 import sys
 import time
@@ -30,6 +31,7 @@ STATUS_TEXT = {"approved": "승인 완료 · 홈페이지 반영 대기", "rejec
                "unauthorized": "등록된 개인 승인 계정에서만 처리할 수 있습니다", "invalid": "유효하지 않은 승인 버튼입니다"}
 STATE_LABEL = {"active": "활성", "watch": "관찰", "archived": "보관"}
 DISCOVERY_LABEL = {"ok": "완료", "partial": "일부 미완료", "failed": "실패", "running": "탐색 중", "waiting-data": "시장자료 대기"}
+STAGE_LABEL = {"receive": "명령 수신", "delivery": "안건 발송", "publication": "승인 게시", "notice": "점검 알림"}
 
 
 def best_effort(bot, method, **params):
@@ -52,6 +54,15 @@ def load_env(path: Path):
         os.environ.setdefault(key.strip(), " ".join(tokens))
 
 
+class TelegramError(RuntimeError):
+    """토큰·URL·응답 본문 없이 원인 구분에 필요한 정보만 전달합니다."""
+
+    def __init__(self, method, kind, code=None, retry_after=10):
+        self.method, self.kind, self.code = method, kind, code
+        self.retry_after = max(10, retry_after)
+        super().__init__(f"Telegram {method} · {kind}" + (f" · HTTP/API {code}" if code else ""))
+
+
 class Telegram:
     def __init__(self, token: str):
         self.token = token
@@ -63,11 +74,91 @@ class Telegram:
             with urllib.request.urlopen(request, timeout=35) as response:
                 result = json.loads(response.read(1_000_000))
             if not result.get("ok"):
-                raise ValueError("API 응답 실패")
+                code = result.get("error_code")
+                delay = 10
+                if code == 429:
+                    try:
+                        delay = int(result.get("parameters", {}).get("retry_after", 10))
+                    except (ValueError, TypeError, AttributeError):
+                        pass
+                raise TelegramError(method, "API 거부", code if isinstance(code, int) else None, delay)
             return result["result"]
+        except TelegramError:
+            raise
+        except urllib.error.HTTPError as error:
+            delay = 10
+            if error.code == 429:
+                try:
+                    delay = int(json.loads(error.read(4096)).get("parameters", {}).get("retry_after", 10))
+                except (ValueError, TypeError, AttributeError):
+                    pass
+            raise TelegramError(method, "요청 제한" if error.code == 429 else "HTTP 거부", error.code, delay) from None
+        except (TimeoutError, socket.timeout):
+            raise TelegramError(method, "응답 시간 초과") from None
+        except urllib.error.URLError as error:
+            kind = "응답 시간 초과" if isinstance(error.reason, (TimeoutError, socket.timeout)) else "네트워크 연결 실패"
+            raise TelegramError(method, kind) from None
         except Exception:
-            # URL에 들어 있는 봇 토큰과 응답 원문은 예외·로그에 노출하지 않습니다.
-            raise RuntimeError(f"Telegram {method} 요청 실패") from None
+            raise TelegramError(method, "응답 형식 오류") from None
+
+
+def notify_discovery_health(store, bot, now):
+    """일반 무후보는 무알림. 연속 검증 탈락은 상태가 바뀔 때 개인에게만 알립니다."""
+    owner = store.get("ownerId")
+    if not owner:
+        return
+    last = store.get("discovery", {})
+    if last.get("status") in {"failed", "partial"}:
+        if last.get("attemptedAt") != store.get("lastFailureNotice"):
+            bot.call("sendMessage", chat_id=owner, text="시장 이슈 탐색·검증 일부 또는 전체 미완료. 기존 승인 이슈 유지 · 1시간 뒤 재시도. /history에서 수집·모델 검증 기록 확인")
+            store.put("lastFailureNotice", last.get("attemptedAt"))
+        return
+    if last.get("status") != "ok":
+        return
+    slots = {}
+    for row in store.discovery_history(12):
+        slots.setdefault(row["slot"], row)
+    recent = list(slots.values())[:3]
+    blocked = len(recent) == 3 and all(r.get("status") == "ok" and r.get("modelCandidates", 0) > 0
+                 and r.get("rejected", 0) == r.get("modelCandidates") and not r.get("proposed") for r in recent)
+    previous = store.get("discoveryHealth", {}).get("state")
+    if blocked and previous != "validation-blocked":
+        bot.call("sendMessage", chat_id=owner, text="[시장 이슈 선정 점검]\n최근 3회 연속 제안 후보가 검증 제외·보류되어 상정된 안건이 없습니다. 탐색 중단이나 위험 부재를 뜻하지 않습니다.\n독립 출처 기준은 유지 · /history 제외 사유 · /status 통신 상태 확인")
+    outcome = "validation-blocked" if blocked else "ok"
+    if previous != outcome:
+        store.put("discoveryHealth", {"state": outcome, "at": now.isoformat()})
+
+
+def service_tick(store, bot, publisher, now, retry_at: dict) -> None:
+    """수신 실패가 안건 발송·게시를 막지 않도록 단계별로 복구합니다."""
+    def receive():
+        updates = bot.call("getUpdates", offset=store.get("telegramOffset"), timeout=20, allowed_updates=["message", "callback_query"])
+        for update in updates:
+            handle_update(store, bot, update, utc_now())
+            store.put("telegramOffset", update["update_id"] + 1)
+
+    stages = [("receive", receive), ("delivery", lambda: send_pending(store, bot, now)),
+              ("publication", lambda: publisher.tick(bot)), ("notice", lambda: notify_discovery_health(store, bot, now))]
+    for stage, operation in stages:
+        if time.monotonic() < retry_at.get(stage, 0):
+            continue
+        health = store.get("botHealth", {})
+        previous = health.get(stage, {})
+        try:
+            operation()
+            if previous.get("status") != "ok":
+                health[stage] = {"status": "ok", "at": utc_now().isoformat()}
+                store.put("botHealth", health)
+                if previous:
+                    print(f"{utc_now().isoformat()} {STAGE_LABEL[stage]} 복구 확인", flush=True)
+        except Exception as error:
+            detail = str(error) if isinstance(error, TelegramError) else type(error).__name__
+            delay = error.retry_after if isinstance(error, TelegramError) else 10
+            retry_at[stage] = time.monotonic() + delay
+            health[stage] = {"status": "failed", "at": utc_now().isoformat(), "detail": detail,
+                             "consecutiveFailures": previous.get("consecutiveFailures", 0) + 1}
+            store.put("botHealth", health)
+            print(f"{utc_now().isoformat()} {STAGE_LABEL[stage]} 오류: {detail} · {delay}초 뒤 재시도", flush=True)
 
 
 def proposal_message(proposal: dict, metric_labels: dict | None = None) -> tuple[str, dict]:
@@ -149,6 +240,8 @@ def handle_update(store: ReviewStore, bot, update: dict, now):
             lines.append(f"{row['slot'].replace('T', ' ')} · {DISCOVERY_LABEL.get(row['status'], row['status'])} · 기사 {row.get('reviewedArticles', 0)}건 · 제안 {row.get('modelCandidates', 0)}건 · 상정 {row.get('proposed', 0)}건")
             if row.get("noCandidateReason"):
                 lines.append(row["noCandidateReason"])
+            if row.get("eventReviews"):
+                lines.append(f"사건 재검증 {row['eventReviews']}건 · 추가 검색 {row.get('targetedQueries', 0)}회")
             for reason, count in row.get("rejectionReasons", {}).items():
                 lines.append(f"제외: {reason} {count}건")
         bot.call("sendMessage", chat_id=chat["id"], text="\n".join(lines) if rows else "아직 저장된 탐색 기록 없음")
@@ -157,7 +250,12 @@ def handle_update(store: ReviewStore, bot, update: dict, now):
         text = (f"시장 이슈 개인 승인함\n탐색: 매일 07:45 · 12:45 · 16:20 KST\n검토 대기 {len(store.pending(now))}건\n"
                 f"후보 탐색: {DISCOVERY_LABEL.get(last.get('status'), '대기')} · {str(last.get('attemptedAt', '-'))[:16]}\n"
                 f"기사 {last.get('reviewedArticles', 0)}건 · 모델 제안 {last.get('modelCandidates', 0)}건 · 상정 {last.get('proposed', 0)}건\n"
+                f"선정 결과: {last.get('noCandidateReason') or ('검토 안건 있음' if last.get('proposed') else '결과 대기')}\n"
                 f"홈페이지: {'반영 대기' if store.get('needsPublication') else '승인 변경 대기 없음'}\n/issues 검토함 · /history 탐색 기록 · /status 상태")
+        for stage, health in store.get("botHealth", {}).items():
+            text += f"\n{STAGE_LABEL.get(stage, stage)}: {'정상' if health.get('status') == 'ok' else '재시도 중'}"
+            if health.get("status") == "failed":
+                text += f" · {health.get('detail', '원인 확인 필요')}"
         bot.call("sendMessage", chat_id=chat["id"], text=text)
 
 
@@ -244,6 +342,7 @@ def main():
     publisher = Publisher(args.runtime, store)
     themes = json.loads((ROOT / "config/market_issues.json").read_text())["issues"]
     pool, future = ThreadPoolExecutor(max_workers=1), None
+    retry_at = {}
     print("시장 이슈 승인함 시작 · 개인 계정 인증 필수", flush=True)
     while True:
         # Telegram 조회 장애가 뉴스 탐색까지 중단시키지 않도록 먼저 회차를 점검합니다.
@@ -252,26 +351,13 @@ def main():
             try:
                 last = future.result()
                 print(f"{now.isoformat()} 이슈 탐색 완료: {last.get('status')} · 기사 {last.get('reviewedArticles', 0)} · 상정 {last.get('proposed', 0)}", flush=True)
-                if last.get("status") in {"failed", "partial"} and last.get("attemptedAt") != store.get("lastFailureNotice") and store.get("ownerId"):
-                    result = best_effort(bot, "sendMessage", chat_id=store.get("ownerId"), text="시장 이슈 후보 탐색 일부 또는 전체 미완료. 뉴스 수집·로컬 모델 응답 확인 필요. 기존 승인 이슈는 유지하며 1시간 뒤 재시도. /history에서 탐색 기록 확인")
-                    if result is not None:
-                        store.put("lastFailureNotice", last.get("attemptedAt"))
             except Exception as error:
                 print(f"{now.isoformat()} 이슈 탐색 작업 오류: {type(error).__name__}", flush=True)
             future = None
         if future is None and discovery_due(store.get("discovery", {}), now):
             future = pool.submit(discover, store, themes, now)
-        try:
-            updates = bot.call("getUpdates", offset=store.get("telegramOffset"), timeout=20, allowed_updates=["message", "callback_query"])
-            for update in updates:
-                handle_update(store, bot, update, utc_now())
-                store.put("telegramOffset", update["update_id"] + 1)
-            now = utc_now()
-            send_pending(store, bot, now)
-            publisher.tick(bot)
-        except Exception as error:
-            print(f"{utc_now().isoformat()} 승인함 수신·발송·게시 일시 오류: {type(error).__name__} · 10초 뒤 재시도", flush=True)
-            time.sleep(10)
+        service_tick(store, bot, publisher, utc_now(), retry_at)
+        time.sleep(1)
 
 
 if __name__ == "__main__":

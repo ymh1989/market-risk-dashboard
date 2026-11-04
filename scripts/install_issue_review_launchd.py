@@ -8,8 +8,21 @@ from pathlib import Path
 import plistlib
 import subprocess
 import sys
+import time
 
 LABEL = "com.marketlab.issue-review"
+
+
+def reload_agent(domain: str, target: Path) -> None:
+    """기존 서비스 종료 직후 발생하는 일시적인 등록 지연만 제한적으로 재시도합니다."""
+    subprocess.run(["launchctl", "bootout", domain + "/" + LABEL], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    for attempt in range(5):
+        result = subprocess.run(["launchctl", "bootstrap", domain, str(target)], capture_output=True, text=True)
+        if result.returncode == 0:
+            return
+        if result.returncode != 5 or attempt == 4:
+            raise RuntimeError(f"승인 서비스 등록 실패 · 종료코드 {result.returncode} · launchctl 상태 확인 필요")
+        time.sleep(2)
 
 
 def main():
@@ -36,8 +49,7 @@ def main():
     target.chmod(0o600)
     if not args.write_only:
         domain = f"gui/{os.getuid()}"
-        subprocess.run(["launchctl", "bootout", domain + "/" + LABEL], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.run(["launchctl", "bootstrap", domain, str(target)], check=True)
+        reload_agent(domain, target)
     print(f"개인 이슈 승인함 설치 완료: {target}")
 
 
