@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-06 15:38:04 KST",
+  "generatedAt": "2026-11-07 07:32:19 KST",
   "source": "Yahoo Finance, Naver Finance equity/market-index, and FRED endpoints",
   "historyCache": "data/market-history-cache.json",
   "methodology": "2020년 이후 동일 시장리스크 모델 점수와 KOSPI 252일 고점대비 낙폭을 함께 평가해 모델 점수 75 이상 또는 KOSPI 낙폭 10% 이상인 거래일을 주요 스트레스 후보로 묶습니다.",
   "sampleStart": "2020-02-05",
-  "sampleEnd": "2026-10-21",
-  "sampleCount": 156,
+  "sampleEnd": "2026-11-06",
+  "sampleCount": 157,
   "thresholds": {
     "modelScore": 75,
     "kospiDrawdownFromHighPct": 10,
@@ -15,50 +15,50 @@
   "episodeCount": 5,
   "episodes": [
     {
-      "id": "2026-07-13_2026-10-21",
+      "id": "2026-07-13_2026-11-06",
       "label": "모델 스트레스 구간 2026-07",
       "startDate": "2026-07-13",
-      "endDate": "2026-10-21",
-      "tradingDays": 8,
-      "peakDate": "2026-07-13",
-      "peakScore": 68.1,
-      "averageScore": 58.0,
+      "endDate": "2026-11-06",
+      "tradingDays": 9,
+      "peakDate": "2026-11-06",
+      "peakScore": 71.5,
+      "averageScore": 59.5,
       "kospiStart": 6806.93,
-      "kospiEnd": 5735.66,
-      "kospiLow": 5735.66,
-      "kospiEpisodeReturnPct": -15.74,
-      "kospiMaxDrawdownFromHighPct": 37.07,
-      "kospiLowFromStartPct": -15.74,
-      "forward20dMaxDrawdownFromPeakPct": -17.83,
+      "kospiEnd": 5059.69,
+      "kospiLow": 5059.69,
+      "kospiEpisodeReturnPct": -25.67,
+      "kospiMaxDrawdownFromHighPct": 44.49,
+      "kospiLowFromStartPct": -25.67,
+      "forward20dMaxDrawdownFromPeakPct": 0.0,
       "trigger": "kospiDrawdown",
       "topContributors": [
         {
           "id": "kospi_price_stress",
           "name": "KOSPI 가격 스트레스",
           "group": "crash",
-          "score": 94.2,
-          "contribution": 10.36
+          "score": 84.5,
+          "contribution": 9.78
         },
         {
           "id": "global_ai_semiconductor_stress",
           "name": "글로벌 AI 반도체 스트레스",
           "group": "ai_semi",
-          "score": 79.5,
-          "contribution": 7.95
+          "score": 92.9,
+          "contribution": 9.78
         },
         {
           "id": "foreign_ownership_pressure",
           "name": "외국인 소진율 이탈 압력",
           "group": "flow",
-          "score": 71.1,
-          "contribution": 7.11
+          "score": 70.0,
+          "contribution": 7.37
         },
         {
-          "id": "korea_ai_semiconductor_concentration",
-          "name": "한국 AI 반도체 쏠림/스트레스",
-          "group": "ai_semi",
-          "score": 67.3,
-          "contribution": 6.73
+          "id": "trading_activity_heat",
+          "name": "거래량 과열/위축 압력",
+          "group": "liquidity",
+          "score": 95.1,
+          "contribution": 7.01
         }
       ]
     },
@@ -261,10 +261,10 @@
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261106T183007-1830-krx",
-    "mode": "krx",
-    "state": "reused",
-    "startedAt": "2026-11-06 18:30:07 KST",
-    "preparedAt": "2026-11-06 18:31:13 KST"
+    "runId": "20261107T073007-0730-full",
+    "mode": "full",
+    "state": "generated",
+    "startedAt": "2026-11-07 07:30:07 KST",
+    "preparedAt": "2026-11-07 07:51:31 KST"
   }
 }
