@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-09 15:39:16 KST",
+  "generatedAt": "2026-11-09 18:31:38 KST",
   "current": {
-    "runId": "20261109T153502-1535-full",
+    "runId": "20261109T183002-1830-krx",
     "status": "success",
-    "mode": "full",
+    "mode": "krx",
     "trigger": "scheduled",
-    "scheduledTime": "15:35",
-    "startedAt": "2026-11-09 15:35:02 KST",
-    "completedAt": "2026-11-09 15:39:16 KST",
-    "durationSeconds": 254,
+    "scheduledTime": "18:30",
+    "startedAt": "2026-11-09 18:30:02 KST",
+    "completedAt": "2026-11-09 18:31:38 KST",
+    "durationSeconds": 96,
     "statusScope": "calculation",
-    "calculationCompletedAt": "2026-11-09 15:39:16 KST",
-    "calculationDurationSeconds": 254,
+    "calculationCompletedAt": "2026-11-09 18:31:38 KST",
+    "calculationDurationSeconds": 96,
     "publicationStatus": "awaiting-verification",
     "publishedAt": null,
     "endToEndDurationSeconds": null,
@@ -20,7 +20,9 @@
     "dashboardGeneratedAt": "2026-11-09 15:36:33 KST",
     "mlGeneratedAt": "2026-11-09 15:38 KST",
     "qualityScore": 99.4,
-    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+    "krxReferenceDate": "2026-11-09",
+    "krxSessionDate": "2026-11-09"
   },
   "schedule": {
     "timezone": "Asia/Seoul",
@@ -124,15 +126,15 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 114,
-      "detail": "시장 데이터 수집, 위험점수, M7·KB 시장자금, ELS·HMM 산출"
+      "durationSeconds": 3,
+      "detail": "KRX 2026-11-09 외국인·기관·프로그램 확정치 점검"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
-      "durationSeconds": 57,
-      "detail": "최신 ML 신호 갱신 · 워크포워드 OOS 검증 수행"
+      "durationSeconds": 0,
+      "detail": "직전 확정 ML·HMM 산출물 재사용"
     },
     {
       "id": "validation",
@@ -308,13 +310,13 @@
       "id": "breadth",
       "label": "KOSPI 시장 내부강도",
       "status": "ok",
-      "generatedAt": "2026-11-09 15:35:36 KST"
+      "generatedAt": "2026-11-09 18:30:08 KST"
     },
     {
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-11-09 15:39:16 KST"
+      "generatedAt": "2026-11-09 18:31:38 KST"
     }
   ],
   "quality": {
@@ -578,6 +580,29 @@
   ],
   "history": [
     {
+      "runId": "20261109T183002-1830-krx",
+      "status": "success",
+      "mode": "krx",
+      "trigger": "scheduled",
+      "scheduledTime": "18:30",
+      "startedAt": "2026-11-09 18:30:02 KST",
+      "completedAt": "2026-11-09 18:31:38 KST",
+      "durationSeconds": 96,
+      "statusScope": "calculation",
+      "calculationCompletedAt": "2026-11-09 18:31:38 KST",
+      "calculationDurationSeconds": 96,
+      "publicationStatus": "awaiting-verification",
+      "publishedAt": null,
+      "endToEndDurationSeconds": null,
+      "dataAsOf": "2026-11-09",
+      "dashboardGeneratedAt": "2026-11-09 15:36:33 KST",
+      "mlGeneratedAt": "2026-11-09 15:38 KST",
+      "qualityScore": 99.4,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "krxReferenceDate": "2026-11-09",
+      "krxSessionDate": "2026-11-09"
+    },
+    {
       "runId": "20261109T153502-1535-full",
       "status": "success",
       "mode": "full",
@@ -589,14 +614,15 @@
       "statusScope": "calculation",
       "calculationCompletedAt": "2026-11-09 15:39:16 KST",
       "calculationDurationSeconds": 254,
-      "publicationStatus": "awaiting-verification",
-      "publishedAt": null,
-      "endToEndDurationSeconds": null,
+      "publicationStatus": "verified",
+      "publishedAt": "2026-11-09 15:39:57 KST",
+      "endToEndDurationSeconds": 295,
       "dataAsOf": "2026-11-09",
       "dashboardGeneratedAt": "2026-11-09 15:36:33 KST",
       "mlGeneratedAt": "2026-11-09 15:38 KST",
       "qualityScore": 99.4,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "deploymentDurationSeconds": 41
     },
     {
       "runId": "20261109T150004-1500-live",
@@ -1217,58 +1243,36 @@
       "qualityScore": 99.1,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
       "deploymentDurationSeconds": 103
-    },
-    {
-      "runId": "20261105T073007-0730-fast",
-      "status": "success",
-      "mode": "fast",
-      "trigger": "scheduled",
-      "scheduledTime": "07:30",
-      "startedAt": "2026-11-05 07:30:07 KST",
-      "completedAt": "2026-11-05 07:33:07 KST",
-      "durationSeconds": 180,
-      "statusScope": "calculation",
-      "calculationCompletedAt": "2026-11-05 07:33:07 KST",
-      "calculationDurationSeconds": 180,
-      "publicationStatus": "verified",
-      "publishedAt": "2026-11-05 07:33:50 KST",
-      "endToEndDurationSeconds": 223,
-      "dataAsOf": "2026-11-04",
-      "dashboardGeneratedAt": "2026-11-05 07:31:12 KST",
-      "mlGeneratedAt": "2026-11-05 07:31 KST",
-      "qualityScore": 98.3,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-      "deploymentDurationSeconds": 43
     }
   ],
   "lastVerifiedPublication": {
-    "runId": "20261109T150004-1500-live",
+    "runId": "20261109T153502-1535-full",
     "status": "success",
-    "mode": "live",
+    "mode": "full",
     "trigger": "scheduled",
-    "scheduledTime": "15:00",
-    "startedAt": "2026-11-09 15:00:04 KST",
-    "completedAt": "2026-11-09 15:01:56 KST",
-    "durationSeconds": 112,
+    "scheduledTime": "15:35",
+    "startedAt": "2026-11-09 15:35:02 KST",
+    "completedAt": "2026-11-09 15:39:16 KST",
+    "durationSeconds": 254,
     "statusScope": "calculation",
-    "calculationCompletedAt": "2026-11-09 15:01:56 KST",
-    "calculationDurationSeconds": 112,
+    "calculationCompletedAt": "2026-11-09 15:39:16 KST",
+    "calculationDurationSeconds": 254,
     "publicationStatus": "verified",
-    "publishedAt": "2026-11-09 15:02:49 KST",
-    "endToEndDurationSeconds": 166,
+    "publishedAt": "2026-11-09 15:39:57 KST",
+    "endToEndDurationSeconds": 295,
     "dataAsOf": "2026-11-09",
-    "dashboardGeneratedAt": "2026-11-09 15:00:55 KST",
-    "mlGeneratedAt": "2026-11-07 07:50 KST",
-    "qualityScore": 99.2,
+    "dashboardGeneratedAt": "2026-11-09 15:36:33 KST",
+    "mlGeneratedAt": "2026-11-09 15:38 KST",
+    "qualityScore": 99.4,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-    "deploymentDurationSeconds": 54
+    "deploymentDurationSeconds": 41
   },
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261109T153502-1535-full",
-    "mode": "full",
+    "runId": "20261109T183002-1830-krx",
+    "mode": "krx",
     "state": "generated",
-    "startedAt": "2026-11-09 15:35:02 KST",
-    "preparedAt": "2026-11-09 15:39:16 KST"
+    "startedAt": "2026-11-09 18:30:02 KST",
+    "preparedAt": "2026-11-09 18:31:38 KST"
   }
 }
