@@ -1,28 +1,26 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-12 09:29:09 KST",
+  "generatedAt": "2026-11-12 10:01:34 KST",
   "current": {
-    "runId": "20261112T092809-manual-krx",
+    "runId": "20261112T100004-1000-live",
     "status": "success",
-    "mode": "krx",
-    "trigger": "manual",
-    "scheduledTime": null,
-    "startedAt": "2026-11-12 09:28:09 KST",
-    "completedAt": "2026-11-12 09:29:09 KST",
-    "durationSeconds": 60,
+    "mode": "live",
+    "trigger": "scheduled",
+    "scheduledTime": "10:00",
+    "startedAt": "2026-11-12 10:00:04 KST",
+    "completedAt": "2026-11-12 10:01:34 KST",
+    "durationSeconds": 90,
     "statusScope": "calculation",
-    "calculationCompletedAt": "2026-11-12 09:29:09 KST",
-    "calculationDurationSeconds": 60,
+    "calculationCompletedAt": "2026-11-12 10:01:34 KST",
+    "calculationDurationSeconds": 90,
     "publicationStatus": "awaiting-verification",
     "publishedAt": null,
     "endToEndDurationSeconds": null,
     "dataAsOf": "2026-11-12",
-    "dashboardGeneratedAt": "2026-11-12 09:00:56 KST",
+    "dashboardGeneratedAt": "2026-11-12 10:00:53 KST",
     "mlGeneratedAt": "2026-11-12 07:32 KST",
-    "qualityScore": 98.7,
-    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-    "krxReferenceDate": "2026-11-11",
-    "krxSessionDate": "2026-11-11"
+    "qualityScore": 98.9,
+    "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
     "timezone": "Asia/Seoul",
@@ -126,8 +124,8 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 29,
-      "detail": "KRX 2026-11-11 외국인·기관·프로그램 확정치 점검"
+      "durationSeconds": 52,
+      "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
     },
     {
       "id": "ml",
@@ -262,7 +260,7 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-11-12 09:00:56 KST"
+      "generatedAt": "2026-11-12 10:00:53 KST"
     },
     {
       "id": "ml",
@@ -304,7 +302,7 @@
       "id": "kb-funds",
       "label": "FreeSIS·KB 증시주변자금",
       "status": "ok",
-      "generatedAt": "2026-11-12 09:00:07 KST"
+      "generatedAt": "2026-11-12 10:00:07 KST"
     },
     {
       "id": "breadth",
@@ -316,24 +314,24 @@
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-11-12 09:29:09 KST"
+      "generatedAt": "2026-11-12 10:01:34 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 98.7,
+    "score": 98.9,
     "referenceDate": "2026-11-12",
     "summary": {
-      "checks": 268,
-      "ok": 261,
-      "warning": 7,
+      "checks": 266,
+      "ok": 260,
+      "warning": 6,
       "error": 0,
       "sourceSeriesExpected": 102,
       "sourceSeriesPresent": 102,
       "freshSeries": 101,
       "staleSeries": 1,
       "fallbackSeries": 13,
-      "actionRequired": 7,
+      "actionRequired": 6,
       "information": 13
     },
     "issues": [
@@ -359,6 +357,22 @@
         "detail": "공식 가격 37개 · 기대 점수 17개 · 표시 점수 17개 · 원자료 재계산 일치 · 점수 이력 초기 축적 중(60개 미만)"
       },
       {
+        "id": "cross:kospi-ml-snapshot",
+        "category": "alignment",
+        "label": "KOSPI 시장지표·ML 기준일",
+        "status": "warning",
+        "attention": "action",
+        "detail": "시장지표 2026-11-12 · ML 2026-11-11"
+      },
+      {
+        "id": "cache:naver-market-live:coverage",
+        "category": "cache",
+        "label": "시장지표 최신 스냅샷",
+        "status": "warning",
+        "attention": "action",
+        "detail": "27/28개 · 누락 fr_de_10y_spread"
+      },
+      {
         "id": "cache:naver-market-live:bdti",
         "category": "cache",
         "label": "시장지표 최신값/bdti",
@@ -377,42 +391,6 @@
         "status": "warning",
         "attention": "action",
         "detail": "2026-11-10 · 2,862.0000 · 원천표기 실시간 · live",
-        "lastDate": "2026-11-10",
-        "lagBusinessDays": 2,
-        "calendarBasis": "weekdays",
-        "reason": null
-      },
-      {
-        "id": "cache:naver-market-live:us2y_naver",
-        "category": "cache",
-        "label": "시장지표 최신값/us2y_naver",
-        "status": "warning",
-        "attention": "action",
-        "detail": "2026-11-10 · 4.7480 · 원천표기 실시간 · live",
-        "lastDate": "2026-11-10",
-        "lagBusinessDays": 2,
-        "calendarBasis": "weekdays",
-        "reason": null
-      },
-      {
-        "id": "cache:naver-market-live:us10y_naver",
-        "category": "cache",
-        "label": "시장지표 최신값/us10y_naver",
-        "status": "warning",
-        "attention": "action",
-        "detail": "2026-11-10 · 5.0000 · 원천표기 실시간 · live",
-        "lastDate": "2026-11-10",
-        "lagBusinessDays": 2,
-        "calendarBasis": "weekdays",
-        "reason": null
-      },
-      {
-        "id": "cache:naver-market-live:us_10y2y_spread",
-        "category": "cache",
-        "label": "시장지표 최신값/us_10y2y_spread",
-        "status": "warning",
-        "attention": "action",
-        "detail": "2026-11-10 · 0.2520 · 원천표기 최근 EOD 계산 · derived: live + live",
         "lastDate": "2026-11-10",
         "lagBusinessDays": 2,
         "calendarBasis": "weekdays",
@@ -579,7 +557,7 @@
       "id": "ai-roi",
       "title": "AI 투자 ROI 회의론",
       "status": "관찰",
-      "score": 58.8,
+      "score": 57.4,
       "tone": "watch",
       "decision": "기존 가중지표 유지",
       "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검"
@@ -588,7 +566,7 @@
       "id": "geopolitics-reinflation",
       "title": "지정학·재인플레이션",
       "status": "관찰",
-      "score": 50.7,
+      "score": 50.6,
       "tone": "watch",
       "decision": "관찰지표 보강",
       "operation": "DBC·DBA 관찰카드 유지 · 기존 에너지 가중치 변경 없음"
@@ -606,7 +584,7 @@
       "id": "domestic-funding-leverage",
       "title": "국내 레버리지·대기자금",
       "status": "관찰",
-      "score": 46.6,
+      "score": 45.6,
       "tone": "watch",
       "decision": "직접 시장통계 관찰",
       "operation": "연결일 이후 일별 누적 · 60개 관측과 OOS 검증 전 가중치 0 유지"
@@ -615,7 +593,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "관찰",
-      "score": 42.5,
+      "score": 41.5,
       "tone": "watch",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -632,6 +610,27 @@
   ],
   "history": [
     {
+      "runId": "20261112T100004-1000-live",
+      "status": "success",
+      "mode": "live",
+      "trigger": "scheduled",
+      "scheduledTime": "10:00",
+      "startedAt": "2026-11-12 10:00:04 KST",
+      "completedAt": "2026-11-12 10:01:34 KST",
+      "durationSeconds": 90,
+      "statusScope": "calculation",
+      "calculationCompletedAt": "2026-11-12 10:01:34 KST",
+      "calculationDurationSeconds": 90,
+      "publicationStatus": "awaiting-verification",
+      "publishedAt": null,
+      "endToEndDurationSeconds": null,
+      "dataAsOf": "2026-11-12",
+      "dashboardGeneratedAt": "2026-11-12 10:00:53 KST",
+      "mlGeneratedAt": "2026-11-12 07:32 KST",
+      "qualityScore": 98.9,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
+    {
       "runId": "20261112T092809-manual-krx",
       "status": "success",
       "mode": "krx",
@@ -643,16 +642,17 @@
       "statusScope": "calculation",
       "calculationCompletedAt": "2026-11-12 09:29:09 KST",
       "calculationDurationSeconds": 60,
-      "publicationStatus": "awaiting-verification",
-      "publishedAt": null,
-      "endToEndDurationSeconds": null,
+      "publicationStatus": "verified",
+      "publishedAt": "2026-11-12 09:29:39 KST",
+      "endToEndDurationSeconds": 90,
       "dataAsOf": "2026-11-12",
       "dashboardGeneratedAt": "2026-11-12 09:00:56 KST",
       "mlGeneratedAt": "2026-11-12 07:32 KST",
       "qualityScore": 98.7,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
       "krxReferenceDate": "2026-11-11",
-      "krxSessionDate": "2026-11-11"
+      "krxSessionDate": "2026-11-11",
+      "deploymentDurationSeconds": 30
     },
     {
       "runId": "20261112T090004-0900-live",
@@ -1273,58 +1273,38 @@
       "qualityScore": 99.2,
       "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
       "deploymentDurationSeconds": 31
-    },
-    {
-      "runId": "20261109T100003-1000-live",
-      "status": "success",
-      "mode": "live",
-      "trigger": "scheduled",
-      "scheduledTime": "10:00",
-      "startedAt": "2026-11-09 10:00:03 KST",
-      "completedAt": "2026-11-09 10:01:08 KST",
-      "durationSeconds": 65,
-      "statusScope": "calculation",
-      "calculationCompletedAt": "2026-11-09 10:01:08 KST",
-      "calculationDurationSeconds": 65,
-      "publicationStatus": "verified",
-      "publishedAt": "2026-11-09 10:01:49 KST",
-      "endToEndDurationSeconds": 106,
-      "dataAsOf": "2026-11-09",
-      "dashboardGeneratedAt": "2026-11-09 10:00:52 KST",
-      "mlGeneratedAt": "2026-11-07 07:50 KST",
-      "qualityScore": 99.1,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-      "deploymentDurationSeconds": 41
     }
   ],
   "lastVerifiedPublication": {
-    "runId": "20261112T090004-0900-live",
+    "runId": "20261112T092809-manual-krx",
     "status": "success",
-    "mode": "live",
-    "trigger": "scheduled",
-    "scheduledTime": "09:00",
-    "startedAt": "2026-11-12 09:00:04 KST",
-    "completedAt": "2026-11-12 09:01:57 KST",
-    "durationSeconds": 113,
+    "mode": "krx",
+    "trigger": "manual",
+    "scheduledTime": null,
+    "startedAt": "2026-11-12 09:28:09 KST",
+    "completedAt": "2026-11-12 09:29:09 KST",
+    "durationSeconds": 60,
     "statusScope": "calculation",
-    "calculationCompletedAt": "2026-11-12 09:01:57 KST",
-    "calculationDurationSeconds": 113,
+    "calculationCompletedAt": "2026-11-12 09:29:09 KST",
+    "calculationDurationSeconds": 60,
     "publicationStatus": "verified",
-    "publishedAt": "2026-11-12 09:02:37 KST",
-    "endToEndDurationSeconds": 154,
+    "publishedAt": "2026-11-12 09:29:39 KST",
+    "endToEndDurationSeconds": 90,
     "dataAsOf": "2026-11-12",
     "dashboardGeneratedAt": "2026-11-12 09:00:56 KST",
     "mlGeneratedAt": "2026-11-12 07:32 KST",
     "qualityScore": 98.7,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-    "deploymentDurationSeconds": 41
+    "krxReferenceDate": "2026-11-11",
+    "krxSessionDate": "2026-11-11",
+    "deploymentDurationSeconds": 30
   },
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261112T092809-manual-krx",
-    "mode": "krx",
+    "runId": "20261112T100004-1000-live",
+    "mode": "live",
     "state": "generated",
-    "startedAt": "2026-11-12 09:28:09 KST",
-    "preparedAt": "2026-11-12 09:29:09 KST"
+    "startedAt": "2026-11-12 10:00:04 KST",
+    "preparedAt": "2026-11-12 10:01:34 KST"
   }
 }
