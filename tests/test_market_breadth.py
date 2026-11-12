@@ -8,12 +8,14 @@ import pandas as pd
 import pytest
 
 from kospi_risk.data_loader import load_frame
+from kospi_risk.krx_auth import KrxAuthenticationError
 from kospi_risk.market_breadth import (
     add_market_state_flags,
     calculate_breadth_metrics,
     calculate_direct_flow_metrics,
     fetch_kospi_breadth,
     fetch_kospi_investor_flows,
+    fetch_kospi_index,
     fetch_kospi_program_flows,
     merge_vkospi,
     plot_breadth_dashboard,
@@ -68,6 +70,119 @@ def test_default_source_requires_krx_credentials_before_date_retries(monkeypatch
 
     with np.testing.assert_raises_regex(RuntimeError, "KRX_ID, KRX_PW"):
         fetch_kospi_breadth("2026-01-02", "2026-01-02", sleep_seconds=0)
+
+
+@pytest.mark.parametrize("kind", ["breadth", "index", "investor", "program"])
+def test_authentication_failure_is_never_retried(kind):
+    calls = []
+
+    def failed(*args):
+        calls.append(args)
+        raise KrxAuthenticationError("password_change_required")
+
+    kwargs = {"retries": 3, "sleep_fn": lambda _: pytest.fail("인증 오류 재시도 금지")}
+    with pytest.raises(KrxAuthenticationError, match="CD010"):
+        if kind == "breadth":
+            fetch_kospi_breadth("2026-11-10", "2026-11-11", ohlcv_fetcher=failed, **kwargs)
+        elif kind == "index":
+            fetch_kospi_index("2026-11-10", "2026-11-11", index_fetcher=failed, **kwargs)
+        elif kind == "investor":
+            fetch_kospi_investor_flows("2026-11-10", "2026-11-11", investor_flow_fetcher=failed, **kwargs)
+        else:
+            fetch_kospi_program_flows(["2026-11-10", "2026-11-11"], program_flow_fetcher=failed, **kwargs)
+    assert len(calls) == 1
+
+
+def test_authentication_failure_preserves_cache_and_skips_other_krx_requests(tmp_path):
+    path = tmp_path / "breadth.csv"
+    metadata_path = tmp_path / "quality.json"
+    pd.DataFrame([{
+        "date": "2026-11-10", "up": 600, "down": 300, "flat": 40, "total": 940,
+        "kospi_close": 5000,
+    }]).to_csv(path, index=False)
+    calls = []
+
+    def failed(_):
+        calls.append(1)
+        raise KrxAuthenticationError("password_change_required")
+
+    def forbidden(*_):
+        pytest.fail("인증 실패 뒤 다른 KRX 원천을 재조회하면 안 됩니다")
+
+    frame = update_breadth_data(
+        path, end_date="2026-11-11", metadata_path=metadata_path,
+        ohlcv_fetcher=failed, index_fetcher=forbidden,
+        investor_flow_fetcher=forbidden, program_flow_fetcher=forbidden,
+        sleep_seconds=0,
+    )
+    assert calls == [1]
+    assert frame["date"].tolist() == [pd.Timestamp("2026-11-10")]
+    assert frame.loc[0, "kospi_close"] == 5000
+    metadata = json.loads(metadata_path.read_text())
+    assert metadata["authenticationError"]["code"] == "password_change_required"
+    assert metadata["quality"]["status"] == "warning"
+    assert "CD010" in metadata["quality"]["reason"]
+
+    # 비밀번호 갱신 후 성공한 다음 실행은 과거 인증 오류를 물려받지 않는다.
+    frame = update_breadth_data(
+        path, end_date="2026-11-11", metadata_path=metadata_path,
+        ohlcv_fetcher=lambda _: daily_ohlcv([1, -1, 0]),
+        index_fetcher=lambda *_: pd.DataFrame({"종가": [5100]}, index=["2026-11-11"]),
+        fetch_flows=False, sleep_seconds=0,
+    )
+    assert frame["date"].max() == pd.Timestamp("2026-11-11")
+    assert json.loads(metadata_path.read_text())["authenticationError"] is None
+
+
+def test_first_run_authentication_failure_retains_actionable_error(tmp_path):
+    path = tmp_path / "breadth.csv"
+    metadata = tmp_path / "quality.json"
+
+    def failed(_):
+        raise KrxAuthenticationError("password_change_required")
+
+    with pytest.raises(RuntimeError, match="CD010"):
+        update_breadth_data(
+            path, start_date="2026-11-11", end_date="2026-11-11",
+            metadata_path=metadata, ohlcv_fetcher=failed, sleep_seconds=0,
+        )
+    assert not path.exists()
+    assert json.loads(metadata.read_text())["authenticationError"]["code"] == "password_change_required"
+
+
+@pytest.mark.parametrize("stage", ["investor", "program"])
+def test_flow_authentication_failure_marks_quality_without_new_breadth_dates(tmp_path, stage):
+    path = tmp_path / "breadth.csv"
+    metadata = tmp_path / "quality.json"
+    row = {
+        "date": "2026-11-11", "up": 500, "down": 400, "flat": 40,
+        "total": 940, "kospi_close": 5000,
+    }
+    if stage == "program":
+        row.update({
+            "foreign_net_buy_value": 100, "institution_net_buy_value": -100,
+            "financial_investment_net_buy_value": -50, "pension_net_buy_value": -50,
+        })
+    pd.DataFrame([row]).to_csv(path, index=False)
+    calls = []
+
+    def failed(*_):
+        calls.append(stage)
+        raise KrxAuthenticationError("password_change_required")
+
+    def forbidden(*_):
+        pytest.fail("인증 거절 후 후속 요청 금지")
+
+    update_breadth_data(
+        path, end_date="2026-11-11", metadata_path=metadata, sleep_seconds=0,
+        ohlcv_fetcher=forbidden, index_fetcher=forbidden,
+        investor_flow_fetcher=failed if stage == "investor" else forbidden,
+        program_flow_fetcher=failed if stage == "program" else forbidden,
+    )
+    assert calls == [stage]
+    state = json.loads(metadata.read_text())
+    assert state["authenticationError"]["code"] == "password_change_required"
+    assert state["quality"]["status"] == "warning"
 
 
 def test_fetch_kospi_breadth_preserves_large_cap_context_returns():

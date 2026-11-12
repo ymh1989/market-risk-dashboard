@@ -72,8 +72,36 @@ def test_runtime_uses_calendar_before_query_and_keeps_failure_audit():
     source = SCRIPT.read_text(encoding="utf-8")
     krx = source.split('elif [[ "$UPDATE_MODE" == "krx" ]]; then', 1)[1]
     assert krx.index("--resolve-date") < krx.index('update_kospi_breadth_data "$BREADTH_END_DATE"')
+    assert "--metadata data/quality/kospi_breadth_update.json" in krx
     assert '"${SCHEDULE_FAILED_FILE}.before-retry-$RUN_ID"' in source
     assert '--krx-session-date "${BREADTH_END_DATE:-}"' in source
+    assert 'KRX_REFERENCE_DATE="${KRX_REFERENCE_DATE_OVERRIDE:-$(kst_now' in krx
+
+
+@pytest.mark.parametrize("mode,reference,retry,scheduled,valid", [
+    ("krx", "2026-11-11", "", "0", True),
+    ("krx", "2026-11-12", "", "0", True),
+    ("krx", "2026-11-13", "", "0", False),
+    ("fast", "2026-11-11", "", "0", False),
+    ("krx", "2026-11-11", "18:30", "0", False),
+    ("krx", "2026-11-11", "", "1", False),
+    ("fast", "", "", "0", True),
+])
+def test_krx_historical_recovery_is_manual_and_cannot_use_a_future_date(mode, reference, retry, scheduled, valid):
+    source = SCRIPT.read_text(encoding="utf-8")
+    function = "validate_krx_recovery_request() {" + source.split(
+        "validate_krx_recovery_request() {", 1
+    )[1].split('\nif [[ -n "$RETRY_SCHEDULED_KST" ]]; then', 1)[0]
+    environment = {
+        **os.environ, "UPDATE_MODE": mode, "KRX_REFERENCE_DATE_OVERRIDE": reference,
+        "RETRY_SCHEDULED_KST": retry, "ONLY_AT_SCHEDULED_KST": scheduled,
+    }
+    result = subprocess.run(
+        ["/bin/bash", "-c", "set -Eeuo pipefail\nkst_now() { printf '2026-11-12'; }\n"
+         + function + "\nvalidate_krx_recovery_request"],
+        env=environment, text=True, capture_output=True, timeout=5,
+    )
+    assert (result.returncode == 0) is valid, result.stderr
 
 
 def test_live_refreshes_funds_without_kb_or_model_training_and_seals_new_output():

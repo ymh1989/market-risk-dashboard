@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from .data_loader import load_frame, save_frame
+from .krx_auth import KrxAuthenticationError, load_authenticated_stock
 
 
 LOGGER = logging.getLogger(__name__)
@@ -70,17 +71,7 @@ def _date_key(value: str | date | datetime | pd.Timestamp) -> str:
 
 
 def _load_pykrx_stock():
-    try:
-        from pykrx import stock
-    except ImportError as error:
-        raise RuntimeError(
-            "pykrx가 설치되어 있지 않습니다. `pip install pykrx` 후 다시 실행하세요."
-        ) from error
-    except Exception as error:
-        raise RuntimeError(
-            "pykrx KRX 로그인 또는 세션 초기화에 실패했습니다. 잠시 뒤 다시 시도하세요."
-        ) from error
-    return stock
+    return load_authenticated_stock()
 
 
 def _require_krx_credentials() -> None:
@@ -123,6 +114,7 @@ def _default_investor_flow_fetcher(start_key: str, end_key: str) -> pd.DataFrame
 
 
 def _default_program_flow_fetcher(date_key: str) -> pd.DataFrame:
+    _load_pykrx_stock()
     try:
         from pykrx.website.krx.krxio import KrxWebIo
     except ImportError as error:
@@ -227,6 +219,8 @@ def fetch_kospi_breadth(
                 daily_frame = fetcher(date_key)
                 last_error = None
                 break
+            except KrxAuthenticationError:
+                raise
             except Exception as error:
                 last_error = error
                 LOGGER.warning(
@@ -371,6 +365,8 @@ def fetch_kospi_index(
             raw = fetcher(_date_key(start), _date_key(end))
             last_error = None
             break
+        except KrxAuthenticationError:
+            raise
         except Exception as error:
             last_error = error
             LOGGER.warning("KOSPI 지수 조회 실패 · %s/%s회 · %s", attempt, retries, error)
@@ -404,6 +400,8 @@ def _retry_range_fetch(
     for attempt in range(1, retries + 1):
         try:
             return fetcher(start_key, end_key)
+        except KrxAuthenticationError:
+            raise
         except Exception as error:
             last_error = error
             LOGGER.warning(
@@ -552,6 +550,8 @@ def fetch_kospi_program_flows(
                 raw = fetcher(_date_key(observed_date))
                 last_error = None
                 break
+            except KrxAuthenticationError:
+                raise
             except Exception as error:
                 last_error = error
                 LOGGER.warning(
@@ -865,6 +865,7 @@ def _update_metadata(
         "failedDates": fetch_attrs.get("failed_dates", []),
         "emptyDates": fetch_attrs.get("empty_dates", []),
         "indexError": fetch_attrs.get("index_error"),
+        "authenticationError": fetch_attrs.get("authentication_error"),
         "investorFlowStatus": "available" if investor_flow_available else "not_available",
         "programFlowStatus": "available" if program_flow_available else "not_available",
         "programFlowCoverageStart": (
@@ -960,6 +961,8 @@ def update_breadth_data(
                 ],
                 "empty_dates": [],
             }
+            if isinstance(error, KrxAuthenticationError):
+                fetch_attrs["authentication_error"] = {"code": error.code, "message": str(error)}
         if not new_counts.empty:
             try:
                 new_index = fetch_kospi_index(
@@ -973,6 +976,8 @@ def update_breadth_data(
             except RuntimeError as error:
                 LOGGER.warning("KOSPI 지수 결합 실패 · breadth 집계는 보존합니다 · %s", error)
                 fetch_attrs["index_error"] = str(error)
+                if isinstance(error, KrxAuthenticationError):
+                    fetch_attrs["authentication_error"] = {"code": error.code, "message": str(error)}
 
     existing_counts = (
         existing[
@@ -1010,7 +1015,9 @@ def update_breadth_data(
                 vkospi_merged=False,
             )
         raise RuntimeError(
-            f"저장할 KOSPI breadth 거래일이 없습니다. 조회 실패일 {failed_count}개를 확인하세요."
+            str(fetch_attrs["authentication_error"]["message"])
+            if fetch_attrs.get("authentication_error")
+            else f"저장할 KOSPI breadth 거래일이 없습니다. 조회 실패일 {failed_count}개를 확인하세요."
         )
     all_counts["date"] = pd.to_datetime(all_counts["date"])
     all_counts = all_counts.drop_duplicates("date", keep="last").sort_values("date")
@@ -1045,7 +1052,7 @@ def update_breadth_data(
         existing_flow["date"] = pd.to_datetime(existing_flow["date"])
         result = result.merge(existing_flow, on="date", how="left")
 
-    if fetch_flows and not result.empty:
+    if fetch_flows and not result.empty and not fetch_attrs.get("authentication_error"):
         target_dates = pd.DatetimeIndex(pd.to_datetime(result["date"]).dropna().unique()).sort_values()
         investor_missing = result.loc[
             result.get("foreign_net_buy_value", pd.Series(np.nan, index=result.index)).isna()
@@ -1081,6 +1088,8 @@ def update_breadth_data(
             except Exception as error:
                 fetch_attrs["investor_flow_error"] = str(error)
                 LOGGER.warning("KOSPI 투자자 순매수 결합 실패 · 기존 값 보존 · %s", error)
+                if isinstance(error, KrxAuthenticationError):
+                    fetch_attrs["authentication_error"] = {"code": error.code, "message": str(error)}
 
         program_existing = result.get(
             "program_net_buy_value", pd.Series(np.nan, index=result.index)
@@ -1093,7 +1102,7 @@ def update_breadth_data(
             for value in target_dates
             if value in program_missing_set and value in recent_program_dates
         ]
-        if fetch_program and program_missing_dates:
+        if fetch_program and program_missing_dates and not fetch_attrs.get("authentication_error"):
             try:
                 program_flow = fetch_kospi_program_flows(
                     program_missing_dates,
@@ -1133,6 +1142,8 @@ def update_breadth_data(
                     }
                 ]
                 LOGGER.warning("KOSPI 프로그램 순매수 결합 실패 · 기존 값 보존 · %s", error)
+                if isinstance(error, KrxAuthenticationError):
+                    fetch_attrs["authentication_error"] = {"code": error.code, "message": str(error)}
 
     result = calculate_direct_flow_metrics(result)
     vkospi_metadata: dict[str, object] = {}
@@ -1150,12 +1161,14 @@ def update_breadth_data(
     result = add_market_state_flags(result)
     result = result.sort_values("date").drop_duplicates("date", keep="last").reset_index(drop=True)
     quality = validate_breadth_quality(result)
-    if fetch_attrs.get("failed_dates") or fetch_attrs.get("index_error"):
+    if fetch_attrs.get("failed_dates") or fetch_attrs.get("index_error") or fetch_attrs.get("authentication_error"):
         quality = {
             **quality,
             "status": "warning" if quality.get("status") != "error" else "error",
             "fetchFailureCount": len(fetch_attrs.get("failed_dates", [])),
         }
+        if fetch_attrs.get("authentication_error"):
+            quality["reason"] = fetch_attrs["authentication_error"]["message"]
     latest_result = result.iloc[-1]
     direct_flow_missing = not all(
         column in result.columns and pd.notna(latest_result[column])

@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -50,6 +51,26 @@ def test_verify_final_flows_rejects_missing_expected_date():
 
     with pytest.raises(ValueError, match="기준일 행이 없습니다"):
         module.verify_final_flows(flow_frame(), "2026-08-26")
+
+
+def test_cli_reports_authentication_cause_before_missing_date(tmp_path, monkeypatch):
+    source = tmp_path / "breadth.csv"
+    metadata = tmp_path / "quality.json"
+    flow_frame(date="2026-11-10").to_csv(source, index=False)
+    metadata.write_text(json.dumps({"authenticationError": {
+        "code": "password_change_required", "message": "KRX 비밀번호 변경 필요(CD010)"
+    }}))
+    monkeypatch.setattr("sys.argv", [
+        "verify_kospi_flow_final.py", "--date", "2026-11-11",
+        "--input", str(source), "--metadata", str(metadata),
+    ])
+    with pytest.raises(RuntimeError, match="CD010"):
+        load_module().main()
+
+    # 인증 성공으로 갱신돼도 당일 행 검증 자체는 생략하지 않는다.
+    metadata.write_text(json.dumps({"authenticationError": None}))
+    with pytest.raises(ValueError, match="기준일 행이 없습니다"):
+        load_module().main()
 
 
 @pytest.mark.parametrize("reference,expected", [

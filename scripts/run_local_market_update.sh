@@ -27,6 +27,7 @@ SCHEDULE_GRACE_MINUTES="${LOCAL_MARKET_UPDATE_SCHEDULE_GRACE_MINUTES:-10}"
 RUNTIME_SELF_UPDATE="${LOCAL_MARKET_UPDATE_RUNTIME_SELF_UPDATE:-0}"
 ONLY_AT_SCHEDULED_KST=0
 RETRY_SCHEDULED_KST=""
+KRX_REFERENCE_DATE_OVERRIDE=""
 SCHEDULE_STATE_FILE=""
 SCHEDULED_TIME=""
 SCHEDULED_DAY_TYPE=""
@@ -134,6 +135,13 @@ for arg in "$@"; do
       ;;
     --krx|--mode=krx)
       MODE="krx"
+      ;;
+    --krx-reference-date=*)
+      KRX_REFERENCE_DATE_OVERRIDE="${arg#*=}"
+      if [[ ! "$KRX_REFERENCE_DATE_OVERRIDE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+        echo "KRX 복구 기준일은 YYYY-MM-DD 형식이어야 합니다." >&2
+        exit 2
+      fi
       ;;
     --full|--mode=full)
       MODE="full"
@@ -291,6 +299,20 @@ resolve_update_mode() {
   esac
 }
 
+validate_krx_recovery_request() {
+  if [[ -z "$KRX_REFERENCE_DATE_OVERRIDE" ]]; then
+    return 0
+  fi
+  if [[ "$UPDATE_MODE" != "krx" || -n "$RETRY_SCHEDULED_KST" || "$ONLY_AT_SCHEDULED_KST" != "0" ]]; then
+    echo "KRX 기준일 지정은 --krx 수동 복구에서만 허용합니다. 예약 실행과 함께 사용할 수 없습니다." >&2
+    return 2
+  fi
+  if [[ "$KRX_REFERENCE_DATE_OVERRIDE" > "$(kst_now '+%Y-%m-%d')" ]]; then
+    echo "KRX 복구 기준일은 미래 날짜일 수 없습니다." >&2
+    return 2
+  fi
+}
+
 if [[ -n "$RETRY_SCHEDULED_KST" ]]; then
   is_scheduled_now || exit 1
 elif (( ONLY_AT_SCHEDULED_KST )); then
@@ -298,6 +320,7 @@ elif (( ONLY_AT_SCHEDULED_KST )); then
 fi
 
 UPDATE_MODE="$(resolve_update_mode)"
+validate_krx_recovery_request
 if [[ "$UPDATE_MODE" != "live" ]]; then
   if [[ -z "$KOSPI_BREADTH_PYTHON" ]]; then
     KOSPI_BREADTH_PYTHON="$ROOT/.venv-breadth/bin/python"
@@ -534,7 +557,7 @@ if [[ "$UPDATE_MODE" == "live" ]]; then
   ML_STAGE_STARTED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"
   ML_STAGE_COMPLETED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"
 elif [[ "$UPDATE_MODE" == "krx" ]]; then
-  KRX_REFERENCE_DATE="$(kst_now '+%Y-%m-%d')"
+  KRX_REFERENCE_DATE="${KRX_REFERENCE_DATE_OVERRIDE:-$(kst_now '+%Y-%m-%d')}"
   BREADTH_END_DATE="$("$KOSPI_BREADTH_PYTHON" scripts/verify_kospi_flow_final.py \
     --date "$KRX_REFERENCE_DATE" --resolve-date)"
   if [[ "$BREADTH_END_DATE" != "$KRX_REFERENCE_DATE" ]]; then
@@ -545,6 +568,7 @@ elif [[ "$UPDATE_MODE" == "krx" ]]; then
   update_kospi_breadth_data "$BREADTH_END_DATE"
   "$KOSPI_BREADTH_PYTHON" scripts/verify_kospi_flow_final.py \
     --input data/processed/kospi_breadth.parquet \
+    --metadata data/quality/kospi_breadth_update.json \
     --date "$BREADTH_END_DATE"
   MARKET_STAGE_COMPLETED_EPOCH="$(date +%s)"
   ML_STAGE_STARTED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"

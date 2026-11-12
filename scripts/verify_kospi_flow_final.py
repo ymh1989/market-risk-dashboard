@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -75,6 +76,7 @@ def verify_final_flows(frame: pd.DataFrame, expected_date: str) -> dict[str, flo
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="KRX 당일 직접 수급 확정치를 검증합니다.")
     parser.add_argument("--input", help="시장 내부강도 CSV 또는 Parquet")
+    parser.add_argument("--metadata", help="이번 수집의 품질·인증 상태 JSON")
     parser.add_argument("--date", required=True, help="확정치 기준일 YYYY-MM-DD")
     parser.add_argument("--resolve-date", action="store_true", help="휴장을 제외한 최근 KRX 거래일만 출력")
     args = parser.parse_args()
@@ -88,6 +90,11 @@ def main() -> None:
     if args.resolve_date:
         print(resolve_krx_session_date(args.date))
         return
+    if args.metadata:
+        metadata = json.loads(Path(args.metadata).read_text(encoding="utf-8"))
+        auth_error = metadata.get("authenticationError")
+        if auth_error:
+            raise RuntimeError(auth_error["message"])
     values = verify_final_flows(load_frame(args.input), args.date)
     print(
         "KRX 직접 수급 확정치 확인: "
