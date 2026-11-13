@@ -1,25 +1,25 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-13 15:02:33 KST",
+  "generatedAt": "2026-11-13 15:39:29 KST",
   "current": {
-    "runId": "20261113T150003-1500-live",
+    "runId": "20261113T153506-1535-full",
     "status": "success",
-    "mode": "live",
+    "mode": "full",
     "trigger": "scheduled",
-    "scheduledTime": "15:00",
-    "startedAt": "2026-11-13 15:00:03 KST",
-    "completedAt": "2026-11-13 15:02:33 KST",
-    "durationSeconds": 150,
+    "scheduledTime": "15:35",
+    "startedAt": "2026-11-13 15:35:06 KST",
+    "completedAt": "2026-11-13 15:39:29 KST",
+    "durationSeconds": 263,
     "statusScope": "calculation",
-    "calculationCompletedAt": "2026-11-13 15:02:33 KST",
-    "calculationDurationSeconds": 150,
+    "calculationCompletedAt": "2026-11-13 15:39:29 KST",
+    "calculationDurationSeconds": 263,
     "publicationStatus": "awaiting-verification",
     "publishedAt": null,
     "endToEndDurationSeconds": null,
     "dataAsOf": "2026-11-13",
-    "dashboardGeneratedAt": "2026-11-13 15:00:58 KST",
-    "mlGeneratedAt": "2026-11-13 07:32 KST",
-    "qualityScore": 99.2,
+    "dashboardGeneratedAt": "2026-11-13 15:36:54 KST",
+    "mlGeneratedAt": "2026-11-13 15:39 KST",
+    "qualityScore": 99.4,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
   },
   "schedule": {
@@ -124,21 +124,21 @@
       "id": "market",
       "label": "시장데이터·지표",
       "status": "success",
-      "durationSeconds": 61,
-      "detail": "장중 가격·금리·환율·원자재와 위험점수 갱신"
+      "durationSeconds": 117,
+      "detail": "시장 데이터 수집, 위험점수, M7·KB 시장자금, ELS·HMM 산출"
     },
     {
       "id": "ml",
       "label": "ML 신호",
       "status": "success",
-      "durationSeconds": 0,
-      "detail": "직전 확정 ML·HMM 산출물 재사용"
+      "durationSeconds": 56,
+      "detail": "최신 ML 신호 갱신 · 워크포워드 OOS 검증 수행"
     },
     {
       "id": "validation",
       "label": "품질검증",
       "status": "success",
-      "durationSeconds": 1,
+      "durationSeconds": 0,
       "detail": "대시보드 계약·정렬·가독성·캐시 검증"
     },
     {
@@ -202,18 +202,18 @@
       "id": "krx-breadth",
       "label": "KRX Market Breadth",
       "status": "ok",
-      "lastDate": "2026-11-12",
-      "seriesCount": 697,
+      "lastDate": "2026-11-13",
+      "seriesCount": 698,
       "detail": "KOSPI 상승·하락·보합 종목 수 · pykrx EOD"
     },
     {
       "id": "stockplus-vkospi",
       "label": "증권플러스 VKOSPI",
       "status": "ok",
-      "lastDate": "2026-11-12",
-      "seriesCount": 697,
+      "lastDate": "2026-11-13",
+      "seriesCount": 698,
       "detail": "1/1개 수집 · 허용시차 내 1개",
-      "oldestLastDate": "2026-11-12",
+      "oldestLastDate": "2026-11-13",
       "freshCount": 1,
       "staleCount": 0,
       "fallbackCount": 0
@@ -222,7 +222,7 @@
       "id": "ml-input",
       "label": "ML 입력 원천",
       "status": "warning",
-      "lastDate": "2026-11-12",
+      "lastDate": "2026-11-13",
       "oldestLastDate": "2026-11-06",
       "seriesCount": 17,
       "freshCount": 16,
@@ -246,8 +246,8 @@
       "id": "kb-market-funds",
       "label": "FreeSIS·KB 증시주변자금",
       "status": "ok",
-      "lastDate": "2026-11-11",
-      "oldestLastDate": "2026-11-11",
+      "lastDate": "2026-11-12",
+      "oldestLastDate": "2026-11-12",
       "seriesCount": 1,
       "freshCount": 1,
       "staleCount": 0,
@@ -260,78 +260,78 @@
       "id": "dashboard",
       "label": "시장리스크",
       "status": "ok",
-      "generatedAt": "2026-11-13 15:00:58 KST"
+      "generatedAt": "2026-11-13 15:36:54 KST"
     },
     {
       "id": "ml",
       "label": "ML 위험신호",
       "status": "ok",
-      "generatedAt": "2026-11-13 07:32 KST"
+      "generatedAt": "2026-11-13 15:39 KST"
     },
     {
       "id": "els",
       "label": "ELS 지수위험",
       "status": "ok",
-      "generatedAt": "2026-11-13 07:31 KST"
+      "generatedAt": "2026-11-13 15:38 KST"
     },
     {
       "id": "hmm",
       "label": "HMM 레짐",
       "status": "ok",
-      "generatedAt": "2026-11-13 07:31 KST"
+      "generatedAt": "2026-11-13 15:38 KST"
     },
     {
       "id": "backtest",
       "label": "시장 백테스트",
       "status": "ok",
-      "generatedAt": "2026-11-13 07:31:14 KST"
+      "generatedAt": "2026-11-13 15:36:54 KST"
     },
     {
       "id": "stress",
       "label": "스트레스 이력",
       "status": "ok",
-      "generatedAt": "2026-11-12 15:37:54 KST"
+      "generatedAt": "2026-11-13 15:37:59 KST"
     },
     {
       "id": "m7",
       "label": "M7 신용스트레스 프록시",
       "status": "ok",
-      "generatedAt": "2026-11-13T07:30:18+09:00"
+      "generatedAt": "2026-11-13T15:36:05+09:00"
     },
     {
       "id": "kb-funds",
       "label": "FreeSIS·KB 증시주변자금",
       "status": "ok",
-      "generatedAt": "2026-11-13 15:00:06 KST"
+      "generatedAt": "2026-11-13 15:36:05 KST"
     },
     {
       "id": "breadth",
       "label": "KOSPI 시장 내부강도",
       "status": "ok",
-      "generatedAt": "2026-11-13 07:30:07 KST"
+      "generatedAt": "2026-11-13 15:35:55 KST"
     },
     {
       "id": "quality",
       "label": "데이터 완비성",
       "status": "ok",
-      "generatedAt": "2026-11-13 15:02:33 KST"
+      "generatedAt": "2026-11-13 15:39:29 KST"
     }
   ],
   "quality": {
     "status": "warning",
-    "score": 99.2,
+    "score": 99.4,
     "referenceDate": "2026-11-13",
     "summary": {
-      "checks": 266,
-      "ok": 262,
-      "warning": 4,
+      "checks": 267,
+      "ok": 264,
+      "warning": 3,
       "error": 0,
       "sourceSeriesExpected": 102,
       "sourceSeriesPresent": 102,
       "freshSeries": 101,
       "staleSeries": 1,
       "fallbackSeries": 13,
-      "actionRequired": 4,
+      "actionRequired": 3,
       "information": 13
     },
     "issues": [
@@ -341,9 +341,9 @@
         "label": "CSI 300",
         "status": "warning",
         "attention": "action",
-        "detail": "yahoo · skipped_low_coverage · 최신 2026-11-12 · 관측치 1개 · 커버리지 9.1%",
+        "detail": "yahoo · skipped_low_coverage · 최신 2026-11-13 · 관측치 1개 · 커버리지 8.3%",
         "groupId": "ml-input",
-        "lastDate": "2026-11-12",
+        "lastDate": "2026-11-13",
         "observations": 1,
         "fetchStatus": "skipped_low_coverage",
         "required": false
@@ -354,15 +354,7 @@
         "label": "DRAM 관찰점수 이력",
         "status": "warning",
         "attention": "information",
-        "detail": "공식 가격 38개 · 기대 점수 18개 · 표시 점수 18개 · 원자료 재계산 일치 · 점수 이력 초기 축적 중(60개 미만)"
-      },
-      {
-        "id": "cross:kospi-ml-snapshot",
-        "category": "alignment",
-        "label": "KOSPI 시장지표·ML 기준일",
-        "status": "warning",
-        "attention": "action",
-        "detail": "시장지표 2026-11-13 · ML 2026-11-12"
+        "detail": "공식 가격 39개 · 기대 점수 19개 · 표시 점수 19개 · 원자료 재계산 일치 · 점수 이력 초기 축적 중(60개 미만)"
       },
       {
         "id": "cache:naver-market-live:coverage",
@@ -524,7 +516,7 @@
         "label": "DRAM 관찰점수 이력",
         "status": "warning",
         "attention": "information",
-        "detail": "공식 가격 38개 · 기대 점수 18개 · 표시 점수 18개 · 원자료 재계산 일치 · 점수 이력 초기 축적 중(60개 미만)"
+        "detail": "공식 가격 39개 · 기대 점수 19개 · 표시 점수 19개 · 원자료 재계산 일치 · 점수 이력 초기 축적 중(60개 미만)"
       }
     ]
   },
@@ -533,7 +525,7 @@
       "id": "ai-roi",
       "title": "AI 투자 ROI 회의론",
       "status": "관찰",
-      "score": 57.4,
+      "score": 57.3,
       "tone": "watch",
       "decision": "기존 가중지표 유지",
       "operation": "실적 발표 뒤 수요지표와 반도체 가격신호의 동행 여부 재점검"
@@ -560,7 +552,7 @@
       "id": "domestic-funding-leverage",
       "title": "국내 레버리지·대기자금",
       "status": "확산 미확인",
-      "score": 35.9,
+      "score": 31.6,
       "tone": "good",
       "decision": "직접 시장통계 관찰",
       "operation": "연결일 이후 일별 누적 · 60개 관측과 OOS 검증 전 가중치 0 유지"
@@ -569,7 +561,7 @@
       "id": "flow-deleveraging",
       "title": "옵션 헤지·디레버리징",
       "status": "관찰",
-      "score": 43.9,
+      "score": 41.9,
       "tone": "watch",
       "decision": "관찰지표 보강",
       "operation": "신규 2개 카드는 가중치 0 · OOS와 내부 포지션 대조 전 승격 금지"
@@ -586,6 +578,27 @@
   ],
   "history": [
     {
+      "runId": "20261113T153506-1535-full",
+      "status": "success",
+      "mode": "full",
+      "trigger": "scheduled",
+      "scheduledTime": "15:35",
+      "startedAt": "2026-11-13 15:35:06 KST",
+      "completedAt": "2026-11-13 15:39:29 KST",
+      "durationSeconds": 263,
+      "statusScope": "calculation",
+      "calculationCompletedAt": "2026-11-13 15:39:29 KST",
+      "calculationDurationSeconds": 263,
+      "publicationStatus": "awaiting-verification",
+      "publishedAt": null,
+      "endToEndDurationSeconds": null,
+      "dataAsOf": "2026-11-13",
+      "dashboardGeneratedAt": "2026-11-13 15:36:54 KST",
+      "mlGeneratedAt": "2026-11-13 15:39 KST",
+      "qualityScore": 99.4,
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+    },
+    {
       "runId": "20261113T150003-1500-live",
       "status": "success",
       "mode": "live",
@@ -597,14 +610,15 @@
       "statusScope": "calculation",
       "calculationCompletedAt": "2026-11-13 15:02:33 KST",
       "calculationDurationSeconds": 150,
-      "publicationStatus": "awaiting-verification",
-      "publishedAt": null,
-      "endToEndDurationSeconds": null,
+      "publicationStatus": "verified",
+      "publishedAt": "2026-11-13 15:03:03 KST",
+      "endToEndDurationSeconds": 180,
       "dataAsOf": "2026-11-13",
       "dashboardGeneratedAt": "2026-11-13 15:00:58 KST",
       "mlGeneratedAt": "2026-11-13 07:32 KST",
       "qualityScore": 99.2,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다."
+      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
+      "deploymentDurationSeconds": 30
     },
     {
       "runId": "20261113T140005-1400-live",
@@ -1227,58 +1241,36 @@
       "krxReferenceDate": "2026-11-10",
       "krxSessionDate": "2026-11-10",
       "deploymentDurationSeconds": 52
-    },
-    {
-      "runId": "20261110T153506-1535-full",
-      "status": "success",
-      "mode": "full",
-      "trigger": "scheduled",
-      "scheduledTime": "15:35",
-      "startedAt": "2026-11-10 15:35:06 KST",
-      "completedAt": "2026-11-10 15:39:21 KST",
-      "durationSeconds": 255,
-      "statusScope": "calculation",
-      "calculationCompletedAt": "2026-11-10 15:39:21 KST",
-      "calculationDurationSeconds": 255,
-      "publicationStatus": "verified",
-      "publishedAt": "2026-11-10 15:40:02 KST",
-      "endToEndDurationSeconds": 297,
-      "dataAsOf": "2026-11-10",
-      "dashboardGeneratedAt": "2026-11-10 15:36:39 KST",
-      "mlGeneratedAt": "2026-11-10 15:38 KST",
-      "qualityScore": 99.4,
-      "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-      "deploymentDurationSeconds": 42
     }
   ],
   "lastVerifiedPublication": {
-    "runId": "20261113T140005-1400-live",
+    "runId": "20261113T150003-1500-live",
     "status": "success",
     "mode": "live",
     "trigger": "scheduled",
-    "scheduledTime": "14:00",
-    "startedAt": "2026-11-13 14:00:05 KST",
-    "completedAt": "2026-11-13 14:00:59 KST",
-    "durationSeconds": 54,
+    "scheduledTime": "15:00",
+    "startedAt": "2026-11-13 15:00:03 KST",
+    "completedAt": "2026-11-13 15:02:33 KST",
+    "durationSeconds": 150,
     "statusScope": "calculation",
-    "calculationCompletedAt": "2026-11-13 14:00:59 KST",
-    "calculationDurationSeconds": 54,
+    "calculationCompletedAt": "2026-11-13 15:02:33 KST",
+    "calculationDurationSeconds": 150,
     "publicationStatus": "verified",
-    "publishedAt": "2026-11-13 14:01:39 KST",
-    "endToEndDurationSeconds": 95,
+    "publishedAt": "2026-11-13 15:03:03 KST",
+    "endToEndDurationSeconds": 180,
     "dataAsOf": "2026-11-13",
-    "dashboardGeneratedAt": "2026-11-13 14:00:53 KST",
+    "dashboardGeneratedAt": "2026-11-13 15:00:58 KST",
     "mlGeneratedAt": "2026-11-13 07:32 KST",
     "qualityScore": 99.2,
     "message": "데이터 생성은 완료됐으며 일부 완비성 항목을 확인해야 합니다.",
-    "deploymentDurationSeconds": 41
+    "deploymentDurationSeconds": 30
   },
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261113T150003-1500-live",
-    "mode": "live",
+    "runId": "20261113T153506-1535-full",
+    "mode": "full",
     "state": "generated",
-    "startedAt": "2026-11-13 15:00:03 KST",
-    "preparedAt": "2026-11-13 15:02:33 KST"
+    "startedAt": "2026-11-13 15:35:06 KST",
+    "preparedAt": "2026-11-13 15:39:30 KST"
   }
 }
