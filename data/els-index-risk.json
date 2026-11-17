@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-11-17 07:31 KST",
+  "generatedAt": "2026-11-17 15:37 KST",
   "methodology": "각 지수별 20일 실현변동성, 252일 변동성 분위수, 20/60/252일 낙폭, 단기 하락 모멘텀, 고변동성 급등 신호를 0~100점으로 합성합니다. Basket 점수는 worst-of ELS 구조를 반영해 가장 높은 리스크 지수에 50% 가중합니다.",
   "basket": {
-    "score": 52.33,
+    "score": 51.98,
     "bucket": "주의",
     "tone": "caution",
     "worstIndex": "KOSPI200",
     "secondWorstIndex": "NKY",
-    "averageIndexScore": 50.8,
-    "correlationScore": 0.0,
+    "averageIndexScore": 50.79,
+    "correlationScore": 0.34,
     "interpretation": "KOSPI200가 basket 리스크를 가장 크게 끌어올리고, NKY가 두 번째 취약 지수입니다."
   },
   "issuanceHedgeMap": {
@@ -24,8 +24,8 @@
     },
     "singleStockMethodology": "삼성전자·SK하이닉스는 지수와 같은 공개 종가 기반 좌표계에 참고용으로 표시합니다. 단일종목의 실적·수급 이벤트, 갭 위험, 종목별 발행 재고와 헤지 한도는 별도 확인 대상입니다.",
     "basket": {
-      "opportunityScore": 72.29,
-      "hedgeBurdenScore": 55.13,
+      "opportunityScore": 72.23,
+      "hedgeBurdenScore": 54.97,
       "stance": "헤지주의",
       "tone": "caution",
       "topOpportunityIndex": "SPX",
@@ -600,6 +600,572 @@
         ]
       },
       {
+        "id": "hscei",
+        "label": "HSCEI",
+        "name": "Hang Seng China Enterprises",
+        "region": "중국/HK",
+        "assetType": "index",
+        "includedInBasket": true,
+        "includedInStressEpisodes": true,
+        "lastDate": "2026-11-16",
+        "opportunityScore": 67.91,
+        "hedgeBurdenScore": 32.65,
+        "balanceScore": 46.68,
+        "stance": "발행기회",
+        "tone": "good",
+        "components": {
+          "volPercentileScore": 86.2,
+          "volLevelScore": 36.4,
+          "volShockScore": 63.8,
+          "downsideMomentumScore": 9.0,
+          "drawdownScore": 56.2,
+          "gapShockScore": 48.4,
+          "correlationScore": 0.0
+        },
+        "interpretation": "상대적 쿠폰 여력이 높고 현재 낙폭·방향성 부담은 제한적입니다. 신규 발행 후보군으로 우선 검토할 수 있습니다.",
+        "metrics": {
+          "return1dPct": 0.55,
+          "return1wPct": -3.37,
+          "returnMtdPct": 1.52,
+          "returnYtdPct": -10.46,
+          "return3mPct": -4.31,
+          "return6mPct": -8.16,
+          "return20dPct": -1.8,
+          "realizedVol20dPct": 23.29,
+          "drawdown252dPct": -16.85
+        },
+        "trajectory": [
+          {
+            "date": "2026-08-13",
+            "opportunityScore": 44.39,
+            "hedgeBurdenScore": 24.74,
+            "balanceScore": 28.31,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-08-14",
+            "opportunityScore": 31.77,
+            "hedgeBurdenScore": 24.67,
+            "balanceScore": 15.74,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-08-17",
+            "opportunityScore": 11.77,
+            "hedgeBurdenScore": 20.69,
+            "balanceScore": -1.68,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-08-18",
+            "opportunityScore": 11.52,
+            "hedgeBurdenScore": 20.54,
+            "balanceScore": -1.83,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-08-19",
+            "opportunityScore": 6.81,
+            "hedgeBurdenScore": 19.92,
+            "balanceScore": -6.13,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-08-20",
+            "opportunityScore": 6.4,
+            "hedgeBurdenScore": 19.09,
+            "balanceScore": -6.01,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-08-21",
+            "opportunityScore": 5.33,
+            "hedgeBurdenScore": 18.2,
+            "balanceScore": -6.5,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-08-24",
+            "opportunityScore": 11.29,
+            "hedgeBurdenScore": 20.62,
+            "balanceScore": -2.12,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-08-25",
+            "opportunityScore": 8.71,
+            "hedgeBurdenScore": 20.72,
+            "balanceScore": -4.76,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-08-26",
+            "opportunityScore": 4.69,
+            "hedgeBurdenScore": 19.4,
+            "balanceScore": -7.92,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-08-27",
+            "opportunityScore": 4.94,
+            "hedgeBurdenScore": 20.88,
+            "balanceScore": -8.63,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-08-28",
+            "opportunityScore": 4.91,
+            "hedgeBurdenScore": 20.42,
+            "balanceScore": -8.36,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-08-31",
+            "opportunityScore": 4.63,
+            "hedgeBurdenScore": 20.44,
+            "balanceScore": -8.65,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-01",
+            "opportunityScore": 4.5,
+            "hedgeBurdenScore": 20.42,
+            "balanceScore": -8.77,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-02",
+            "opportunityScore": 4.44,
+            "hedgeBurdenScore": 21.02,
+            "balanceScore": -9.22,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-03",
+            "opportunityScore": 4.16,
+            "hedgeBurdenScore": 20.76,
+            "balanceScore": -9.34,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-04",
+            "opportunityScore": 7.84,
+            "hedgeBurdenScore": 18.71,
+            "balanceScore": -4.32,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-07",
+            "opportunityScore": 8.52,
+            "hedgeBurdenScore": 22.73,
+            "balanceScore": -6.25,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-08",
+            "opportunityScore": 7.81,
+            "hedgeBurdenScore": 21.92,
+            "balanceScore": -6.44,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-09",
+            "opportunityScore": 7.19,
+            "hedgeBurdenScore": 21.29,
+            "balanceScore": -6.65,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-10",
+            "opportunityScore": 8.8,
+            "hedgeBurdenScore": 23.65,
+            "balanceScore": -6.57,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-11",
+            "opportunityScore": 7.88,
+            "hedgeBurdenScore": 22.71,
+            "balanceScore": -6.88,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-14",
+            "opportunityScore": 6.42,
+            "hedgeBurdenScore": 22.94,
+            "balanceScore": -8.49,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-15",
+            "opportunityScore": 6.85,
+            "hedgeBurdenScore": 25.17,
+            "balanceScore": -9.51,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-16",
+            "opportunityScore": 6.82,
+            "hedgeBurdenScore": 25.37,
+            "balanceScore": -9.67,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-17",
+            "opportunityScore": 5.56,
+            "hedgeBurdenScore": 26.86,
+            "balanceScore": -11.9,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-18",
+            "opportunityScore": 4.62,
+            "hedgeBurdenScore": 26.56,
+            "balanceScore": -12.64,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-21",
+            "opportunityScore": 4.41,
+            "hedgeBurdenScore": 21.56,
+            "balanceScore": -9.6,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-22",
+            "opportunityScore": 4.65,
+            "hedgeBurdenScore": 20.59,
+            "balanceScore": -8.74,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-23",
+            "opportunityScore": 4.07,
+            "hedgeBurdenScore": 23.89,
+            "balanceScore": -11.46,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-24",
+            "opportunityScore": 4.02,
+            "hedgeBurdenScore": 23.44,
+            "balanceScore": -11.21,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-25",
+            "opportunityScore": 5.72,
+            "hedgeBurdenScore": 25.9,
+            "balanceScore": -11.11,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-28",
+            "opportunityScore": 6.54,
+            "hedgeBurdenScore": 25.12,
+            "balanceScore": -9.79,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-29",
+            "opportunityScore": 6.5,
+            "hedgeBurdenScore": 25.33,
+            "balanceScore": -9.96,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-09-30",
+            "opportunityScore": 8.62,
+            "hedgeBurdenScore": 24.13,
+            "balanceScore": -7.07,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-02",
+            "opportunityScore": 17.34,
+            "hedgeBurdenScore": 28.93,
+            "balanceScore": -1.47,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-05",
+            "opportunityScore": 6.45,
+            "hedgeBurdenScore": 29.51,
+            "balanceScore": -12.73,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-06",
+            "opportunityScore": 5.85,
+            "hedgeBurdenScore": 25.94,
+            "balanceScore": -11.02,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-07",
+            "opportunityScore": 6.82,
+            "hedgeBurdenScore": 26.61,
+            "balanceScore": -10.48,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-08",
+            "opportunityScore": 8.27,
+            "hedgeBurdenScore": 28.07,
+            "balanceScore": -9.97,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-09",
+            "opportunityScore": 13.82,
+            "hedgeBurdenScore": 24.2,
+            "balanceScore": -1.9,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-12",
+            "opportunityScore": 14.61,
+            "hedgeBurdenScore": 23.31,
+            "balanceScore": -0.54,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-13",
+            "opportunityScore": 15.67,
+            "hedgeBurdenScore": 23.04,
+            "balanceScore": 0.7,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-14",
+            "opportunityScore": 13.19,
+            "hedgeBurdenScore": 20.97,
+            "balanceScore": -0.45,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-15",
+            "opportunityScore": 16.23,
+            "hedgeBurdenScore": 23.15,
+            "balanceScore": 1.19,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-16",
+            "opportunityScore": 16.74,
+            "hedgeBurdenScore": 22.08,
+            "balanceScore": 2.39,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-20",
+            "opportunityScore": 18.9,
+            "hedgeBurdenScore": 25.39,
+            "balanceScore": 2.4,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-21",
+            "opportunityScore": 14.09,
+            "hedgeBurdenScore": 28.69,
+            "balanceScore": -4.56,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-22",
+            "opportunityScore": 31.11,
+            "hedgeBurdenScore": 38.71,
+            "balanceScore": 5.95,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-23",
+            "opportunityScore": 34.47,
+            "hedgeBurdenScore": 36.0,
+            "balanceScore": 11.07,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-26",
+            "opportunityScore": 35.77,
+            "hedgeBurdenScore": 34.95,
+            "balanceScore": 13.05,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-27",
+            "opportunityScore": 34.07,
+            "hedgeBurdenScore": 34.16,
+            "balanceScore": 11.87,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-28",
+            "opportunityScore": 33.35,
+            "hedgeBurdenScore": 34.38,
+            "balanceScore": 11.0,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-29",
+            "opportunityScore": 33.44,
+            "hedgeBurdenScore": 34.68,
+            "balanceScore": 10.89,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-10-30",
+            "opportunityScore": 39.43,
+            "hedgeBurdenScore": 33.13,
+            "balanceScore": 17.89,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-11-02",
+            "opportunityScore": 29.88,
+            "hedgeBurdenScore": 28.32,
+            "balanceScore": 11.48,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-11-03",
+            "opportunityScore": 30.21,
+            "hedgeBurdenScore": 27.73,
+            "balanceScore": 12.18,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-11-04",
+            "opportunityScore": 31.56,
+            "hedgeBurdenScore": 26.41,
+            "balanceScore": 14.39,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-11-05",
+            "opportunityScore": 62.7,
+            "hedgeBurdenScore": 26.55,
+            "balanceScore": 45.44,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-11-06",
+            "opportunityScore": 64.23,
+            "hedgeBurdenScore": 27.48,
+            "balanceScore": 46.37,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-11-09",
+            "opportunityScore": 59.24,
+            "hedgeBurdenScore": 27.17,
+            "balanceScore": 41.58,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-11-10",
+            "opportunityScore": 59.17,
+            "hedgeBurdenScore": 27.12,
+            "balanceScore": 41.54,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-11-11",
+            "opportunityScore": 61.94,
+            "hedgeBurdenScore": 28.23,
+            "balanceScore": 43.59,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-11-12",
+            "opportunityScore": 65.85,
+            "hedgeBurdenScore": 31.43,
+            "balanceScore": 45.42,
+            "stance": "발행기회",
+            "tone": "good"
+          },
+          {
+            "date": "2026-11-13",
+            "opportunityScore": 67.25,
+            "hedgeBurdenScore": 33.3,
+            "balanceScore": 45.6,
+            "stance": "발행기회",
+            "tone": "good"
+          },
+          {
+            "date": "2026-11-16",
+            "opportunityScore": 67.91,
+            "hedgeBurdenScore": 32.65,
+            "balanceScore": 46.68,
+            "stance": "발행기회",
+            "tone": "good"
+          }
+        ]
+      },
+      {
         "id": "sx5e",
         "label": "SX5E",
         "name": "Euro Stoxx 50",
@@ -1166,572 +1732,6 @@
         ]
       },
       {
-        "id": "hscei",
-        "label": "HSCEI",
-        "name": "Hang Seng China Enterprises",
-        "region": "중국/HK",
-        "assetType": "index",
-        "includedInBasket": true,
-        "includedInStressEpisodes": true,
-        "lastDate": "2026-11-13",
-        "opportunityScore": 67.25,
-        "hedgeBurdenScore": 33.3,
-        "balanceScore": 45.6,
-        "stance": "발행기회",
-        "tone": "good",
-        "components": {
-          "volPercentileScore": 85.4,
-          "volLevelScore": 36.2,
-          "volShockScore": 62.7,
-          "downsideMomentumScore": 10.2,
-          "drawdownScore": 57.7,
-          "gapShockScore": 48.4,
-          "correlationScore": 0.0
-        },
-        "interpretation": "상대적 쿠폰 여력이 높고 현재 낙폭·방향성 부담은 제한적입니다. 신규 발행 후보군으로 우선 검토할 수 있습니다.",
-        "metrics": {
-          "return1dPct": -1.48,
-          "return1wPct": -4.07,
-          "returnMtdPct": 0.96,
-          "returnYtdPct": -10.95,
-          "return3mPct": -5.8,
-          "return6mPct": -10.58,
-          "return20dPct": -2.05,
-          "realizedVol20dPct": 23.22,
-          "drawdown252dPct": -17.31
-        },
-        "trajectory": [
-          {
-            "date": "2026-08-12",
-            "opportunityScore": 47.99,
-            "hedgeBurdenScore": 24.99,
-            "balanceScore": 31.75,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-08-13",
-            "opportunityScore": 44.39,
-            "hedgeBurdenScore": 24.74,
-            "balanceScore": 28.31,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-08-14",
-            "opportunityScore": 31.77,
-            "hedgeBurdenScore": 24.67,
-            "balanceScore": 15.74,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-08-17",
-            "opportunityScore": 11.77,
-            "hedgeBurdenScore": 20.69,
-            "balanceScore": -1.68,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-08-18",
-            "opportunityScore": 11.52,
-            "hedgeBurdenScore": 20.54,
-            "balanceScore": -1.83,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-08-19",
-            "opportunityScore": 6.81,
-            "hedgeBurdenScore": 19.92,
-            "balanceScore": -6.13,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-08-20",
-            "opportunityScore": 6.4,
-            "hedgeBurdenScore": 19.09,
-            "balanceScore": -6.01,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-08-21",
-            "opportunityScore": 5.33,
-            "hedgeBurdenScore": 18.2,
-            "balanceScore": -6.5,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-08-24",
-            "opportunityScore": 11.29,
-            "hedgeBurdenScore": 20.62,
-            "balanceScore": -2.12,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-08-25",
-            "opportunityScore": 8.71,
-            "hedgeBurdenScore": 20.72,
-            "balanceScore": -4.76,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-08-26",
-            "opportunityScore": 4.69,
-            "hedgeBurdenScore": 19.4,
-            "balanceScore": -7.92,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-08-27",
-            "opportunityScore": 4.94,
-            "hedgeBurdenScore": 20.88,
-            "balanceScore": -8.63,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-08-28",
-            "opportunityScore": 4.91,
-            "hedgeBurdenScore": 20.42,
-            "balanceScore": -8.36,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-08-31",
-            "opportunityScore": 4.63,
-            "hedgeBurdenScore": 20.44,
-            "balanceScore": -8.65,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-01",
-            "opportunityScore": 4.5,
-            "hedgeBurdenScore": 20.42,
-            "balanceScore": -8.77,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-02",
-            "opportunityScore": 4.44,
-            "hedgeBurdenScore": 21.02,
-            "balanceScore": -9.22,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-03",
-            "opportunityScore": 4.16,
-            "hedgeBurdenScore": 20.76,
-            "balanceScore": -9.34,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-04",
-            "opportunityScore": 7.84,
-            "hedgeBurdenScore": 18.71,
-            "balanceScore": -4.32,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-07",
-            "opportunityScore": 8.52,
-            "hedgeBurdenScore": 22.73,
-            "balanceScore": -6.25,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-08",
-            "opportunityScore": 7.81,
-            "hedgeBurdenScore": 21.92,
-            "balanceScore": -6.44,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-09",
-            "opportunityScore": 7.19,
-            "hedgeBurdenScore": 21.29,
-            "balanceScore": -6.65,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-10",
-            "opportunityScore": 8.8,
-            "hedgeBurdenScore": 23.65,
-            "balanceScore": -6.57,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-11",
-            "opportunityScore": 7.88,
-            "hedgeBurdenScore": 22.71,
-            "balanceScore": -6.88,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-14",
-            "opportunityScore": 6.42,
-            "hedgeBurdenScore": 22.94,
-            "balanceScore": -8.49,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-15",
-            "opportunityScore": 6.85,
-            "hedgeBurdenScore": 25.17,
-            "balanceScore": -9.51,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-16",
-            "opportunityScore": 6.82,
-            "hedgeBurdenScore": 25.37,
-            "balanceScore": -9.67,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-17",
-            "opportunityScore": 5.56,
-            "hedgeBurdenScore": 26.86,
-            "balanceScore": -11.9,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-18",
-            "opportunityScore": 4.62,
-            "hedgeBurdenScore": 26.56,
-            "balanceScore": -12.64,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-21",
-            "opportunityScore": 4.41,
-            "hedgeBurdenScore": 21.56,
-            "balanceScore": -9.6,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-22",
-            "opportunityScore": 4.65,
-            "hedgeBurdenScore": 20.59,
-            "balanceScore": -8.74,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-23",
-            "opportunityScore": 4.07,
-            "hedgeBurdenScore": 23.89,
-            "balanceScore": -11.46,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-24",
-            "opportunityScore": 4.02,
-            "hedgeBurdenScore": 23.44,
-            "balanceScore": -11.21,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-25",
-            "opportunityScore": 5.72,
-            "hedgeBurdenScore": 25.9,
-            "balanceScore": -11.11,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-28",
-            "opportunityScore": 6.54,
-            "hedgeBurdenScore": 25.12,
-            "balanceScore": -9.79,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-29",
-            "opportunityScore": 6.5,
-            "hedgeBurdenScore": 25.33,
-            "balanceScore": -9.96,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-09-30",
-            "opportunityScore": 8.62,
-            "hedgeBurdenScore": 24.13,
-            "balanceScore": -7.07,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-02",
-            "opportunityScore": 17.34,
-            "hedgeBurdenScore": 28.93,
-            "balanceScore": -1.47,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-05",
-            "opportunityScore": 6.45,
-            "hedgeBurdenScore": 29.51,
-            "balanceScore": -12.73,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-06",
-            "opportunityScore": 5.85,
-            "hedgeBurdenScore": 25.94,
-            "balanceScore": -11.02,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-07",
-            "opportunityScore": 6.82,
-            "hedgeBurdenScore": 26.61,
-            "balanceScore": -10.48,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-08",
-            "opportunityScore": 8.27,
-            "hedgeBurdenScore": 28.07,
-            "balanceScore": -9.97,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-09",
-            "opportunityScore": 13.82,
-            "hedgeBurdenScore": 24.2,
-            "balanceScore": -1.9,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-12",
-            "opportunityScore": 14.61,
-            "hedgeBurdenScore": 23.31,
-            "balanceScore": -0.54,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-13",
-            "opportunityScore": 15.67,
-            "hedgeBurdenScore": 23.04,
-            "balanceScore": 0.7,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-14",
-            "opportunityScore": 13.19,
-            "hedgeBurdenScore": 20.97,
-            "balanceScore": -0.45,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-15",
-            "opportunityScore": 16.23,
-            "hedgeBurdenScore": 23.15,
-            "balanceScore": 1.19,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-16",
-            "opportunityScore": 16.74,
-            "hedgeBurdenScore": 22.08,
-            "balanceScore": 2.39,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-20",
-            "opportunityScore": 18.9,
-            "hedgeBurdenScore": 25.39,
-            "balanceScore": 2.4,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-21",
-            "opportunityScore": 14.09,
-            "hedgeBurdenScore": 28.69,
-            "balanceScore": -4.56,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-22",
-            "opportunityScore": 31.11,
-            "hedgeBurdenScore": 38.71,
-            "balanceScore": 5.95,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-23",
-            "opportunityScore": 34.47,
-            "hedgeBurdenScore": 36.0,
-            "balanceScore": 11.07,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-26",
-            "opportunityScore": 35.77,
-            "hedgeBurdenScore": 34.95,
-            "balanceScore": 13.05,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-27",
-            "opportunityScore": 34.07,
-            "hedgeBurdenScore": 34.16,
-            "balanceScore": 11.87,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-28",
-            "opportunityScore": 33.35,
-            "hedgeBurdenScore": 34.38,
-            "balanceScore": 11.0,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-29",
-            "opportunityScore": 33.44,
-            "hedgeBurdenScore": 34.68,
-            "balanceScore": 10.89,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-10-30",
-            "opportunityScore": 39.43,
-            "hedgeBurdenScore": 33.13,
-            "balanceScore": 17.89,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-11-02",
-            "opportunityScore": 29.88,
-            "hedgeBurdenScore": 28.32,
-            "balanceScore": 11.48,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-11-03",
-            "opportunityScore": 30.21,
-            "hedgeBurdenScore": 27.73,
-            "balanceScore": 12.18,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-11-04",
-            "opportunityScore": 31.56,
-            "hedgeBurdenScore": 26.41,
-            "balanceScore": 14.39,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-11-05",
-            "opportunityScore": 62.7,
-            "hedgeBurdenScore": 26.55,
-            "balanceScore": 45.44,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-11-06",
-            "opportunityScore": 64.23,
-            "hedgeBurdenScore": 27.48,
-            "balanceScore": 46.37,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-11-09",
-            "opportunityScore": 59.24,
-            "hedgeBurdenScore": 27.17,
-            "balanceScore": 41.58,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-11-10",
-            "opportunityScore": 59.17,
-            "hedgeBurdenScore": 27.12,
-            "balanceScore": 41.54,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-11-11",
-            "opportunityScore": 61.94,
-            "hedgeBurdenScore": 28.23,
-            "balanceScore": 43.59,
-            "stance": "선별발행",
-            "tone": "watch"
-          },
-          {
-            "date": "2026-11-12",
-            "opportunityScore": 65.85,
-            "hedgeBurdenScore": 31.43,
-            "balanceScore": 45.42,
-            "stance": "발행기회",
-            "tone": "good"
-          },
-          {
-            "date": "2026-11-13",
-            "opportunityScore": 67.25,
-            "hedgeBurdenScore": 33.3,
-            "balanceScore": 45.6,
-            "stance": "발행기회",
-            "tone": "good"
-          }
-        ]
-      },
-      {
         "id": "nky",
         "label": "NKY",
         "name": "Nikkei 225",
@@ -1739,42 +1739,34 @@
         "assetType": "index",
         "includedInBasket": true,
         "includedInStressEpisodes": true,
-        "lastDate": "2026-11-16",
-        "opportunityScore": 62.15,
-        "hedgeBurdenScore": 51.07,
-        "balanceScore": 28.95,
+        "lastDate": "2026-11-17",
+        "opportunityScore": 63.09,
+        "hedgeBurdenScore": 52.88,
+        "balanceScore": 28.72,
         "stance": "선별발행",
         "tone": "watch",
         "components": {
-          "volPercentileScore": 68.8,
-          "volLevelScore": 58.2,
-          "volShockScore": 45.7,
-          "downsideMomentumScore": 43.0,
-          "drawdownScore": 58.3,
+          "volPercentileScore": 69.6,
+          "volLevelScore": 58.6,
+          "volShockScore": 48.2,
+          "downsideMomentumScore": 46.2,
+          "drawdownScore": 61.9,
           "gapShockScore": 74.5,
-          "correlationScore": 0.0
+          "correlationScore": 0.3
         },
         "interpretation": "헤지부담은 통제 가능하지만 쿠폰 여력이 제한적일 수 있습니다. 구조와 만기를 선별해 상대가치를 확인해야 합니다.",
         "metrics": {
-          "return1dPct": -2.36,
-          "return1wPct": 1.58,
-          "returnMtdPct": -5.67,
-          "returnYtdPct": 18.6,
-          "return3mPct": -13.12,
-          "return6mPct": -2.78,
-          "return20dPct": -8.61,
-          "realizedVol20dPct": 32.44,
-          "drawdown252dPct": -17.5
+          "return1dPct": -1.24,
+          "return1wPct": -2.54,
+          "returnMtdPct": -6.9,
+          "returnYtdPct": 17.05,
+          "return3mPct": -14.88,
+          "return6mPct": -4.05,
+          "return20dPct": -9.23,
+          "realizedVol20dPct": 32.62,
+          "drawdown252dPct": -18.58
         },
         "trajectory": [
-          {
-            "date": "2026-08-07",
-            "opportunityScore": 71.7,
-            "hedgeBurdenScore": 36.71,
-            "balanceScore": 47.84,
-            "stance": "발행기회",
-            "tone": "good"
-          },
           {
             "date": "2026-08-10",
             "opportunityScore": 73.73,
@@ -2289,9 +2281,17 @@
           },
           {
             "date": "2026-11-16",
-            "opportunityScore": 62.15,
-            "hedgeBurdenScore": 51.07,
-            "balanceScore": 28.95,
+            "opportunityScore": 62.21,
+            "hedgeBurdenScore": 51.23,
+            "balanceScore": 28.91,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-11-17",
+            "opportunityScore": 63.09,
+            "hedgeBurdenScore": 52.88,
+            "balanceScore": 28.72,
             "stance": "선별발행",
             "tone": "watch"
           }
@@ -2305,42 +2305,34 @@
         "assetType": "index",
         "includedInBasket": true,
         "includedInStressEpisodes": true,
-        "lastDate": "2026-11-16",
-        "opportunityScore": 70.53,
-        "hedgeBurdenScore": 77.88,
-        "balanceScore": 19.91,
+        "lastDate": "2026-11-17",
+        "opportunityScore": 70.0,
+        "hedgeBurdenScore": 76.74,
+        "balanceScore": 20.12,
         "stance": "헤지주의",
         "tone": "caution",
         "components": {
-          "volPercentileScore": 61.3,
+          "volPercentileScore": 59.7,
           "volLevelScore": 100.0,
-          "volShockScore": 45.4,
-          "downsideMomentumScore": 56.0,
+          "volShockScore": 47.8,
+          "downsideMomentumScore": 51.2,
           "drawdownScore": 100.0,
           "gapShockScore": 92.6,
-          "correlationScore": 0.0
+          "correlationScore": 0.3
         },
         "interpretation": "발행 조건 개선 여지는 크지만 변동성과 하락 경로가 헤지비용을 높입니다. 한도·만기·기초자산 집중을 함께 관리해야 합니다.",
         "metrics": {
-          "return1dPct": -4.03,
-          "return1wPct": 1.7,
-          "returnMtdPct": -12.03,
-          "returnYtdPct": 30.62,
-          "return3mPct": -27.82,
-          "return6mPct": -31.9,
-          "return20dPct": -11.19,
-          "realizedVol20dPct": 59.25,
-          "drawdown252dPct": -46.42
+          "return1dPct": -2.63,
+          "return1wPct": -5.35,
+          "returnMtdPct": -14.34,
+          "returnYtdPct": 27.19,
+          "return3mPct": -29.72,
+          "return6mPct": -33.69,
+          "return20dPct": -10.25,
+          "realizedVol20dPct": 58.65,
+          "drawdown252dPct": -47.82
         },
         "trajectory": [
-          {
-            "date": "2026-08-10",
-            "opportunityScore": 92.98,
-            "hedgeBurdenScore": 88.28,
-            "balanceScore": 35.6,
-            "stance": "발행부담",
-            "tone": "danger"
-          },
           {
             "date": "2026-08-11",
             "opportunityScore": 91.25,
@@ -2860,6 +2852,14 @@
             "balanceScore": 19.91,
             "stance": "헤지주의",
             "tone": "caution"
+          },
+          {
+            "date": "2026-11-17",
+            "opportunityScore": 70.0,
+            "hedgeBurdenScore": 76.74,
+            "balanceScore": 20.12,
+            "stance": "헤지주의",
+            "tone": "caution"
           }
         ]
       }
@@ -2873,42 +2873,34 @@
         "assetType": "single-stock",
         "includedInBasket": false,
         "includedInStressEpisodes": false,
-        "lastDate": "2026-11-16",
-        "opportunityScore": 72.89,
-        "hedgeBurdenScore": 80.36,
-        "balanceScore": 20.65,
-        "stance": "발행부담",
-        "tone": "danger",
+        "lastDate": "2026-11-17",
+        "opportunityScore": 72.67,
+        "hedgeBurdenScore": 77.61,
+        "balanceScore": 22.22,
+        "stance": "헤지주의",
+        "tone": "caution",
         "components": {
-          "volPercentileScore": 64.8,
+          "volPercentileScore": 63.6,
           "volLevelScore": 100.0,
-          "volShockScore": 48.3,
-          "downsideMomentumScore": 61.4,
+          "volShockScore": 51.3,
+          "downsideMomentumScore": 50.3,
           "drawdownScore": 100.0,
           "gapShockScore": 100.0,
-          "correlationScore": 0.0
+          "correlationScore": 0.3
         },
-        "interpretation": "변동성에 따른 쿠폰 여력보다 하락·갭 위험과 기존 북의 헤지부담이 더 큰 구간입니다. 신규 발행 한도보다 재고·감마·이벤트 익스포저 점검이 우선입니다.",
+        "interpretation": "쿠폰 여력은 높지만 지수보다 큰 갭·집중 위험이 헤지비용을 키울 수 있습니다. 만기 분산과 종목별 재고 한도를 함께 확인해야 합니다.",
         "metrics": {
-          "return1dPct": -7.89,
-          "return1wPct": -1.41,
-          "returnMtdPct": -21.02,
-          "returnYtdPct": 72.04,
-          "return3mPct": -31.91,
-          "return6mPct": -38.43,
-          "return20dPct": -12.29,
-          "realizedVol20dPct": 95.35,
-          "drawdown252dPct": -61.63
+          "return1dPct": -1.79,
+          "return1wPct": -9.24,
+          "returnMtdPct": -22.43,
+          "returnYtdPct": 68.97,
+          "return3mPct": -33.13,
+          "return6mPct": -39.53,
+          "return20dPct": -10.06,
+          "realizedVol20dPct": 94.47,
+          "drawdown252dPct": -62.32
         },
         "trajectory": [
-          {
-            "date": "2026-08-10",
-            "opportunityScore": 93.39,
-            "hedgeBurdenScore": 90.56,
-            "balanceScore": 34.53,
-            "stance": "발행부담",
-            "tone": "danger"
-          },
           {
             "date": "2026-08-11",
             "opportunityScore": 91.1,
@@ -3428,6 +3420,14 @@
             "balanceScore": 20.65,
             "stance": "발행부담",
             "tone": "danger"
+          },
+          {
+            "date": "2026-11-17",
+            "opportunityScore": 72.67,
+            "hedgeBurdenScore": 77.61,
+            "balanceScore": 22.22,
+            "stance": "헤지주의",
+            "tone": "caution"
           }
         ]
       },
@@ -3439,42 +3439,34 @@
         "assetType": "single-stock",
         "includedInBasket": false,
         "includedInStressEpisodes": false,
-        "lastDate": "2026-11-16",
-        "opportunityScore": 62.24,
-        "hedgeBurdenScore": 77.15,
-        "balanceScore": 12.1,
+        "lastDate": "2026-11-17",
+        "opportunityScore": 62.77,
+        "hedgeBurdenScore": 77.27,
+        "balanceScore": 12.55,
         "stance": "선별발행",
         "tone": "watch",
         "components": {
           "volPercentileScore": 49.4,
           "volLevelScore": 100.0,
-          "volShockScore": 33.8,
-          "downsideMomentumScore": 48.6,
+          "volShockScore": 37.4,
+          "downsideMomentumScore": 48.9,
           "drawdownScore": 100.0,
           "gapShockScore": 100.0,
-          "correlationScore": 0.0
+          "correlationScore": 0.3
         },
         "interpretation": "현재 쿠폰 여력은 제한적입니다. 단일종목 특유의 갭·집중 위험을 감안해 구조와 만기를 선별할 구간입니다.",
         "metrics": {
-          "return1dPct": -4.47,
-          "return1wPct": 3.63,
-          "returnMtdPct": -12.53,
-          "returnYtdPct": 64.14,
-          "return3mPct": -28.31,
-          "return6mPct": -27.25,
-          "return20dPct": -9.72,
-          "realizedVol20dPct": 68.75,
-          "drawdown252dPct": -45.71
+          "return1dPct": -3.05,
+          "return1wPct": -4.07,
+          "returnMtdPct": -15.2,
+          "returnYtdPct": 59.13,
+          "return3mPct": -30.49,
+          "return6mPct": -29.46,
+          "return20dPct": -9.79,
+          "realizedVol20dPct": 68.79,
+          "drawdown252dPct": -47.37
         },
         "trajectory": [
-          {
-            "date": "2026-08-10",
-            "opportunityScore": 92.21,
-            "hedgeBurdenScore": 89.68,
-            "balanceScore": 33.92,
-            "stance": "발행부담",
-            "tone": "danger"
-          },
           {
             "date": "2026-08-11",
             "opportunityScore": 91.26,
@@ -3992,6 +3984,14 @@
             "opportunityScore": 62.24,
             "hedgeBurdenScore": 77.15,
             "balanceScore": 12.1,
+            "stance": "선별발행",
+            "tone": "watch"
+          },
+          {
+            "date": "2026-11-17",
+            "opportunityScore": 62.77,
+            "hedgeBurdenScore": 77.27,
+            "balanceScore": 12.55,
             "stance": "선별발행",
             "tone": "watch"
           }
@@ -13186,27 +13186,27 @@
       "priceSource": "Yahoo Finance",
       "historyCacheStatus": "incremental",
       "historyStartDate": "2016-08-29",
-      "historyObservations": 2494,
-      "lastDate": "2026-11-16",
-      "lastClose": 59701.55,
-      "score": 56.39,
+      "historyObservations": 2495,
+      "lastDate": "2026-11-17",
+      "lastClose": 58922.5,
+      "score": 58.57,
       "bucket": "주의",
       "tone": "caution",
       "reading": "고점 대비 낙폭이 커져 쿠폰 매력도는 높아질 수 있지만, 순연 가능성과 헤지 비용 증가를 우선 점검해야 합니다.",
       "metrics": {
-        "return1dPct": -2.36,
-        "return1wPct": 1.58,
-        "returnMtdPct": -5.67,
-        "returnYtdPct": 18.6,
-        "return3mPct": -13.12,
-        "return6mPct": -2.78,
-        "return20dPct": -8.61,
-        "return60dPct": -13.75,
-        "realizedVol20dPct": 32.44,
-        "realizedVol60dPct": 27.84,
-        "volPercentile252d": 68.8,
-        "drawdown60dPct": -15.54,
-        "drawdown252dPct": -17.5,
+        "return1dPct": -1.24,
+        "return1wPct": -2.54,
+        "returnMtdPct": -6.9,
+        "returnYtdPct": 17.05,
+        "return3mPct": -14.88,
+        "return6mPct": -4.05,
+        "return20dPct": -9.23,
+        "return60dPct": -12.66,
+        "realizedVol20dPct": 32.62,
+        "realizedVol60dPct": 27.52,
+        "volPercentile252d": 69.6,
+        "drawdown60dPct": -16.64,
+        "drawdown252dPct": -18.58,
         "maxAbsDailyMove20dPct": 5.96
       },
       "ytdPriceSeries": [
@@ -14052,7 +14052,11 @@
         },
         {
           "date": "2026-11-16",
-          "close": 59701.55
+          "close": 59662.02
+        },
+        {
+          "date": "2026-11-17",
+          "close": 58922.5
         }
       ],
       "sixMonthPriceSeries": [
@@ -14550,18 +14554,14 @@
         },
         {
           "date": "2026-11-16",
-          "close": 59701.55
+          "close": 59662.02
+        },
+        {
+          "date": "2026-11-17",
+          "close": 58922.5
         }
       ],
       "series": [
-        {
-          "date": "2026-07-17",
-          "close": 64141.12,
-          "score": 58.02,
-          "return20dPct": -9.98,
-          "realizedVol20dPct": 36.68,
-          "drawdown252dPct": -11.37
-        },
         {
           "date": "2026-07-21",
           "close": 66232.19,
@@ -15188,11 +15188,19 @@
         },
         {
           "date": "2026-11-16",
-          "close": 59701.55,
-          "score": 56.39,
-          "return20dPct": -8.61,
-          "realizedVol20dPct": 32.44,
-          "drawdown252dPct": -17.5
+          "close": 59662.02,
+          "score": 56.52,
+          "return20dPct": -8.67,
+          "realizedVol20dPct": 32.5,
+          "drawdown252dPct": -17.56
+        },
+        {
+          "date": "2026-11-17",
+          "close": 58922.5,
+          "score": 58.57,
+          "return20dPct": -9.23,
+          "realizedVol20dPct": 32.62,
+          "drawdown252dPct": -18.58
         }
       ]
     },
@@ -15205,27 +15213,27 @@
       "priceSource": "Yahoo Finance",
       "historyCacheStatus": "incremental",
       "historyStartDate": "2016-08-29",
-      "historyObservations": 2513,
-      "lastDate": "2026-11-13",
-      "lastClose": 7937.53,
-      "score": 50.3,
-      "bucket": "주의",
-      "tone": "caution",
+      "historyObservations": 2514,
+      "lastDate": "2026-11-16",
+      "lastClose": 7981.54,
+      "score": 49.78,
+      "bucket": "정상",
+      "tone": "watch",
       "reading": "고점 대비 낙폭이 커져 쿠폰 매력도는 높아질 수 있지만, 순연 가능성과 헤지 비용 증가를 우선 점검해야 합니다.",
       "metrics": {
-        "return1dPct": -1.48,
-        "return1wPct": -4.07,
-        "returnMtdPct": 0.96,
-        "returnYtdPct": -10.95,
-        "return3mPct": -5.8,
-        "return6mPct": -10.58,
-        "return20dPct": -2.05,
-        "return60dPct": -6.3,
-        "realizedVol20dPct": 23.22,
-        "realizedVol60dPct": 17.84,
-        "volPercentile252d": 85.4,
-        "drawdown60dPct": -8.07,
-        "drawdown252dPct": -17.31,
+        "return1dPct": 0.55,
+        "return1wPct": -3.37,
+        "returnMtdPct": 1.52,
+        "returnYtdPct": -10.46,
+        "return3mPct": -4.31,
+        "return6mPct": -8.16,
+        "return20dPct": -1.8,
+        "return60dPct": -6.63,
+        "realizedVol20dPct": 23.29,
+        "realizedVol60dPct": 17.77,
+        "volPercentile252d": 86.2,
+        "drawdown60dPct": -7.56,
+        "drawdown252dPct": -16.85,
         "maxAbsDailyMove20dPct": 3.87
       },
       "ytdPriceSeries": [
@@ -16084,21 +16092,13 @@
         {
           "date": "2026-11-13",
           "close": 7937.53
+        },
+        {
+          "date": "2026-11-16",
+          "close": 7981.54
         }
       ],
       "sixMonthPriceSeries": [
-        {
-          "date": "2026-05-13",
-          "close": 8876.38
-        },
-        {
-          "date": "2026-05-14",
-          "close": 8858.63
-        },
-        {
-          "date": "2026-05-15",
-          "close": 8691.03
-        },
         {
           "date": "2026-05-18",
           "close": 8597.97
@@ -16598,17 +16598,13 @@
         {
           "date": "2026-11-13",
           "close": 7937.53
+        },
+        {
+          "date": "2026-11-16",
+          "close": 7981.54
         }
       ],
       "series": [
-        {
-          "date": "2026-07-23",
-          "close": 8352.67,
-          "score": 59.27,
-          "return20dPct": 7.57,
-          "realizedVol20dPct": 26.32,
-          "drawdown252dPct": -14.11
-        },
         {
           "date": "2026-07-24",
           "close": 8271.06,
@@ -17240,6 +17236,14 @@
           "return20dPct": -2.05,
           "realizedVol20dPct": 23.22,
           "drawdown252dPct": -17.31
+        },
+        {
+          "date": "2026-11-16",
+          "close": 7981.54,
+          "score": 49.78,
+          "return20dPct": -1.8,
+          "realizedVol20dPct": 23.29,
+          "drawdown252dPct": -16.85
         }
       ]
     },
@@ -17252,27 +17256,27 @@
       "priceSource": "Naver KPI200",
       "historyCacheStatus": "incremental",
       "historyStartDate": "2016-07-11",
-      "historyObservations": 2538,
-      "lastDate": "2026-11-16",
-      "lastClose": 791.56,
-      "score": 66.87,
+      "historyObservations": 2539,
+      "lastDate": "2026-11-17",
+      "lastClose": 770.74,
+      "score": 65.19,
       "bucket": "높음",
       "tone": "danger",
       "reading": "고점 대비 낙폭이 커져 쿠폰 매력도는 높아질 수 있지만, 순연 가능성과 헤지 비용 증가를 우선 점검해야 합니다.",
       "metrics": {
-        "return1dPct": -4.03,
-        "return1wPct": 1.7,
-        "returnMtdPct": -12.03,
-        "returnYtdPct": 30.62,
-        "return3mPct": -27.82,
-        "return6mPct": -31.9,
-        "return20dPct": -11.19,
-        "return60dPct": -26.84,
-        "realizedVol20dPct": 59.25,
-        "realizedVol60dPct": 50.92,
-        "volPercentile252d": 61.3,
-        "drawdown60dPct": -29.71,
-        "drawdown252dPct": -46.42,
+        "return1dPct": -2.63,
+        "return1wPct": -5.35,
+        "returnMtdPct": -14.34,
+        "returnYtdPct": 27.19,
+        "return3mPct": -29.72,
+        "return6mPct": -33.69,
+        "return20dPct": -10.25,
+        "return60dPct": -23.89,
+        "realizedVol20dPct": 58.65,
+        "realizedVol60dPct": 49.61,
+        "volPercentile252d": 59.7,
+        "drawdown60dPct": -31.56,
+        "drawdown252dPct": -47.82,
         "maxAbsDailyMove20dPct": 7.41
       },
       "ytdPriceSeries": [
@@ -18127,6 +18131,10 @@
         {
           "date": "2026-11-16",
           "close": 791.56
+        },
+        {
+          "date": "2026-11-17",
+          "close": 770.74
         }
       ],
       "sixMonthPriceSeries": [
@@ -18621,17 +18629,13 @@
         {
           "date": "2026-11-16",
           "close": 791.56
+        },
+        {
+          "date": "2026-11-17",
+          "close": 770.74
         }
       ],
       "series": [
-        {
-          "date": "2026-07-21",
-          "close": 1078.22,
-          "score": 82.81,
-          "return20dPct": -27.01,
-          "realizedVol20dPct": 87.86,
-          "drawdown252dPct": -27.01
-        },
         {
           "date": "2026-07-22",
           "close": 1081.98,
@@ -19263,6 +19267,14 @@
           "return20dPct": -11.19,
           "realizedVol20dPct": 59.25,
           "drawdown252dPct": -46.42
+        },
+        {
+          "date": "2026-11-17",
+          "close": 770.74,
+          "score": 65.19,
+          "return20dPct": -10.25,
+          "realizedVol20dPct": 58.65,
+          "drawdown252dPct": -47.82
         }
       ]
     }
@@ -19278,27 +19290,27 @@
       "priceSource": "Yahoo Finance",
       "historyCacheStatus": "incremental",
       "historyStartDate": "2016-08-29",
-      "historyObservations": 2499,
-      "lastDate": "2026-11-16",
-      "lastClose": 196800.0,
-      "score": 60.96,
+      "historyObservations": 2500,
+      "lastDate": "2026-11-17",
+      "lastClose": 190800.0,
+      "score": 61.04,
       "bucket": "주의",
       "tone": "caution",
       "reading": "고점 대비 낙폭이 커져 쿠폰 매력도는 높아질 수 있지만, 순연 가능성과 헤지 비용 증가를 우선 점검해야 합니다.",
       "metrics": {
-        "return1dPct": -4.47,
-        "return1wPct": 3.63,
-        "returnMtdPct": -12.53,
-        "returnYtdPct": 64.14,
-        "return3mPct": -28.31,
-        "return6mPct": -27.25,
-        "return20dPct": -9.72,
-        "return60dPct": -26.7,
-        "realizedVol20dPct": 68.75,
-        "realizedVol60dPct": 64.22,
+        "return1dPct": -3.05,
+        "return1wPct": -4.07,
+        "returnMtdPct": -15.2,
+        "returnYtdPct": 59.13,
+        "return3mPct": -30.49,
+        "return6mPct": -29.46,
+        "return20dPct": -9.79,
+        "return60dPct": -22.91,
+        "realizedVol20dPct": 68.79,
+        "realizedVol60dPct": 62.6,
         "volPercentile252d": 49.4,
-        "drawdown60dPct": -31.07,
-        "drawdown252dPct": -45.71,
+        "drawdown60dPct": -33.17,
+        "drawdown252dPct": -47.37,
         "maxAbsDailyMove20dPct": 9.01
       },
       "ytdPriceSeries": [
@@ -20153,6 +20165,10 @@
         {
           "date": "2026-11-16",
           "close": 196800.0
+        },
+        {
+          "date": "2026-11-17",
+          "close": 190800.0
         }
       ],
       "sixMonthPriceSeries": [
@@ -20647,17 +20663,13 @@
         {
           "date": "2026-11-16",
           "close": 196800.0
+        },
+        {
+          "date": "2026-11-17",
+          "close": 190800.0
         }
       ],
       "series": [
-        {
-          "date": "2026-07-21",
-          "close": 259000.0,
-          "score": 83.94,
-          "return20dPct": -26.73,
-          "realizedVol20dPct": 108.5,
-          "drawdown252dPct": -28.55
-        },
         {
           "date": "2026-07-22",
           "close": 260500.0,
@@ -21289,6 +21301,14 @@
           "return20dPct": -9.72,
           "realizedVol20dPct": 68.75,
           "drawdown252dPct": -45.71
+        },
+        {
+          "date": "2026-11-17",
+          "close": 190800.0,
+          "score": 61.04,
+          "return20dPct": -9.79,
+          "realizedVol20dPct": 68.79,
+          "drawdown252dPct": -47.37
         }
       ]
     },
@@ -21302,27 +21322,27 @@
       "priceSource": "Yahoo Finance",
       "historyCacheStatus": "incremental",
       "historyStartDate": "2016-08-29",
-      "historyObservations": 2499,
-      "lastDate": "2026-11-16",
-      "lastClose": 1120000.0,
-      "score": 69.44,
+      "historyObservations": 2500,
+      "lastDate": "2026-11-17",
+      "lastClose": 1100000.0,
+      "score": 66.34,
       "bucket": "높음",
       "tone": "danger",
       "reading": "고점 대비 낙폭이 커져 쿠폰 매력도는 높아질 수 있지만, 순연 가능성과 헤지 비용 증가를 우선 점검해야 합니다.",
       "metrics": {
-        "return1dPct": -7.89,
-        "return1wPct": -1.41,
-        "returnMtdPct": -21.02,
-        "returnYtdPct": 72.04,
-        "return3mPct": -31.91,
-        "return6mPct": -38.43,
-        "return20dPct": -12.29,
-        "return60dPct": -32.61,
-        "realizedVol20dPct": 95.35,
-        "realizedVol60dPct": 80.35,
-        "volPercentile252d": 64.8,
-        "drawdown60dPct": -40.04,
-        "drawdown252dPct": -61.63,
+        "return1dPct": -1.79,
+        "return1wPct": -9.24,
+        "returnMtdPct": -22.43,
+        "returnYtdPct": 68.97,
+        "return3mPct": -33.13,
+        "return6mPct": -39.53,
+        "return20dPct": -10.06,
+        "return60dPct": -26.67,
+        "realizedVol20dPct": 94.47,
+        "realizedVol60dPct": 78.07,
+        "volPercentile252d": 63.6,
+        "drawdown60dPct": -41.11,
+        "drawdown252dPct": -62.32,
         "maxAbsDailyMove20dPct": 10.89
       },
       "ytdPriceSeries": [
@@ -22177,6 +22197,10 @@
         {
           "date": "2026-11-16",
           "close": 1120000.0
+        },
+        {
+          "date": "2026-11-17",
+          "close": 1100000.0
         }
       ],
       "sixMonthPriceSeries": [
@@ -22671,17 +22695,13 @@
         {
           "date": "2026-11-16",
           "close": 1120000.0
+        },
+        {
+          "date": "2026-11-17",
+          "close": 1100000.0
         }
       ],
       "series": [
-        {
-          "date": "2026-07-21",
-          "close": 1836000.0,
-          "score": 84.45,
-          "return20dPct": -37.1,
-          "realizedVol20dPct": 127.79,
-          "drawdown252dPct": -37.1
-        },
         {
           "date": "2026-07-22",
           "close": 1830000.0,
@@ -23313,16 +23333,24 @@
           "return20dPct": -12.29,
           "realizedVol20dPct": 95.35,
           "drawdown252dPct": -61.63
+        },
+        {
+          "date": "2026-11-17",
+          "close": 1100000.0,
+          "score": 66.34,
+          "return20dPct": -10.06,
+          "realizedVol20dPct": 94.47,
+          "drawdown252dPct": -62.32
         }
       ]
     }
   ],
   "publication": {
     "schemaVersion": 1,
-    "runId": "20261117T150004-1500-live",
-    "mode": "live",
-    "state": "reused",
-    "startedAt": "2026-11-17 15:00:04 KST",
-    "preparedAt": "2026-11-17 15:01:32 KST"
+    "runId": "20261117T153505-1535-full",
+    "mode": "full",
+    "state": "generated",
+    "startedAt": "2026-11-17 15:35:05 KST",
+    "preparedAt": "2026-11-17 15:39:38 KST"
   }
 }
