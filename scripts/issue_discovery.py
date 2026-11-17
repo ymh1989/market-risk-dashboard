@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from email.utils import parsedate_to_datetime
 from itertools import zip_longest
 import json
 import os
 import re
 import time
+from threading import Event
 import urllib.error
 
 from scripts.issue_radar_llm import OllamaIssueSelector, MODEL, KST, fingerprint, parsed_time
@@ -16,7 +18,7 @@ from scripts.update_issue_radar import fetch_articles, clean_articles
 from scripts.issue_evidence import inspect_articles, require_corroboration, require_same_event, similar_headline, normalize
 from scripts.issue_candidate_review import review_candidate, candidate_query, related_articles
 
-DISCOVERY_VERSION = "discovery-v4"
+DISCOVERY_VERSION = "discovery-v5"
 SCHEDULE = ((7, 45), (12, 45), (16, 20))
 MAX_ARTICLES = 96
 BATCH_SIZE = 24
@@ -31,15 +33,48 @@ def scheduled_slot(now: datetime) -> str | None:
 
 
 def discovery_due(last: dict, now: datetime) -> bool:
-    """회차별 정상 완료는 재실행하지 않고 실패·부분 실패는 한 시간 뒤 재시도합니다."""
+    """정상 회차는 재실행하지 않고 요청 제한의 대기시각을 새 회차에도 적용합니다."""
     slot = scheduled_slot(now)
     stamp = parsed_time(last.get("attemptedAt"))
     if slot is None:
+        return False
+    retry_at = parsed_time(last.get("nextRetryAt"))
+    if retry_at and now < retry_at:
         return False
     previous = last.get("slot") or (scheduled_slot(stamp) if stamp else None)
     if previous == slot and last.get("status") == "ok":
         return False
     return not stamp or now - stamp >= timedelta(hours=1)
+
+
+def rate_limit_retry_at(value: str | None, now: datetime) -> datetime:
+    """Retry-After 초·HTTP 날짜를 해석하며 잘못된 값은 기본 대기로 처리합니다."""
+    try:
+        if str(value).strip().isdigit():
+            return now + timedelta(seconds=int(value))
+        stamp = parsedate_to_datetime(value)
+        if stamp.tzinfo is not None:
+            return max(now, stamp)
+    except (ValueError, TypeError, OverflowError):
+        pass
+    return now
+
+
+def set_discovery_retry(state: dict, last: dict, now: datetime) -> None:
+    """연속 요청 제한은 1·2·4·6시간으로 완화하며 원천의 더 긴 대기는 준수합니다."""
+    limited = [e for e in state["fetchErrors"] if e.get("code") == 429]
+    if limited:
+        streak = min(int(last.get("rateLimitStreak", 0)) + 1, 4)
+        retry_at = now + timedelta(hours=(1, 2, 4, 6)[streak - 1])
+        for error in limited:
+            requested = parsed_time(error.get("retryAt"))
+            if requested:
+                retry_at = max(retry_at, requested)
+        state.update(rateLimitStreak=streak, nextRetryAt=retry_at.isoformat())
+    elif state.get("status") in {"failed", "partial"}:
+        state.update(rateLimitStreak=0, nextRetryAt=(now + timedelta(hours=1)).isoformat())
+    else:
+        state.update(rateLimitStreak=0, nextRetryAt=None)
 
 
 def article_batches(articles: list[dict]) -> list[list[dict]]:
@@ -203,6 +238,10 @@ def discover(store, themes: list[dict], now: datetime, *, fetcher=fetch_articles
              inspector=inspect_articles, force=False) -> dict:
     """하루 세 회차 탐색하며 후보는 원출처 검증·개인 승인 전에 공개하지 않습니다."""
     last = store.get("discovery", {})
+    retry_at = parsed_time(last.get("nextRetryAt"))
+    # 강제 진단도 외부 제공자의 요청 제한 대기를 우회하지 않습니다.
+    if last.get("rateLimitStreak") and retry_at and now < retry_at:
+        return last
     if not force and not discovery_due(last, now):
         return last
     radar = store.get("latestRadar", {})
@@ -211,7 +250,8 @@ def discover(store, themes: list[dict], now: datetime, *, fetcher=fetch_articles
     state = {"attemptedAt": now.isoformat(), "slot": scheduled_slot(now) or now.isoformat()[:16],
              "status": "running", "proposed": 0, "reviewedArticles": 0, "rejected": 0,
              "rejectionReasons": {}, "model": model, "promptVersion": DISCOVERY_VERSION,
-             "eventReviews": 0, "eventReviewFailures": 0, "targetedQueries": 0, "targetedFetchFailures": 0}
+             "eventReviews": 0, "eventReviewFailures": 0, "targetedQueries": 0, "targetedFetchFailures": 0,
+             "fetchErrors": [], "fetchDeferred": 0}
     articles, decisions = [], []
     if not generated or not timedelta(0) <= now - generated <= timedelta(hours=26):
         state.update(status="waiting-data", noCandidateReason="최신 시장자료 대기")
@@ -219,23 +259,38 @@ def discover(store, themes: list[dict], now: datetime, *, fetcher=fetch_articles
         return state
     store.put("discovery", state)
     try:
+        rate_limited = Event()
         def fetch(query):
             for attempt in range(2):
+                if rate_limited.is_set():
+                    return [], {"kind": "cooldown"}
                 try:
-                    return fetcher({"query": query}, now)[:24], False
+                    return fetcher({"query": query}, now)[:24], None
                 except urllib.error.HTTPError as error:
+                    if error.code == 429:
+                        rate_limited.set()
+                        return [], {"kind": "http", "code": 429,
+                                    "retryAt": rate_limit_retry_at(error.headers.get("Retry-After") if error.headers else None, now).isoformat()}
                     if error.code not in {500, 502, 503, 504} or attempt:
-                        return [], True
+                        return [], {"kind": "http", "code": error.code}
                 except (urllib.error.URLError, TimeoutError):
                     if attempt:
-                        return [], True
+                        return [], {"kind": "network"}
                 except Exception:
-                    return [], True
+                    return [], {"kind": "response"}
                 time.sleep(1)
-            return [], True
+            return [], {"kind": "network"}
+
+        def record_fetch_error(error, scope):
+            if error:
+                state["fetchErrors"].append({**error, "scope": scope})
+                state["fetchDeferred"] += int(error["kind"] == "cooldown")
+
         with ThreadPoolExecutor(max_workers=2) as pool:
             fetched = list(pool.map(fetch, QUERIES))
-        state["fetchFailures"] = sum(failed for _, failed in fetched)
+        state["fetchFailures"] = sum(error is not None for _, error in fetched)
+        for _, error in fetched:
+            record_fetch_error(error, "broad")
         groups = [group for group, _ in fetched]
         groups += [issue.get("news", {}).get("articles", [])[:12] for issue in radar["issues"]
                    if issue.get("news", {}).get("status") not in {"failed", "unavailable"}]
@@ -310,8 +365,9 @@ def discover(store, themes: list[dict], now: datetime, *, fetcher=fetch_articles
                 reviewed_events.add(event_key)
                 state["eventReviews"] += 1
                 state["targetedQueries"] += 1
-                extra, failed = fetch(query)
-                state["targetedFetchFailures"] += int(failed)
+                extra, error = fetch(query)
+                record_fetch_error(error, "targeted")
+                state["targetedFetchFailures"] += int(error is not None)
                 fresh_extra = clean_articles(extra, now, limit=24)
                 known = {a["url"]: a for a in articles}
                 for article in fresh_extra:
@@ -355,7 +411,12 @@ def discover(store, themes: list[dict], now: datetime, *, fetcher=fetch_articles
                      noCandidateReason=None)
         if not state["proposed"]:
             if state["status"] == "partial":
-                state["noCandidateReason"] = "수집·모델 검증 일부 미완료"
+                incomplete = []
+                if state["fetchFailures"] or state["targetedFetchFailures"]:
+                    incomplete.append("뉴스 수집")
+                if failures or state["eventReviewFailures"]:
+                    incomplete.append("모델 검증")
+                state["noCandidateReason"] = "·".join(incomplete) + " 일부 미완료"
             elif not results:
                 state["noCandidateReason"] = "모델 신규·전환 제안 없음"
             elif any("한도" in reason for reason in state["rejectionReasons"]):
@@ -369,5 +430,6 @@ def discover(store, themes: list[dict], now: datetime, *, fetcher=fetch_articles
     except Exception as error:
         state["status"] = "failed"
         state["failureType"] = type(error).__name__
+    set_discovery_retry(state, last, now)
     store.record_discovery(state, articles, decisions, now)
     return state

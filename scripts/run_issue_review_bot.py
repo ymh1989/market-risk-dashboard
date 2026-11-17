@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
 import fcntl
 import json
 import os
@@ -19,6 +20,7 @@ import urllib.request
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.issue_review_store import ReviewStore, utc_now
 from scripts.issue_discovery import discover, discovery_due
+from scripts.issue_radar_llm import KST, parsed_time
 from scripts.issue_evidence import require_corroboration
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -102,19 +104,70 @@ class Telegram:
             raise TelegramError(method, "응답 형식 오류") from None
 
 
+def discovery_diagnostics(last: dict) -> list[str]:
+    """수집 장애와 모델 장애를 구분하며 URL·예외 본문은 표시하지 않습니다."""
+    lines = []
+    errors = last.get("fetchErrors", [])
+    codes = sorted({e["code"] for e in errors if isinstance(e.get("code"), int)})
+    if 429 in codes:
+        lines.append("Google News RSS 요청 제한 · HTTP 429")
+    other_codes = [str(code) for code in codes if code != 429]
+    if other_codes:
+        lines.append("뉴스 수집 HTTP 오류 · " + ", ".join(other_codes))
+    if any(e.get("kind") == "network" for e in errors):
+        lines.append("뉴스 수집 연결 실패·응답 시간 초과")
+    if any(e.get("kind") == "response" for e in errors):
+        lines.append("뉴스 수집 응답 처리 실패")
+    if last.get("fetchFailures") or last.get("targetedFetchFailures"):
+        lines.append(f"미완료 검색: 기본 {last.get('fetchFailures', 0)}회 · 추가 {last.get('targetedFetchFailures', 0)}회"
+                     + (f" · 요청 제한으로 보류 {last['fetchDeferred']}회 포함" if last.get("fetchDeferred") else ""))
+    if last.get("batchFailures") or last.get("eventReviewFailures"):
+        lines.append(f"모델 응답 실패: 기사 묶음 {last.get('batchFailures', 0)}회 · 사건 검증 {last.get('eventReviewFailures', 0)}회")
+    elif last.get("reviewedArticles"):
+        lines.append(f"모델 응답 정상 · 수집 기사 {last['reviewedArticles']}건 검토")
+    else:
+        lines.append("모델 검토 완료 기록 없음")
+    if last.get("status") in {"failed", "partial"}:
+        stamp = parsed_time(last.get("attemptedAt"))
+        retry_at = parsed_time(last.get("nextRetryAt")) or (stamp + timedelta(hours=1) if stamp else None)
+        if retry_at:
+            lines.append(f"재시도 가능: {retry_at.astimezone(KST):%m/%d %H:%M} KST 이후")
+    return lines
+
+
 def notify_discovery_health(store, bot, now):
-    """일반 무후보는 무알림. 연속 검증 탈락은 상태가 바뀔 때 개인에게만 알립니다."""
+    """진행 중인 장애는 재시도마다 알리지 않고 악화·하루 경과·복구만 안내합니다."""
     owner = store.get("ownerId")
     if not owner:
         return
     last = store.get("discovery", {})
+    incident = store.get("discoveryIncident", {})
     if last.get("status") in {"failed", "partial"}:
-        if last.get("attemptedAt") != store.get("lastFailureNotice"):
-            bot.call("sendMessage", chat_id=owner, text="시장 이슈 탐색·검증 일부 또는 전체 미완료. 기존 승인 이슈 유지 · 1시간 뒤 재시도. /history에서 수집·모델 검증 기록 확인")
-            store.put("lastFailureNotice", last.get("attemptedAt"))
+        if not incident and last.get("attemptedAt") and last.get("attemptedAt") == store.get("lastFailureNotice"):
+            # 구버전이 이미 보낸 실패 안내도 재시작 후 중복 발송하지 않습니다.
+            incident = {"active": True, "firstSeenAt": last["attemptedAt"],
+                        "lastNotifiedAt": last["attemptedAt"], "lastNotifiedStatus": last["status"]}
+            store.put("discoveryIncident", incident)
+        notified = parsed_time(incident.get("lastNotifiedAt"))
+        attempted = parsed_time(last.get("attemptedAt"))
+        ongoing = incident.get("active", False)
+        escalated = ongoing and last["status"] == "failed" and incident.get("lastNotifiedStatus") == "partial"
+        reminder = ongoing and notified and now - notified >= timedelta(hours=24) and attempted and attempted > notified
+        if not ongoing or escalated or reminder:
+            text = "\n".join(["[시장 이슈 탐색 점검]", *discovery_diagnostics(last),
+                "기존 승인 이슈 유지 · 같은 장애의 반복 알림 생략(24시간 간격 재안내)",
+                "/history 상세 기록 · /status 운영 상태"])
+            bot.call("sendMessage", chat_id=owner, text=text)
+            store.put("discoveryIncident", {"active": True,
+                "firstSeenAt": incident.get("firstSeenAt") if ongoing else now.isoformat(),
+                "lastNotifiedAt": now.isoformat(), "lastNotifiedStatus": last["status"]})
         return
     if last.get("status") != "ok":
         return
+    recovered = incident.get("active", False)
+    if recovered:
+        bot.call("sendMessage", chat_id=owner, text=f"[시장 이슈 탐색 복구]\n뉴스 수집·모델 검토 정상 완료 · 기사 {last.get('reviewedArticles', 0)}건 · 상정 {last.get('proposed', 0)}건\n신규 이슈는 개인 승인 후 공개 · /history 검토 기록")
+        store.put("discoveryIncident", {**incident, "active": False, "resolvedAt": now.isoformat()})
     slots = {}
     for row in store.discovery_history(12):
         slots.setdefault(row["slot"], row)
@@ -122,7 +175,7 @@ def notify_discovery_health(store, bot, now):
     blocked = len(recent) == 3 and all(r.get("status") == "ok" and r.get("modelCandidates", 0) > 0
                  and r.get("rejected", 0) == r.get("modelCandidates") and not r.get("proposed") for r in recent)
     previous = store.get("discoveryHealth", {}).get("state")
-    if blocked and previous != "validation-blocked":
+    if blocked and previous != "validation-blocked" and not recovered:
         bot.call("sendMessage", chat_id=owner, text="[시장 이슈 선정 점검]\n최근 3회 연속 제안 후보가 검증 제외·보류되어 상정된 안건이 없습니다. 탐색 중단이나 위험 부재를 뜻하지 않습니다.\n독립 출처 기준은 유지 · /history 제외 사유 · /status 통신 상태 확인")
     outcome = "validation-blocked" if blocked else "ok"
     if previous != outcome:
@@ -237,9 +290,13 @@ def handle_update(store: ReviewStore, bot, update: dict, now):
         rows = store.discovery_history(6)
         lines = ["최근 이슈 탐색 기록 · 한국시간"]
         for row in rows:
-            lines.append(f"{row['slot'].replace('T', ' ')} · {DISCOVERY_LABEL.get(row['status'], row['status'])} · 기사 {row.get('reviewedArticles', 0)}건 · 제안 {row.get('modelCandidates', 0)}건 · 상정 {row.get('proposed', 0)}건")
+            attempted = parsed_time(row.get("attemptedAt"))
+            stamp = attempted.strftime("%Y-%m-%d %H:%M") if attempted else row["slot"].replace("T", " ")
+            lines.append(f"{stamp} · {DISCOVERY_LABEL.get(row['status'], row['status'])} · 기사 {row.get('reviewedArticles', 0)}건 · 제안 {row.get('modelCandidates', 0)}건 · 상정 {row.get('proposed', 0)}건")
             if row.get("noCandidateReason"):
                 lines.append(row["noCandidateReason"])
+            if row.get("status") in {"partial", "failed"}:
+                lines.extend(discovery_diagnostics(row))
             if row.get("eventReviews"):
                 lines.append(f"사건 재검증 {row['eventReviews']}건 · 추가 검색 {row.get('targetedQueries', 0)}회")
             for reason, count in row.get("rejectionReasons", {}).items():
@@ -252,6 +309,8 @@ def handle_update(store: ReviewStore, bot, update: dict, now):
                 f"기사 {last.get('reviewedArticles', 0)}건 · 모델 제안 {last.get('modelCandidates', 0)}건 · 상정 {last.get('proposed', 0)}건\n"
                 f"선정 결과: {last.get('noCandidateReason') or ('검토 안건 있음' if last.get('proposed') else '결과 대기')}\n"
                 f"홈페이지: {'반영 대기' if store.get('needsPublication') else '승인 변경 대기 없음'}\n/issues 검토함 · /history 탐색 기록 · /status 상태")
+        if last.get("status") in {"partial", "failed"}:
+            text += "\n" + "\n".join(discovery_diagnostics(last))
         for stage, health in store.get("botHealth", {}).items():
             text += f"\n{STAGE_LABEL.get(stage, stage)}: {'정상' if health.get('status') == 'ok' else '재시도 중'}"
             if health.get("status") == "failed":
