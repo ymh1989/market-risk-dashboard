@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#111b1b">
+  <title>창밖 · Field Lab</title>
+  <style>{{STYLE}}</style>
+</head>
+<body>
+  <main id="window" aria-label="자연 파노라마">
+    <div id="landscape">
+      <img id="poster" src="./src/media/nature/water.jpg" alt="산과 숲으로 둘러싸인 청록빛 물가" fetchpriority="high">
+      <video id="film-a" muted playsinline preload="none" aria-hidden="true"></video>
+      <video id="film-b" muted playsinline preload="none" aria-hidden="true"></video>
+    </div>
+    <div class="shade" aria-hidden="true"></div>
+    <header class="chrome">
+      <div class="identity"><a class="icon" href="./snow-lab.html" title="Field Lab으로 돌아가기" aria-label="Field Lab으로 돌아가기">{{ICON_APERTURE}}</a><div><span>FIELD LAB</span><strong>창밖</strong></div></div>
+      <div class="clock"><time id="clock"></time><span id="date"></span></div>
+    </header>
+    <section class="scene-heading chrome" aria-label="현재 풍경">
+      <p id="scene-kicker">WATER / STILLNESS</p>
+      <h1 id="scene-title">산과 물 사이</h1>
+      <div class="scene-mark" aria-hidden="true"><span></span><i></i><span></span></div>
+    </section>
+    <footer class="chrome">
+      <div class="dock" aria-label="풍경 재생 설정">
+        <button id="scenes" class="icon" aria-label="풍경 선택" title="풍경 선택" aria-expanded="false" aria-controls="picker">{{ICON_APERTURE}}</button>
+        <span class="divider" aria-hidden="true"></span>
+        <button id="pause" class="icon" aria-label="일시정지" title="일시정지" aria-pressed="false">{{ICON_PAUSE}}</button>
+        <label class="speed"><span class="sr-only">재생 속도</span><select id="speed" aria-label="재생 속도"><option value="0.5">0.5×</option><option value="0.75" selected>0.75×</option><option value="1">1×</option></select></label>
+        <label class="tour"><input id="tour" type="checkbox"><span>풍경 순환</span></label>
+        <span class="divider" aria-hidden="true"></span>
+        <button id="fullscreen" class="icon" aria-label="전체 화면" title="전체 화면">{{ICON_MAXIMIZE}}</button>
+      </div>
+      <a class="credit" href="./docs/nature-lab.md" target="_blank" rel="noopener" title="영상 출처와 이용 안내">FILM · MIXKIT</a>
+    </footer>
+    <section id="picker" class="picker" aria-label="풍경 선택" hidden>
+      <div class="picker-title"><h2>머무르고 싶은 풍경</h2><button id="close-picker" aria-label="풍경 선택 닫기" title="닫기">닫기</button></div>
+      <div class="scenes">
+        <button data-scene="water" aria-label="산과 물 사이" aria-pressed="true"><img src="./src/media/nature/water.jpg" alt="" loading="lazy"><span><strong>산과 물 사이</strong><small>WATER</small></span></button>
+        <button data-scene="forest" aria-label="숲이 깨어나는 시간" aria-pressed="false"><img src="./src/media/nature/forest.jpg" alt="" loading="lazy"><span><strong>숲이 깨어나는 시간</strong><small>FOREST</small></span></button>
+        <button data-scene="alps" aria-label="알프스의 능선" aria-pressed="false"><img src="./src/media/nature/alps.jpg" alt="" loading="lazy"><span><strong>알프스의 능선</strong><small>ALPINE</small></span></button>
+      </div>
+    </section>
+    <div id="status" role="status">풍경을 불러오는 중</div>
+    <button id="retry" hidden>다시 불러오기</button>
+    <div id="notice" role="status"></div>
+    <div class="film-progress chrome" aria-hidden="true"><span id="progress"></span></div>
+    <noscript>움직이는 풍경을 보려면 JavaScript를 허용해 주세요.</noscript>
+  </main>
+  <!-- {{LICENSE}} -->
+  <script id="icons" type="application/json">{{ICONS}}</script>
+  <script>{{SCRIPT}}</script>
+</body>
+</html>

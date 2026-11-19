@@ -33,6 +33,16 @@
 - 라이선스: ISC 및 해당 Feather 파생 아이콘의 MIT
 - 라이선스 전문: `src/vendor/lucide.LICENSE`
 
+## Mixkit 자연 영상
+
+- 용도: `nature-lab.html`의 숲·물가·알프스 감상 화면
+- 원본: Mixkit 무료 영상 5008, 28342, 4132
+- 라이선스: [Mixkit Stock Video Free License](https://mixkit.co/license/modal/videoFree/)
+- 보관 위치: `src/media/nature/`의 편집 영상과 포스터
+- 원본 링크와 편집 내역: [자연 파노라마 안내](docs/nature-lab.md)
+
+이 감상 화면에 통합하여 사용하며 별도의 스톡 영상 배포 서비스로 제공하지 않습니다.
+
 ## 해양 스펙트럼 참고 방법론
 
 - Jerry Tessendorf, [`Simulating Ocean Water`](https://people.computing.clemson.edu/~jtessen/reports/papers_files/coursenotes2002.pdf) (1999-2001)

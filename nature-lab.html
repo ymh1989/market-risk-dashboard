@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#111b1b">
+  <title>창밖 · Field Lab</title>
+  <style>:root {
+  color-scheme: dark;
+  font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #f5f8f3;
+  background: #111b1b;
+  letter-spacing: 0;
+  font-synthesis: none;
+}
+* { box-sizing: border-box; }
+body { margin: 0; overflow: hidden; }
+button, select, input, a { font: inherit; -webkit-tap-highlight-color: transparent; }
+button, select { cursor: pointer; }
+button, a { touch-action: manipulation; }
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible {
+  outline: 2px solid #f5f8f3; outline-offset: 5px;
+}
+[hidden] { display: none !important; }
+#window { position: relative; width: 100%; height: 100dvh; overflow: hidden; isolation: isolate; }
+#landscape { position: absolute; inset: 0; transform: translate3d(var(--look-x, 0px), var(--look-y, 0px), 0) scale(1.045); will-change: transform; }
+#landscape img, #landscape video { display: block; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; }
+#landscape video { opacity: 0; }
+.shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, #0006, transparent 20%, transparent 56%, #0008); opacity: .8; transition: opacity 1.8s; }
+.chrome { transition: opacity 1.5s, transform 1.5s; }
+header { position: absolute; inset: max(28px, env(safe-area-inset-top)) 36px auto; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.identity { display: flex; align-items: center; gap: 14px; text-shadow: 0 2px 12px #0006; }
+.identity span { display: block; font-size: .75rem; font-weight: 500; opacity: .8; }
+.identity strong { display: block; font-size: 1.125rem; font-weight: 500; margin-top: 5px; }
+.icon { display: inline-grid; place-items: center; flex: 0 0 42px; width: 42px; height: 42px; border: 0; color: inherit; background: transparent; border-radius: 6px; text-decoration: none; }
+.icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.icon:hover, .icon[aria-expanded="true"] { background: #fff2; }
+.identity .icon { border: 1px solid #fff5; border-radius: 50%; background: #10201a24; }
+.clock { text-align: right; text-shadow: 0 2px 10px #0008; }
+.clock time { display: block; font-size: 1.375rem; font-weight: 300; font-variant-numeric: tabular-nums; }
+.clock span { display: block; font-size: .8125rem; margin-top: 6px; opacity: .8; }
+.scene-heading { position: absolute; left: 44px; bottom: 114px; text-shadow: 0 2px 18px #0006; pointer-events: none; }
+.scene-heading p { font-size: .8125rem; font-weight: 400; margin: 0 0 14px; color: #e8eee8; }
+.scene-heading h1 { font-family: "Nanum Myeongjo", "AppleMyungjo", "Batang", Georgia, serif; font-size: 2rem; line-height: 1.5; font-weight: 400; margin: 0; word-break: keep-all; }
+.scene-mark { display: flex; gap: 7px; align-items: center; margin-top: 22px; opacity: .8; }
+.scene-mark span { display: block; width: 30px; height: 1px; background: #f1f4ed80; }
+.scene-mark i { width: 4px; height: 4px; border: 1px solid #e4eddf; transform: rotate(45deg); }
+footer { position: absolute; bottom: max(30px, env(safe-area-inset-bottom)); left: 32px; right: 32px; display: flex; align-items: center; justify-content: center; }
+.dock { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: #15251eaa; backdrop-filter: blur(18px); border: 1px solid #f0f8ef3d; border-radius: 8px; box-shadow: 0 8px 30px #0002; }
+.divider { width: 1px; height: 20px; background: #f2f5ed33; margin: 0 4px; }
+.speed select { appearance: none; border: 0; color: #f4f6f1; background: #0000; font-size: .875rem; text-align: center; width: 58px; padding: 10px 8px; border-radius: 4px; }
+.speed select:hover { background: #ffffff18; }
+.speed option { background: #1a2b24; }
+.tour { display: flex; align-items: center; gap: 7px; white-space: nowrap; font-size: .875rem; padding: 0 8px; cursor: pointer; }
+.tour input { accent-color: #bdd9c4; width: 15px; height: 15px; margin: 0; }
+.credit { position: absolute; right: 4px; bottom: 10px; color: #eff7ebbb; font-size: .75rem; text-decoration: none; }
+.credit:hover { color: #fff; text-decoration: underline; }
+.picker { position: absolute; left: 50%; bottom: 108px; transform: translateX(-50%); width: min(660px, calc(100% - 40px)); padding: 18px; border: 1px solid #fff3; background: #13251aee; backdrop-filter: blur(20px); border-radius: 8px; box-shadow: 0 12px 50px #0004; }
+.picker-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.picker h2 { font-size: .9375rem; font-weight: 500; margin: 0; }
+.picker-title button { color: #c7d6c9; font-size: .875rem; background: transparent; padding: 4px; border: 0; }
+.scenes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.scenes button { display: flex; flex-direction: column; position: relative; padding: 0; border: 1px solid #fff2; border-radius: 5px; overflow: hidden; background: #15261b; color: inherit; text-align: left; }
+.scenes button[aria-pressed="true"] { border-color: #dcebdd; box-shadow: 0 0 0 1px #dcebdd; }
+.scenes img { display: block; width: 100%; aspect-ratio: 16/9; object-fit: cover; }
+.scenes button > span { display: flex; flex-direction: column; flex: 1; padding: 12px 10px; }
+.scenes strong { display: block; font-size: .875rem; font-weight: 500; line-height: 1.5; word-break: keep-all; }
+.scenes small { display: block; margin-top: auto; padding-top: 4px; font-size: .75rem; color: #adbeaf; }
+#status, #notice, #retry { position: absolute; left: 50%; transform: translateX(-50%); max-width: calc(100% - 40px); font-size: .875rem; text-align: center; }
+#status { top: 42%; background: #15211bc9; padding: 12px 20px; border-radius: 6px; line-height: 1.7; }
+#retry { top: 54%; border: 1px solid #e7efde99; border-radius: 4px; padding: 10px 16px; color: inherit; background: #14211de6; }
+#notice { bottom: 110px; color: #eef3e7; background: #14211ddd; padding: 10px 16px; border-radius: 4px; pointer-events: none; }
+#notice:empty { display: none; }
+.film-progress { position: absolute; inset: auto 0 0; height: 2px; background: #fff1; pointer-events: none; }
+.film-progress span { display: block; height: 100%; width: 100%; background: #e2eddb66; transform: scaleX(0); transform-origin: left; }
+body.idle .chrome:not(:has(:focus-visible)) { opacity: 0; pointer-events: none; }
+body.idle .shade { opacity: 0; }
+body.idle #window { cursor: none; }
+body:has(.picker:not([hidden])) .scene-heading { opacity: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+noscript { position: absolute; left: 24px; bottom: 40%; padding: 12px; background: #10201dcc; }
+@media (max-width: 720px) {
+  header { inset: max(22px, env(safe-area-inset-top)) 22px auto; }
+  .scene-heading { left: 26px; bottom: 144px; }
+  .scene-heading h1 { font-size: 1.625rem; }
+  .scene-heading p { font-size: .75rem; }
+  .scene-mark { margin-top: 16px; }
+  footer { left: 12px; right: 12px; bottom: max(40px, env(safe-area-inset-bottom)); }
+  .dock { gap: 3px; padding: 6px; }
+  .tour { padding: 0 3px; font-size: .8125rem; }
+  .speed select { width: 54px; }
+  .divider { margin: 0 2px; }
+  .credit { right: 50%; transform: translateX(50%); bottom: -25px; }
+  .picker { bottom: 114px; width: calc(100% - 24px); padding: 14px; }
+  .scenes { gap: 8px; }
+  .scenes button > span { padding: 9px 7px; }
+  .scenes strong { font-size: .8125rem; min-height: 2.6em; }
+  .scenes small { font-size: .75rem; }
+}
+@media (max-width: 359px) {
+  .icon { width: 36px; height: 40px; flex-basis: 36px; }
+  .dock { gap: 0; }
+  .speed select { width: 48px; }
+}
+@media (max-height: 500px) {
+  header { top: 14px; }
+  .scene-heading { bottom: 92px; }
+  .scene-heading h1 { font-size: 1.4rem; }
+  .scene-heading p, .scene-mark { display: none; }
+  footer { bottom: 14px; }
+  .credit { display: none; }
+  .picker { bottom: 84px; width: min(560px, calc(100% - 24px)); max-height: calc(100dvh - 100px); overflow: auto; }
+  .scenes img { aspect-ratio: 2.6; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+  #landscape { transform: none !important; }
+}
+</style>
+</head>
+<body>
+  <main id="window" aria-label="자연 파노라마">
+    <div id="landscape">
+      <img id="poster" src="./src/media/nature/water.jpg" alt="산과 숲으로 둘러싸인 청록빛 물가" fetchpriority="high">
+      <video id="film-a" muted playsinline preload="none" aria-hidden="true"></video>
+      <video id="film-b" muted playsinline preload="none" aria-hidden="true"></video>
+    </div>
+    <div class="shade" aria-hidden="true"></div>
+    <header class="chrome">
+      <div class="identity"><a class="icon" href="./snow-lab.html" title="Field Lab으로 돌아가기" aria-label="Field Lab으로 돌아가기"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="m14.31 8 5.74 9.94" /><path d="M9.69 8h11.48" /><path d="m7.38 12 5.74-9.94" /><path d="M9.69 16 3.95 6.06" /><path d="M14.31 16H2.83" /><path d="m16.62 12-5.74 9.94" /></svg></a><div><span>FIELD LAB</span><strong>창밖</strong></div></div>
+      <div class="clock"><time id="clock"></time><span id="date"></span></div>
+    </header>
+    <section class="scene-heading chrome" aria-label="현재 풍경">
+      <p id="scene-kicker">WATER / STILLNESS</p>
+      <h1 id="scene-title">산과 물 사이</h1>
+      <div class="scene-mark" aria-hidden="true"><span></span><i></i><span></span></div>
+    </section>
+    <footer class="chrome">
+      <div class="dock" aria-label="풍경 재생 설정">
+        <button id="scenes" class="icon" aria-label="풍경 선택" title="풍경 선택" aria-expanded="false" aria-controls="picker"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="m14.31 8 5.74 9.94" /><path d="M9.69 8h11.48" /><path d="m7.38 12 5.74-9.94" /><path d="M9.69 16 3.95 6.06" /><path d="M14.31 16H2.83" /><path d="m16.62 12-5.74 9.94" /></svg></button>
+        <span class="divider" aria-hidden="true"></span>
+        <button id="pause" class="icon" aria-label="일시정지" title="일시정지" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="14" y="3" width="5" height="18" rx="1" /><rect x="5" y="3" width="5" height="18" rx="1" /></svg></button>
+        <label class="speed"><span class="sr-only">재생 속도</span><select id="speed" aria-label="재생 속도"><option value="0.5">0.5×</option><option value="0.75" selected>0.75×</option><option value="1">1×</option></select></label>
+        <label class="tour"><input id="tour" type="checkbox"><span>풍경 순환</span></label>
+        <span class="divider" aria-hidden="true"></span>
+        <button id="fullscreen" class="icon" aria-label="전체 화면" title="전체 화면"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></svg></button>
+      </div>
+      <a class="credit" href="./docs/nature-lab.md" target="_blank" rel="noopener" title="영상 출처와 이용 안내">FILM · MIXKIT</a>
+    </footer>
+    <section id="picker" class="picker" aria-label="풍경 선택" hidden>
+      <div class="picker-title"><h2>머무르고 싶은 풍경</h2><button id="close-picker" aria-label="풍경 선택 닫기" title="닫기">닫기</button></div>
+      <div class="scenes">
+        <button data-scene="water" aria-label="산과 물 사이" aria-pressed="true"><img src="./src/media/nature/water.jpg" alt="" loading="lazy"><span><strong>산과 물 사이</strong><small>WATER</small></span></button>
+        <button data-scene="forest" aria-label="숲이 깨어나는 시간" aria-pressed="false"><img src="./src/media/nature/forest.jpg" alt="" loading="lazy"><span><strong>숲이 깨어나는 시간</strong><small>FOREST</small></span></button>
+        <button data-scene="alps" aria-label="알프스의 능선" aria-pressed="false"><img src="./src/media/nature/alps.jpg" alt="" loading="lazy"><span><strong>알프스의 능선</strong><small>ALPINE</small></span></button>
+      </div>
+    </section>
+    <div id="status" role="status">풍경을 불러오는 중</div>
+    <button id="retry" hidden>다시 불러오기</button>
+    <div id="notice" role="status"></div>
+    <div class="film-progress chrome" aria-hidden="true"><span id="progress"></span></div>
+    <noscript>움직이는 풍경을 보려면 JavaScript를 허용해 주세요.</noscript>
+  </main>
+  <!-- ISC License
+
+Copyright (c) 2026 Lucide Icons and Contributors
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+- --
+
+The following Lucide icons are derived from the Feather project:
+
+airplay, alert-circle, alert-octagon, alert-triangle, aperture, arrow-down-circle, arrow-down-left, arrow-down-right, arrow-down, arrow-left-circle, arrow-left, arrow-right-circle, arrow-right, arrow-up-circle, arrow-up-left, arrow-up-right, arrow-up, at-sign, calendar, cast, check, chevron-down, chevron-left, chevron-right, chevron-up, chevrons-down, chevrons-left, chevrons-right, chevrons-up, circle, clipboard, clock, code, columns, command, compass, corner-down-left, corner-down-right, corner-left-down, corner-left-up, corner-right-down, corner-right-up, corner-up-left, corner-up-right, crosshair, database, divide-circle, divide-square, dollar-sign, download, external-link, feather, frown, hash, headphones, help-circle, info, italic, key, layout, life-buoy, link-2, link, loader, lock, log-in, log-out, maximize, meh, minimize, minimize-2, minus-circle, minus-square, minus, monitor, moon, more-horizontal, more-vertical, move, music, navigation-2, navigation, octagon, pause-circle, percent, plus-circle, plus-square, plus, power, radio, rss, search, server, share, shopping-bag, sidebar, smartphone, smile, square, table-2, tablet, target, terminal, trash-2, trash, triangle, tv, type, upload, x-circle, x-octagon, x-square, x, zoom-in, zoom-out
+
+The MIT License (MIT) (for the icons listed above)
+
+Copyright (c) 2013-present Cole Bemis
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+ -->
+  <script id="icons" type="application/json">{"trees": "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z\" /><path d=\"M7 16v6\" /><path d=\"M13 19v3\" /><path d=\"M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5\" /></svg>", "aperture": "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"m14.31 8 5.74 9.94\" /><path d=\"M9.69 8h11.48\" /><path d=\"m7.38 12 5.74-9.94\" /><path d=\"M9.69 16 3.95 6.06\" /><path d=\"M14.31 16H2.83\" /><path d=\"m16.62 12-5.74 9.94\" /></svg>", "arrowleft": "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m12 19-7-7 7-7\" /><path d=\"M19 12H5\" /></svg>", "pause": "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"14\" y=\"3\" width=\"5\" height=\"18\" rx=\"1\" /><rect x=\"5\" y=\"3\" width=\"5\" height=\"18\" rx=\"1\" /></svg>", "play": "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z\" /></svg>", "volume2": "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z\" /><path d=\"M16 9a5 5 0 0 1 0 6\" /><path d=\"M19.364 18.364a9 9 0 0 0 0-12.728\" /></svg>", "volumex": "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z\" /><line x1=\"22\" x2=\"16\" y1=\"9\" y2=\"15\" /><line x1=\"16\" x2=\"22\" y1=\"9\" y2=\"15\" /></svg>", "maximize": "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M8 3H5a2 2 0 0 0-2 2v3\" /><path d=\"M21 8V5a2 2 0 0 0-2-2h-3\" /><path d=\"M3 16v3a2 2 0 0 0 2 2h3\" /><path d=\"M16 21h3a2 2 0 0 0 2-2v-3\" /></svg>", "download": "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 15V3\" /><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><path d=\"m7 10 5 5 5-5\" /></svg>", "rotateccw": "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\" /><path d=\"M3 3v5h5\" /></svg>"}</script>
+  <script>(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const icons = JSON.parse($("icons").textContent);
+  const scenes = {
+    water: { title: "산과 물 사이", kicker: "WATER / STILLNESS", alt: "산과 숲으로 둘러싸인 청록빛 물가" },
+    forest: { title: "숲이 깨어나는 시간", kicker: "FOREST / EARLY LIGHT", alt: "안개가 천천히 흐르는 푸른 숲" },
+    alps: { title: "알프스의 능선", kicker: "ALPINE / OPEN SKY", alt: "알프스의 산과 능선 위로 흐르는 구름" },
+  };
+  const order = Object.keys(scenes);
+  const videos = [$("film-a"), $("film-b")];
+  const motion = matchMedia("(prefers-reduced-motion: reduce)");
+  let active = -1, sceneId = "water", paused = motion.matches, loading = false;
+  let generation = 0, controller = null, fade = null, raf = 0, lastFrame = 0;
+  let idleTimer = 0, noticeTimer = 0, clockTimer = 0, sceneTime = 0;
+  let look = { x: 0, y: 0 }, target = { x: 0, y: 0 };
+  const asset = (id, ext) => `./src/media/nature/${id}.${ext}`;
+
+  function showNotice(text) {
+    clearTimeout(noticeTimer);
+    $("notice").textContent = text;
+    noticeTimer = setTimeout(() => { $("notice").textContent = ""; }, 4500);
+  }
+
+  function wake() {
+    document.body.classList.remove("idle");
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      if (!paused && !loading && $("picker").hidden && !document.querySelector(".chrome :focus-visible")) {
+        document.body.classList.add("idle");
+      }
+    }, 5500);
+  }
+
+  function updateClock() {
+    clearTimeout(clockTimer);
+    const now = new Date();
+    $("clock").textContent = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(now);
+    $("clock").dateTime = now.toISOString();
+    $("clock").title = "한국시간";
+    $("date").textContent = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric", weekday: "short" }).format(now);
+    if (!document.hidden) clockTimer = setTimeout(updateClock, 30000);
+  }
+
+  function syncControls() {
+    const label = paused ? "재생" : "일시정지";
+    $("pause").setAttribute("aria-label", label);
+    $("pause").title = label;
+    $("pause").setAttribute("aria-pressed", String(paused));
+    $("pause").innerHTML = icons[paused ? "play" : "pause"];
+    document.body.dataset.paused = String(paused);
+  }
+
+  function showScene(id) {
+    sceneId = id;
+    $("scene-title").textContent = scenes[id].title;
+    $("scene-kicker").textContent = scenes[id].kicker;
+    $("poster").src = asset(id, "jpg");
+    $("poster").alt = scenes[id].alt;
+    document.querySelectorAll("button[data-scene]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.scene === id));
+    });
+    document.body.dataset.scene = id;
+  }
+
+  function settleFade() {
+    if (!fade) return;
+    active = fade.to;
+    videos[active].style.opacity = "1";
+    videos[fade.from].style.opacity = "0";
+    videos[fade.from].pause();
+    fade = null;
+    document.body.dataset.transition = "false";
+  }
+
+  function waitForFilm(video, signal) {
+    return new Promise((resolve, reject) => {
+      let timeout;
+      const cleanup = () => {
+        clearTimeout(timeout);
+        video.removeEventListener("loadeddata", ready);
+        video.removeEventListener("error", failed);
+        signal.removeEventListener("abort", aborted);
+      };
+      const ready = () => { cleanup(); resolve(); };
+      const failed = () => { cleanup(); reject(new Error("영상 불러오기 실패")); };
+      const aborted = () => { cleanup(); reject(new DOMException("장면 변경", "AbortError")); };
+      video.addEventListener("loadeddata", ready);
+      video.addEventListener("error", failed);
+      signal.addEventListener("abort", aborted, { once: true });
+      timeout = setTimeout(failed, 15000);
+      if (signal.aborted) aborted();
+      else if (video.readyState >= 2) ready();
+    });
+  }
+
+  async function playFilm(video) {
+    if (paused || document.hidden) return;
+    try {
+      await video.play();
+      // 비동기 재생 요청 도중 탭을 벗어나거나 일시정지했을 수 있습니다.
+      if (paused || document.hidden) video.pause();
+    } catch (error) {
+      if (error.name === "AbortError") return;
+      paused = true;
+      videos.forEach((v) => v.pause());
+      syncControls();
+      wake();
+      showNotice("재생 버튼으로 풍경을 시작할 수 있습니다.");
+    }
+  }
+
+  async function loadScene(id, loop = false) {
+    if (!scenes[id]) return;
+    const ticket = ++generation;
+    controller?.abort();
+    controller = new AbortController();
+    settleFade();
+    loading = true;
+    document.body.dataset.loading = "true";
+    $("retry").hidden = true;
+    const next = active < 0 ? 0 : 1 - active;
+    const video = videos[next];
+    video.pause();
+    video.style.opacity = "0";
+    video.preload = "auto";
+    video.muted = true;
+    video.playbackRate = Number($("speed").value);
+    if (video.dataset.scene !== id || video.error) {
+      video.dataset.scene = id;
+      video.src = asset(id, "mp4");
+      video.load();
+    } else {
+      video.currentTime = 0;
+    }
+    try {
+      await waitForFilm(video, controller.signal);
+      if (ticket !== generation) return;
+      await playFilm(video);
+      if (ticket !== generation) { video.pause(); return; }
+      if (active < 0 || paused || motion.matches) {
+        videos.forEach((v) => { if (v !== video) { v.pause(); v.style.opacity = "0"; } });
+        active = next;
+        video.style.opacity = "1";
+      } else {
+        fade = { from: active, to: next, elapsed: 0, duration: loop ? 1.6 : 2.2 };
+        document.body.dataset.transition = "true";
+      }
+      if (!loop) { showScene(id); sceneTime = 0; }
+      $("status").hidden = true;
+      document.body.dataset.ready = "true";
+      loading = false;
+      document.body.dataset.loading = "false";
+      requestFrame();
+      if (!loop) wake();
+    } catch (error) {
+      if (ticket !== generation || error.name === "AbortError") return;
+      loading = false;
+      document.body.dataset.loading = "false";
+      paused = true;
+      videos.forEach((v) => v.pause());
+      syncControls();
+      $("status").textContent = "영상을 불러오지 못했습니다. 다른 풍경을 선택하거나 다시 시도해 주세요.";
+      $("status").hidden = false;
+      $("retry").hidden = false;
+      $("retry").onclick = () => { paused = motion.matches; syncControls(); loadScene(id); };
+      wake();
+    }
+  }
+
+  function requestFrame() {
+    if (!raf && !document.hidden) raf = requestAnimationFrame(frame);
+  }
+
+  function frame(now) {
+    raf = 0;
+    if (document.hidden) return;
+    const dt = Math.min((now - (lastFrame || now)) / 1000, .08);
+    lastFrame = now;
+    const moving = Math.abs(target.x - look.x) + Math.abs(target.y - look.y) > .02;
+    if (moving && !motion.matches && !paused) {
+      const ease = 1 - Math.exp(-dt * 2.6);
+      look.x += (target.x - look.x) * ease;
+      look.y += (target.y - look.y) * ease;
+      $("landscape").style.setProperty("--look-x", `${look.x.toFixed(2)}px`);
+      $("landscape").style.setProperty("--look-y", `${look.y.toFixed(2)}px`);
+    }
+    if (!paused && active >= 0) {
+      sceneTime += dt;
+      if (fade) {
+        fade.elapsed += dt;
+        const t = Math.min(1, fade.elapsed / fade.duration);
+        const eased = t * t * (3 - 2 * t);
+        // 아래 영상을 불투명하게 유지해 교차 전환 중 검은 화면이 생기지 않게 합니다.
+        videos[fade.from].style.zIndex = "1";
+        videos[fade.to].style.zIndex = "2";
+        videos[fade.to].style.opacity = String(eased);
+        if (t >= 1) settleFade();
+      } else if (!loading) {
+        const film = videos[active];
+        if (Number.isFinite(film.duration) && film.duration > 0) {
+          $("progress").style.transform = `scaleX(${Math.min(1, film.currentTime / film.duration)})`;
+          const remaining = (film.duration - film.currentTime) / film.playbackRate;
+          if (remaining < 2.1) {
+            const tour = $("tour").checked && sceneTime > 55;
+            const next = tour ? order[(order.indexOf(sceneId) + 1) % order.length] : sceneId;
+            loadScene(next, !tour);
+          }
+        }
+      }
+      requestFrame();
+    }
+  }
+
+  function setPaused(value) {
+    paused = value;
+    syncControls();
+    if (paused) {
+      videos.forEach((v) => v.pause());
+      cancelAnimationFrame(raf); raf = 0;
+    } else {
+      const indices = fade ? [fade.from, fade.to] : active >= 0 ? [active] : [];
+      indices.forEach((i) => playFilm(videos[i]));
+      lastFrame = performance.now();
+      requestFrame();
+    }
+    wake();
+  }
+
+  function setPicker(open, focus = false) {
+    $("picker").hidden = !open;
+    $("scenes").setAttribute("aria-expanded", String(open));
+    if (focus) (open ? document.querySelector(`button[data-scene="${sceneId}"]`) : $("scenes")).focus();
+    wake();
+  }
+  $("scenes").onclick = () => setPicker($("picker").hidden, true);
+  $("close-picker").onclick = () => setPicker(false, true);
+  document.querySelectorAll("button[data-scene]").forEach((button) => {
+    button.onclick = () => { setPicker(false, true); loadScene(button.dataset.scene); };
+  });
+  $("pause").onclick = () => setPaused(!paused);
+  $("speed").onchange = () => { videos.forEach((v) => { v.playbackRate = Number($("speed").value); }); wake(); };
+  $("tour").onchange = wake;
+  $("fullscreen").onclick = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+      else showNotice("이 브라우저에서는 전체 화면을 지원하지 않습니다.");
+    } catch { showNotice("전체 화면으로 전환하지 못했습니다."); }
+    wake();
+  };
+  document.addEventListener("fullscreenchange", () => {
+    const label = document.fullscreenElement ? "전체 화면 종료" : "전체 화면";
+    $("fullscreen").setAttribute("aria-label", label); $("fullscreen").title = label;
+  });
+  document.addEventListener("pointermove", (event) => {
+    wake();
+    if (event.pointerType !== "mouse" || motion.matches || paused) return;
+    target = { x: (event.clientX / innerWidth - .5) * -16, y: (event.clientY / innerHeight - .5) * -10 };
+    requestFrame();
+  }, { passive: true });
+  document.addEventListener("pointerdown", (event) => {
+    wake();
+    if (!event.target.closest("#picker, #scenes")) setPicker(false);
+  }, { passive: true });
+  document.addEventListener("keydown", (event) => {
+    wake();
+    if (event.key === "Escape" && !$("picker").hidden) setPicker(false, true);
+    if (event.code === "Space" && !event.target.closest("button, a, select, input")) {
+      event.preventDefault(); setPaused(!paused);
+    }
+  });
+  document.addEventListener("focusin", wake);
+  // 숨겨진 탭에서는 영상 디코딩과 화면 갱신을 모두 멈춥니다.
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      videos.forEach((v) => v.pause());
+      cancelAnimationFrame(raf); raf = 0;
+      clearTimeout(clockTimer); clearTimeout(idleTimer);
+    } else {
+      updateClock();
+      setPaused(paused);
+    }
+  });
+  motion.addEventListener("change", () => { if (motion.matches) setPaused(true); });
+  addEventListener("pagehide", () => {
+    videos.forEach((v) => v.pause());
+    cancelAnimationFrame(raf); raf = 0;
+    clearTimeout(clockTimer); clearTimeout(idleTimer);
+  });
+  addEventListener("pageshow", (event) => { if (event.persisted) { updateClock(); setPaused(paused); } });
+  updateClock(); syncControls(); loadScene("water"); wake();
+})();
+</script>
+</body>
+</html>
