@@ -43,6 +43,20 @@ def adjusted_plist(payload: dict, wrapper: Path, today: date, prepare_minutes: i
     return result
 
 
+def special_preparation_plist(payload: dict, wrapper: Path, today: date, prepare_minutes: int) -> dict:
+    """기존 준비가 실행 중이면 해당일의 별도 예약만 만든다."""
+    result = adjusted_plist(payload, wrapper, today, prepare_minutes)
+    result["Label"] = f"com.marketlab.news-digest.session-{today:%Y%m%d}.prepare"
+    result["StartCalendarInterval"] = [
+        entry for entry in result["StartCalendarInterval"]
+        if entry.get("Month") == today.month and entry.get("Day") == today.day
+    ]
+    if not result["StartCalendarInterval"]:
+        raise ValueError("오늘은 별도 사전 준비가 필요한 특별 거래일이 아닙니다.")
+    result.pop("RunAtLoad", None)
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--news-root", type=Path, required=True)
@@ -65,14 +79,25 @@ def main() -> None:
         if payload.get("Label") != label:
             raise SystemExit(f"LaunchAgent 이름 불일치: {path}")
         state = subprocess.run(["launchctl", "print", f"gui/{os.getuid()}/{label}"], capture_output=True, text=True)
+        today = datetime.now(KST).date()
         if re.search(r"^\s*pid = \d+", state.stdout, re.MULTILINE):
-            raise SystemExit(f"실행 중인 작업은 중단하지 않습니다: {label}")
-        plans.append((label, path, raw, adjusted_plist(payload, wrapper, datetime.now(KST).date(), args.prepare_minutes)))
+            if not label.endswith(".prepare"):
+                raise SystemExit(f"실행 중인 작업은 중단하지 않습니다: {label}")
+            payload = special_preparation_plist(payload, wrapper, today, args.prepare_minutes)
+            label = payload["Label"]
+            path = path.with_name(f"{label}.plist")
+            if path.exists():
+                raise SystemExit(f"특별일 사전 준비가 이미 등록되어 있습니다: {label}")
+            raw = None
+        else:
+            payload = adjusted_plist(payload, wrapper, today, args.prepare_minutes)
+        plans.append((label, path, raw, payload))
     for label, path, raw, payload in plans:
         if args.apply:
             backup = root / "logs/schedule-backups" / datetime.now(KST).strftime("%Y%m%dT%H%M%S") / path.name
             backup.parent.mkdir(parents=True, exist_ok=True)
-            backup.write_bytes(raw)
+            if raw is not None:
+                backup.write_bytes(raw)
             candidate = path.with_suffix(".plist.pending")
             candidate.write_bytes(plistlib.dumps(payload))
             candidate.replace(path)
@@ -82,8 +107,11 @@ def main() -> None:
                 subprocess.run(["launchctl", "enable", f"gui/{os.getuid()}/{label}"], check=True)
             except subprocess.CalledProcessError:
                 subprocess.run(["launchctl", "bootout", f"gui/{os.getuid()}", str(path)], capture_output=True)
-                path.write_bytes(raw)
-                subprocess.run(["launchctl", "bootstrap", f"gui/{os.getuid()}", str(path)], check=True)
+                if raw is not None:
+                    path.write_bytes(raw)
+                    subprocess.run(["launchctl", "bootstrap", f"gui/{os.getuid()}", str(path)], check=True)
+                else:
+                    path.unlink()
                 raise
         print(f"{label}: {'설치 완료' if args.apply else '설치 예정'} · 수능일 마감 브리핑 17:10 / 사전 준비 {args.prepare_minutes}분 전")
 

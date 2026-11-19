@@ -13,7 +13,7 @@ from scripts.market_session_schedule import (
 )
 from scripts.monitor_local_market_update import find_schedule_alerts, settings_from_env
 from scripts.run_session_news import news_environment
-from scripts.install_session_news_launchd import adjusted_plist
+from scripts.install_session_news_launchd import adjusted_plist, special_preparation_plist
 
 ROOT = Path(__file__).resolve().parents[1]
 CSAT = date(2026, 11, 19)
@@ -121,3 +121,13 @@ def test_news_agent_install_is_idempotent_and_retains_arguments(tmp_path):
     assert {"Month": 11, "Day": 19, "Hour": 16, "Minute": 40} in result["StartCalendarInterval"]
     assert adjusted_plist(result, wrapper, CSAT) == result
     assert original["ProgramArguments"][1] == "/news/scripts/prepare.py"
+
+
+def test_running_preparation_gets_separate_date_limited_job(tmp_path):
+    original = {"Label": "com.marketlab.news-digest.prepare", "ProgramArguments": ["python3", "/news/scripts/prepare.py", "--only-at-preparation-kst"],
+                "StartCalendarInterval": [{"Hour": 15, "Minute": 40}], "RunAtLoad": True}
+    result = special_preparation_plist(original, tmp_path / "run_session_news.py", CSAT, 30)
+    assert result["Label"] == "com.marketlab.news-digest.session-20261119.prepare"
+    assert result["StartCalendarInterval"] == [{"Month": 11, "Day": 19, "Hour": 16, "Minute": 40}]
+    assert "RunAtLoad" not in result
+    assert original["Label"] == "com.marketlab.news-digest.prepare"
