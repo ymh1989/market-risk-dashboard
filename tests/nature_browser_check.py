@@ -45,6 +45,17 @@ def main():
             browser = p.chromium.launch(headless=True, executable_path=os.getenv("NATURE_BROWSER"))
             context = browser.new_context(viewport={"width": 1440, "height": 900}, device_scale_factor=1)
             page = context.new_page()
+            page.add_init_script("""document.addEventListener('DOMContentLoaded', () => {
+                window.filmEvents = [];
+                document.querySelectorAll('video').forEach(v => {
+                    for (const name of ['loadeddata', 'canplay', 'seeked', 'seeking', 'playing', 'pause', 'ended', 'error']) {
+                        v.addEventListener(name, () => {
+                            window.filmEvents.push({id: v.id, event: name, time: v.currentTime, ready: v.readyState, seeking: v.seeking});
+                            window.filmEvents = window.filmEvents.slice(-40);
+                        });
+                    }
+                });
+            });""")
             page.on("pageerror", lambda error: errors.append(str(error)))
             page.on("request", lambda request: requests.append(request.url))
             try:
@@ -82,6 +93,15 @@ def main():
                 result["loopMidpoint"] = verify_pixels(frame(page))
                 page.wait_for_function("document.body.dataset.transition === 'false'")
                 assert page.locator("video").evaluate_all("vs => vs.filter(v => !v.paused).length") == 1
+                # 첫 교차 재생뿐 아니라 기존 영상 요소를 되감아 쓰는 반복도 검사합니다.
+                for repetition in range(4):
+                    print(f"반복 재생 {repetition + 2}회 확인", flush=True)
+                    page.locator("video").evaluate_all("vs => vs.filter(v => !v.paused).forEach(v => v.currentTime = v.duration - .8)")
+                    page.wait_for_function("document.body.dataset.transition === 'true' || !document.getElementById('retry').hidden", timeout=22000)
+                    assert page.locator("#retry").is_hidden(), f"{repetition + 2}회 반복 재생이 실패했습니다."
+                    page.wait_for_function("document.body.dataset.transition === 'false'")
+                    assert page.locator("video").evaluate_all("vs => vs.filter(v => !v.paused).length") == 1
+                result["repeatCount"] = 5
                 page.get_by_role("combobox", name="재생 속도").select_option("0.5")
                 assert page.locator("video").evaluate_all("vs => vs.every(v => v.playbackRate === .5)")
                 page.mouse.click(700, 300)
@@ -148,6 +168,20 @@ def main():
                 page.wait_for_function("document.body.dataset.ready === 'true'")
                 result["retry"] = True
                 assert all(url.startswith(base + "/") for url in requests)
+                if os.getenv("NATURE_SOAK") == "1":
+                    page.emulate_media(reduced_motion="no-preference")
+                    page.reload()
+                    page.wait_for_function("document.body.dataset.ready === 'true'")
+                    page.get_by_role("checkbox", name="풍경 순환").check()
+                    seen = []
+                    for scene in ["forest", "alps", "water"]:
+                        print(f"자동 순환 대기: {scene}", flush=True)
+                        page.wait_for_function("id => document.body.dataset.scene === id || !document.getElementById('retry').hidden", arg=scene, timeout=110000)
+                        assert page.locator("#retry").is_hidden(), f"{scene} 자동 순환 중 오류"
+                        page.wait_for_function("document.body.dataset.transition === 'false'")
+                        verify_pixels(frame(page))
+                        seen.append(scene)
+                    result["automaticTour"] = seen
                 # HTML과 동봉 미디어만으로 네트워크 없이 열리는지 확인합니다.
                 context.set_offline(True)
                 page.goto((ROOT / "nature-lab.html").as_uri())
@@ -171,6 +205,11 @@ def main():
                 print(json.dumps(result, ensure_ascii=False, indent=2))
             except Exception:
                 page.screenshot(path=str(OUTPUT / "failure.png"))
+                print(json.dumps(page.evaluate("""() => ({
+                    state: {...document.body.dataset},
+                    videos: [...document.querySelectorAll('video')].map(v => ({id: v.id, time: v.currentTime, duration: v.duration, ready: v.readyState, seeking: v.seeking, paused: v.paused, error: v.error?.message})),
+                    events: window.filmEvents
+                })"""), ensure_ascii=False, indent=2), flush=True)
                 raise
             finally:
                 browser.close()

@@ -76,21 +76,25 @@
   function waitForFilm(video, signal) {
     return new Promise((resolve, reject) => {
       let timeout;
+      // 되감기에서는 loadeddata가 다시 오지 않을 수 있으므로 탐색 완료도 확인합니다.
+      const readinessEvents = ["loadeddata", "canplay", "seeked"];
+      const isReady = () => video.readyState >= 2 && !video.seeking;
       const cleanup = () => {
         clearTimeout(timeout);
-        video.removeEventListener("loadeddata", ready);
+        readinessEvents.forEach((name) => video.removeEventListener(name, ready));
         video.removeEventListener("error", failed);
         signal.removeEventListener("abort", aborted);
       };
-      const ready = () => { cleanup(); resolve(); };
+      const ready = () => { if (isReady()) { cleanup(); resolve(); } };
       const failed = () => { cleanup(); reject(new Error("영상 불러오기 실패")); };
       const aborted = () => { cleanup(); reject(new DOMException("장면 변경", "AbortError")); };
-      video.addEventListener("loadeddata", ready);
+      readinessEvents.forEach((name) => video.addEventListener(name, ready));
       video.addEventListener("error", failed);
       signal.addEventListener("abort", aborted, { once: true });
-      timeout = setTimeout(failed, 15000);
+      timeout = setTimeout(() => { if (!video.error && isReady()) ready(); else failed(); }, 15000);
       if (signal.aborted) aborted();
-      else if (video.readyState >= 2) ready();
+      else if (video.error) failed();
+      else ready();
     });
   }
 

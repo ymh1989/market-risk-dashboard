@@ -47,7 +47,10 @@ python scripts/build_nature_lab.py
 python scripts/build_chamber_lab.py
 python -m pytest -q tests/test_nature_lab.py tests/test_chamber_lab.py
 python tests/nature_browser_check.py
+NATURE_SOAK=1 python tests/nature_browser_check.py
 ```
 
 브라우저 검증은 Playwright와 Pillow 필요. `NATURE_BROWSER`로 검증용 Chromium 실행 파일을 지정할 수 있음.
+기본 검증에 영상 되감기 5회 포함. `NATURE_SOAK=1`은 실제 시간으로 물가 → 숲 → 알프스 → 물가 자동 순환까지 추가 확인.
+Chrome은 되감기 때 최초 로딩 이벤트가 반복되지 않을 수 있어 탐색 완료·재생 준비 이벤트와 실제 준비 상태를 함께 확인.
 `nature-lab.html`은 빌드 결과이며 코드 수정은 `src/nature-lab.html`, `src/nature-lab.css`, `src/nature-lab.js`에서 수행.
