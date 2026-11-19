@@ -122,6 +122,9 @@ def test_pipeline_status_keeps_previous_run_history(tmp_path):
     assert payload["schedule"]["delayGraceMinutes"] == 10
     assert payload["schedule"]["expectedDurationMinutes"]["live"] == 3
     assert payload["schedule"]["expectedDurationMinutes"]["krx"] == 4
+    csat_slots = payload["schedule"]["dateOverrides"]["2026-11-19"]["times"]
+    assert csat_slots[-2:] == [{"time": "16:35", "mode": "full"}, {"time": "19:30", "mode": "krx"}]
+    assert payload["schedule"]["times"][-2:][0]["time"] == "15:35"
     assert all(source["lastDate"] for source in payload["sources"])
     assert payload["current"]["calculationDurationSeconds"] == 1128
     assert payload["current"]["publishedAt"] is None

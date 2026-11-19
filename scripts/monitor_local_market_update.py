@@ -10,6 +10,7 @@ from typing import Mapping
 from zoneinfo import ZoneInfo
 
 try:
+    from market_session_schedule import original_time, shifted_time
     from send_operations_alert import (
         format_schedule_alert,
         load_env_file,
@@ -18,6 +19,7 @@ try:
         send_message,
     )
 except ModuleNotFoundError:  # pytest에서 저장소 루트 패키지로 불러오는 경우
+    from scripts.market_session_schedule import original_time, shifted_time
     from scripts.send_operations_alert import (
         format_schedule_alert,
         load_env_file,
@@ -114,6 +116,7 @@ def _active_times(now: datetime, settings: MonitorSettings) -> tuple[str, ...]:
 
 
 def _mode_for(slot_time: str, now: datetime, settings: MonitorSettings) -> str:
+    slot_time = original_time(slot_time, now.date())
     if now.weekday() == 5:
         return "full"
     if slot_time in settings.full_times:
@@ -151,6 +154,7 @@ def find_schedule_alerts(
     current = now.astimezone(KST)
     slots: list[tuple[str, datetime, str, Path]] = []
     for slot_time in _active_times(current, settings):
+        slot_time = shifted_time(slot_time, current.date())
         hour, minute = (int(value) for value in slot_time.split(":"))
         scheduled_at = current.replace(hour=hour, minute=minute, second=0, microsecond=0)
         mode = _mode_for(slot_time, current, settings)

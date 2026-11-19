@@ -272,6 +272,7 @@ def test_runtime_sync_checks_watchdog_before_replacing_files(tmp_path, valid):
     monitor = "status = 'new'\n" if valid else "def (\n"
     (upstream / "scripts/monitor_local_market_update.py").write_text(monitor)
     (upstream / "scripts/send_operations_alert.py").write_text("status = 'new'\n")
+    (upstream / "scripts/market_session_schedule.py").write_text("status = 'new'\n")
     delivery.git(upstream, "init", "-b", "main")
     delivery.git(upstream, "config", "user.name", "test")
     delivery.git(upstream, "config", "user.email", "test@example.invalid")
@@ -279,7 +280,7 @@ def test_runtime_sync_checks_watchdog_before_replacing_files(tmp_path, valid):
     delivery.git(upstream, "commit", "-m", "runtime")
     runtime = tmp_path / "runtime"
     delivery.git(tmp_path, "clone", str(upstream), str(runtime))
-    for name in ("monitor_local_market_update.py", "send_operations_alert.py"):
+    for name in ("market_session_schedule.py", "monitor_local_market_update.py", "send_operations_alert.py"):
         (runtime / "scripts" / name).write_text("status = 'old'\n")
     function = "refresh_runtime_entrypoint() {" + script.split("refresh_runtime_entrypoint() {", 1)[1].split("\n}\n", 1)[0] + "\n}\n"
     result = subprocess.run(
@@ -290,6 +291,6 @@ def test_runtime_sync_checks_watchdog_before_replacing_files(tmp_path, valid):
     )
     assert result.returncode == (0 if valid else 1), result.stderr
     expected = "status = 'new'\n" if valid else "status = 'old'\n"
-    for name in ("monitor_local_market_update.py", "send_operations_alert.py"):
+    for name in ("market_session_schedule.py", "monitor_local_market_update.py", "send_operations_alert.py"):
         assert (runtime / "scripts" / name).read_text() == expected
     assert (runtime / "scripts/run_local_market_update.sh").read_text() == script

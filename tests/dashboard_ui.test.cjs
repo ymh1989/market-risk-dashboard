@@ -51,6 +51,23 @@ function completeFlowPoint(date = "2026-10-14", pressure = 70.9) {
   };
 }
 
+test("수능일 예약만 순연하고 다음 날은 정규 일정으로 복귀", () => {
+  class Clock extends Date {
+    static now() { return Date.parse("2026-11-19T16:00:00+09:00"); }
+  }
+  const {context} = harness({Date: Clock});
+  const status = {schedule: {
+    times: [{time: "15:35", mode: "full"}, {time: "18:30", mode: "krx"}],
+    saturdayTimes: [],
+    dateOverrides: {"2026-11-19": {times: [{time: "16:35", mode: "full"}, {time: "19:30", mode: "krx"}]}}
+  }};
+  const rows = context.buildScheduleInstances(status);
+  const slots = date => Array.from(rows.filter(row => row.dateKey === date), row => `${row.time}:${row.mode}`);
+  assert.deepEqual(slots("2026-11-19"), ["16:35:full", "19:30:krx"]);
+  assert.deepEqual(slots("2026-11-20"), ["15:35:full", "18:30:krx"]);
+  assert.deepEqual(slots("2026-11-22"), []);
+});
+
 function fundingFixture() {
   const dates = ["2026-10-16", "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-26"];
   const series = dates.map((date, index) => ({

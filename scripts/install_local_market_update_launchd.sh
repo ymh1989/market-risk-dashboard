@@ -83,6 +83,12 @@ append_calendar_intervals "$MONDAY_TIMES" 1
 append_calendar_intervals "$TIMES" 2 3 4 5
 append_calendar_intervals "$SATURDAY_TIMES" 6
 
+# launchd에는 연도 조건이 없으므로 실제 실행기는 연도까지 다시 확인합니다.
+SPECIAL_INTERVALS="$("$WATCHDOG_PYTHON" "$ROOT/scripts/market_session_schedule.py" --launchd-xml \
+  --times "$TIMES" --monday-times "$MONDAY_TIMES" --saturday-times "$SATURDAY_TIMES")"
+CALENDAR_INTERVALS="$CALENDAR_INTERVALS
+$SPECIAL_INTERVALS"
+
 mkdir -p "$HOME/Library/LaunchAgents" "$LOG_DIR"
 
 cat > "$PLIST" <<PLIST

@@ -736,13 +736,13 @@ function buildScheduleInstances(pipelineStatus) {
             : !schedule.weekdaysOnly && !schedule.saturdayTimes
               ? schedule.times
               : [];
-    if (!scheduleItems.length) continue;
     const year = day.getUTCFullYear();
     const month = day.getUTCMonth();
     const date = day.getUTCDate();
     const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
 
-    scheduleItems.forEach((item) => {
+    const effectiveItems = schedule.dateOverrides?.[dateKey]?.times ?? scheduleItems;
+    effectiveItems.forEach((item) => {
       const [hour, minute] = String(item.time).split(":").map(Number);
       if (!Number.isFinite(hour) || !Number.isFinite(minute)) return;
       instances.push({

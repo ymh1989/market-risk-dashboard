@@ -89,7 +89,7 @@ refresh_runtime_entrypoint() {
   # 감시기도 같은 커밋으로 맞춰, 실행기만 최신이고 실패 판독은 구버전인 상태를 방지합니다.
   runtime_python="${PYTHON_BIN:-python3}"
   support_dir="$(mktemp -d "$ROOT/scripts/.runtime-support.XXXXXX")"
-  for support in monitor_local_market_update.py send_operations_alert.py; do
+  for support in market_session_schedule.py monitor_local_market_update.py send_operations_alert.py; do
     if ! git -C "$ROOT" show "$runtime_commit:scripts/$support" > "$support_dir/$support" || \
       ! "$runtime_python" -c 'import ast, pathlib, sys; ast.parse(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))' "$support_dir/$support"; then
       rm -rf "$support_dir"
@@ -98,7 +98,7 @@ refresh_runtime_entrypoint() {
       return 1
     fi
   done
-  for support in monitor_local_market_update.py send_operations_alert.py; do
+  for support in market_session_schedule.py monitor_local_market_update.py send_operations_alert.py; do
     mv -f "$support_dir/$support" "$ROOT/scripts/$support"
   done
   rmdir "$support_dir"
@@ -197,6 +197,7 @@ is_scheduled_now() {
       ;;
   esac
 
+  active_times="$("$PYTHON_BIN" "$ROOT/scripts/market_session_schedule.py" --date "$(kst_now +%Y-%m-%d)" --times "$active_times")" || return 2
   IFS=',' read -ra schedule_times <<< "$active_times"
   for scheduled_time in "${schedule_times[@]}"; do
     scheduled_time="${scheduled_time//[[:space:]]/}"
@@ -252,7 +253,7 @@ wait_for_pages_deployment() {
 }
 
 resolve_update_mode() {
-  local full_time live_time krx_time
+  local full_time live_time krx_time mode_time
   case "$MODE" in
     full|fast|live|krx)
       echo "$MODE"
@@ -266,10 +267,11 @@ resolve_update_mode() {
         echo "full"
         return 0
       fi
+      mode_time="$("$PYTHON_BIN" "$ROOT/scripts/market_session_schedule.py" --date "$(kst_now +%Y-%m-%d)" --original-time "$SCHEDULED_TIME")" || return 2
       IFS=',' read -ra full_times <<< "$FULL_TIMES"
       for full_time in "${full_times[@]}"; do
         full_time="${full_time//[[:space:]]/}"
-        if [[ "$SCHEDULED_TIME" == "$full_time" ]]; then
+        if [[ "$mode_time" == "$full_time" ]]; then
           echo "full"
           return 0
         fi
@@ -277,7 +279,7 @@ resolve_update_mode() {
       IFS=',' read -ra krx_times <<< "$KRX_TIMES"
       for krx_time in "${krx_times[@]}"; do
         krx_time="${krx_time//[[:space:]]/}"
-        if [[ "$SCHEDULED_TIME" == "$krx_time" ]]; then
+        if [[ "$mode_time" == "$krx_time" ]]; then
           echo "krx"
           return 0
         fi
@@ -285,7 +287,7 @@ resolve_update_mode() {
       IFS=',' read -ra live_times <<< "$LIVE_TIMES"
       for live_time in "${live_times[@]}"; do
         live_time="${live_time//[[:space:]]/}"
-        if [[ "$SCHEDULED_TIME" == "$live_time" ]]; then
+        if [[ "$mode_time" == "$live_time" ]]; then
           echo "live"
           return 0
         fi
@@ -574,7 +576,7 @@ elif [[ "$UPDATE_MODE" == "krx" ]]; then
   ML_STAGE_STARTED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"
   ML_STAGE_COMPLETED_EPOCH="$MARKET_STAGE_COMPLETED_EPOCH"
 else
-BREADTH_END_DATE="$("$PYTHON_BIN" -c 'from datetime import datetime, timedelta; from zoneinfo import ZoneInfo; now=datetime.now(ZoneInfo("Asia/Seoul")); target=now if now.strftime("%H:%M") >= "15:35" else now-timedelta(days=1); print(target.date().isoformat())')"
+BREADTH_END_DATE="$("$PYTHON_BIN" scripts/market_session_schedule.py --breadth-date)"
 update_kospi_breadth_data "$BREADTH_END_DATE"
 
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] M7 공개시장 신용스트레스 프록시를 갱신합니다."

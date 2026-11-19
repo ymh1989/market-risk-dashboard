@@ -3,6 +3,11 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+try:
+    from market_session_schedule import schedule_overrides
+except ModuleNotFoundError:
+    from scripts.market_session_schedule import schedule_overrides
+
 
 ROOT = Path(__file__).resolve().parents[1]
 KST = timezone(timedelta(hours=9))
@@ -342,6 +347,7 @@ def build_payload(args):
         "researchLog": research_log(data["dashboard"]),
         "history": history[:30],
     }
+    payload["schedule"]["dateOverrides"] = schedule_overrides(payload["schedule"])
     if getattr(args, "preserve_current", False) and previous.get("current"):
         for key in ("current", "schedule", "stages", "history"):
             if key in previous:
