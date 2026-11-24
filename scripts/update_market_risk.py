@@ -1025,6 +1025,28 @@ def fetch_naver_chart(symbol, lookback_days=760, start_date=None, end_date=None)
     return series
 
 
+def fetch_domestic_official_close_frame(date_key, *, market):
+    """KRX 조회만 기존 breadth 전용 환경에 격리하고 JSON으로 결과를 받습니다."""
+    interpreter = os.environ.get("KOSPI_BREADTH_PYTHON")
+    if not interpreter:
+        from pykrx import stock
+        return stock.get_market_ohlcv(date_key, market=market)
+    code = """
+import contextlib
+import sys
+with contextlib.redirect_stdout(sys.stderr):
+    from pykrx import stock
+    frame = stock.get_market_ohlcv(sys.argv[1], market=sys.argv[2])
+print(frame.to_json(orient="table"))
+"""
+    result = subprocess.run(
+        [interpreter, "-c", code, date_key, market],
+        capture_output=True, text=True, check=True, timeout=45,
+    )
+    import pandas as pd
+    return pd.read_json(io.StringIO(result.stdout), orient="table")
+
+
 def reconcile_domestic_eod_prices(series_map, naver_map, *, now=None, fetch_official=None):
     """전일 국내 종가 충돌은 KRX가 Yahoo와 일치할 때만 네이버 종가를 보정합니다."""
     today = (now or datetime.now(KST)).astimezone(KST).date()
@@ -1053,8 +1075,7 @@ def reconcile_domestic_eod_prices(series_map, naver_map, *, now=None, fetch_offi
         try:
             if frame_key not in official_frames:
                 if fetch_official is None:
-                    from pykrx import stock
-                    fetch_official = stock.get_market_ohlcv
+                    fetch_official = fetch_domestic_official_close_frame
                 official_frames[frame_key] = fetch_official(observed.strftime("%Y%m%d"), market=market)
             frame = official_frames[frame_key]
             if frame is None or not frame.index.is_unique or ticker not in frame.index:

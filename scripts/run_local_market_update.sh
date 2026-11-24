@@ -359,10 +359,8 @@ fi
 
 UPDATE_MODE="$(resolve_update_mode)"
 validate_krx_recovery_request
+export KOSPI_BREADTH_PYTHON="${KOSPI_BREADTH_PYTHON:-$ROOT/.venv-breadth/bin/python}"
 if [[ "$UPDATE_MODE" != "live" ]]; then
-  if [[ -z "$KOSPI_BREADTH_PYTHON" ]]; then
-    KOSPI_BREADTH_PYTHON="$ROOT/.venv-breadth/bin/python"
-  fi
   if [[ ! -x "$KOSPI_BREADTH_PYTHON" ]]; then
     echo "KOSPI Market Breadth용 Python을 찾지 못했습니다: $KOSPI_BREADTH_PYTHON" >&2
     echo ".venv-breadth에 pykrx를 설치하거나 KOSPI_BREADTH_PYTHON을 지정하세요." >&2

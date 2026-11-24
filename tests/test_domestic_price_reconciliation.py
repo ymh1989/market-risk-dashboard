@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 import pytest
 
+from scripts import update_market_risk
 from scripts.update_market_risk import reconcile_domestic_eod_prices
 from scripts.audit_data_completeness import cross_artifact_checks
 
@@ -134,3 +135,21 @@ def test_quality_gate_still_blocks_unresolved_conflict_and_records_confirmed_rep
     assert "155,800" in verified["cross:domestic-price-reconciliations"]["detail"]
     still_conflicted = checks(naver, evidence)
     assert still_conflicted["cross:naver-yahoo-domestic-values"]["status"] == "error"
+
+
+def test_official_query_uses_breadth_environment_and_structured_stdout(monkeypatch):
+    monkeypatch.setenv("KOSPI_BREADTH_PYTHON", "/isolated breadth/bin/python")
+    calls = []
+
+    def run(args, **kwargs):
+        calls.append((args, kwargs))
+        return type("Result", (), {"stdout": official().to_json(orient="table")})()
+
+    monkeypatch.setattr(update_market_risk.subprocess, "run", run)
+    result = update_market_risk.fetch_domestic_official_close_frame("20261124", market="KOSPI")
+    assert result.loc["042700", "종가"] == 163600
+    args, kwargs = calls[0]
+    assert args[0] == "/isolated breadth/bin/python"
+    assert args[-2:] == ["20261124", "KOSPI"]
+    assert "redirect_stdout(sys.stderr)" in args[2]
+    assert kwargs == {"capture_output": True, "text": True, "check": True, "timeout": 45}
