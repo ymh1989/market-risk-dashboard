@@ -60,6 +60,42 @@ if [[ -f "$ENV_FILE" ]]; then
   RUNTIME_SELF_UPDATE="${LOCAL_MARKET_UPDATE_RUNTIME_SELF_UPDATE:-$RUNTIME_SELF_UPDATE}"
 fi
 
+git_remote() {
+  local attempt output exit_code delay
+  GIT_REMOTE_FAILURE_KIND=""
+  for attempt in 1 2 3; do
+    if output="$(LC_ALL=C GIT_TERMINAL_PROMPT=0 git "$@" 2>&1)"; then
+      [[ -z "$output" ]] || printf '%s\n' "$output"
+      GIT_REMOTE_FAILURE_KIND=""
+      return 0
+    else
+      exit_code="$?"
+    fi
+    printf '%s\n' "$output" >&2
+    case "$output" in
+      *"REMOTE HOST IDENTIFICATION HAS CHANGED"*|*"Host key verification failed"*)
+        GIT_REMOTE_FAILURE_KIND="host-key"
+        ;;
+      *"(non-fast-forward)"*|*"(fetch first)"*)
+        GIT_REMOTE_FAILURE_KIND="remote-changed"
+        ;;
+      *"Permission denied (publickey)"*|*"Could not resolve hostname"*|*"Could not resolve host:"*|*"Connection timed out"*|*"Connection reset"*|*"Connection closed"*|*"Could not read from remote repository"*|*"remote end hung up"*|*"HTTP 502"*|*"HTTP 503"*|*"HTTP 504"*)
+        GIT_REMOTE_FAILURE_KIND="transport"
+        ;;
+      *) GIT_REMOTE_FAILURE_KIND="other" ;;
+    esac
+    if [[ "$GIT_REMOTE_FAILURE_KIND" != "transport" || "$attempt" == "3" ]]; then
+      if [[ "$GIT_REMOTE_FAILURE_KIND" == "transport" ]]; then
+        echo "GitHub 접속 재시도 소진: 기존 SSH 키·접속 상태 확인 필요. 인증 방식과 호스트 검증은 변경하지 않습니다." >&2
+      fi
+      return "$exit_code"
+    fi
+    delay="$((attempt * 3))"
+    echo "[$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')] GitHub 접속 실패 · ${delay}초 후 재시도 ($attempt/3)" >&2
+    sleep "$delay"
+  done
+}
+
 refresh_runtime_entrypoint() {
   local self_path candidate_path remote_path runtime_commit support_dir support runtime_python
   if [[ "$RUNTIME_SELF_UPDATE" != "1" ]]; then
@@ -69,7 +105,7 @@ refresh_runtime_entrypoint() {
   self_path="$ROOT/scripts/run_local_market_update.sh"
   candidate_path="$(mktemp "$ROOT/scripts/.run_local_market_update.XXXXXX")"
 
-  if ! git -C "$ROOT" fetch "$REMOTE" "$BRANCH"; then
+  if ! git_remote -C "$ROOT" fetch "$REMOTE" "$BRANCH"; then
     rm -f "$candidate_path"
     echo "[$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')] 런타임 스크립트 최신본 조회에 실패해 현재 버전으로 계속합니다." >&2
     return 0
@@ -340,7 +376,10 @@ RUN_TRIGGER_ID="${RUN_TRIGGER_ID/:/}"
 RUN_ID="$(kst_now '+%Y%m%dT%H%M%S')-${RUN_TRIGGER_ID}-${UPDATE_MODE}"
 export MARKET_UPDATE_RUN_ID="$RUN_ID"
 
-mkdir -p "$LOG_DIR"
+mkdir -p "$LOG_DIR" "$STATE_DIR"
+RUN_ERROR_LOG="$STATE_DIR/$RUN_ID.err.log"
+# 공용 로그는 유지하고, 운영 알림에는 이 실행의 오류만 연결합니다.
+exec 2> >(tee -a "$RUN_ERROR_LOG" >&2)
 LOCK_DIR="$LOG_DIR/.local-market-update.lock"
 LOCK_ACQUIRED=0
 WORKTREE=""
@@ -403,9 +442,10 @@ record_schedule_running
 WORKTREE="$(mktemp -d "${TMPDIR:-/tmp}/market-risk-update.XXXXXX")"
 rm -rf "$WORKTREE"
 
-CURRENT_STAGE="임시 워크트리 준비"
+CURRENT_STAGE="GitHub 원격 동기화"
 echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] $REMOTE/$BRANCH 기준 임시 worktree를 준비합니다."
-git -C "$ROOT" fetch "$REMOTE" "$BRANCH"
+git_remote -C "$ROOT" fetch "$REMOTE" "$BRANCH"
+CURRENT_STAGE="임시 워크트리 준비"
 git -C "$ROOT" worktree add --detach "$WORKTREE" "$REMOTE/$BRANCH"
 
 cd "$WORKTREE"
@@ -727,12 +767,17 @@ git config user.name "${LOCAL_MARKET_UPDATE_GIT_NAME:-local-market-risk-bot}"
 git config user.email "${LOCAL_MARKET_UPDATE_GIT_EMAIL:-local-market-risk-bot@users.noreply.github.com}"
 
 push_update_commit() {
-  if git push "$REMOTE" "HEAD:$BRANCH"; then
+  local push_status
+  if git_remote push "$REMOTE" "HEAD:$BRANCH"; then
     return 0
+  else
+    push_status="$?"
   fi
+  # 인증·통신 실패는 원격 브랜치 변경이 아니므로 재배치하지 않습니다.
+  [[ "$GIT_REMOTE_FAILURE_KIND" == "remote-changed" ]] || return "$push_status"
 
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 원격 변경을 감지했습니다. 최신 $REMOTE/$BRANCH 위로 데이터 커밋을 재배치합니다."
-  git fetch "$REMOTE" "$BRANCH"
+  git_remote fetch "$REMOTE" "$BRANCH"
   "$PYTHON_BIN" scripts/publication_delivery.py check-rebase --base "$SOURCE_COMMIT" --target "$REMOTE/$BRANCH"
   git rebase "$REMOTE/$BRANCH"
   SOURCE_COMMIT="$(git rev-parse "$REMOTE/$BRANCH")"
@@ -747,7 +792,7 @@ push_update_commit() {
   if ! git diff --cached --quiet; then
     git commit --amend --no-edit
   fi
-  git push "$REMOTE" "HEAD:$BRANCH"
+  git_remote push "$REMOTE" "HEAD:$BRANCH"
 }
 
 load_publish_files() {
@@ -766,6 +811,7 @@ if git diff --cached --quiet; then
   echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] 변경된 데이터가 없어 커밋하지 않습니다."
 else
   git commit -m "Update market risk data"
+  CURRENT_STAGE="GitHub 게시"
   push_update_commit
 fi
 
@@ -780,7 +826,7 @@ for ((retry = 0; retry <= PAGES_DEPLOY_RETRIES; retry++)); do
   if ((retry < PAGES_DEPLOY_RETRIES)); then
     echo "[$(kst_now '+%Y-%m-%d %H:%M:%S KST')] Pages 미반영으로 재배포를 요청합니다 ($((retry + 1))/$PAGES_DEPLOY_RETRIES)."
     git commit --allow-empty -m "Retry GitHub Pages deployment"
-    git push "$REMOTE" "HEAD:$BRANCH"
+    git_remote push "$REMOTE" "HEAD:$BRANCH"
   fi
 done
 

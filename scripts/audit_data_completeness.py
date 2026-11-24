@@ -882,6 +882,17 @@ def cross_artifact_checks(
         )
     )
 
+    reconciliations = (data.get("snapshot") or {}).get("domesticPriceReconciliations") or []
+    if reconciliations:
+        checks.append(make_check(
+            "cross:domestic-price-reconciliations", "alignment", "국내 종가 원천 불일치 보정", "warning",
+            " · ".join(
+                f"{item['key']} {item['date']}: Naver {item['naverOriginalClose']:,.0f} → "
+                f"KRX {item['krxClose']:,.0f} (Yahoo 일치)"
+                for item in reconciliations
+            ),
+        ))
+
     els_close = els_kospi.get("lastClose")
     hmm_close = hmm_kospi.get("lastClose")
     if els_date and hmm_date and els_date == hmm_date and els_close and hmm_close:

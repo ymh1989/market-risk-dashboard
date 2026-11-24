@@ -1025,6 +1025,64 @@ def fetch_naver_chart(symbol, lookback_days=760, start_date=None, end_date=None)
     return series
 
 
+def reconcile_domestic_eod_prices(series_map, naver_map, *, now=None, fetch_official=None):
+    """전일 국내 종가 충돌은 KRX가 Yahoo와 일치할 때만 네이버 종가를 보정합니다."""
+    today = (now or datetime.now(KST)).astimezone(KST).date()
+    reconciled = dict(naver_map)
+    evidence = []
+    official_frames = {}
+    for key in sorted(set(series_map) & set(naver_map) & set(NAVER_SYMBOLS) & set(TICKERS)):
+        if not series_map[key] or not naver_map[key]:
+            continue
+        yahoo, naver = series_map[key][-1], naver_map[key][-1]
+        symbol = TICKERS[key]["symbol"]
+        ticker = NAVER_SYMBOLS[key]["symbol"]
+        if symbol not in (f"{ticker}.KS", f"{ticker}.KQ") or yahoo["date"] != naver["date"]:
+            continue
+        observed = datetime.strptime(naver["date"], "%Y-%m-%d").date()
+        prices = (yahoo.get("close"), naver.get("close"))
+        if observed >= today or any(
+            not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0
+            for value in prices
+        ):
+            continue
+        if abs(yahoo["close"] / naver["close"] - 1) * 100 <= 5:
+            continue
+        market = "KOSPI" if symbol.endswith(".KS") else "KOSDAQ"
+        frame_key = (observed, market)
+        try:
+            if frame_key not in official_frames:
+                if fetch_official is None:
+                    from pykrx import stock
+                    fetch_official = stock.get_market_ohlcv
+                official_frames[frame_key] = fetch_official(observed.strftime("%Y%m%d"), market=market)
+            frame = official_frames[frame_key]
+            if frame is None or not frame.index.is_unique or ticker not in frame.index:
+                continue
+            official_close = float(frame.loc[ticker, "종가"])
+        except Exception as error:
+            official_frames[frame_key] = None
+            print(f"국내 종가 KRX 대조 불가: {key} · {type(error).__name__} · 기존 품질검증 유지", flush=True)
+            continue
+        # 같은 날짜의 독립 원천 두 곳이 사실상 동일한 경우만 허용합니다.
+        if not math.isfinite(official_close) or official_close <= 0:
+            continue
+        if not math.isclose(yahoo["close"], official_close, rel_tol=0, abs_tol=0.01):
+            continue
+        verified_at = (now or datetime.now(KST)).isoformat()
+        reconciled[key] = [*naver_map[key][:-1], {
+            **naver, "close": official_close, "originalClose": naver["close"],
+            "closeSource": "KRX verified EOD", "closeVerifiedAt": verified_at,
+        }]
+        evidence.append({
+            "key": key, "ticker": ticker, "market": market, "date": naver["date"],
+            "yahooClose": yahoo["close"], "naverOriginalClose": naver["close"],
+            "krxClose": official_close, "verifiedAt": verified_at,
+        })
+        print(f"국내 종가 KRX 대조 보정: {key} {naver['date']} · Naver {naver['close']} -> KRX {official_close} · Yahoo 일치", flush=True)
+    return reconciled, evidence
+
+
 def supplement_domestic_index_series(series_map, max_workers=2):
     results = {}
     statuses = {}
@@ -4774,11 +4832,13 @@ def write_snapshot(
     m7_credit_proxy=None,
     kb_market_funds=None,
     dram_spot_prices=None,
+    domestic_price_reconciliations=None,
 ):
     enriched_indicators, group_scores = enrich_indicators(indicators)
     snapshot = {
         "generatedAt": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
         "source": "Yahoo Finance, Naver Finance, FRED, KOFIA FreeSIS, and KB Securities OpenAPI endpoints",
+        "domesticPriceReconciliations": domestic_price_reconciliations or [],
         "yahooSymbols": {
             key: {
                 "symbol": config["symbol"],
@@ -4799,6 +4859,8 @@ def write_snapshot(
                 "lastClose": round(naver_map[key][-1]["close"], 4),
                 "lastVolume": naver_map[key][-1]["volume"],
                 "lastForeignOwnership": naver_map[key][-1]["foreignOwnership"],
+                "lastCloseSource": naver_map[key][-1].get("closeSource", "Naver Finance"),
+                "originalLastClose": naver_map[key][-1].get("originalClose"),
                 "observations": len(naver_map[key]),
             }
             for key, config in NAVER_SYMBOLS.items()
@@ -4976,6 +5038,7 @@ def main():
     naver_map = fetch_configured_series(
         NAVER_SYMBOLS, lambda config: fetch_naver_chart(config["symbol"]), max_workers=4
     )
+    naver_map, domestic_price_reconciliations = reconcile_domestic_eod_prices(series_map, naver_map)
     market_index_map, market_index_statuses = fetch_naver_market_indexes()
     refresh_naver_crypto_direction_cache()
     print("FRED 금융여건 시계열을 조회합니다.", flush=True)
@@ -5016,6 +5079,7 @@ def main():
         m7_credit_proxy,
         kb_market_funds,
         dram_spot_prices,
+        domestic_price_reconciliations,
     )
     write_timeseries(
         series_map,

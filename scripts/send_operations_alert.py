@@ -121,9 +121,15 @@ def format_schedule_alert(
 
     slot = scheduled_at.astimezone(KST)
     log_tail = read_log_tail(log_file)
+    display_path = Path(log_file)
+    log_hint = (
+        f"logs/local-market-update-state/{display_path.name}"
+        if display_path.parent.name == "local-market-update-state"
+        else f"logs/{display_path.name}"
+    )
     codex_prompt = (
         f"market-lab {slot.strftime('%Y-%m-%d %H:%M')} {mode} 정기 갱신 지연을 점검해줘. "
-        f"현재상태={state}, 경과={elapsed_minutes}분. logs/{Path(log_file).name}와 "
+        f"현재상태={state}, 경과={elapsed_minutes}분. {log_hint}와 "
         "local-market-update 상태 파일을 확인하고 원인을 수정한 뒤 누락 갱신을 복구해줘."
     )
     return "\n".join(

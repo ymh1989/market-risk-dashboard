@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -60,6 +61,7 @@ class ScheduleAlert:
     elapsed_minutes: int
     state: str
     marker: Path
+    log_file: Path | None = None
 
 
 def _times(value: str) -> tuple[str, ...]:
@@ -128,17 +130,36 @@ def _mode_for(slot_time: str, now: datetime, settings: MonitorSettings) -> str:
     return "fast"
 
 
-def _read_failure_state(path: Path) -> str | None:
+def _read_state(path: Path) -> dict[str, str]:
     if not path.exists():
-        return None
+        return {}
     values = {}
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         key, separator, value = line.partition("=")
         if separator:
             values[key] = value
+    return values
+
+
+def _read_failure_state(path: Path) -> str | None:
+    values = _read_state(path)
+    if not values:
+        return None
     stage = values.get("stage", "확인 불가")
     exit_code = values.get("exitCode", "?")
     return f"실행 실패 · 단계 {stage} · 종료코드 {exit_code}"
+
+
+def _run_log(state_dir: Path, state_key: str) -> Path | None:
+    """실패·실행 중 표식에 연결된 안전한 실행별 로그만 선택한다."""
+    for suffix in ("failed", "running"):
+        run_id = _read_state(state_dir / f"{state_key}.{suffix}").get("runId", "")
+        if not re.fullmatch(r"\d{8}T\d{6}-(?:\d{4}|manual)-(?:fast|full|live|krx)", run_id):
+            continue
+        log = state_dir / f"{run_id}.err.log"
+        if log.is_file() and log.resolve().parent == state_dir.resolve():
+            return log
+    return None
 
 
 def find_schedule_alerts(
@@ -192,6 +213,7 @@ def find_schedule_alerts(
                 elapsed_minutes=int((current - scheduled_at).total_seconds() // 60),
                 state=state,
                 marker=marker,
+                log_file=_run_log(state_dir, f"{current.date().isoformat()}-{slot_time}"),
             )
         )
     return alerts
@@ -241,7 +263,7 @@ def main() -> None:
             mode=alert.mode,
             elapsed_minutes=alert.elapsed_minutes,
             state=alert.state,
-            log_file=str(log_file),
+            log_file=str(alert.log_file or log_file),
         )
         if args.dry_run:
             print(message)

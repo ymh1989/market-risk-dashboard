@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 import pytest
 
@@ -18,6 +19,8 @@ def run_schedule_check(tmp_path, *, retry="18:30", now="19:00", marker="failed")
     environment = {
         **os.environ,
         "STATE_DIR": str(tmp_path),
+        "ROOT": str(SCRIPT.parents[1]),
+        "PYTHON_BIN": sys.executable,
         "TIMES": "07:30,15:35,18:30",
         "MONDAY_TIMES": "15:35,18:30",
         "SATURDAY_TIMES": "07:30",

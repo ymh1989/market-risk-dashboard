@@ -2,6 +2,8 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import pytest
+
 from scripts.monitor_local_market_update import find_schedule_alerts, settings_from_env
 from scripts.send_operations_alert import (
     format_schedule_alert,
@@ -148,6 +150,51 @@ def test_schedule_alert_message_is_codex_ready(tmp_path):
     assert "Codex 붙여넣기" in message
     assert "^KS200 관측치 1개" in message
     assert len(message) < 3000
+
+
+@pytest.mark.parametrize("suffix", ["failed", "running"])
+def test_alert_selects_only_current_run_errors(tmp_path, suffix):
+    state = tmp_path / "state"
+    state.mkdir()
+    run_id = "20260827T153500-1535-full"
+    (state / f"2026-08-27-15:35.{suffix}").write_text(
+        f"status={suffix}\nrunId={run_id}\nstage=GitHub 원격 동기화\nexitCode=128\n"
+    )
+    log = state / f"{run_id}.err.log"
+    log.write_text("Permission denied (publickey).")
+    (state / "20260826T153500-1535-full.err.log").write_text("old manifest mismatch")
+    alert = _alerts(tmp_path, datetime(2026, 8, 27, 16, 10, tzinfo=KST))[0]
+    assert alert.log_file == log
+    message = format_schedule_alert(
+        scheduled_at=alert.scheduled_at, mode=alert.mode, elapsed_minutes=alert.elapsed_minutes,
+        state=alert.state, log_file=str(alert.log_file),
+    )
+    assert "Permission denied" in message
+    assert "old manifest" not in message
+
+
+@pytest.mark.parametrize("run_id", ["", "../../private", "20260827T153500-1535-full"])
+def test_legacy_invalid_or_escaped_run_log_falls_back(tmp_path, run_id):
+    state = tmp_path / "state"
+    state.mkdir()
+    (state / "2026-08-27-15:35.failed").write_text(f"exitCode=128\nrunId={run_id}\n")
+    if run_id.endswith("-full"):
+        outside = tmp_path / "outside.err.log"
+        outside.write_text("private")
+        (state / f"{run_id}.err.log").symlink_to(outside)
+    alert = _alerts(tmp_path, datetime(2026, 8, 27, 16, 10, tzinfo=KST))[0]
+    assert alert.log_file is None
+
+
+def test_alert_copy_prompt_keeps_run_log_directory(tmp_path):
+    log = tmp_path / "local-market-update-state" / "20260827T153500-1535-full.err.log"
+    log.parent.mkdir()
+    log.write_text("auth failed")
+    message = format_schedule_alert(
+        scheduled_at=datetime(2026, 8, 27, 15, 35, tzinfo=KST), mode="full",
+        elapsed_minutes=35, state="실패", log_file=str(log),
+    )
+    assert f"logs/local-market-update-state/{log.name}" in message
 
 
 def test_operations_alert_never_falls_back_to_risk_news_credentials():

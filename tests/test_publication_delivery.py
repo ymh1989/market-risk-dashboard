@@ -282,7 +282,10 @@ def test_runtime_sync_checks_watchdog_before_replacing_files(tmp_path, valid):
     delivery.git(tmp_path, "clone", str(upstream), str(runtime))
     for name in ("market_session_schedule.py", "monitor_local_market_update.py", "send_operations_alert.py"):
         (runtime / "scripts" / name).write_text("status = 'old'\n")
-    function = "refresh_runtime_entrypoint() {" + script.split("refresh_runtime_entrypoint() {", 1)[1].split("\n}\n", 1)[0] + "\n}\n"
+    function = "".join(
+        name + "() {" + script.split(name + "() {", 1)[1].split("\n}\n", 1)[0] + "\n}\n"
+        for name in ("git_remote", "refresh_runtime_entrypoint")
+    )
     result = subprocess.run(
         ["/bin/bash", "-c", "set -Eeuo pipefail\n" + function + "refresh_runtime_entrypoint"],
         env={**os.environ, "ROOT": str(runtime), "REMOTE": "origin", "BRANCH": "main",
