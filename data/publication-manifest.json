@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "status": "ready",
-  "runId": "20261124T073003-0730-fast",
-  "mode": "fast",
-  "startedAt": "2026-11-24 07:30:03 KST",
-  "preparedAt": "2026-11-24 07:33:15 KST",
+  "runId": "20261124T090004-0900-live",
+  "mode": "live",
+  "startedAt": "2026-11-24 09:00:04 KST",
+  "preparedAt": "2026-11-24 09:02:11 KST",
   "commitAtomic": true,
   "artifactCount": 17,
-  "generatedCount": 16,
-  "reusedCount": 1,
+  "generatedCount": 9,
+  "reusedCount": 8,
   "checks": {
     "requiredFilesPresent": true,
     "jsonParsed": true,
@@ -18,55 +18,57 @@
     "checksumsVerified": true
   },
   "reusePolicy": {
-    "mode": "fast",
-    "implicitCount": 0,
-    "implicitPaths": []
+    "mode": "live",
+    "implicitCount": 1,
+    "implicitPaths": [
+      "data/dram-spot-prices.json"
+    ]
   },
   "artifacts": [
     {
       "path": "data/risk-dashboard.json",
       "type": "json",
       "state": "generated",
-      "generatedAt": "2026-11-24 07:31:06 KST",
-      "observationDate": "2026-11-23",
-      "bytes": 2916671,
-      "sha256": "d55e98dd49a7f1e7824735b642a3bffc38213d527d729cb4cbd04a1bb46382e3"
+      "generatedAt": "2026-11-24 09:00:57 KST",
+      "observationDate": "2026-11-24",
+      "bytes": 2917339,
+      "sha256": "128d30a1cb630b70307078781306a5ed533e8c307a541beb68303669e5106669"
     },
     {
       "path": "data/market-risk-snapshot.json",
       "type": "json",
       "state": "generated",
-      "generatedAt": "2026-11-24 07:31:06 KST",
+      "generatedAt": "2026-11-24 09:00:57 KST",
       "observationDate": null,
-      "bytes": 735302,
-      "sha256": "e0c6a8461f742a03869375d2ca0a9f4d0116520f7db3f0f1f787f00aeae65b2a"
+      "bytes": 735707,
+      "sha256": "c0e043721c61f05b59293751535da59fdd5ca5017850f477e98441dfd347877f"
     },
     {
       "path": "data/market-risk-timeseries.json",
       "type": "json",
       "state": "generated",
-      "generatedAt": "2026-11-24 07:31:06 KST",
+      "generatedAt": "2026-11-24 09:00:57 KST",
       "observationDate": null,
       "bytes": 360760,
-      "sha256": "d007483d360c0ef671f3a5fbdd7b18a796114fb23bc70eb71e6fe62fbee757ec"
+      "sha256": "b59612c8353b866d3db0e1acaf7416704fcfa84cd925425a017d5729c0d7c3df"
     },
     {
       "path": "data/naver-marketindex-history.json",
       "type": "json",
       "state": "generated",
-      "generatedAt": "2026-11-24 07:31:55 KST",
+      "generatedAt": "2026-11-24 09:01:12 KST",
       "observationDate": null,
-      "bytes": 2941503,
-      "sha256": "228ddba32d7d3869a189aa7fc8e5c268efc76cabebf131051e424a2329b55aaa"
+      "bytes": 2941829,
+      "sha256": "6b9e5c3b69942a7460eb6e901b59697e9f83df66fa2ee720b4ae4a7fc2704213"
     },
     {
       "path": "data/market-risk-backtest.json",
       "type": "json",
-      "state": "generated",
+      "state": "reused",
       "generatedAt": "2026-11-24 07:31:06 KST",
       "observationDate": null,
-      "bytes": 3579,
-      "sha256": "b51af1ba45cd93162d645bb671a9e00a50a17708e8ded6aaa785eb30b94b7115"
+      "bytes": 3576,
+      "sha256": "d5f9f42853383eace46ac624093d4727ca9143ac48abc472f80340a8f5d6b985"
     },
     {
       "path": "data/market-stress-episodes.json",
@@ -75,97 +77,97 @@
       "generatedAt": "2026-11-23 15:37:31 KST",
       "observationDate": "2026-11-20",
       "bytes": 8247,
-      "sha256": "8fe89d74997c98ab53e79b4f3cfa3946307d945217fe200fe73dcaa7d9a004a8"
+      "sha256": "a4e2fd9ea99902a7e2707b74706f2d2c952fdea40015586bad2da5cf2fcd3569"
     },
     {
       "path": "data/market-history-cache.json",
       "type": "json",
       "state": "generated",
-      "generatedAt": "2026-11-24 07:31:06 KST",
+      "generatedAt": "2026-11-24 09:00:57 KST",
       "observationDate": null,
-      "bytes": 6208192,
-      "sha256": "d7ca1d6a54d6ed143be395bf5512621c06b85a07a4bb2c764a305fd5420d0434"
+      "bytes": 6209025,
+      "sha256": "755b60dde727ad29f2eee079908ac37501c5c5252281fbabd63820f2e97fb72f"
     },
     {
       "path": "data/els-index-risk.json",
       "type": "json",
-      "state": "generated",
+      "state": "reused",
       "generatedAt": "2026-11-24 07:31 KST",
       "observationDate": null,
-      "bytes": 613116,
-      "sha256": "a4974cdba5c5d6ba30920b7287228de6794a5aec9752199ba396218bc26e517a"
+      "bytes": 613113,
+      "sha256": "331d35c1675211d3377741267d935ca996253760eeca84c18b6feca29fb9e6fa"
     },
     {
       "path": "data/hmm-regime.json",
       "type": "json",
-      "state": "generated",
+      "state": "reused",
       "generatedAt": "2026-11-24 07:31 KST",
       "observationDate": null,
-      "bytes": 220532,
-      "sha256": "7fdb1652b7913093a31f9f08435609c0ad69ba92f2835fd97acc978721c5ae09"
+      "bytes": 220529,
+      "sha256": "f48b04fdefeef92ac123ad3c768919876549d0d6e3ea03c464fe05e4c71f944e"
     },
     {
       "path": "data/ml-risk-signal.json",
       "type": "json",
-      "state": "generated",
+      "state": "reused",
       "generatedAt": "2026-11-24 07:31 KST",
       "observationDate": "2026-11-23",
-      "bytes": 225279,
-      "sha256": "f50d40e505aaec9e1072022518673a81b7a1f2aa7c7243811ebef7170faf94f9"
+      "bytes": 225276,
+      "sha256": "8cd46b4e4c9969d5f66762d2447290d604368120ad3e4675ecc10dec20f7155c"
     },
     {
       "path": "data/data-quality.json",
       "type": "json",
       "state": "generated",
-      "generatedAt": "2026-11-24 07:33:15 KST",
+      "generatedAt": "2026-11-24 09:02:10 KST",
       "observationDate": "2026-11-24",
-      "bytes": 100491,
-      "sha256": "6c43e4121895a8c7316791ee59195950e22de0ef50d472280759e2e9ceb8beff"
+      "bytes": 99079,
+      "sha256": "f3fbf65b8b8a97c176ae8f9c2f8b2fff58b91f030af529e1e24e686c48d87ba0"
     },
     {
       "path": "data/pipeline-status.json",
       "type": "json",
       "state": "generated",
-      "generatedAt": "2026-11-24 07:33:15 KST",
-      "observationDate": "2026-11-23",
-      "bytes": 46504,
-      "sha256": "381cec8ad77866c940b0da55528a0aa068d33fb327df4e8f073776d08cf5ba84"
+      "generatedAt": "2026-11-24 09:02:10 KST",
+      "observationDate": "2026-11-24",
+      "bytes": 46605,
+      "sha256": "89dbc6b064449de90dab146300d518912e8279c8fbffda156719273ecbcbe9a7"
     },
     {
       "path": "data/m7-credit-proxy.json",
       "type": "json",
-      "state": "generated",
+      "state": "reused",
       "generatedAt": "2026-11-24T07:30:17+09:00",
       "observationDate": null,
-      "bytes": 441201,
-      "sha256": "a35df4f220dc34a7f4055c7025c1e3ca15171d10477c9e07f2486d226629b983"
+      "bytes": 441198,
+      "sha256": "d2f656976d2aa18989ae39b296fafefe9d596a5ddce0f63be0353e14989dd871"
     },
     {
       "path": "data/kb-market-funds.json",
       "type": "json",
       "state": "generated",
-      "generatedAt": "2026-11-24 07:30:17 KST",
+      "generatedAt": "2026-11-24 09:00:06 KST",
       "observationDate": "2026-11-20",
       "bytes": 2678744,
-      "sha256": "23423a51fa68a975252e966c573fa2059ceb9b8ca323e7c1e23d3fac94e28475"
+      "sha256": "25495bad953955a4867bc97977fad48a1e499a9dcbb62968dd6e568de39cedba"
     },
     {
       "path": "data/dram-spot-prices.json",
       "type": "json",
-      "state": "generated",
+      "state": "reused",
       "generatedAt": "2026-11-24T07:30:26.501525+09:00",
       "observationDate": "2026-11-23",
-      "bytes": 96959,
-      "sha256": "2ad62fcaee6ea60f5480d7ed6dbe7036f7143fbe1082e88e325b3b5396ce6224"
+      "bytes": 96956,
+      "sha256": "f9be628642c612c426380355a7d660e6f1b5b63ee6a74016d14674fbd25b3701"
     },
     {
       "path": "data/kospi-breadth.json",
       "type": "json",
-      "state": "generated",
+      "state": "reused",
       "generatedAt": "2026-11-24 07:30:08 KST",
       "observationDate": "2026-11-23",
-      "bytes": 436727,
-      "sha256": "5ae8f47fff96ee67191414ed40a75286d2e816e6f401b1eb41f79291c9077e58"
+      "bytes": 436724,
+      "sha256": "cde00605b1606ac53bf4f9d5f0a048d8d7f95f18cfb40eab68b8f6ad9b796fc4"
     },
     {
       "path": "reports/market-risk-dashboard-offline.html",
@@ -173,8 +175,8 @@
       "state": "generated",
       "generatedAt": null,
       "observationDate": null,
-      "bytes": 7879532,
-      "sha256": "27437d3bf0fc23bd3e98a1deb086458529c3e4f9838781638a8b053dddd1dffb"
+      "bytes": 7880765,
+      "sha256": "614db28843ec6deebe1985dca50790fc466f6fc2031be837c02eee50f6a03d84"
     }
   ]
 }
